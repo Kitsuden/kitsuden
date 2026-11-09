@@ -172,8 +172,7 @@ export function openApiOperation(
 
   const parameters: JsonSchema[] = [];
   const params = jsonSchema(op.input?.params) as
-    | { properties?: Record<string, JsonSchema> }
-    | undefined;
+    { properties?: Record<string, JsonSchema> } | undefined;
   for (const name of parameterNames(op.route)) {
     parameters.push({
       name,
@@ -183,8 +182,7 @@ export function openApiOperation(
     });
   }
   const query = jsonSchema(op.input?.query) as
-    | { properties?: Record<string, JsonSchema>; required?: string[] }
-    | undefined;
+    { properties?: Record<string, JsonSchema>; required?: string[] } | undefined;
   for (const [name, schema] of Object.entries(query?.properties ?? {})) {
     parameters.push({
       name,
@@ -366,15 +364,13 @@ export function mcpTool(konId: string, mountPath: string, op: Operation): McpToo
   const required: string[] = [];
 
   const params = jsonSchema(op.input?.params) as
-    | { properties?: Record<string, JsonSchema> }
-    | undefined;
+    { properties?: Record<string, JsonSchema> } | undefined;
   for (const name of parameterNames(op.route)) {
     properties[name] = params?.properties?.[name] ?? { type: "string" };
     required.push(name);
   }
   const query = jsonSchema(op.input?.query) as
-    | { properties?: Record<string, JsonSchema>; required?: string[] }
-    | undefined;
+    { properties?: Record<string, JsonSchema>; required?: string[] } | undefined;
   for (const [name, schema] of Object.entries(query?.properties ?? {})) {
     if (name in properties) {
       throw new Error(`${konId}/${op.id}: '${name}' is in both the path and the query`);

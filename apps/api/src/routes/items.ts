@@ -190,8 +190,7 @@ function writeWithOwnRoute(
 ): Response | null {
   if (resolved.type !== "native") return null;
   const name = (resolved.table as Record<symbol, unknown>)[Symbol.for("drizzle:Name")] as
-    | string
-    | undefined;
+    string | undefined;
   if (!name || !TABLES_ONLY_VIA_THEIR_ROUTE.has(name)) return null;
   const requestId = ((c.get as (k: string) => unknown)("requestId") as string | undefined) ?? null;
   return respondProblem(c as never, tableProblemOnlyByItsRoute(name, c.req.path, requestId));

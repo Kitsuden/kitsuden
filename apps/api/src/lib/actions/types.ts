@@ -56,10 +56,7 @@ export interface HttpTriggerConfig {
 }
 
 export type TriggerConfig =
-  | CronTriggerConfig
-  | EventTriggerConfig
-  | HttpTriggerConfig
-  | Record<string, never>; // For manual triggers
+  CronTriggerConfig | EventTriggerConfig | HttpTriggerConfig | Record<string, never>; // For manual triggers
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Action Configurations

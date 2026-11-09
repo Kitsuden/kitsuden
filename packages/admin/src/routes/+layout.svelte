@@ -23,7 +23,7 @@
   import TwoFactorRequiredView from "$views/auth/TwoFactorRequiredView.svelte";
 
   // Svelte 5 children snippet for layout
-  const { children } = $props<{ children: () => any }>();
+  const { children }: { children: () => any } = $props();
 
   // tallao's own texts (close buttons, "No results"…) are English by default. Changing the
   // panel's language reloads the page, so choosing them once here is enough.

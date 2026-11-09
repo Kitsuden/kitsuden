@@ -416,8 +416,7 @@ export async function applyProvenanceInRest<T extends object>(
   )
     return rows;
   const agent = (c.get as (k: string) => unknown)("agent") as
-    | { agentId?: string; mcpSettings?: { untrustedWrap?: WrapperMode } }
-    | undefined;
+    { agentId?: string; mcpSettings?: { untrustedWrap?: WrapperMode } } | undefined;
   const mode = restWrapper(c.req.header(WRAPPER_HEADER), agent?.mcpSettings?.untrustedWrap);
   const p = await rowProvenance(sources, executor, {
     reader: agent?.agentId ?? null,

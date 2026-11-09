@@ -38,15 +38,7 @@ export const MODELS_VERSION = 1;
 // ── Fields ──────────────────────────────────────────────────────────────────
 
 export type FieldType =
-  | "text"
-  | "longText"
-  | "integer"
-  | "number"
-  | "boolean"
-  | "date"
-  | "enum"
-  | "json"
-  | "uuid";
+  "text" | "longText" | "integer" | "number" | "boolean" | "date" | "enum" | "json" | "uuid";
 
 export const FIELD_TYPES: readonly FieldType[] = [
   "text",

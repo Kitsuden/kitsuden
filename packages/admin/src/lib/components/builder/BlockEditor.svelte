@@ -292,8 +292,7 @@
             oninput={(e) => updateField(field.key, e.currentTarget.value)}
             placeholder={field.placeholder}
             rows="4"
-            class="textarea"
-          ></textarea>
+            class="textarea"></textarea>
         {/if}
 
         <!-- URL / Image -->
@@ -534,8 +533,7 @@
             oninput={(e) => updateJsonField(field.key, e.currentTarget.value)}
             rows="5"
             placeholder={field.helpText}
-            class="textarea font-mono text-xs"
-          ></textarea>
+            class="textarea font-mono text-xs"></textarea>
           {#if jsonErrors[field.key]}<p class="text-[10px] text-kitsuden-accent-2">
               {jsonErrors[field.key]}
             </p>{/if}

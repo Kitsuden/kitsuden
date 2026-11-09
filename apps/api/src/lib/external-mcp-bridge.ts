@@ -328,8 +328,7 @@ export function externalToolDefinition(e: ExternalToolEntry) {
 }
 
 export type ResolvedExternalTool =
-  | { ok: true; entry: ExternalToolEntry }
-  | { ok: false; code: KitsudenErrorCode; message: string };
+  { ok: true; entry: ExternalToolEntry } | { ok: false; code: KitsudenErrorCode; message: string };
 
 /**
  * The external tool behind `name`, if these scopes may call it NOW (catalog

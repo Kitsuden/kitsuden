@@ -272,8 +272,7 @@
               class="input w-full text-sm font-mono"
               rows={c.type === "json" ? 4 : 5}
               maxlength={c.max}
-              bind:value={values[c.key]}
-            ></textarea>
+              bind:value={values[c.key]}></textarea>
           {:else if c.type === "integer" || c.type === "number"}
             <input
               id={`field-${c.key}`}

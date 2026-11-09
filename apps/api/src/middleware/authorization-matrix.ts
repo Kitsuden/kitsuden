@@ -46,14 +46,7 @@
 import { readFileSync } from "node:fs";
 
 export type Level =
-  | "public"
-  | "user"
-  | "staff"
-  | "content"
-  | "admin"
-  | "restricted"
-  | "custom"
-  | "middleware";
+  "public" | "user" | "staff" | "content" | "admin" | "restricted" | "custom" | "middleware";
 
 type Identity =
   | "anonymous"

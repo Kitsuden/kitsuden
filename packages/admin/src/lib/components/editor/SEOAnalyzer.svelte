@@ -128,8 +128,7 @@
       oninput={(e) => onUpdate({ ...data, seoDescription: e.currentTarget.value })}
       class="textarea"
       rows="3"
-      placeholder={t("sEOAnalyzer.compellingDescriptionForSearchResults")}
-    ></textarea>
+      placeholder={t("sEOAnalyzer.compellingDescriptionForSearchResults")}></textarea>
   </div>
 
   <!-- OG Image -->

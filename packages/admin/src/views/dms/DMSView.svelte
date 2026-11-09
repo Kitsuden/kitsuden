@@ -2104,8 +2104,7 @@
                 id="description"
                 rows="3"
                 class="kitsuden-input w-full"
-                bind:value={formDoc.description}
-              ></textarea>
+                bind:value={formDoc.description}></textarea>
             </div>
             <div>
               <label for="tags-comma-separated" class="block text-xs text-kitsuden-subtle mb-1"
@@ -2207,8 +2206,7 @@
                   class="flex-1 kitsuden-input font-mono text-xs resize-none"
                   bind:value={contentEditor}
                   oninput={onContentInput}
-                  placeholder={tr("dMSView.writeYourContentHere")}
-                ></textarea>
+                  placeholder={tr("dMSView.writeYourContentHere")}></textarea>
                 {#if showWikiDropdown && wikiSuggestions.length > 0}
                   <div
                     class="absolute left-4 bottom-4 w-64 max-h-48 overflow-y-auto bg-kitsuden-card border border-kitsuden-border rounded-xl shadow-xl z-10"
@@ -2383,8 +2381,7 @@
                   rows="2"
                   class="kitsuden-input w-full text-sm"
                   placeholder={tr("dMSView.addAComment")}
-                  bind:value={commentInput}
-                ></textarea>
+                  bind:value={commentInput}></textarea>
                 <div class="flex justify-end mt-2">
                   <button
                     class="btn-primary btn-sm"
@@ -2667,8 +2664,7 @@
             bind:value={formDoc.description}
             rows="3"
             placeholder={tr("dMSView.shortDescription")}
-            class="kitsuden-input w-full"
-          ></textarea>
+            class="kitsuden-input w-full"></textarea>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -2788,8 +2784,7 @@
             bind:value={newCategoryDescription}
             rows="2"
             placeholder={tr("dMSView.shortDescription")}
-            class="kitsuden-input w-full"
-          ></textarea>
+            class="kitsuden-input w-full"></textarea>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -2919,8 +2914,7 @@
             rows="3"
             class="kitsuden-input w-full"
             placeholder={tr("dMSView.describeWhatChanged")}
-            bind:value={changelogInput}
-          ></textarea>
+            bind:value={changelogInput}></textarea>
         </div>
         <div class="flex justify-end gap-3 pt-2">
           <button class="btn-secondary" onclick={() => (showCreateVersionModal = false)}
@@ -2974,8 +2968,7 @@
             rows="6"
             class="kitsuden-input w-full font-mono text-xs"
             bind:value={newDiagramSource}
-            placeholder={tr("dMSView.pasteDiagramSourceXmlOr")}
-          ></textarea>
+            placeholder={tr("dMSView.pasteDiagramSourceXmlOr")}></textarea>
         </div>
         <div class="flex justify-end gap-3 pt-2">
           <button

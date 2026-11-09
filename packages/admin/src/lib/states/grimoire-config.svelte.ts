@@ -63,10 +63,7 @@ export interface R2StorageConfig {
 }
 
 export type StorageConfig =
-  | MinioStorageConfig
-  | S3StorageConfig
-  | LocalStorageConfig
-  | R2StorageConfig;
+  MinioStorageConfig | S3StorageConfig | LocalStorageConfig | R2StorageConfig;
 
 export interface MediaFeaturesConfig {
   thumbnails: boolean;

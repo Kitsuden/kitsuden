@@ -41,16 +41,7 @@ import * as schema from "../../../apps/api/src/db/schema";
 
 /** Supported filter operators */
 export type FilterOperator =
-  | "eq"
-  | "neq"
-  | "gt"
-  | "gte"
-  | "lt"
-  | "lte"
-  | "in"
-  | "contains"
-  | "startsWith"
-  | "endsWith";
+  "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "in" | "contains" | "startsWith" | "endsWith";
 
 /** Logical operators */
 export type LogicalOperator = "AND" | "OR" | "NOT";

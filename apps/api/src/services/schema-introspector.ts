@@ -323,21 +323,19 @@ async function getColumns(tableName: string, schema: string): Promise<Introspect
     ORDER BY c.ordinal_position
   `);
 
-  return result.rows.map(
-    (r: QueryRow): IntrospectedColumn => ({
-      name: r.column_name as string,
-      type: r.data_type as string,
-      nullable: r.is_nullable === "YES",
-      defaultValue: r.column_default as string | null,
-      isPrimaryKey: r.is_primary_key as boolean,
-      isForeignKey: false, // Will be set later
-      foreignTable: null,
-      foreignColumn: null,
-      maxLength: r.character_maximum_length as number | null,
-      isUnique: r.is_unique as boolean,
-      isIndexed: r.is_primary_key as boolean, // PKs are always indexed
-    })
-  );
+  return result.rows.map((r: QueryRow): IntrospectedColumn => ({
+    name: r.column_name as string,
+    type: r.data_type as string,
+    nullable: r.is_nullable === "YES",
+    defaultValue: r.column_default as string | null,
+    isPrimaryKey: r.is_primary_key as boolean,
+    isForeignKey: false, // Will be set later
+    foreignTable: null,
+    foreignColumn: null,
+    maxLength: r.character_maximum_length as number | null,
+    isUnique: r.is_unique as boolean,
+    isIndexed: r.is_primary_key as boolean, // PKs are always indexed
+  }));
 }
 
 async function getPrimaryKey(tableName: string, schema: string): Promise<string[]> {
@@ -372,14 +370,12 @@ async function getForeignKeys(tableName: string, schema: string): Promise<Foreig
     AND tc.table_schema = ${schema}
   `);
 
-  return result.rows.map(
-    (r: QueryRow): ForeignKeyInfo => ({
-      column: r.column_name as string,
-      foreignTable: r.foreign_table_name as string,
-      foreignColumn: r.foreign_column_name as string,
-      constraintName: r.constraint_name as string,
-    })
-  );
+  return result.rows.map((r: QueryRow): ForeignKeyInfo => ({
+    column: r.column_name as string,
+    foreignTable: r.foreign_table_name as string,
+    foreignColumn: r.foreign_column_name as string,
+    constraintName: r.constraint_name as string,
+  }));
 }
 
 async function getIndexes(tableName: string, schema: string): Promise<IndexInfo[]> {
@@ -399,14 +395,12 @@ async function getIndexes(tableName: string, schema: string): Promise<IndexInfo[
     GROUP BY i.relname, ix.indisunique, ix.indisprimary
   `);
 
-  return result.rows.map(
-    (r: QueryRow): IndexInfo => ({
-      name: r.index_name as string,
-      columns: r.columns as string[],
-      unique: r.is_unique as boolean,
-      primary: r.is_primary as boolean,
-    })
-  );
+  return result.rows.map((r: QueryRow): IndexInfo => ({
+    name: r.index_name as string,
+    columns: r.columns as string[],
+    unique: r.is_unique as boolean,
+    primary: r.is_primary as boolean,
+  }));
 }
 
 async function getEstimatedRowCount(tableName: string, schema: string): Promise<number> {

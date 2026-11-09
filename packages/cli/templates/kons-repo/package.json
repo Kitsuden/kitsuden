@@ -18,7 +18,7 @@
     "kon:sync:check": "node scripts/kon-sync.mjs --check"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "link:.kitsuden/node_modules/@electric-sql/pglite",
+    "@electric-sql/pglite": "^0.5.15",
     "@kitsuden/engine": "link:.kitsuden/packages/engine",
     "@kitsuden/shared": "link:.kitsuden/packages/shared",
     "@types/node": "link:.kitsuden/node_modules/@types/node",

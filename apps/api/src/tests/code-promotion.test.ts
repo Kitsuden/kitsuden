@@ -1167,8 +1167,7 @@ describe("code promotion", () => {
           sql`select set_config('app.current_user_id', ${agentId}, true), set_config('app.current_user_role', 'agent', true)`
         );
         const visible = (await tx.execute(sql`select agent_id from code_versions`)) as unknown as
-          | { rows: { agent_id: string | null }[] }
-          | { agent_id: string | null }[];
+          { rows: { agent_id: string | null }[] } | { agent_id: string | null }[];
         const rows = Array.isArray(visible) ? visible : visible.rows;
         const touched = (await tx.execute(
           sql`update code_versions set description = 'pwned' where agent_id = ${agentId} returning id`

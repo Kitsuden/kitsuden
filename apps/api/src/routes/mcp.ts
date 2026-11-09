@@ -1198,8 +1198,7 @@ async function executeTool(
       // An idempotency repeat (`idempotency_key` already used)
       // ran nothing: it spends no quota.
       const sc = ofOperation.structuredContent as
-        | { idempotentReplayed?: boolean; code?: string }
-        | undefined;
+        { idempotentReplayed?: boolean; code?: string } | undefined;
       if (sc?.idempotentReplayed || sc?.code === "KITSUDEN_E_IDEMPOTENCY_NOT_REPLAYABLE") {
         await returnQuota?.();
       }

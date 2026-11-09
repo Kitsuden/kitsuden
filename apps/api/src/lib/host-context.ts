@@ -30,8 +30,7 @@ export function withHostContext(router: Hono): Hono {
   const wrappedItem = new Hono();
   wrappedItem.use("*", async (c, next) => {
     const vars = (c.env as Record<string, unknown> | undefined)?.[ENV_KEY] as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     if (vars) {
       for (const [k, v] of Object.entries(vars)) {
         if (v !== undefined) (c.set as (k: string, v: unknown) => void)(k, v);

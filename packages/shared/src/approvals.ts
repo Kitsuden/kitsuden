@@ -139,12 +139,7 @@ export const DEFAULT_APPROVALS_CONFIG: ApprovalsConfig = {
 };
 
 export type ProposalStatus =
-  | "pending"
-  | "executing"
-  | "executed"
-  | "failed"
-  | "rejected"
-  | "expired";
+  "pending" | "executing" | "executed" | "failed" | "rejected" | "expired";
 
 export const PROPOSAL_STATUSES: readonly ProposalStatus[] = [
   "pending",

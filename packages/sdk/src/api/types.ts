@@ -73,13 +73,7 @@ export interface Problem {
 }
 
 export type ProposalStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "expired"
-  | "executed"
-  | "failed"
-  | (string & {});
+  "pending" | "approved" | "rejected" | "expired" | "executed" | "failed" | (string & {});
 
 /** A request held for human approval (the `proposal` of a 202 `KITSUDEN_E_APPROVAL_REQUIRED`). */
 export interface Proposal {

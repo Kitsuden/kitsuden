@@ -207,9 +207,7 @@ Multi-column container for nested content.
       {
         "id": "item-1",
         "columnSpan": 6,
-        "content": {
-          /* nested block content */
-        }
+        "content": {/* nested block content */}
       }
     ]
   }

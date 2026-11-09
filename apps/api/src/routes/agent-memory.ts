@@ -50,13 +50,7 @@ interface MemoryCreateRequest {
   summary?: string;
   memoryType?: "short_term" | "long_term" | "episodic" | "semantic";
   category?:
-    | "general"
-    | "conversation"
-    | "task"
-    | "insight"
-    | "preference"
-    | "context"
-    | "knowledge";
+    "general" | "conversation" | "task" | "insight" | "preference" | "context" | "knowledge";
   importance?: number;
   confidence?: number;
   source?: "agent" | "user" | "system" | "inference" | "external";

@@ -500,8 +500,7 @@
       class="w-full min-h-[300px] p-4 rounded-xl border bg-kitsuden-card text-kitsuden-text placeholder:text-kitsuden-subtle resize-y focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/20 focus:border-kitsuden-accent/50 font-mono text-sm leading-relaxed {dragging
         ? 'border-kitsuden-accent border-dashed'
         : 'border-kitsuden-border'}"
-      spellcheck="false"
-    ></textarea>
+      spellcheck="false"></textarea>
 
     <!-- Slash Command Menu -->
     {#if showSlashMenu && filteredCommands.length > 0}

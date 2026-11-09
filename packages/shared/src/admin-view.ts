@@ -46,11 +46,7 @@ export class CustomViewError extends Error {
   constructor(
     message: string,
     readonly code:
-      | "INVALID_ELEMENT"
-      | "INVALID_SRC"
-      | "INVALID_KON"
-      | "LOAD_FAILED"
-      | "NOT_REGISTERED"
+      "INVALID_ELEMENT" | "INVALID_SRC" | "INVALID_KON" | "LOAD_FAILED" | "NOT_REGISTERED"
   ) {
     super(message);
     this.name = "CustomViewError";

@@ -486,8 +486,7 @@
         </p>
         <textarea
           class="w-full h-40 font-mono text-sm p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-border"
-          bind:value={segmentFilter}
-        ></textarea>
+          bind:value={segmentFilter}></textarea>
         <button
           class="mt-2 px-4 py-2 rounded-lg bg-kitsuden-accent text-white text-sm"
           onclick={previewSegment}>{t("newsletterView.calculateScope")}</button
@@ -537,8 +536,7 @@
         <textarea
           class="w-full h-72 font-mono text-sm p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-border"
           placeholder={t("newsletterView.newsletterHtml")}
-          bind:value={draftHtml}
-        ></textarea>
+          bind:value={draftHtml}></textarea>
         <!-- sandbox without allow-scripts: the HTML is content, not code. -->
         <iframe
           class="w-full h-72 rounded-lg border border-kitsuden-border bg-white"

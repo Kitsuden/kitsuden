@@ -4,12 +4,7 @@
  */
 
 export type ProposalStatus =
-  | "pending"
-  | "executing"
-  | "executed"
-  | "failed"
-  | "rejected"
-  | "expired";
+  "pending" | "executing" | "executed" | "failed" | "rejected" | "expired";
 export type ApprovalMode = "inherit" | "propose" | "direct";
 /** What `propose` holds: everything except read-only POSTs, or everything. */
 export type ProposeRetention = "selective" | "strict";

@@ -434,15 +434,13 @@
                 class="input w-full min-h-[80px] resize-y"
                 bind:value={formData[col.name]}
                 placeholder={formatLabel(col.name)}
-                rows="3"
-              ></textarea>
+                rows="3"></textarea>
             {:else if inputType === "json"}
               <textarea
                 class="input w-full font-mono text-xs min-h-[80px] resize-y"
                 bind:value={formData[col.name]}
                 placeholder={'{"key": "value"}'}
-                rows="3"
-              ></textarea>
+                rows="3"></textarea>
             {:else if inputType === "number"}
               <input
                 type="number"

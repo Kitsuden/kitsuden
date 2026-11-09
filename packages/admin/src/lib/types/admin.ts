@@ -53,12 +53,7 @@ export interface AdminConfig {
 }
 
 export type AdminView =
-  | GridView
-  | KanbanView
-  | CalendarView
-  | DashboardView
-  | FormView
-  | CustomView;
+  GridView | KanbanView | CalendarView | DashboardView | FormView | CustomView;
 
 interface BaseView {
   id: string;

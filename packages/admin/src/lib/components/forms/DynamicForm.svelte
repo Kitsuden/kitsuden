@@ -534,8 +534,7 @@
           placeholder={'{ "key": "value" }'}
           class="textarea font-mono text-xs {fieldErrors[field.key]
             ? 'border-kitsuden-accent-2-50 focus:ring-kitsuden-accent-2-30'
-            : ''}"
-        ></textarea>
+            : ''}"></textarea>
       {/if}
 
       <!-- ── Rich Text ── -->
@@ -551,8 +550,7 @@
           placeholder={field.helpText || t("dynamicForm.enterContentMarkdownSupported")}
           class="textarea {fieldErrors[field.key]
             ? 'border-kitsuden-accent-2-50 focus:ring-kitsuden-accent-2-30'
-            : ''}"
-        ></textarea>
+            : ''}"></textarea>
       {/if}
 
       <!-- ── Relation ── -->

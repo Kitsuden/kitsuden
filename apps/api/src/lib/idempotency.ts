@@ -367,8 +367,7 @@ export function containsSecret(value: unknown, depth = 0): boolean {
     const o = value as Record<string, unknown>;
     // `{ key: "OPENAI_API_KEY", value: "sk-…" }` (the Secrets Manager), `{ name: "Authorization", value: … }`.
     const label = [o.key, o.name, o.header, o.variable].find((x) => typeof x === "string") as
-      | string
-      | undefined;
+      string | undefined;
     if (label && secretName(label) && hasText(o.value)) return true;
     for (const [key, v] of Object.entries(o)) {
       if (secretName(key) && hasText(v)) return true;

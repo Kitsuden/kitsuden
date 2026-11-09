@@ -389,8 +389,7 @@
         onChange?.(expression);
         validateExpression();
         calculatePreview();
-      }}
-    ></textarea>
+      }}></textarea>
     <p class="text-xs text-kitsuden-subtle">
       {tr("formulaBuilder.useToReferenceFieldsExample", { v: "{fieldName}" })}
       <code class="text-kitsuden-accent">{"{price} * {quantity}"}</code>
