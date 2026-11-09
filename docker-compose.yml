@@ -82,7 +82,7 @@ services:
       - kitsuden_net_prod
 
   # ═══════════════════════════════════════════════════════════════════════
-  # Valkey 7 (REQUIRED) - Cache, Pub/Sub, Queue backend
+  # Valkey 9 (REQUIRED) - Cache, Pub/Sub, Queue backend
   #
   # Password required: any process on the host can reach a published port, and
   # an open Valkey lets it read and rewrite the cache, including sessions. Use a

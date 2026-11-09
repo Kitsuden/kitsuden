@@ -92,7 +92,7 @@ from this repository, as a pnpm workspace, and the images are built from it.
   **pnpm 9** (`npm i -g pnpm@9.15.4`, the `packageManager` version and the one
   the images use; `pnpm-lock.yaml` is written by it).
 - Postgres 16 + pgvector (easiest: the containers in [local.md](local.md)).
-  Valkey 7 is optional: only several API replicas need it.
+  Valkey 9 is optional: only several API replicas need it.
 - On **Windows**, a short path for the repository (for example
   `C:\src\kitsuden`): see [troubleshooting.md](troubleshooting.md#installing).
 

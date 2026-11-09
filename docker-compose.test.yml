@@ -3,7 +3,7 @@
 #
 # Services:
 #   - PostgreSQL 16 + pgvector (configurable port, default 5434)
-#   - Valkey 7 (default 6380, the one in REDIS_URL in .env.test)
+#   - Valkey 9 (default 6380, the one in REDIS_URL in .env.test)
 #
 # USAGE:
 #   pnpm test:db:up   (copies .env.test.example to .env.test if it does not exist)
