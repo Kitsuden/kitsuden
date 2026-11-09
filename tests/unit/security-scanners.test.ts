@@ -85,7 +85,7 @@ describe("workflows", () => {
   };
 
   it("the scanners and CodeQL block, and run on every push and pull request", () => {
-    expect(security).toMatch(/push:\n\s+branches: \["\*\*"\]/);
+    expect(security).toContain('branches: ["**", "!dependabot/**"]');
     expect(security).toMatch(/pull_request:/);
     // Job level (4 spaces): a step may be informational, the job may not
     expect(job(security, "scanners")).not.toMatch(/^ {4}continue-on-error/m);

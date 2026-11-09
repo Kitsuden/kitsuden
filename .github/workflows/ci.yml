@@ -17,7 +17,8 @@ name: CI - Quality Checks
 #     extends. It does not exist on a clean clone.
 on:
   push:
-    branches: ["**"]
+    # Dependabot branches run once, as a pull request, not twice
+    branches: ["**", "!dependabot/**"]
   pull_request:
     branches: [main, develop]
   # By hand (Actions → Run workflow): used by the aig-red-team job

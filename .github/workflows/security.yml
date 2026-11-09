@@ -26,7 +26,8 @@ name: Security
 
 on:
   push:
-    branches: ["**"]
+    # Dependabot branches run once, as a pull request, not twice
+    branches: ["**", "!dependabot/**"]
   pull_request:
     branches: [main, develop]
   schedule:
