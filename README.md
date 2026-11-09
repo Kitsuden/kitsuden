@@ -3,14 +3,26 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Kitsuden/kitsuden/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Kitsuden/kitsuden/ci.yml?branch=main&label=CI"></a>
+  <a href="https://github.com/Kitsuden/kitsuden/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Kitsuden/kitsuden/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white"></a>
   <img alt="Version 0.9.0-beta" src="https://img.shields.io/badge/version-0.9.0--beta-orange">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <a href="https://github.com/Kitsuden/kitsuden/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/Kitsuden/kitsuden?style=flat&logo=github"></a>
+  <br>
+  <img alt="Bun" src="https://img.shields.io/badge/Bun-1.3+-000?logo=bun&logoColor=white">
+  <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-4169E1?logo=postgresql&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white">
+  <img alt="MCP" src="https://img.shields.io/badge/MCP-server-8A2BE2">
+  <img alt="SvelteKit admin" src="https://img.shields.io/badge/admin-SvelteKit-FF3E00?logo=svelte&logoColor=white">
 </p>
 
-# Kitsuden
-
-**The JS backend where you declare a model once and your agents can use it, with permissions and human approval.**
+<p align="center">
+  <a href="#quickstart"><b>Quickstart</b></a> ·
+  <a href="#why-kitsuden"><b>Why Kitsuden</b></a> ·
+  <a href="#for-ai-agents"><b>For AI agents</b></a> ·
+  <a href="#kons-installable-modules"><b>Kons</b></a> ·
+  <a href="docs/install/README.md"><b>Docs</b></a> ·
+  <a href="CHANGELOG.md"><b>Changelog</b></a>
+</p>
 
 An agent framework decides _what_ to do and a durable queue decides _when_;
 Kitsuden is the third layer, the one that decides **whether an agent may do it
@@ -33,13 +45,54 @@ See the [threat model](docs/threat-model.md).
   <img src="assets/readme/architecture.svg" width="100%" alt="How a request flows: AI agents (Claude, Cursor or your own) connect over MCP at /api/mcp or REST under /api with their own kitsuden_agent_* key and scopes; people use the SvelteKit admin panel over REST with a session. The Kitsuden API, Hono on Bun and deny by default, checks scopes (a deny wins), human approval (a 202 proposal), quotas and idempotent retries, and audits every agent action; kons plug in with kitsuden kon add. Each request runs in one transaction with its row-level security context in PostgreSQL 16 with pgvector, which also holds the outbox queue and the datasets. Valkey is optional, for several API replicas.">
 </p>
 
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🤖 Agents are first-class users</h3>
+      MCP and REST with their own identity, scoped keys, audit and human approval for what matters.
+      <a href="#1-agents-are-first-class-users">More →</a>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🪙 Fewer tokens</h3>
+      Each response in the shortest lossless format (JSON, TOON or TRON): 16.7 % fewer tokens than compact JSON, measured.
+      <a href="#2-fewer-tokens-the-shortest-lossless-format-per-response">More →</a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🛡️ Secure by default</h3>
+      Deny by default, row-level security checked at startup, a sandbox for agent code and an authorization matrix in CI.
+      <a href="#3-secure-by-default-and-checked">More →</a>
+    </td>
+    <td width="50%" valign="top">
+      <h3>⚡ Fast with every check on</h3>
+      RLS, authorization, quotas, approvals, idempotency and audit on every request, and still up to 11× the throughput it had.
+      <a href="#4-fast-enough-to-keep-every-check-on">More →</a>
+    </td>
+  </tr>
+</table>
+
 **Who it is for:** developers who want AI agents (Claude, Cursor, their own)
 to read and write real application data without handing them a database
 password or an admin session, and who want the safe setting to be the
 default rather than a checklist.
 
-**Status:** beta (`0.9.0-beta`). The public repository is new: expect rough
-edges, and read [docs/install/](docs/install/README.md) before deploying.
+> [!WARNING]
+> **Beta (`0.9.0-beta`).** The public repository is new: expect rough edges, and read
+> [docs/install/](docs/install/README.md) before deploying.
+
+<details>
+<summary><b>Contents</b></summary>
+
+- [For AI agents](#for-ai-agents)
+- [Why Kitsuden](#why-kitsuden)
+- [Quickstart](#quickstart)
+- [What else is in the box](#what-else-is-in-the-box)
+- [Kons: installable modules](#kons-installable-modules)
+- [Requirements](#requirements) · [Ports](#ports) · [Local development](#local-development)
+- [Documentation](#documentation) · [Repository layout](#repository-layout) · [License](#license)
+
+</details>
 
 ## For AI agents
 
@@ -117,6 +170,9 @@ response says which format it is (`Content-Type`, `X-Kitsuden-Format`, or
 `_meta["kitsuden/format"]` in MCP). `Accept: application/json` always gets
 JSON, so existing clients do not change.
 
+<details>
+<summary><b>How much it saves, and how it was measured</b></summary>
+
 Measured on 24 real responses from a copy of a production database
 ([docs/agents/benchmarks.md](docs/agents/benchmarks.md), `o200k_base`
 tokenizer): `auto` used **16.7 % fewer tokens than compact JSON** (15.6 % and
@@ -126,6 +182,8 @@ is 7 % **bigger** than compact JSON on this data (it only wins on flat lists);
 TRON on its own saves 16.6 % but is a young library (`0.1.3`, pinned), so it
 is only ever sent after the round-trip check. Cost: up to ~30 ms of encoding
 and checking on a 220 KB response, under 4 ms below 16 KB.
+
+</details>
 
 ### 3. Secure by default, and checked
 
@@ -176,6 +234,9 @@ With 50 concurrent connections, on one shared laptop, before → after:
 | MCP tool call through the kon SDK       |  10.7 → 42.7 | 4,841 → 3,152 ms |
 | Blog list with a session                |  19.5 → 36.0 | 3,497 → 1,782 ms |
 
+<details>
+<summary><b>What changed, and how pessimistic these numbers are</b></summary>
+
 The biggest cost was the agent key's argon2 hash, verified on every request
 (and twice per MCP message); a successful verification is now remembered per
 key and secret, while the key and the agent are still read from the database
@@ -183,6 +244,8 @@ on every request, so revocation still applies on the next one. Anonymous
 public reads moved within the run-to-run noise of that machine. The figures
 are pessimistic: there, a round trip to Postgres took 1.3 ms when idle and
 much more under load.
+
+</details>
 
 ## Quickstart
 
@@ -248,9 +311,9 @@ builds and starts `docker-compose.yml` + `docker-compose.tls.yml`).
 The core is a complete backend for agents on its own. Domain features — blog,
 wiki, comments, newsletter, CRM, payments, tournaments, game tooling… — are
 **kons**: modules that you install when you need them. They live in a separate
-repository, `kitsuden-kons` (MIT), which is **not public yet**. Until it is,
-`kon add` needs a local checkout of it (`--from ../kitsuden-kons`); the
-commands below show the shape of the workflow:
+repository, [`kitsuden-kons`](https://github.com/Kitsuden/kitsuden-kons) (MIT).
+Clone it next to this one: until a public registry runs, `kon add` installs from
+that local checkout (`--from ../kitsuden-kons`):
 
 ```bash
 pnpm install --frozen-lockfile        # needs Bun first, see Requirements
@@ -320,8 +383,7 @@ in `tests/unit`; `pnpm test:cli` runs the CLI's own tests; `pnpm test:db:up`
 starts a test Postgres (`docker-compose.test.yml`, port 5434) and migrates it, and
 `pnpm test:api` runs the API's Bun tests against it, with the settings in `.env.test`
 (`pnpm test:api:all` does the whole round).
-`pnpm format:check` also runs in CI, but does not block yet: much of the
-repository still has to be formatted.
+`pnpm format:check` and `pnpm lint` run in CI and block a merge.
 
 Postgres and Valkey containers, the minimum `.env` and the caveats are in
 [docs/install/local.md](docs/install/local.md). Do not use `pnpm db:push`
@@ -376,3 +438,13 @@ docker/              Dockerfiles, Caddyfile, startup and backup scripts
 ## License
 
 [MIT](LICENSE).
+
+---
+
+<p align="center">
+  <sub>Built by <a href="https://github.com/Kitsuden">Kitsuden</a> ·
+  <a href="https://github.com/Kitsuden/kitsuden-kons">Kons</a> ·
+  <a href="https://github.com/tallao-ui/tallao">tallao</a> ·
+  <a href="docs/install/README.md">Docs</a> ·
+  <a href="https://github.com/Kitsuden/kitsuden/issues">Issues</a></sub>
+</p>
