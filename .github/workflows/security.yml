@@ -73,14 +73,33 @@ jobs:
         continue-on-error: true
         run: node scripts/security/aig.mjs --prescan-only --target=code,skill
 
-      # Code scanning keeps findings visible to maintainers only. Skipped on pull
+      # Code scanning keeps findings visible to maintainers only. One upload per
+      # report: code scanning refuses several runs under one category. Skipped on pull
       # requests from forks, whose token cannot write security events.
-      - name: Upload results to code scanning
-        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+      - name: Upload gitleaks (history) to code scanning
+        if: always() && hashFiles('.security/gitleaks-history.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
-          sarif_file: .security
-          category: scanners
+          sarif_file: .security/gitleaks-history.sarif
+          category: gitleaks-history
+      - name: Upload gitleaks (tree) to code scanning
+        if: always() && hashFiles('.security/gitleaks-tree.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: .security/gitleaks-tree.sarif
+          category: gitleaks-tree
+      - name: Upload OSV-Scanner to code scanning
+        if: always() && hashFiles('.security/osv.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: .security/osv.sarif
+          category: osv-scanner
+      - name: Upload Checkov to code scanning
+        if: always() && hashFiles('.security/checkov.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: .security/checkov.sarif
+          category: checkov
 
   codeql:
     name: CodeQL (${{ matrix.language }})

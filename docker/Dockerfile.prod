@@ -200,7 +200,6 @@ COPY --from=builder /app/apps/api/drizzle ./apps/api/drizzle
 # (start-with-check.sh step 4). Without this copy, the container starts unable to
 # migrate and the API comes up against an outdated schema.
 COPY --from=builder /app/apps/api/scripts ./apps/api/scripts
-COPY --from=builder /app/apps/api/migrations ./apps/api/migrations
 COPY --from=builder /app/apps/api/kitsuden.config.ts ./apps/api/kitsuden.config.ts
 COPY --from=builder /app/apps/api/drizzle.config.ts ./apps/api/drizzle.config.ts
 COPY --from=builder /app/apps/api/package.json ./apps/api/

@@ -48,7 +48,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { messageOf, type EffectStore } from "@kitsuden/engine";
@@ -223,19 +223,25 @@ interface Startup {
 
 let cachedStartup: Startup | null = null;
 
-/** Is there a Node >= 22 with `--permission`? It is checked once. */
-function nodeWithPermissions(): string | null {
+/**
+ * Is there a Node >= 22 with `--permission`? It is checked once. Returns its
+ * ABSOLUTE path: the child starts with an empty environment (no PATH), so a bare
+ * `node` is found here but not when the child is spawned (Linux, Docker).
+ */
+export function nodeWithPermissions(): string | null {
   const chosenItem = process.env.KITSUDEN_SANDBOX_RUNTIME;
   if (chosenItem === "bun") return null;
   const binary = chosenItem && chosenItem !== "node" ? chosenItem : "node";
   try {
-    const r = spawnSync(binary, ["--version"], {
+    const r = spawnSync(binary, ["-p", "process.version + ' ' + process.execPath"], {
       encoding: "utf8",
       timeout: 5000,
       windowsHide: true,
     });
-    const major = Number(/^v(\d+)/.exec(String(r.stdout).trim())?.[1] ?? 0);
-    return major >= 22 ? binary : null;
+    const [version = "", ...path] = String(r.stdout).trim().split(" ");
+    const major = Number(/^v(\d+)/.exec(version)?.[1] ?? 0);
+    const executable = path.join(" ");
+    return major >= 22 && isAbsolute(executable) ? executable : null;
   } catch {
     return null;
   }
@@ -668,7 +674,7 @@ async function callMockFetch(
   );
   const r = await test.fetch({
     url: url.href,
-    method: method,
+    method,
     body: typeof args.body === "string" ? args.body : undefined,
   });
   if (r.body.length > LIMITS.maxResponse) throw new CallError("Response too large");
@@ -789,7 +795,7 @@ export async function executeSandbox(input: SandboxInput): Promise<SandboxResult
             String(args.path ?? "")
           );
         }
-        send({ t: "response", id: m.id, ok: true, value: value });
+        send({ t: "response", id: m.id, ok: true, value });
       } catch (err) {
         send({ t: "response", id: m.id, ok: false, error: messageOf(err) });
       }
