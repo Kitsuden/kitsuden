@@ -176,10 +176,11 @@ RUN --mount=type=cache,target=/app/packages/admin/.vite \
 # Rebuild sharp for Alpine/musl
 RUN SHARP_IGNORE_GLOBAL_LIBVIPS=1 pnpm rebuild sharp
 
-# esbuild ships a Go binary (one per version) that only the build uses. Removed
+# esbuild ships a Go binary (one per version, plus the copy its install script puts
+# in esbuild/bin) that only the build uses. Removed
 # here, before node_modules is copied to the runtime image: Trivy flags its old Go
 # standard library, and nothing at runtime runs it.
-RUN rm -rf /app/node_modules/.pnpm/@esbuild+*
+RUN rm -rf /app/node_modules/.pnpm/@esbuild+* /app/node_modules/.pnpm/esbuild@*/node_modules/esbuild/bin/esbuild
 
 # ===================================================================
 # STAGE 4: API Runtime - Minimal image for backend
