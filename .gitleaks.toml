@@ -5,8 +5,12 @@
 useDefault = true
 
 [[allowlists]]
-description = "Reports and downloaded scanners, never committed"
-paths = ['''^\.security/''', '''(^|/)node_modules/''']
+description = "Reports, downloaded scanners and build output, never committed"
+paths = [
+  '''^\.security/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)(dist|dist-node|build|\.svelte-kit)/''',
+]
 
 [[allowlists]]
 description = "Public HKDF salt: the entropy comes from the master key"
