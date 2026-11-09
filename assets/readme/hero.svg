@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 592" width="1200" height="592" role="img" aria-labelledby="t d">
+<title id="t">Kitsuden</title>
+<desc id="d">Kitsuden: the JS backend where you declare a model once and your agents can use it, with permissions and human approval. An agent framework decides what to do and a durable queue decides when; Kitsuden decides whether an agent may do it at all, on whose behalf, and who signs off. Install with ./install.sh (Windows: install.ps1).</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<rect x="1" y="1" width="1198" height="590" rx="28" fill="#0f1520" stroke="#2a3446" stroke-width="2"/>
+<text class="s" x="56" y="104" font-size="60" fill="#f1f5f9" font-weight="800">Kitsuden</text>
+<rect x="844" y="64" width="300" height="56" rx="14" fill="#161e2c" stroke="#2a3446" stroke-width="2"/>
+<text class="m" x="866" y="100" font-size="22" fill="#f1f5f9"><tspan fill="#ff8a4c">$</tspan> ./install.sh</text>
+<text class="s" x="1144" y="146" font-size="20" fill="#a8b3c4" text-anchor="end">Windows: install.ps1</text>
+<text class="s" x="56" y="156" font-size="25" fill="#f1f5f9">The JS backend where you declare a model once and your agents</text>
+<text class="s" x="56" y="190" font-size="25" fill="#f1f5f9">can use it, with permissions and human approval.</text>
+<line x1="56" y1="222" x2="1144" y2="222" stroke="#2a3446" stroke-width="2"/>
+<rect x="56.0" y="248" width="346.7" height="196" rx="18" fill="#161e2c" stroke="#2a3446" stroke-width="2"/>
+<rect x="80.0" y="264" width="48" height="6" rx="3" fill="#60a5fa"/>
+<text class="s" x="80.0" y="304" font-size="22" fill="#a8b3c4">An agent framework</text>
+<text class="s" x="80.0" y="348" font-size="27" fill="#f1f5f9" font-weight="700">decides what</text>
+<text class="s" x="80.0" y="416" font-size="20" fill="#a8b3c4">the layer you already have</text>
+<rect x="426.7" y="248" width="346.7" height="196" rx="18" fill="#161e2c" stroke="#2a3446" stroke-width="2"/>
+<rect x="450.7" y="264" width="48" height="6" rx="3" fill="#a78bfa"/>
+<text class="s" x="450.7" y="304" font-size="22" fill="#a8b3c4">A durable queue</text>
+<text class="s" x="450.7" y="348" font-size="27" fill="#f1f5f9" font-weight="700">decides when</text>
+<text class="s" x="450.7" y="416" font-size="20" fill="#a8b3c4">the layer you already have</text>
+<rect x="797.3" y="248" width="346.7" height="196" rx="18" fill="#161e2c" stroke="#ff8a4c" stroke-width="3"/>
+<rect x="821.3" y="264" width="48" height="6" rx="3" fill="#ff8a4c"/>
+<text class="s" x="821.3" y="304" font-size="22" fill="#f1f5f9" font-weight="700">Kitsuden</text>
+<text class="s" x="821.3" y="344" font-size="27" fill="#f1f5f9" font-weight="700">decides whether,</text>
+<text class="s" x="821.3" y="378" font-size="27" fill="#f1f5f9" font-weight="700">on whose behalf,</text>
+<text class="s" x="821.3" y="412" font-size="27" fill="#f1f5f9" font-weight="700">and who signs off</text>
+<rect x="56" y="474" width="211" height="46" rx="23" fill="#0f1520" stroke="#2a3446" stroke-width="2"/>
+<text class="s" x="76" y="504" font-size="20" fill="#f1f5f9">MCP at <tspan font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" fill="#ff8a4c">/api/mcp</tspan></text>
+<rect x="281" y="474" width="362" height="46" rx="23" fill="#0f1520" stroke="#2a3446" stroke-width="2"/>
+<text class="s" x="301" y="504" font-size="20" fill="#f1f5f9">scoped keys <tspan font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" fill="#ff8a4c">kitsuden_agent_*</tspan></text>
+<rect x="657" y="474" width="167" height="46" rx="23" fill="#0f1520" stroke="#2a3446" stroke-width="2"/>
+<text class="s" x="677" y="504" font-size="20" fill="#f1f5f9">Postgres RLS</text>
+<rect x="838" y="474" width="135" height="46" rx="23" fill="#0f1520" stroke="#2a3446" stroke-width="2"/>
+<text class="s" x="858" y="504" font-size="20" fill="#f1f5f9">audit log</text>
+<text class="s" x="56" y="562" font-size="20" fill="#a8b3c4">Bun · Hono · Drizzle · PostgreSQL 16 · SvelteKit</text>
+<text class="m" x="1144" y="562" font-size="20" fill="#a8b3c4" text-anchor="end">MIT · v0.9.0-beta</text>
+</svg>

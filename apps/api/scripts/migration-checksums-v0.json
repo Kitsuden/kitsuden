@@ -1,0 +1,309 @@
+{
+  "0000_amusing_lethal_legion.sql": ["81d7b924ac13b963", "bad9d7a363fc44c8"],
+  "0000_initial.sql": [
+    "0070c63b4cb56518",
+    "22a16540d2014a8c",
+    "6d636e617349d417",
+    "138c979eab538672",
+    "c76fbc0b10e46214",
+    "614d44dded4319fd"
+  ],
+  "0000_models.sql": ["be194cdcb14ac6ec", "bfe29178ad08d75e"],
+  "0001_calculated_fields.sql": ["d8cb82069ee0823b", "ec2c43c3bb9a3559"],
+  "0001_rename_tables.sql": ["486e27990dced859", "64818fc78a6aa43b"],
+  "0001_steady_the_executioner.sql": ["71498847f37b544c", "90c3b2bc5c27d6eb"],
+  "0002_add_blocks_column.sql": [
+    "c472df2afe589daf",
+    "e4e4bb742794ab50",
+    "5449103fdb3e9861",
+    "b264669cb44c784f"
+  ],
+  "0002_agent_identities.sql": ["03715da9edfce875", "d1f0ba8d5e20451f"],
+  "0002_block_vocabulary.sql": [
+    "b97088181e46ecad",
+    "c878b281417ae65d",
+    "6c83ebdbaeb1e064",
+    "49d49c2e04761023"
+  ],
+  "0003_habitat_map_and_stat_compare.sql": [
+    "e25871e92c19e4a7",
+    "6ca2c2d6761d3c12",
+    "58cd3b90b1aaad09",
+    "a3b1584b9669ce79"
+  ],
+  "0004_dex_index.sql": [
+    "e48ac2eb28af4d35",
+    "ce3361ee7586e9a0",
+    "36c319931e734b74",
+    "a3f6e924bfe8ff1b"
+  ],
+  "0005_affinity_calculator.sql": [
+    "8b6d71e8aecb3e32",
+    "347f741db12adecb",
+    "94baa6f13990b0ef",
+    "7e240c993b4f4c15"
+  ],
+  "0006_event_search_and_race_planner.sql": [
+    "ce61b3034eb6c981",
+    "de040f941b0f4ec6",
+    "a2273d387c2a4615",
+    "2eea141169b898ad"
+  ],
+  "0007_card_games.sql": [
+    "3b37abb07bcbe5d0",
+    "5501e7dedf8e4f76",
+    "0f8a60152a26d5ff",
+    "f48ef603c343a701"
+  ],
+  "0008_embedded_deck.sql": [
+    "299297bb58a828a3",
+    "fed609abb1c66549",
+    "9b47efc61696f82c",
+    "d30aecff378db01b"
+  ],
+  "0009_block_type_without_enum.sql": [
+    "fa1c6ab27ce9220c",
+    "fef13831b4cfb739",
+    "31a9650b2858b2b5",
+    "d6c8aafb9f08c9fe"
+  ],
+  "0009_installed_kons.sql": ["147dc6d76ab3dab3", "5f35eb67f0cc0b09"],
+  "001_migrate_from_ai_memories.sql": ["7527dd7ec13d855a", "c6b748aacc99034d"],
+  "0015_actions_unification.sql": [
+    "52247e50e1611c7b",
+    "5a8c6b8a4c301d73",
+    "cf2cbae448cd3b11",
+    "9b0ad1914c6e20c1"
+  ],
+  "0020_agent_identities_persona.sql": [
+    "e4ffd015aeee2e8e",
+    "8dbb64fbd5ef06d7",
+    "f9fe042bc1738a9d",
+    "ee61c5f14aecaa81"
+  ],
+  "0021_agent_memory.sql": [
+    "fc863fbbb88f9620",
+    "d6ff0e1358b31f3d",
+    "50a38351b8a298fd",
+    "2ff408707e1d45c0"
+  ],
+  "0022_agent_traces.sql": [
+    "14dbf586ecad30ea",
+    "60b3a571f9d75746",
+    "c5d200b8810e60c9",
+    "0d11fa0a4905a0f0"
+  ],
+  "0022_critical_features.sql": [
+    "8fe6de2f5d53b0ce",
+    "3c4277452bec56ea",
+    "a2167fef438b4bc1",
+    "f24877a0b3cae616"
+  ],
+  "0023_academy_indexes.sql": [
+    "b422e762e612fc10",
+    "082f5242119530ff",
+    "73fb69595beb2cd4",
+    "fe9f65e96bce20d0"
+  ],
+  "0024_brain_notes.sql": ["da3a197264f7d8cd", "e2a9c5c897fceec5"],
+  "0025_agent_api_keys_argon2id.sql": [
+    "b6efc74c0518a633",
+    "bea9eddafc728fac",
+    "e4e1812cb87928b6",
+    "ccf9bde8ed374017"
+  ],
+  "0026_brain_sources.sql": [
+    "6a321ffb1309cf7a",
+    "57e29c1e3f68dd36",
+    "328a89446b582394",
+    "6d1629a10f68a4b8"
+  ],
+  "0027_rename_usagibase_tables.sql": [
+    "b434208711e14d6e",
+    "cc7eb6355ed8b8c1",
+    "153dbef8a0c5c6d3",
+    "4b9a688c9a63b35f"
+  ],
+  "0028_rename_facets_to_pyons.sql": [
+    "3d9a7f0e9ab2e019",
+    "d78e1e0b34fe651b",
+    "c1a8acf2b44ae61f",
+    "5f2e8351f4c11a13"
+  ],
+  "0029_rename_kitsuden_and_kons.sql": [
+    "c5558fdeb2f6379c",
+    "8ca5a2c22d838451",
+    "3428bf2ccbdf5b9e",
+    "62b3c2aec2bab971"
+  ],
+  "0030_rename_formulas_to_dataset_kpis.sql": [
+    "ad849ca4809ebba2",
+    "2632e6ae75209586",
+    "d9bec570c5e9beeb",
+    "fc21f0e21e425edc"
+  ],
+  "0031_fix_schema_drift.sql": [
+    "2b62dd5c65e498ec",
+    "db7aee67de23916c",
+    "f69498aa383acbe5",
+    "f3b17799a8a52f0e"
+  ],
+  "0032_links.sql": [
+    "8b8363893226f8b0",
+    "c8e5796cdd1377ce",
+    "c8a92a0f3e377dcb",
+    "ff73d8b85d6a9aff"
+  ],
+  "0033_dataset_provenance.sql": [
+    "2c9f39f35839e35b",
+    "24379b59d3984de7",
+    "c368364db53401ed",
+    "2e23ec2badfaadaa"
+  ],
+  "0034_dataset_search_index.sql": [
+    "de9aeb709b4491cc",
+    "9da831eee3a2c030",
+    "a20e80e066461770",
+    "9e9e121fe7e5c973"
+  ],
+  "0035_core_schema_drift.sql": [
+    "e79c572de0e45c2f",
+    "9322796a5ceedb8c",
+    "f0d5d0d60587209d",
+    "a2f36d01cea52e54"
+  ],
+  "0036_missing_auth_tables.sql": [
+    "39c34a2e10006aad",
+    "d2557e630f892b97",
+    "0c3ef2c7cb78bd4c",
+    "31175ed2e41a9ca8"
+  ],
+  "0037_declared_tables_without_migration.sql": [
+    "f6e3daed91a1551d",
+    "2c879232e87d2734",
+    "7a3c06a581ef771c",
+    "222ec85765966673"
+  ],
+  "0038_auth_sessions_up_to_date.sql": [
+    "8edf84a6d2afd8d6",
+    "008dd10db0cc3022",
+    "7e628af085389b38",
+    "64683ea15fc9790d"
+  ],
+  "0039_kitsuden_config.sql": [
+    "68721c7d828c7f4c",
+    "33f3d25e9b3cbcdf",
+    "67f0672a883724c9",
+    "544ee5d2644e93da"
+  ],
+  "0040_retire_kitsuden_config.sql": [
+    "e24e8fdf030315a2",
+    "cd8bd8d6505cb0f8",
+    "484d7dac182ffba6",
+    "92d14fd84765d4b4"
+  ],
+  "0041_existing_admins_verified.sql": [
+    "e6b302dd6d85d155",
+    "21c42130c93a6424",
+    "dd8ea2953c5cd1da",
+    "3d5d789453ffe2bf"
+  ],
+  "0042_dataset_search_without_content.sql": [
+    "a557752c0c387665",
+    "c7b11d6d7f25bd28",
+    "fee48ee103fbc56b",
+    "5c8c2f0365067c24"
+  ],
+  "0043_dataset_entries_in_order.sql": [
+    "f4a743944ef36f74",
+    "1022f657e33645ca",
+    "705cc0dc2261d3c9",
+    "cf13fc62f443cb4b"
+  ],
+  "0044_agent_audit_without_agent.sql": [
+    "8d9739f8b86492c0",
+    "ed5c788882d1b4dd",
+    "5784c99b33103dcb",
+    "246ee220d9ca4615"
+  ],
+  "0045_brain_notes_vector_from_jsonb.sql": [
+    "c06eddb8e878b0ae",
+    "dc62b0f45ac74f7c",
+    "365dd722332da8aa",
+    "fb2dda45a04d35d0"
+  ],
+  "0046_postgres_idempotency.sql": [
+    "5876e7c3abb86e26",
+    "a8c2a50a082a6edc",
+    "61dd6dfcacf2de3a",
+    "5657803bb315d5d8"
+  ],
+  "0047_agent_permissions_and_quotas.sql": [
+    "b4fc4a65e30d93d2",
+    "6a96f002c7ac3ef7",
+    "09ff19125c40cfd9",
+    "833c8e329abfd33c"
+  ],
+  "0048_agent_human_approval.sql": [
+    "cab36feaa6027ceb",
+    "95b6fc8722a31a60",
+    "c1d20ce4fc11adf7",
+    "6145aaf570b2066d"
+  ],
+  "0049_agent_signer.sql": [
+    "7373094e0cb453d1",
+    "e41386ffb5fff9c6",
+    "40256334436b5bbf",
+    "07d6544faf7ae2ad"
+  ],
+  "0050_proposal_files.sql": [
+    "ce641965e7a341c4",
+    "e3b4c1bb02d7b92b",
+    "c43f3d4474b853ce",
+    "f88cc24a164bed0d"
+  ],
+  "0051_agent_memory.sql": ["22186f108f2275f5", "a0e30cce8afc9653"],
+  "0052_mcp_settings_and_savings.sql": [
+    "fbd2e22fdc32c851",
+    "90c078d122757fad",
+    "60f9583c5f0b38c3",
+    "b06884444f21f85e"
+  ],
+  "0053_code_promotion.sql": [
+    "7badc78f5a512695",
+    "b5d30625eb123763",
+    "4c57a93ad4b58a3d",
+    "18aecb66d29103bf"
+  ],
+  "0055_oauth_for_mcp.sql": [
+    "b226e66200ec375e",
+    "5dde280fa87bfa03",
+    "b1511023d8ab3c40",
+    "9c25480d4953833d"
+  ],
+  "0056_postgres_queue.sql": [
+    "4270405e19e976db",
+    "aa775b1bbfcf56ea",
+    "912293a9115a0b68",
+    "095d826cd286feeb"
+  ],
+  "0057_request_traces.sql": [
+    "a77ed7c2979bca90",
+    "5260e76abc880414",
+    "deaa3669be48672c",
+    "fd72ad4d5e7852d6"
+  ],
+  "0058_agent_notices.sql": [
+    "581860dd903a5038",
+    "e8c837c3ea165f10",
+    "9011ce6eff377ef3",
+    "8adeb0557e90b581"
+  ],
+  "0059_injection_classifier.sql": [
+    "e51816e1a785be5a",
+    "175e8e6079669021",
+    "3507198cc4645ec0",
+    "37fba7bf61ec9069"
+  ],
+  "init.sql": ["9bac1b9ecc41ee7f", "dcd8c9ae20ef4879"]
+}

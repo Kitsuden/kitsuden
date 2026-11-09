@@ -1,0 +1,89 @@
+# ===================================================================
+# Kitsuden .dockerignore
+# Excludes files not needed in the Docker build context
+# ===================================================================
+
+# Dependencies (reinstalled inside Docker)
+**/node_modules
+
+# Build outputs (rebuilt inside Docker)
+**/dist
+**/dist-*
+**/build
+**/.astro
+**/.next
+**/.turbo
+**/.svelte-kit
+**/*.tsbuildinfo
+
+# Git
+.git
+.gitattributes
+
+# Environment files, in any folder. The examples do go in.
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+# Keys, dumps and archives, in any folder
+**/*.pem
+**/*.key
+**/*.p12
+**/*.dump
+**/*.sql.gz
+
+# Logs, test output and reports
+**/*.log
+**/*.err
+**/coverage
+**/coverage*.txt
+**/test-results*
+playwright-report
+apps/api/.schemathesis
+apps/api/evals
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+**/__pycache__
+
+# Local tool state. At the end on purpose: in .dockerignore the last matching
+# rule wins, and these folders could hold .env.example files.
+.claude/**
+.cursor/**
+.kitsuden/**
+apps/api/data/**
+apps/api/scripts/tmp
+
+# Documentation and loose files in the repository root (not used at runtime)
+docs
+/*.md
+/*.mjs
+/*.cjs
+/*.html
+/*.txt
+/*.sql
+
+# Compiled .js/.d.ts artifacts next to the sources
+apps/api/src/**/*.js
+apps/api/src/**/*.d.ts
+apps/api/src/**/*.js.map
+apps/api/src/**/*.d.ts.map
+packages/admin/src/**/*.js
+packages/admin/src/**/*.d.ts
+packages/admin/src/**/*.js.map
+packages/admin/src/**/*.d.ts.map
+
+# Windows scripts
+scripts/*.ps1
+scripts/*.bat
+
+# Kons: the image installs the ones in KITSUDEN_KONS from the additional build
+# context `kons` (docker/install-kons.mjs), so it does not depend on what is in
+# the working tree. packages/kons/package.json does go in: it is the workspace
+# root of the install folder.
+packages/kons/kon-*
+kitsuden.kons.json

@@ -1,0 +1,69 @@
+---
+/** `cards`: a grid of cards with image, title, text, tags and link */
+import { imageSrc } from "../lib/media";
+import { isExternal, safeHref } from "../lib/text";
+import { oneOf, type BlockProps } from "./types";
+
+type Card = { id?: unknown; title?: unknown; description?: unknown; mediaId?: unknown; imageUrl?: unknown; linkUrl?: unknown; tags?: unknown };
+const props = Astro.props as BlockProps;
+const data = props as Record<string, unknown>;
+const edit = props.block?.editable;
+const cards = (Array.isArray(data.cards) ? (data.cards as Card[]) : [])
+  .filter((card) => card && typeof card === "object" && typeof card.title === "string" && card.title.trim())
+  .map((card, i) => ({
+    i,
+    title: String(card.title),
+    description: typeof card.description === "string" ? card.description : "",
+    image: imageSrc(card.mediaId, "medium") ?? imageSrc(card.imageUrl, "medium"),
+    href: safeHref(card.linkUrl),
+    tags: Array.isArray(card.tags) ? card.tags.filter((tag): tag is string => typeof tag === "string").slice(0, 6) : [],
+  }));
+const columns = Number(data.columns) >= 1 && Number(data.columns) <= 4 ? Number(data.columns) : 3;
+const variant = oneOf(data.variant, ["default", "horizontal", "compact"] as const, "default");
+---
+
+{
+  cards.length > 0 && (
+    <ul class:list={["cards", `cards--${variant}`]} style={`--columns:${columns}`} role="list">
+      {cards.map((card) => (
+        <li class="card">
+          {card.image && variant !== "compact" && <img src={card.image} alt="" loading="lazy" decoding="async" />}
+          <div class="card__body">
+            <h3 data-inti-field={edit ? `cards.${card.i}.title` : undefined}>
+              {card.href ? (
+                <a href={card.href} rel={isExternal(card.href) ? "noopener" : undefined}>
+                  {card.title}
+                </a>
+              ) : (
+                card.title
+              )}
+            </h3>
+            {card.description && <p data-inti-field={edit ? `cards.${card.i}.description` : undefined}>{card.description}</p>}
+            {card.tags.length > 0 && (
+              <p class="card__tags">
+                {card.tags.map((tag) => (
+                  <span class="tag">{tag}</span>
+                ))}
+              </p>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+<style>
+  .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.25rem; grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); }
+  @media (max-width: 48rem) { .cards { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; }
+  .cards--horizontal .card { flex-direction: row; }
+  .cards--horizontal .card img { width: 40%; }
+  .card img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+  .card__body { padding: 1rem 1.25rem 1.25rem; }
+  .card h3 { margin: 0 0 0.4rem; font-size: 1.1rem; }
+  .card h3 a { color: inherit; text-decoration: none; }
+  .card h3 a:hover { text-decoration: underline; }
+  .card p { margin: 0; color: var(--muted); }
+  .card__tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.75rem !important; }
+</style>

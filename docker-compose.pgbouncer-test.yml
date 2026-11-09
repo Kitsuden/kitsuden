@@ -1,0 +1,42 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Kitsuden — PgBouncer in TRANSACTION mode, for TESTING only
+#
+# It sits in front of the TESTS database (docker-compose.test.yml, network
+# kitsuden_test_net) and listens on 127.0.0.1:6434. Then:
+#
+#   pnpm test:db:up
+#   docker compose -f docker-compose.pgbouncer-test.yml --env-file .env.test up -d
+#   cd apps/api && bun --no-env-file scripts/test-pgbouncer.ts
+#
+# Its own project and network: a `down` here does not touch anything in production.
+# ═══════════════════════════════════════════════════════════════════════════
+
+name: kitsuden-test-pgbouncer
+
+services:
+  kitsuden_test_pgbouncer:
+    # Pinned version (1.24.x): it supports protocol-level prepared statements
+    # in transaction mode (`MAX_PREPARED_STATEMENTS`), since 1.21.
+    image: edoburu/pgbouncer:v1.24.1-p1
+    container_name: kitsuden_test_pgbouncer
+    environment:
+      DB_HOST: kitsuden_test_db
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:-kitsuden}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-kitsuden_test_secure_change_me}
+      DB_NAME: ${POSTGRES_DB:-kitsuden_test}
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "200"
+      DEFAULT_POOL_SIZE: "5"
+      # 0 = no support for named prepared statements (the classic behavior); the
+      # script tests with and without. Kitsuden does not use them (see docs/install/pgbouncer.md).
+      MAX_PREPARED_STATEMENTS: "${PGBOUNCER_MAX_PREPARED:-0}"
+    ports:
+      - "127.0.0.1:${PGBOUNCER_PORT:-6434}:5432"
+    networks:
+      - kitsuden_test_net
+
+networks:
+  kitsuden_test_net:
+    external: true

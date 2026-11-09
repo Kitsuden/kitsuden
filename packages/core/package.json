@@ -1,0 +1,29 @@
+{
+  "name": "@kitsuden/core",
+  "version": "0.9.0-beta",
+  "description": "Kitsuden Core — Engine infrastructure extensions (vector-search, calculated-fields types)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/core#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "echo 'No build step needed'"
+  },
+  "dependencies": {
+    "@kitsuden/shared": "workspace:*",
+    "@kitsuden/engine": "workspace:*"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.34.5"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@kitsuden/sdk-react",
+  "version": "0.9.0-beta",
+  "description": "React bindings for Kitsuden. React is a peerDependency: the core SDK stays framework-agnostic.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/sdk-react"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/sdk-react#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "keywords": [
+    "kitsuden",
+    "react",
+    "hooks",
+    "sdk"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@kitsuden/sdk": "workspace:*",
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@kitsuden/sdk": "workspace:*",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "typescript": "^5.7.0"
+  }
+}

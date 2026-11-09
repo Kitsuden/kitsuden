@@ -1,0 +1,139 @@
+{
+  "$schema": "../../schemas/kon-schema.json",
+  "id": "kon-blocks",
+  "name": "Page Builder",
+  "description": "Lego-style block system for dynamic page layouts with drag & drop. Includes Hero, Text, Image, Video, Grid, Cards, Quote, CTA, Embed, Divider, and Spacer blocks.",
+  "version": "1.0.0",
+  "maturity": "stable",
+  "type": "core-den",
+  "category": "core",
+  "order": 2,
+  "core": true,
+  "defaultEnabled": true,
+  "layer": 3,
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "license": "MIT",
+  "icon": "Layout",
+  "mount": {
+    "path": "/api/page-builder",
+    "router": "pageBuilderRoutes"
+  },
+  "exports": {
+    "routes": "./index.ts",
+    "schema": "./blocks.schema.ts"
+  },
+  "database": {
+    "tables": ["block_pages", "block_contents", "block_templates"],
+    "enums": ["block_page_status"]
+  },
+  "admin": {
+    "category": "core",
+    "order": 2,
+    "icon": "Layout",
+    "defaultView": "pages",
+    "views": [
+      {
+        "id": "pages",
+        "type": "custom",
+        "title": "Pages",
+        "icon": "FileText"
+      },
+      {
+        "id": "templates",
+        "type": "grid",
+        "title": "Templates",
+        "table": "block_templates",
+        "icon": "Layout"
+      }
+    ]
+  },
+  "features": [
+    "pages-crud",
+    "blocks-crud",
+    "drag-drop-reorder",
+    "block-templates",
+    "public-render",
+    "visibility-scheduling",
+    "seo-metadata",
+    "responsive-grid",
+    "responsive-images",
+    "focal-point-cropping"
+  ],
+  "blockTypes": [
+    {
+      "type": "hero",
+      "name": "Hero Section",
+      "category": "layout"
+    },
+    {
+      "type": "text",
+      "name": "Text",
+      "category": "content"
+    },
+    {
+      "type": "image",
+      "name": "Image",
+      "category": "media"
+    },
+    {
+      "type": "video",
+      "name": "Video",
+      "category": "media"
+    },
+    {
+      "type": "grid",
+      "name": "Grid Layout",
+      "category": "layout"
+    },
+    {
+      "type": "cards",
+      "name": "Cards",
+      "category": "content"
+    },
+    {
+      "type": "quote",
+      "name": "Quote",
+      "category": "content"
+    },
+    {
+      "type": "cta",
+      "name": "Call to Action",
+      "category": "marketing"
+    },
+    {
+      "type": "embed",
+      "name": "Embed",
+      "category": "media"
+    },
+    {
+      "type": "divider",
+      "name": "Divider",
+      "category": "layout"
+    },
+    {
+      "type": "spacer",
+      "name": "Spacer",
+      "category": "layout"
+    },
+    {
+      "type": "custom",
+      "name": "Custom Component",
+      "category": "advanced"
+    }
+  ],
+  "dependencies": {
+    "kons": ["kon-media"],
+    "core": ["auth"]
+  },
+  "compatibility": {
+    "kitsuden": ">=0.8.0"
+  },
+  "documentation": {
+    "readme": "./README.md",
+    "examples": "./examples"
+  },
+  "schema": {
+    "entry": "./blocks.schema.ts",
+    "strategy": "drizzle"
+  }
+}

@@ -1,0 +1,76 @@
+---
+/**
+ * One block: its component, or the grid of nested blocks, or (in dev only) a
+ * placeholder that names the missing type.
+ */
+import { BLOCKS } from "../blocks";
+import type { BlockContext } from "../blocks/types";
+
+interface Props {
+  type: string;
+  content: Record<string, unknown>;
+  context: BlockContext;
+}
+
+const { type, content, context } = Astro.props;
+const Component = BLOCKS[type];
+
+/**
+ * Grid items are `{ id, columnSpan, content }`. The schema does not store the
+ * nested type, so it is taken from `item.type` when present and otherwise
+ * guessed from the keys (the editor writes the same shapes as top-level blocks).
+ */
+type GridItem = { id?: unknown; type?: unknown; content?: unknown };
+const guessType = (c: Record<string, unknown>): string => {
+  if ("headline" in c) return "hero";
+  if ("quote" in c) return "quote";
+  if ("buttonLabel" in c) return "cta";
+  if ("cards" in c) return "cards";
+  if ("mediaId" in c) return "image";
+  if ("code" in c) return "embed";
+  return "text";
+};
+const items =
+  type === "grid" && Array.isArray(content.items)
+    ? (content.items as GridItem[])
+        .filter((item) => item && typeof item === "object" && item.content && typeof item.content === "object")
+        .map((item) => {
+          const inner = item.content as Record<string, unknown>;
+          return {
+            type: typeof item.type === "string" ? item.type : guessType(inner),
+            content: inner,
+          };
+        })
+    : [];
+const columns = Math.min(4, Math.max(1, Number(content.columns) || 2));
+const gap = { sm: "0.75rem", md: "1.5rem", lg: "2.5rem" }[String(content.gap)] ?? "1.5rem";
+// Nested blocks are rendered, but never editable inline: they have no row id
+const nested: BlockContext = { ...context, isFirst: false, editable: false };
+---
+
+{Component && <Component {...content} block={context} />}
+{
+  type === "grid" && items.length > 0 && (
+    <div class="grid" style={`--columns:${columns};--gap:${gap}`}>
+      {items.map((item) => (
+        <div class="grid__item">
+          <Astro.self type={item.type} content={item.content} context={nested} />
+        </div>
+      ))}
+    </div>
+  )
+}
+{
+  !Component && type !== "grid" && import.meta.env.DEV && (
+    <div class="block-missing" role="note">
+      No component for block type <code>{type}</code>. Add <code>src/blocks/{type}.astro</code> and register it in <code>src/blocks/index.ts</code>.
+    </div>
+  )
+}
+
+<style>
+  .grid { display: grid; gap: var(--gap); grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); }
+  .grid__item { min-width: 0; }
+  @media (max-width: 48rem) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .block-missing { padding: 1rem; border: 2px dashed var(--border); border-radius: var(--radius); color: var(--muted); font-size: 0.9rem; }
+</style>

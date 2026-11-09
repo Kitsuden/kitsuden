@@ -1,0 +1,24 @@
+{
+  "name": "@kitsuden/kons",
+  "version": "0.9.0-beta",
+  "description": "Installed kons (copies made by `kitsuden kon add` from the kitsuden-kons repo). This folder is the install target; it holds no kon in the Kitsuden repository.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/kons"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/kons#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build step needed'"
+  },
+  "dependencies": {
+    "@kitsuden/shared": "workspace:*",
+    "@kitsuden/engine": "workspace:*"
+  }
+}

@@ -1,0 +1,34 @@
+---
+/** `callout` (admin editor): a highlighted note. `content` is Markdown. */
+import { fieldAttributes } from "../lib/inti-markup";
+import { textToHtml } from "../lib/text";
+import { oneOf, pick, type BlockProps } from "./types";
+
+const props = Astro.props as BlockProps;
+const data = props as Record<string, unknown>;
+const title = pick(data, "title");
+const html = textToHtml(data.content, "markdown");
+const variant = oneOf(data.variant, ["info", "warning", "success", "danger", "tip"] as const, "info");
+const role = variant === "warning" || variant === "danger" ? "alert" : "note";
+---
+
+{
+  (title || html) && (
+    <aside class:list={["callout", `callout--${variant}`]} role={role}>
+      {title && <p class="callout__title" {...fieldAttributes(props.block?.editable, title.key)}>{title.value}</p>}
+      {html && <div class="prose" set:html={html} />}
+    </aside>
+  )
+}
+
+<style>
+  .callout { padding: 1rem 1.25rem; border-radius: var(--radius); border: 1px solid var(--callout, var(--border)); background: color-mix(in srgb, var(--callout, var(--accent)) 10%, transparent); }
+  .callout--info { --callout: #3b82f6; }
+  .callout--tip { --callout: #8b5cf6; }
+  .callout--success { --callout: #16a34a; }
+  .callout--warning { --callout: #d97706; }
+  .callout--danger { --callout: #dc2626; }
+  .callout__title { font-weight: 700; margin: 0 0 0.35rem; }
+  .callout .prose :global(> :first-child) { margin-top: 0; }
+  .callout .prose :global(> :last-child) { margin-bottom: 0; }
+</style>

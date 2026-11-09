@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "packages/core/*"
+  # Kons INSTALLED with `kitsuden kon add` (copies from the kitsuden-kons repo,
+  # git-ignored). Empty in a fresh clone: the core needs no kon.
+  - "packages/kons/*"
+  # Starters that belong to this repository are named `kitsuden-starter-*`.
+  # Any other folder under packages/starters/ (a site of your own built from a
+  # copy of a starter, for instance) is NOT part of this workspace: give it its
+  # own pnpm-workspace.yaml and lockfile, so this lockfile only describes what
+  # is in the repository.
+  - "packages/starters/kitsuden-starter-*"

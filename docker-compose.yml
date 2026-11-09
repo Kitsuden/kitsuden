@@ -1,0 +1,542 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Kitsuden — Docker Compose (production stack)
+#
+#   docker compose -f docker-compose.yml build kitsuden_api kitsuden_admin
+#   docker compose -f docker-compose.yml up -d
+#
+# The API and panel images are built from this repository: nothing is pulled
+# for them. Copy .env.production.example to .env first (docs/install/server.md).
+#
+# PROFILES:
+#   • (none)        Postgres + Valkey + API + panel + backups
+#   • --profile s3  adds SeaweedFS for S3-compatible storage (also: full, dev)
+#
+# NAMES: containers, volumes and the network take the prefix KITSUDEN_INSTANCE
+# (default `kitsuden`), so a second install on one machine shares nothing with the
+# first. Services reach each other by service name, which does not change.
+#
+# Local access:
+#   • API:              http://localhost:3000
+#   • Admin panel:      http://localhost:3001
+#   • SeaweedFS panel:  http://localhost:9001 (with --profile s3)
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ── NETWORK: WHY EVERYTHING LISTENS ON 127.0.0.1 ──────────────────────────────────
+#
+# Each `ports:` published on ALL interfaces (`"5432:5432"` means
+# 0.0.0.0:5432). On a laptop it does not matter; on a server with no firewall that
+# is Postgres, Valkey (no password) and the S3 storage panel open to the
+# internet, with a `docker compose up -d` and no warning.
+#
+# Now the default is 127.0.0.1: everything still works from the
+# machine itself —`localhost:3000`, `localhost:5432`— and nothing is reachable
+# from outside.
+#
+# To really publish there are two ways, both deliberate:
+#   · with TLS (the right way): `docker compose -f docker-compose.yml
+#     -f docker-compose.tls.yml up -d`, which puts Caddy on 80/443 in front.
+#   · without TLS, on purpose: `BIND_ADDRESS=0.0.0.0` in `.env`.
+#
+# Postgres and Valkey ignore BIND_ADDRESS: they stay on 127.0.0.1 whatever it
+# says, so opening the API without TLS cannot expose them as well. To reach them
+# from another machine, use an SSH tunnel.
+
+services:
+  # ═══════════════════════════════════════════════════════════════════════
+  # PostgreSQL 16 with pgvector (REQUIRED)
+  # ═══════════════════════════════════════════════════════════════════════
+  kitsuden_db:
+    image: pgvector/pgvector:pg16
+    container_name: ${KITSUDEN_INSTANCE:-kitsuden}_db_prod
+    restart: unless-stopped
+    # Point-in-time restore (KITSUDEN_PITR=on): the wrapper switches WAL archiving
+    # on and allows replication connections; with it off it only hands over to the
+    # image's own entrypoint. See docker/postgres-entrypoint.sh and
+    # docs/install/high-availability.md. Replacing `entrypoint` drops the image's
+    # CMD, hence `command`.
+    entrypoint: ["sh", "/kitsuden/postgres-entrypoint.sh"]
+    command: ["postgres"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kitsuden}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - set it in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-kitsuden_prod}
+      KITSUDEN_PITR: ${KITSUDEN_PITR:-off}
+      PG_ARCHIVE_TIMEOUT: ${PG_ARCHIVE_TIMEOUT:-300}
+    volumes:
+      - kitsuden_postgres_prod:/var/lib/postgresql/data
+      - ./docker/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql:ro
+      # Finished WAL segments (KITSUDEN_PITR=on). Empty otherwise. On the same
+      # disk as the database: copy it off the machine too (see the docs).
+      - kitsuden_wal_archive_prod:/wal-archive
+      - ./docker/postgres-entrypoint.sh:/kitsuden/postgres-entrypoint.sh:ro
+      - ./docker/wal-archive.sh:/kitsuden/wal-archive.sh:ro
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kitsuden} -d ${POSTGRES_DB:-kitsuden_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kitsuden_net_prod
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Valkey 7 (REQUIRED) - Cache, Pub/Sub, Queue backend
+  #
+  # Password required: any process on the host can reach a published port, and
+  # an open Valkey lets it read and rewrite the cache, including sessions. Use a
+  # value that needs no URL encoding (openssl rand -hex 32): it goes in REDIS_URL.
+  # ═══════════════════════════════════════════════════════════════════════
+  kitsuden_state:
+    image: valkey/valkey:7-alpine
+    container_name: ${KITSUDEN_INSTANCE:-kitsuden}_state_prod
+    restart: unless-stopped
+    # The password reaches valkey-server on stdin (`-` reads config from it), not
+    # as `--requirepass <secret>`: an argument is visible to anyone who runs `ps`
+    # on the host. `$$REDISCLI_AUTH` is expanded by the container's shell, and
+    # `printf` is a shell builtin, so no process gets it in its argv. The image's
+    # entrypoint still drops root before starting the server.
+    command:
+      - sh
+      - -c
+      - >-
+        printf 'requirepass %s\n' "$$REDISCLI_AUTH" |
+        exec docker-entrypoint.sh valkey-server
+        --maxmemory 256mb --maxmemory-policy noeviction --appendonly yes -
+    environment:
+      # Read by valkey-cli in the healthcheck and by the command above, so the
+      # password stays out of every argv
+      REDISCLI_AUTH: ${VALKEY_PASSWORD:?VALKEY_PASSWORD is required - set it in .env}
+    ports:
+      - "127.0.0.1:${VALKEY_PORT:-6379}:6379"
+    volumes:
+      - kitsuden_valkey_prod:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - kitsuden_net_prod
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # SeaweedFS (OPTIONAL) - S3-compatible storage for local development
+  #
+  # PROFILES: s3, full, dev
+  # In production it is recommended to use AWS S3, R2, or another cloud provider.
+  #
+  # Replaces MinIO: its free edition stopped being maintained (no official
+  # images since October 2025, repository archived in April 2026).
+  # The variables are the same —S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET— and
+  # the API does not change: it still speaks S3 on the usual port.
+  #
+  # The startup is in docker/seaweedfs-startup.sh: it writes the S3
+  # identities (without them SeaweedFS lets anyone in), creates the bucket, grants
+  # anonymous read ONLY to that bucket for public URLs, and turns off
+  # telemetry. A separate container to create the bucket is no longer needed.
+  #
+  # Only the S3 and the panel are published. The other pieces (master, filer,
+  # volume) stay inside Docker's network.
+  # ═══════════════════════════════════════════════════════════════════════
+  kitsuden_seaweedfs:
+    # Pinned version, like Postgres and Valkey: `latest` is exactly what left
+    # MinIO frozen without anything warning
+    image: chrislusf/seaweedfs:4.47
+    container_name: ${KITSUDEN_INSTANCE:-kitsuden}_seaweedfs_prod
+    restart: unless-stopped
+    profiles: ["s3", "full", "dev"]
+    entrypoint: ["/bin/sh", "/kitsuden/startup.sh"]
+    environment:
+      # ⚠️ REQUIRED when using --profile s3/full/dev. Set in .env
+      #
+      # `:-` and not `:?` ON PURPOSE: compose interpolates ALL services,
+      # also those of a disabled profile, so with `:?` a .env without S3
+      # keys (a VPS that stores media locally) could not run ANY
+      # `docker compose`. The requirement still stands where it matters:
+      # docker/seaweedfs-startup.sh aborts without the two keys (without them
+      # SeaweedFS would let anyone in).
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-kitsuden-media}
+    ports:
+      # S3_PORT / S3_CONSOLE_PORT; MINIO_PORT / MINIO_CONSOLE_PORT remain
+      # valid so that an earlier .env does not change port
+      - "${BIND_ADDRESS:-127.0.0.1}:${S3_PORT:-${MINIO_PORT:-9000}}:8333"
+      - "${BIND_ADDRESS:-127.0.0.1}:${S3_CONSOLE_PORT:-${MINIO_CONSOLE_PORT:-9001}}:23646"
+    volumes:
+      - kitsuden_seaweedfs_prod:/data
+      - ./docker/seaweedfs-startup.sh:/kitsuden/startup.sh:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - kitsuden_net_prod
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # API - Backend (Bun + Hono) (REQUIRED)
+  #
+  # To force a build without affecting other services:
+  #   docker compose -f docker-compose.yml up -d --build kitsuden_api
+  # ═══════════════════════════════════════════════════════════════════════
+  kitsuden_api:
+    image: ${KITSUDEN_API_IMAGE:-ghcr.io/kitsuden/kitsuden/api:latest}
+    # Compose never pulls this image: it uses the one built here. It runs with the
+    # database credentials, so downloading one has to be a deliberate
+    # `docker pull` of a published release.
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
+      target: api
+      # Kons (repo kitsuden-kons): the default image holds the core only. To add
+      # kons, see docs/kons/installing.md ("Docker").
+      args:
+        KITSUDEN_KONS: ${KITSUDEN_KONS:-}
+    container_name: ${KITSUDEN_INSTANCE:-kitsuden}_api_prod
+    restart: unless-stopped
+    depends_on:
+      kitsuden_db:
+        condition: service_healthy
+      kitsuden_state:
+        condition: service_healthy
+      # SeaweedFS is optional - the API works with Local storage if it is not there
+    environment:
+      # Server
+      - NODE_ENV=production
+      - PORT=3000
+      # Database
+      # Two connections on purpose, and the difference is a security one:
+      #
+      #   ADMIN  superuser. Only to create the database, install pgvector,
+      #          migrate and create the application role. It serves no traffic.
+      #   URL    normal role. It is the one the API runs with.
+      #
+      # Postgres IGNORES RLS policies when the one querying is a superuser.
+      # Before, both were the same superuser account: the policies were
+      # applied —"RLS active on 3 tables"— and isolated nothing. Startup
+      # warned about it on the console and it was easy to miss, because everything worked.
+      #
+      # The role is created automatically at startup, with the necessary GRANTs; see
+      # docker/start-with-check.sh.
+      - DATABASE_ADMIN_URL=postgresql://${POSTGRES_USER:-kitsuden}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@${KITSUDEN_INSTANCE:-kitsuden}_db_prod:5432/${POSTGRES_DB:-kitsuden_prod}
+      - DATABASE_URL=postgresql://${APP_DB_USER:-kitsuden_app}:${APP_DB_PASSWORD:?APP_DB_PASSWORD is required - set it in .env}@${KITSUDEN_INSTANCE:-kitsuden}_db_prod:5432/${POSTGRES_DB:-kitsuden_prod}
+      # Limited role to create tables at runtime (enabling a kon from the panel, the
+      # Vault): without it the API has nothing to do that with, because startup takes
+      # the admin URL away from it. Empty if there is no DDL_DB_PASSWORD.
+      - DATABASE_DDL_URL=${DDL_DB_PASSWORD:+postgresql://${DDL_DB_USER:-kitsuden_ddl}:${DDL_DB_PASSWORD}@${KITSUDEN_INSTANCE:-kitsuden}_db_prod:5432/${POSTGRES_DB:-kitsuden_prod}}
+      # Valkey
+      - REDIS_URL=redis://:${VALKEY_PASSWORD:?VALKEY_PASSWORD is required - set it in .env}@${KITSUDEN_INSTANCE:-kitsuden}_state_prod:6379
+      # Storage Configuration (configurable via Media Library settings)
+      - DEFAULT_STORAGE_PROVIDER=${DEFAULT_STORAGE_PROVIDER:-local}
+      # SeaweedFS/S3 (used if DEFAULT_STORAGE_PROVIDER=s3; `minio` is still accepted)
+      - S3_ENDPOINT=http://${KITSUDEN_INSTANCE:-kitsuden}_seaweedfs_prod:8333
+      - S3_PUBLIC_URL=${S3_PUBLIC_URL:-http://localhost:9000}
+      # ⚠️ REQUIRED only when DEFAULT_STORAGE_PROVIDER=minio or s3 (optional for local storage)
+      # NOTE: the s3/full/dev profile does require them (see kitsuden_seaweedfs), here they are optional
+      # so that `docker compose up -d` works with the default local storage.
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-}
+      - S3_BUCKET=${S3_BUCKET:-kitsuden-media}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      # Local Storage (used if DEFAULT_STORAGE_PROVIDER=local)
+      - STORAGE_LOCAL_PATH=/app/data
+      # RELATIVE on purpose: with `http://localhost:3000/...` each
+      # uploaded file stored in the database a URL that only works from the
+      # machine itself. Behind a real domain, all the images would point to
+      # nowhere — and the URL is written into the row, so the failure
+      # survives a configuration change.
+      - STORAGE_LOCAL_URL=/media
+      # Auth
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required - set it in .env}
+      # KITSUDEN Secrets Manager (AES-256-GCM master key). Required: the API refuses
+      # to start without it (docs/install/upgrade-and-backups.md for an old install)
+      - KITSUDEN_SECRETS_KEY=${KITSUDEN_SECRETS_KEY:-}
+      # KITSUDEN Vault (dynamic schemas with real DDL, opt-in)
+      - KITSUDEN_VAULT_ENABLED=${KITSUDEN_VAULT_ENABLED:-false}
+      # ── Public URLs ──
+      #
+      # They were WRITTEN as localhost. Behind a real domain, the OAuth
+      # callbacks (GitHub, Google, Discord) and better-auth's origin
+      # check pointed to the machine of whoever opens the page, and social
+      # login stopped working without any error on the server side.
+      #
+      # Now they come from the environment. The default is still localhost
+      # so that local use does not change; the TLS overlay (docker-compose.tls.yml)
+      # derives them from KITSUDEN_DOMAIN, and in public mode startup REFUSES to
+      # continue if any still points to localhost.
+      - KITSUDEN_PUBLIC=${KITSUDEN_PUBLIC:-false}
+      - KITSUDEN_SIGNUP=${KITSUDEN_SIGNUP:-}
+      - KITSUDEN_SANDBOX_ALLOW_INTERNAL_FETCH=${KITSUDEN_SANDBOX_ALLOW_INTERNAL_FETCH:-}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
+      - ADMIN_URL=${ADMIN_URL:-http://localhost:3001}
+      # OAuth issuer for MCP. Empty = BETTER_AUTH_URL (lib/oauth/config.ts).
+      - OAUTH_ISSUER_URL=${OAUTH_ISSUER_URL:-}
+      - APP_URL=${APP_URL:-http://localhost:3001}
+      # Public site (frontend)
+      - SITE_URL=${SITE_URL:-http://localhost:4321}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001}
+      # ── Mail ──
+      #
+      # None of these reached the container: the Mailer fell back to the `log` driver
+      # and the password recovery was printed to the console. Resolution
+      # order: explicit MAIL_DRIVER → Resend if there is a key → SMTP if there is a
+      # host → log. In public mode, `log` aborts startup.
+      #
+      # MAIL_FROM has a default value on purpose: passing it EMPTY is not the
+      # same as not passing it — the Mailer uses `??`, and an empty string counts
+      # as defined, so mail would go out with no sender.
+      - MAIL_DRIVER=${MAIL_DRIVER:-}
+      - MAIL_FROM=${MAIL_FROM:-noreply@localhost}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Features
+      # Swagger off by default: it publishes the entire
+      # map of the API. To see it locally, `ENABLE_SWAGGER=true` in `.env`.
+      - ENABLE_SWAGGER=${ENABLE_SWAGGER:-false}
+      - ENABLE_MCP=${ENABLE_MCP:-true}
+      # Rate limiting
+      - RATE_LIMIT_ENABLED=true
+      # Key shared with the public site (Astro): with it the quota is
+      # counted per visitor and not for the whole site at once. Empty = no effect.
+      # Ver apps/api/src/lib/rate-limiter.ts (siteVisitor).
+      - SITE_API_KEY=${SITE_API_KEY:-}
+      # Top-level routes of YOUR web that a game cannot occupy (in addition
+      # to the common ones from @kitsuden/shared), comma-separated. Empty = only
+      # the common ones. See packages/shared/src/public-site.ts.
+      - KITSUDEN_RESERVED_SEGMENTS=${KITSUDEN_RESERVED_SEGMENTS:-}
+      # Idempotency-Key on writes (docs/install/errors-and-retries.md).
+      # Empty = code defaults (24 h, closed if there is nowhere to store).
+      - IDEMPOTENCY_TTL_SECONDS=${IDEMPOTENCY_TTL_SECONDS:-}
+      - IDEMPOTENCY_LOCK_SECONDS=${IDEMPOTENCY_LOCK_SECONDS:-}
+      - IDEMPOTENCY_MAX_RESPONSE_BYTES=${IDEMPOTENCY_MAX_RESPONSE_BYTES:-}
+      - IDEMPOTENCY_FAIL_MODE=${IDEMPOTENCY_FAIL_MODE:-}
+      # Days a new agent key lives when whoever creates it does not say.
+      # Empty = 90; 0 = keys never expire (the behaviour before 2026-11-04).
+      - AGENT_KEY_DEFAULT_EXPIRY_DAYS=${AGENT_KEY_DEFAULT_EXPIRY_DAYS:-}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-3000}:3000"
+    networks:
+      - kitsuden_net_prod
+    command: ["sh", "/app/docker/start-with-check.sh"]
+    volumes:
+      # Files uploaded in local mode. Without this mount they live inside the
+      # container and disappear when it is recreated: a `docker compose up -d` after
+      # changing the image would delete the entire media library, silently.
+      - kitsuden_uploads_prod:/app/data
+
+    # API healthcheck — REQUIRED: kitsuden_admin declares
+    # `depends_on: kitsuden_api: condition: service_healthy`, and without this block that
+    # condition is never met and the admin waits forever.
+    #
+    # Uses /live (pure liveness: 200 as long as the event loop responds), NOT /ready
+    # — ready also checks DB and cache, so a temporary Valkey failure
+    # would mark the API as unhealthy and Docker would restart it in a loop. The same
+    # goes for /api/health, which does deep checks.
+    #
+    # WITHOUT the /api prefix: the observability routes are mounted at the ROOT
+    # (`app.route("/", observabilityRoutes)` in src/lib/critical-features.ts),
+    # so they are /live, /health and /ready. This used to say /api/live, which returns
+    # 404 — and a healthcheck against a nonexistent route always fails: the API
+    # started perfectly, answered 200 on /api/health, and still compose
+    # gave `dependency failed to start ... is unhealthy` and the admin never got
+    # to start.
+    #
+    # start_period covers the real startup: migrations + building the merged
+    # schema before listening. During that window failures do not count.
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Admin Panel - Frontend (SvelteKit) (REQUIRED)
+  # ═══════════════════════════════════════════════════════════════════════
+  kitsuden_admin:
+    image: ${KITSUDEN_ADMIN_IMAGE:-ghcr.io/kitsuden/kitsuden/admin:latest}
+    # Never pulled, like the API: see above.
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
+      target: admin
+      # No PUBLIC_API_URL needed - admin uses relative /api/* URLs
+      # which nginx proxies to the API container internally
+    container_name: ${KITSUDEN_INSTANCE:-kitsuden}_admin_prod
+    restart: unless-stopped
+    depends_on:
+      kitsuden_api:
+        condition: service_healthy
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${ADMIN_PORT:-3001}:8080"
+    networks:
+      - kitsuden_net_prod
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Backups (REQUIRED in production)
+  #
+  # `apps/api/scripts/backup.ts` existed —with retention and verification of each
+  # dump with `pg_restore --list`— and NOTHING scheduled it. Backups depended
+  # on someone remembering to run it by hand.
+  #
+  # It uses the same image as the API: it already ships bun, the script and `pg_dump` 17, which
+  # can dump the 16 server.
+  #
+  # WITH THE SUPERUSER, ON PURPOSE. `pg_dump` disables RLS to read whole
+  # tables and, if the one dumping cannot skip the policies, it FAILS. The
+  # application role cannot (and must not). With the app role there would be no
+  # backups; with one that filtered silently, there would be incomplete backups.
+  #
+  # WHAT THIS IS NOT: an off-machine backup. The volume lives on the
+  # same disk as the database. It protects against a DROP TABLE or a broken migration,
+  # not against losing the server. Moving `kitsuden_backups_prod` somewhere else
+  # (S3, rclone, provider snapshot) is still pending work.
+  #
+  # MEDIA: the database stores the addresses of the images, not the images. After
+  # each dump, docker/media-backup.sh copies the media volume (read-only)
+  # every BACKUP_MEDIA_DAYS days and keeps BACKUP_MEDIA_KEEP copies.
+  #
+  # RESTORING a dump requires pg_restore 17 (the one in THIS image): the one in the
+  # Postgres 16 image says «unsupported version (1.16) in file header».
+  # Ver docs/install/upgrade-and-backups.md.
+  # ═══════════════════════════════════════════════════════════════════════
+  kitsuden_backup:
+    image: ${KITSUDEN_API_IMAGE:-ghcr.io/kitsuden/kitsuden/api:latest}
+    # Never pulled, like the API: see above.
+    pull_policy: never
+    container_name: ${KITSUDEN_INSTANCE:-kitsuden}_backup_prod
+    # The API image runs as `bun` (uid 1000); the backup does NOT. `/backups` is a volume that starts out owned by root (the folder does not exist
+    # in the image) and media restored with `docker cp` is owned by root: as
+    # `bun`, the backup could not write nor, with 600 permissions, read. Here root
+    # does not widen anything that matters: it listens on no network and the media is
+    # mounted read-only.
+    user: "0:0"
+    restart: unless-stopped
+    depends_on:
+      kitsuden_db:
+        condition: service_healthy
+      # After the API is healthy: it has migrated (otherwise the first dump is of an
+      # empty database), and it mounted the media volume first (an empty volume takes
+      # the owner of whoever mounts it first, and the API, as `bun`, writes to it).
+      kitsuden_api:
+        condition: service_healthy
+    working_dir: /app/apps/api
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-kitsuden}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@${KITSUDEN_INSTANCE:-kitsuden}_db_prod:5432/${POSTGRES_DB:-kitsuden_prod}
+      - BACKUP_DIR=/backups
+      - BACKUP_KEEP=${BACKUP_KEEP:-14}
+      - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-24}
+      # Media (API volume): full copy every N days, K are kept.
+      # See docker/media-backup.sh.
+      - MEDIA_DIR=/media
+      - BACKUP_MEDIA_DAYS=${BACKUP_MEDIA_DAYS:-7}
+      - BACKUP_MEDIA_KEEP=${BACKUP_MEDIA_KEEP:-2}
+      # Point-in-time restore: a base backup (pg_basebackup) every
+      # BACKUP_BASE_DAYS days, BACKUP_BASE_KEEP kept, and the WAL archive pruned
+      # to what the oldest kept base needs. Off unless KITSUDEN_PITR=on.
+      - KITSUDEN_PITR=${KITSUDEN_PITR:-off}
+      - BACKUP_BASE_DAYS=${BACKUP_BASE_DAYS:-7}
+      - BACKUP_BASE_KEEP=${BACKUP_BASE_KEEP:-2}
+      - WAL_ARCHIVE_DIR=/wal-archive
+    entrypoint: ["sh", "-c"]
+    # `$$` is a `$` for the shell: without doubling it, compose tries to substitute
+    # the loop variables when reading the file and the loop gets empty strings.
+    command:
+      - |
+        INTERVAL_SECONDS=$$(( $${BACKUP_INTERVAL_HOURS} * 3600 ))
+        echo "Backups every $${BACKUP_INTERVAL_HOURS}h in /backups (keeping $${BACKUP_KEEP})"
+        # A failure does NOT wait for the next interval: it retries in 5 minutes.
+        # `depends_on: service_healthy` is only honored by `docker compose up`;
+        # when Docker starts and relaunches the containers through its restart
+        # policy, it brings them up at the same time, and the dump may run before
+        # Postgres is listening.
+        while true; do
+          if bun run scripts/backup.ts; then
+            date -u +%s > /backups/.last-ok
+            # The media, after the database and without retrying the dump if
+            # they fail: the script decides whether it is due (every BACKUP_MEDIA_DAYS days).
+            sh /kitsuden/media-backup.sh || echo "MEDIA BACKUP FAILED $$(date -u +%FT%TZ)" >&2
+            # Base backup for point-in-time restore, when due (KITSUDEN_PITR=on).
+            # Its failure does not hide behind the dump: the healthcheck reads its marker.
+            if [ "$${KITSUDEN_PITR}" = "on" ]; then
+              bun run scripts/backup.ts --base || echo "BASE BACKUP FAILED $$(date -u +%FT%TZ)" >&2
+            fi
+            sleep "$$INTERVAL_SECONDS"
+          else
+            echo "BACKUP FAILED $$(date -u +%FT%TZ) - retrying in 5 min" >&2
+            sleep 300
+          fi
+        done
+    # Healthy = there is a good backup from less than two intervals ago. Without this,
+    # a container that fails every night shows as «Up» for months.
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "test -f /backups/.last-ok && [ $$(( $$(date -u +%s) - $$(cat /backups/.last-ok) )) -lt $$(( $${BACKUP_INTERVAL_HOURS:-24} * 7200 )) ] && test -f /backups/.media-last-ok && [ $$(( $$(date -u +%s) - $$(cat /backups/.media-last-ok) )) -lt $$(( $${BACKUP_MEDIA_DAYS:-7} * 172800 )) ] && { [ $${KITSUDEN_PITR:-off} != on ] || { test -f /backups/.base-last-ok && [ $$(( $$(date -u +%s) - $$(cat /backups/.base-last-ok) )) -lt $$(( $${BACKUP_BASE_DAYS:-7} * 172800 )) ]; }; }",
+        ]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 15m
+    volumes:
+      - kitsuden_backups_prod:/backups
+      # Read-only: the backup can never touch the media it copies. `nocopy`: it
+      # never fills an empty volume with its own /media, which left it owned by root.
+      - type: volume
+        source: kitsuden_uploads_prod
+        target: /media
+        read_only: true
+        volume:
+          nocopy: true
+      # Mounted and not inside the image: that way it works with the API image that
+      # is already built, without rebuilding it (~10 min)
+      - ./docker/media-backup.sh:/kitsuden/media-backup.sh:ro
+      # The WAL archive the database writes (KITSUDEN_PITR=on): checked and pruned
+      # after each base backup. Base backups land in /backups/base.
+      - kitsuden_wal_archive_prod:/wal-archive
+    networks:
+      - kitsuden_net_prod
+
+volumes:
+  # The files uploaded in local mode. WITHOUT this they are stored inside the
+  # container and disappear when it is recreated: `docker compose up -d` after an
+  # image change would delete the entire media library without warning.
+  #
+  # No `name:`, unlike the others: Docker prefixes it with the project name, so
+  # the volume is <COMPOSE_PROJECT_NAME>_kitsuden_uploads_prod. Set
+  # COMPOSE_PROJECT_NAME in .env so that it does not depend on the folder name.
+  kitsuden_uploads_prod:
+  kitsuden_postgres_prod:
+    name: ${KITSUDEN_INSTANCE:-kitsuden}_postgres_prod
+    driver: local
+  kitsuden_seaweedfs_prod:
+    name: ${KITSUDEN_INSTANCE:-kitsuden}_seaweedfs_prod
+    driver: local
+  kitsuden_valkey_prod:
+    name: ${KITSUDEN_INSTANCE:-kitsuden}_valkey_prod
+    driver: local
+  kitsuden_backups_prod:
+    name: ${KITSUDEN_INSTANCE:-kitsuden}_backups_prod
+    driver: local
+  # WAL segments for point-in-time restore (KITSUDEN_PITR=on; empty otherwise).
+  kitsuden_wal_archive_prod:
+    name: ${KITSUDEN_INSTANCE:-kitsuden}_wal_archive_prod
+    driver: local
+
+networks:
+  kitsuden_net_prod:
+    name: ${KITSUDEN_INSTANCE:-kitsuden}_net_prod
+    driver: bridge

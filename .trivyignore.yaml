@@ -1,0 +1,3 @@
+# Vulnerabilities Trivy may ignore in the images (scripts/security/scan.mjs --image).
+# Each needs a statement and an expiry date.
+vulnerabilities: []

@@ -1,0 +1,18 @@
+/* Kitsuden Documents: Light Crimson Theme
+   Palette: crimson, ember and gold on cream. */
+:root {
+  --kitsuden-bg: #fff8f6;
+  --kitsuden-card: #ffffff;
+  --kitsuden-text: #1a0608;
+  --kitsuden-text-dim: #6b2030;
+  --kitsuden-subtle: #a0506a;
+  --kitsuden-border: #f3d5d3;
+
+  --kitsuden-cyan: #c1121f;
+  --kitsuden-purple: #9d0208;
+  --kitsuden-pink: #e63946;
+  --kitsuden-green: #d48806;
+  --kitsuden-amber: #fa8c16;
+
+  --kitsuden-heading: #780000;
+}

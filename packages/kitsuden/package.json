@@ -1,0 +1,116 @@
+{
+  "name": "kitsuden",
+  "version": "0.9.0-beta",
+  "description": "The AI-native backend framework & self-hosted BaaS. Auth, RLS, auto REST+GraphQL, admin, jobs and MCP — batteries included.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/kitsuden"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/kitsuden#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "keywords": [
+    "backend",
+    "framework",
+    "baas",
+    "hono",
+    "bun",
+    "drizzle",
+    "postgres",
+    "rls",
+    "mcp",
+    "ai-native"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./engine": {
+      "types": "./dist/engine.d.ts",
+      "import": "./dist/engine.js"
+    },
+    "./shared": {
+      "types": "./dist/shared.d.ts",
+      "import": "./dist/shared.js"
+    },
+    "./package.json": "./package.json",
+    "./framework": {
+      "types": "./dist/framework.d.ts",
+      "import": "./dist/framework.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.990.0",
+    "@aws-sdk/s3-request-presigner": "^3.995.0",
+    "@kitsuden/blocks": "workspace:^",
+    "@kitsuden/datasets": "workspace:^",
+    "@kitsuden/media": "workspace:^",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@node-rs/argon2": "^2.0.2",
+    "better-auth": "~1.7.14",
+    "drizzle-orm": "^0.45.2",
+    "graphql": "^16.9.0",
+    "hono": "4.13.13",
+    "pg": "^8.20.0",
+    "pino": "^9.0.0",
+    "redis": "^5.11.0",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
+  },
+  "optionalDependencies": {
+    "mysql2": "^3.18.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "croner": "^9.0.0",
+    "graphql-type-json": "^0.3.2",
+    "hono-rate-limiter": "^0.4.0",
+    "openapi3-ts": "^4.5.0",
+    "@hono/swagger-ui": "^0.5.3",
+    "@hono/zod-validator": "^0.9.1"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": "^0.111.0",
+    "@electric-sql/pglite": "^0.5.4",
+    "nodemailer": "^10.2.1",
+    "ollama": "^0.6.3",
+    "openai": "^6.46.0",
+    "pdf-lib": "^1.17.1"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/sdk": {
+      "optional": true
+    },
+    "@electric-sql/pglite": {
+      "optional": true
+    },
+    "nodemailer": {
+      "optional": true
+    },
+    "ollama": {
+      "optional": true
+    },
+    "openai": {
+      "optional": true
+    },
+    "pdf-lib": {
+      "optional": true
+    }
+  }
+}

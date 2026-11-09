@@ -1,0 +1,19 @@
+---
+/**
+ * Inti's editor UI (INTI=true only; the layout renders it only for an editor).
+ * `blockTypes` is the composer palette: the page-builder blocks this site
+ * renders, with their initial content (`src/blocks/palette.ts`).
+ */
+import VisualBridgeAuto from "@intijs/core/visual-bridge/VisualBridgeAuto.astro";
+
+import { PALETTE } from "../../blocks/palette";
+
+const blockTypes = PALETTE.map((b) => ({
+  nativeType: b.nativeType,
+  label: b.label,
+  defaults: structuredClone(b.defaults) as Record<string, unknown>,
+  ...("variants" in b ? { variants: structuredClone(b.variants) as unknown as Record<string, string[]> } : {}),
+}));
+---
+
+<VisualBridgeAuto enabled={true} blockTypes={blockTypes} />

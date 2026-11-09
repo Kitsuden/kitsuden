@@ -1,0 +1,10 @@
+---
+/** `spacer`: vertical space */
+import { oneOf, type BlockProps } from "./types";
+
+const props = Astro.props as BlockProps;
+const height = oneOf((props as Record<string, unknown>).height, ["sm", "md", "lg", "xl", "2xl"] as const, "md");
+const rem = { sm: 1, md: 2, lg: 3.5, xl: 5, "2xl": 8 }[height];
+---
+
+<div class="spacer" style={`height:${rem}rem`} aria-hidden="true"></div>

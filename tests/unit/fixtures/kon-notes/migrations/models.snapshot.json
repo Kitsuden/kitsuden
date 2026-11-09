@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "models": {
+    "category": {
+      "name": "category",
+      "table": "categories",
+      "kon": "notes",
+      "access": {
+        "read": "public",
+        "write": "staff"
+      },
+      "columns": [
+        {
+          "key": "name",
+          "column": "name",
+          "type": "varchar(80)",
+          "nullable": false,
+          "defaultValue": null,
+          "check": null,
+          "unique": true,
+          "index": false
+        },
+        {
+          "key": "color",
+          "column": "color",
+          "type": "varchar(20)",
+          "nullable": true,
+          "defaultValue": null,
+          "check": null,
+          "unique": false,
+          "index": false
+        }
+      ]
+    },
+    "note": {
+      "name": "note",
+      "table": "notes",
+      "kon": "notes",
+      "access": {
+        "read": "owner",
+        "write": "owner"
+      },
+      "columns": [
+        {
+          "key": "title",
+          "column": "title",
+          "type": "varchar(200)",
+          "nullable": false,
+          "defaultValue": null,
+          "check": null,
+          "unique": false,
+          "index": false
+        },
+        {
+          "key": "body",
+          "column": "body",
+          "type": "text",
+          "nullable": true,
+          "defaultValue": null,
+          "check": null,
+          "unique": false,
+          "index": false
+        },
+        {
+          "key": "status",
+          "column": "status",
+          "type": "text",
+          "nullable": false,
+          "defaultValue": "'draft'",
+          "check": "\"status\" IN ('draft', 'published')",
+          "unique": false,
+          "index": false
+        },
+        {
+          "key": "priority",
+          "column": "priority",
+          "type": "integer",
+          "nullable": false,
+          "defaultValue": "0",
+          "check": "\"priority\" >= 0 AND \"priority\" <= 5",
+          "unique": false,
+          "index": false
+        },
+        {
+          "key": "pinned",
+          "column": "pinned",
+          "type": "boolean",
+          "nullable": false,
+          "defaultValue": "false",
+          "check": null,
+          "unique": false,
+          "index": false
+        },
+        {
+          "key": "dueAt",
+          "column": "due_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "defaultValue": null,
+          "check": null,
+          "unique": false,
+          "index": false
+        },
+        {
+          "key": "slug",
+          "column": "slug",
+          "type": "varchar(80)",
+          "nullable": true,
+          "defaultValue": null,
+          "check": null,
+          "unique": true,
+          "index": false
+        },
+        {
+          "key": "meta",
+          "column": "meta",
+          "type": "jsonb",
+          "nullable": true,
+          "defaultValue": null,
+          "check": null,
+          "unique": false,
+          "index": false
+        }
+      ]
+    }
+  }
+}

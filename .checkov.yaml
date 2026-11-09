@@ -1,0 +1,14 @@
+# Checkov (scripts/security/scan.mjs, check `iac`): Dockerfiles and GitHub Actions.
+# Every skipped check says why. Prefer fixing the file over adding a skip.
+framework:
+  - dockerfile
+  - github_actions
+skip-path:
+  - node_modules
+  - .security
+skip-check:
+  # SLSA "workflow_dispatch inputs must be empty". The manual inputs of publish.yml
+  # (which package) and docker-publish.yml (the version tag) choose what to publish
+  # and how to label it; the bytes still come from the checked-out commit after the
+  # full CI passed, and both jobs wait on the `release` environment.
+  - CKV_GHA_7

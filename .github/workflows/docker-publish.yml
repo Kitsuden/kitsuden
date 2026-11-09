@@ -1,0 +1,131 @@
+name: Publish Docker Images
+
+# Only on a `v*` tag or by hand, and only after the whole CI has passed for this
+# commit: a push to main publishes nothing.
+#
+# Images: ghcr.io/kitsuden/kitsuden/{api,admin,mcp}. GHCR under the
+# repository owner needs no third-party account or secret: GITHUB_TOKEN with
+# `packages: write` is enough. A new GHCR package starts PRIVATE; making it public
+# is a setting of the package. Needs a `release` environment in the repository
+# settings (add required reviewers there to gate each publication).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g., 1.0.0)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  # Its blocking scanners (secrets, dependencies, IaC, CodeQL) gate the release too
+  security:
+    name: Security
+    uses: ./.github/workflows/security.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+  build-and-push:
+    name: Build and push ${{ matrix.service }}
+    needs: [ci, security]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+      # Signed build provenance (actions/attest-build-provenance)
+      id-token: write
+      attestations: write
+
+    strategy:
+      matrix:
+        include:
+          - service: api
+            dockerfile: ./docker/Dockerfile.prod
+            target: api
+            context: .
+          - service: admin
+            dockerfile: ./docker/Dockerfile.prod
+            target: admin
+            context: .
+          - service: mcp
+            dockerfile: ./docker/mcp/Dockerfile
+            target: production
+            context: .
+
+    steps:
+      # Actions are pinned by commit in this job: it can write to the registry, and
+      # a moved tag would run inside it. Dependabot keeps them up to date.
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up QEMU (for arm64)
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      # GHCR requires a lowercase namespace
+      - name: Image prefix
+        run: echo "IMAGE_PREFIX=${GITHUB_REPOSITORY_OWNER,,}/kitsuden" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ !contains(github.ref_name, '-') }}
+            type=semver,pattern={{major}},enable=${{ !contains(github.ref_name, '-') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
+            type=raw,value=${{ inputs.version }},enable=${{ inputs.version != '' }}
+            type=sha,enable=${{ github.event_name == 'workflow_dispatch' && inputs.version == '' }}
+
+      # No build cache here on purpose: a release must not reuse layers that a
+      # branch build put in the shared cache.
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          # An SBOM and SLSA provenance travel with the image in the registry
+          sbom: true
+          provenance: mode=max
+
+      # Sigstore-signed attestation: `gh attestation verify oci://<image> -R <repo>`
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true

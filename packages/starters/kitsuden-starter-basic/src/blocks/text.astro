@@ -1,0 +1,33 @@
+---
+/**
+ * `text` (palette: `text` + `format`) and `richtext` (admin editor: `content`
+ * + `format`, Markdown by default). The HTML comes sanitized from the API.
+ */
+import { fieldAttributes } from "../lib/inti-markup";
+import { textToHtml } from "../lib/text";
+import { oneOf, pick, type BlockProps } from "./types";
+
+interface Props {
+  defaultFormat?: "html" | "markdown";
+}
+const props = Astro.props as BlockProps<Props>;
+const data = props as Record<string, unknown>;
+const source = pick(data, "text", "content", "html", "body");
+const format = oneOf(data.format, ["html", "markdown", "plain"] as const, props.defaultFormat ?? "html");
+const html = textToHtml(source?.value, format);
+const align = oneOf(data.alignment, ["left", "center", "right", "justify"] as const, "left");
+const size = oneOf(data.textSize, ["sm", "md", "lg", "xl"] as const, "md");
+// Inline editing only maps cleanly onto plain text: Markdown/HTML are edited in the admin
+const field = format === "plain" && source ? fieldAttributes(props.block?.editable, source.key) : {};
+---
+
+{html && <div class:list={["prose", `text--${align}`, `text--${size}`]} {...field} set:html={html} />}
+
+<style>
+  .text--center { text-align: center; }
+  .text--right { text-align: right; }
+  .text--justify { text-align: justify; }
+  .text--sm { font-size: 0.95rem; }
+  .text--lg { font-size: 1.15rem; }
+  .text--xl { font-size: 1.3rem; }
+</style>

@@ -1,0 +1,68 @@
+{
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Monorepo root: the inherited base, plus the files no package covers
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // This file does two separate things:
+  //
+  //   1. It provides the `compilerOptions` every package inherits through `extends`.
+  //   2. It checks `tests/` and `scripts/`, which belong to no package, so
+  //      `pnpm -r typecheck` does not look at them.
+  //
+  // It does NOT compile `apps/` or `packages/`. Without an `include` it would sweep
+  // the whole monorepo and report errors that do not exist: `@/` unresolved (that
+  // alias is declared in `apps/api/tsconfig.json`), `@types/bun` missing, and strict
+  // rules that differ from each kon's.
+  //
+  // Packages are type-checked with `pnpm -r typecheck`, each with its own tsconfig,
+  // the only one that knows its aliases and types.
+  //
+  // If you edit the `include` below: every package extending this file declares its
+  // own, so none inherits these. A package that stopped declaring one would inherit
+  // `tests/**`, resolved against THIS folder, and stop compiling its own code.
+  "include": ["tests/**/*.ts", "scripts/**/*.ts", "*.config.ts"],
+  "exclude": ["node_modules", "dist", ".astro", "packages/cli/test-vibecoder-app"],
+
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vitest/globals"],
+    "strict": true,
+    // Do NOT set `noEmit` here. `packages/shared` builds its `.d.ts` with
+    // `tsc --emitDeclarationOnly`; an inherited `noEmit` wins over that flag, and tsc
+    // exits 0 without writing anything. `dist` then holds only the `.js`, and the
+    // packages resolving `@kitsuden/shared` against `dist` silently get implicit `any`.
+    // If a package must not emit, pass it on that package's command line.
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      // Tests import from `apps/api/src`, and TypeScript follows the import graph, so
+      // including `tests/**` also brings in the app's code, which uses this alias.
+      // Without it here, tsc reports module-not-found errors that are not real.
+      "@/*": ["./apps/api/src/*"],
+
+      // To the source, not `dist`: anything resolving against a `dist` without
+      // declarations silently gets `any`. `engine` and the kons point at the source too.
+      //
+      // Both entries are needed: the subpath one does not cover the bare import
+      // `from "@kitsuden/shared"`, which is what most code uses.
+      "@kitsuden/shared": ["./packages/shared/src/index.ts"],
+      "@kitsuden/shared/*": ["./packages/shared/src/*"],
+
+      // Packages imported by name. They point at `index.ts` because kons are not
+      // built to `dist`: they load from source.
+      "@kitsuden/engine": ["./packages/engine/index.ts"],
+      "@kitsuden/engine/zod": ["./packages/engine/zod.ts"],
+      "@kitsuden/kon-cardsim": ["./packages/kons/kon-cardsim/index.ts"],
+      "@kitsuden/kon-esports": ["./packages/kons/kon-esports/index.ts"]
+    }
+  }
+}

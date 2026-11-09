@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 848" width="1200" height="848" role="img" aria-labelledby="t d">
+<title id="t">How a request flows through Kitsuden</title>
+<desc id="d">AI agents such as Claude, Cursor or your own connect over MCP at /api/mcp or REST under /api with their own kitsuden_agent_* key and scopes; people use the SvelteKit admin panel over REST with a session. Every request reaches the Kitsuden API, Hono on Bun, which is deny by default and checks scopes (a union where a deny wins), human approval (sensitive requests become a 202 proposal), quotas and idempotent retries, and writes an audit log. Kons plug into the API. Each request runs in one transaction with its row-level security context in PostgreSQL 16 with pgvector, which also holds the outbox queue. Valkey is optional, for several API replicas.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<rect x="1" y="1" width="1198" height="846" rx="28" fill="#0f1520" stroke="#2a3446" stroke-width="2"/>
+<text class="s" x="40" y="66" font-size="30" fill="#f1f5f9" font-weight="800">How a request flows</text>
+<rect x="40" y="96" width="660" height="124" rx="18" fill="#161e2c" stroke="#2a3446" stroke-width="2"/>
+<rect x="64" y="110" width="48" height="6" rx="3" fill="#60a5fa"/>
+<text class="s" x="64" y="146" font-size="20" fill="#a8b3c4">AI agents</text>
+<text class="s" x="64" y="178" font-size="24" fill="#f1f5f9" font-weight="700">Claude · Cursor · your own</text>
+<text class="s" x="64" y="206" font-size="20" fill="#a8b3c4">each with its own <tspan font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" fill="#ff8a4c">kitsuden_agent_*</tspan> key and scopes</text>
+<rect x="740" y="96" width="420" height="124" rx="18" fill="#161e2c" stroke="#2a3446" stroke-width="2"/>
+<rect x="764" y="110" width="48" height="6" rx="3" fill="#a78bfa"/>
+<text class="s" x="764" y="146" font-size="20" fill="#a8b3c4">People</text>
+<text class="s" x="764" y="178" font-size="24" fill="#f1f5f9" font-weight="700">Admin panel (SvelteKit)</text>
+<text class="s" x="764" y="206" font-size="20" fill="#a8b3c4">approve proposals, manage agents</text>
+<line x1="200.0" y1="226" x2="200.0" y2="250" stroke="#ff8a4c" stroke-width="3" stroke-linecap="round"/><path d="M191.0 246 L200.0 260 L209.0 246 Z" fill="#ff8a4c"/>
+<rect x="40.0" y="266" width="320.0" height="60" rx="30" fill="#0f1520" stroke="#ff8a4c" stroke-width="2"/>
+<text class="s" x="200.0" y="304" font-size="22" fill="#f1f5f9" font-weight="700" text-anchor="middle">MCP  <tspan font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" fill="#ff8a4c">/api/mcp</tspan></text>
+<line x1="540.0" y1="226" x2="540.0" y2="250" stroke="#ff8a4c" stroke-width="3" stroke-linecap="round"/><path d="M531.0 246 L540.0 260 L549.0 246 Z" fill="#ff8a4c"/>
+<rect x="380.0" y="266" width="320.0" height="60" rx="30" fill="#0f1520" stroke="#ff8a4c" stroke-width="2"/>
+<text class="s" x="540.0" y="304" font-size="22" fill="#f1f5f9" font-weight="700" text-anchor="middle">REST  <tspan font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" fill="#ff8a4c">/api/*</tspan></text>
+<text class="s" x="934.0" y="304" font-size="20" fill="#a8b3c4" text-anchor="end">REST, with a session</text>
+<line x1="200.0" y1="332" x2="200.0" y2="356" stroke="#ff8a4c" stroke-width="3" stroke-linecap="round"/><path d="M191.0 352 L200.0 366 L209.0 352 Z" fill="#ff8a4c"/>
+<line x1="540.0" y1="332" x2="540.0" y2="356" stroke="#ff8a4c" stroke-width="3" stroke-linecap="round"/><path d="M531.0 352 L540.0 366 L549.0 352 Z" fill="#ff8a4c"/>
+<line x1="950.0" y1="226" x2="950.0" y2="356" stroke="#a78bfa" stroke-width="3" stroke-linecap="round"/><path d="M941.0 352 L950.0 366 L959.0 352 Z" fill="#a78bfa"/>
+<rect x="40" y="372" width="1120" height="220" rx="18" fill="#161e2c" stroke="#ff8a4c" stroke-width="3"/>
+<text class="s" x="64" y="416" font-size="26" fill="#f1f5f9" font-weight="800">Kitsuden API</text>
+<text class="s" x="240" y="416" font-size="20" fill="#a8b3c4">Hono on Bun, deny by default</text>
+<rect x="736" y="388" width="400" height="44" rx="22" fill="#0f1520" stroke="#34d399" stroke-width="2" stroke-dasharray="7 6"/>
+<text class="s" x="936.0" y="417" font-size="20" fill="#f1f5f9" text-anchor="middle">kons plug in: <tspan font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" fill="#34d399">kitsuden kon add</tspan></text>
+<rect x="64.0" y="452" width="256.0" height="116" rx="14" fill="#0f1520" stroke="#60a5fa" stroke-width="2"/>
+<text class="s" x="84.0" y="496" font-size="22" fill="#f1f5f9" font-weight="700">Scopes</text>
+<text class="s" x="84.0" y="534" font-size="20" fill="#a8b3c4">union, deny wins</text>
+<rect x="336.0" y="452" width="256.0" height="116" rx="14" fill="#0f1520" stroke="#ff8a4c" stroke-width="2"/>
+<text class="s" x="356.0" y="496" font-size="22" fill="#f1f5f9" font-weight="700">Human approval</text>
+<text class="s" x="356.0" y="534" font-size="20" fill="#a8b3c4">202 → a proposal</text>
+<rect x="608.0" y="452" width="256.0" height="116" rx="14" fill="#0f1520" stroke="#a78bfa" stroke-width="2"/>
+<text class="s" x="628.0" y="496" font-size="22" fill="#f1f5f9" font-weight="700">Quotas, retries</text>
+<text class="m" x="628.0" y="534" font-size="20" fill="#a8b3c4">Idempotency-Key</text>
+<rect x="880.0" y="452" width="256.0" height="116" rx="14" fill="#0f1520" stroke="#f472b6" stroke-width="2"/>
+<text class="s" x="900.0" y="496" font-size="22" fill="#f1f5f9" font-weight="700">Audit</text>
+<text class="s" x="900.0" y="534" font-size="20" fill="#a8b3c4">every agent action</text>
+<line x1="440.0" y1="598" x2="440.0" y2="632" stroke="#ff8a4c" stroke-width="3" stroke-linecap="round"/><path d="M431.0 628 L440.0 642 L449.0 628 Z" fill="#ff8a4c"/>
+<text class="s" x="458.0" y="628" font-size="20" fill="#a8b3c4">one transaction per request, RLS context set</text>
+<rect x="40" y="648" width="800" height="160" rx="18" fill="#161e2c" stroke="#2a3446" stroke-width="2"/>
+<rect x="64" y="662" width="48" height="6" rx="3" fill="#34d399"/>
+<text class="s" x="64" y="700" font-size="24" fill="#f1f5f9" font-weight="700">PostgreSQL 16</text>
+<text class="s" x="260" y="700" font-size="20" fill="#a8b3c4">with pgvector</text>
+<rect x="64" y="728" width="230" height="48" rx="24" fill="#0f1520" stroke="#2a3446" stroke-width="2"/>
+<text class="s" x="84" y="759" font-size="20" fill="#f1f5f9">row-level security</text>
+<rect x="308" y="728" width="167" height="48" rx="24" fill="#0f1520" stroke="#2a3446" stroke-width="2"/>
+<text class="s" x="328" y="759" font-size="20" fill="#f1f5f9">outbox queue</text>
+<rect x="489" y="728" width="220" height="48" rx="24" fill="#0f1520" stroke="#2a3446" stroke-width="2"/>
+<text class="s" x="509" y="759" font-size="20" fill="#f1f5f9">datasets as JSONB</text>
+<rect x="880" y="648" width="280" height="160" rx="18" fill="#161e2c" stroke="#2a3446" stroke-width="2" stroke-dasharray="8 6"/>
+<text class="s" x="904" y="700" font-size="24" fill="#f1f5f9" font-weight="700">Valkey</text>
+<text class="s" x="904" y="740" font-size="20" fill="#a8b3c4">optional:</text>
+<text class="s" x="904" y="770" font-size="20" fill="#a8b3c4">several API replicas</text>
+</svg>

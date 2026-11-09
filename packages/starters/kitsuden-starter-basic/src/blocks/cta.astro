@@ -1,0 +1,38 @@
+---
+/** `cta`: a call to action with one button */
+import { fieldAttributes } from "../lib/inti-markup";
+import { isExternal, safeHref } from "../lib/text";
+import { oneOf, pick, type BlockProps } from "./types";
+
+const props = Astro.props as BlockProps;
+const data = props as Record<string, unknown>;
+const edit = props.block?.editable;
+const title = pick(data, "title", "headline");
+const description = pick(data, "description");
+const label = pick(data, "buttonLabel", "ctaLabel");
+const href = safeHref(data.buttonUrl ?? data.ctaUrl);
+const variant = oneOf(data.buttonVariant, ["primary", "secondary", "outline"] as const, "primary");
+const align = oneOf(data.alignment, ["left", "center", "right"] as const, "center");
+---
+
+{
+  (title || label) && (
+    <section class:list={["cta", `cta--${align}`]}>
+      {title && <h2 {...fieldAttributes(edit, title.key)}>{title.value}</h2>}
+      {description && <p {...fieldAttributes(edit, description.key)}>{description.value}</p>}
+      {label && href && (
+        <a class={`button button--${variant}`} href={href} rel={isExternal(href) ? "noopener" : undefined} {...fieldAttributes(edit, label.key)}>
+          {label.value}
+        </a>
+      )}
+    </section>
+  )
+}
+
+<style>
+  .cta { padding: 2.5rem var(--gutter); border-radius: var(--radius-lg); background: var(--accent-soft); border: 1px solid var(--border); }
+  .cta--center { text-align: center; }
+  .cta--right { text-align: right; }
+  .cta h2 { margin: 0 0 0.5rem; font-size: 1.6rem; }
+  .cta p { margin: 0 0 1.25rem; color: var(--muted); }
+</style>

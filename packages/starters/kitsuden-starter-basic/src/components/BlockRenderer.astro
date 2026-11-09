@@ -1,0 +1,68 @@
+---
+/**
+ * The blocks of a page-builder page, in order
+ * ============================================================================
+ *
+ * Each block sits in a wrapper that carries the row's own styling
+ * (`backgroundColor`, `textColor`, `padding`, `cssClass`; the API only
+ * accepts plain classes and CSS colours there) and, for an Inti editor only,
+ * the `data-inti-*` attributes plus the block data as JSON (see
+ * `lib/inti-markup.ts`).
+ */
+import type { BlockRow } from "../lib/kitsuden";
+import { blockAttributes, blockJson, type MarkupContext } from "../lib/inti-markup";
+import Block from "./Block.astro";
+
+interface Props {
+  blocks: BlockRow[];
+  /** Page uuid: the document Inti writes to */
+  documentId: string;
+  /** The request comes from an Inti editor */
+  editable?: boolean;
+}
+
+const { blocks, documentId, editable = false } = Astro.props;
+const markup: MarkupContext = { editable, documentId, total: blocks.length };
+
+const PADDING: Record<string, string> = { sm: "1rem", md: "2rem", lg: "3rem", xl: "4.5rem" };
+const COLOR = /^(#[0-9a-f]{3,8}|[a-z]{3,20}|(rgb|hsl)a?\([\d\s.,%/]+\))$/i;
+const color = (v: unknown) => (typeof v === "string" && COLOR.test(v.trim()) ? v.trim() : null);
+const classes = (v: unknown) =>
+  typeof v === "string" ? v.split(/\s+/).filter((c) => /^[\w-]{1,60}$/.test(c)).slice(0, 8) : [];
+
+const rows = blocks.map((row, index) => {
+  const style = [
+    color(row.backgroundColor) && `--block-bg:${color(row.backgroundColor)}`,
+    color(row.textColor) && `--block-fg:${color(row.textColor)}`,
+    row.padding && PADDING[row.padding] && `--block-pad:${PADDING[row.padding]}`,
+  ]
+    .filter(Boolean)
+    .join(";");
+  return {
+    row,
+    index,
+    style: style || undefined,
+    styled: Boolean(style),
+    classes: classes(row.cssClass),
+    attributes: blockAttributes(markup, row, index),
+    json: blockJson(editable, row.content),
+    content: row.content && typeof row.content === "object" ? row.content : {},
+  };
+});
+---
+
+<div class="blocks">
+  {
+    rows.map(({ row, index, style, styled, classes, attributes, json, content }) => (
+      <div class:list={["block", `block--${row.type}`, { "block--styled": styled }, ...classes]} style={style} {...attributes}>
+        <Block type={row.type} content={content} context={{ index, isFirst: index === 0, editable }} />
+        {json && <script type="application/json" data-inti-block-json set:html={json} />}
+      </div>
+    ))
+  }
+</div>
+
+<style>
+  .blocks { display: flex; flex-direction: column; gap: var(--block-gap, 2.5rem); }
+  .block--styled { background: var(--block-bg, transparent); color: var(--block-fg, inherit); padding: var(--block-pad, 0); border-radius: var(--radius-lg); }
+</style>

@@ -1,0 +1,40 @@
+---
+/**
+ * `embed`: the palette stores HTML (`code`), which the API reduces to what
+ * `sanitizeEmbed` allows; the admin editor stores a `url`, which is
+ * embedded only when it is a YouTube or Vimeo video.
+ */
+import { fieldAttributes } from "../lib/inti-markup";
+import { str, videoEmbedUrl } from "../lib/text";
+import { pick, type BlockProps } from "./types";
+
+const props = Astro.props as BlockProps;
+const data = props as Record<string, unknown>;
+const code = str(data.code).trim();
+const video = code ? null : videoEmbedUrl(data.url);
+const caption = pick(data, "caption");
+const ratio = { "16:9": "16 / 9", "4:3": "4 / 3", "1:1": "1 / 1" }[str(data.aspectRatio)] ?? "16 / 9";
+---
+
+{
+  (code || video) && (
+    <figure class="embed">
+      {code ? (
+        <div class="embed__code" set:html={code} />
+      ) : (
+        <div class="embed__frame" style={`aspect-ratio:${ratio}`}>
+          <iframe src={video} title={caption?.value ?? "Embedded content"} loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" />
+        </div>
+      )}
+      {caption && <figcaption {...fieldAttributes(props.block?.editable, caption.key)}>{caption.value}</figcaption>}
+    </figure>
+  )
+}
+
+<style>
+  .embed { margin: 0; }
+  .embed__code :global(iframe) { max-width: 100%; border: 0; }
+  .embed__frame { position: relative; border-radius: var(--radius); overflow: hidden; }
+  .embed__frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  figcaption { margin-top: 0.5rem; color: var(--muted); font-size: 0.9rem; text-align: center; }
+</style>

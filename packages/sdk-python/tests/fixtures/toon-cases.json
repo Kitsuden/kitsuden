@@ -1,0 +1,292 @@
+[
+  {
+    "name": "flat table",
+    "json": [
+      {
+        "id": 0,
+        "slug": "row-0",
+        "name": "Row 0",
+        "active": true,
+        "note": 0
+      },
+      {
+        "id": 1,
+        "slug": "row-1",
+        "name": "Row 1",
+        "active": false,
+        "note": 1.5
+      },
+      {
+        "id": 2,
+        "slug": "row-2",
+        "name": "Row 2",
+        "active": true,
+        "note": 3
+      },
+      {
+        "id": 3,
+        "slug": "row-3",
+        "name": "Row 3",
+        "active": false,
+        "note": 4.5
+      }
+    ],
+    "toon": "[4]{id,slug,name,active,note}:\n  0,row-0,Row 0,true,0\n  1,row-1,Row 1,false,1.5\n  2,row-2,Row 2,true,3\n  3,row-3,Row 3,false,4.5"
+  },
+  {
+    "name": "listing with envelope",
+    "json": {
+      "docs": [
+        {
+          "id": 1,
+          "slug": "row-1",
+          "name": "Row 1",
+          "active": false,
+          "note": 1.5
+        },
+        {
+          "id": 2,
+          "slug": "row-2",
+          "name": "Row 2",
+          "active": true,
+          "note": 3
+        }
+      ],
+      "totalDocs": 2,
+      "page": 1,
+      "hasNextPage": false
+    },
+    "toon": "docs[2]{id,slug,name,active,note}:\n  1,row-1,Row 1,false,1.5\n  2,row-2,Row 2,true,3\ntotalDocs: 2\npage: 1\nhasNextPage: false"
+  },
+  {
+    "name": "column folded into the header",
+    "json": {
+      "docs": [
+        {
+          "id": "e1",
+          "_meta": {
+            "datasetId": "d1",
+            "createdAt": "2026-10-25T10:00:00.000Z"
+          },
+          "name": "One"
+        },
+        {
+          "id": "e2",
+          "_meta": {
+            "datasetId": "d1",
+            "createdAt": "2026-10-24T09:00:00.000Z"
+          },
+          "name": "Two"
+        }
+      ]
+    },
+    "toon": "docs[2]{id,_meta{datasetId,createdAt},name}:\n  e1,d1,\"2026-10-25T10:00:00.000Z\",One\n  e2,d1,\"2026-10-24T09:00:00.000Z\",Two"
+  },
+  {
+    "name": "keyed table",
+    "json": {
+      "byId": {
+        "a": {
+          "x": 1,
+          "y": "one"
+        },
+        "b": {
+          "x": 2,
+          "y": "two"
+        }
+      }
+    },
+    "toon": "byId[2:]{x,y}:\n  a: 1,one\n  b: 2,two"
+  },
+  {
+    "name": "list form with nested items",
+    "json": {
+      "docs": [
+        {
+          "id": 1,
+          "data": {
+            "skills": [
+              "fire",
+              "ice"
+            ],
+            "stats": {
+              "atk": 10
+            }
+          },
+          "tags": []
+        },
+        {
+          "id": 2,
+          "data": {
+            "skills": [],
+            "stats": {
+              "atk": 0
+            }
+          },
+          "extra": {
+            "note": null
+          }
+        }
+      ]
+    },
+    "toon": "docs[2]:\n  - id: 1\n    data:\n      skills[2]: fire,ice\n      stats:\n        atk: 10\n    tags: []\n  - id: 2\n    data:\n      skills: []\n      stats:\n        atk: 0\n    extra:\n      note: null"
+  },
+  {
+    "name": "empty objects",
+    "json": {
+      "content": {},
+      "externalIds": {},
+      "list": [
+        {},
+        {
+          "a": {}
+        }
+      ]
+    },
+    "toon": "content:\nexternalIds:\nlist[2]:\n  -\n  - a:"
+  },
+  {
+    "name": "siblings of data",
+    "json": {
+      "data": {
+        "slug": "x"
+      },
+      "view": {
+        "rows": [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "c"
+          ]
+        ]
+      },
+      "profile": null
+    },
+    "toon": "data:\n  slug: x\nview:\n  rows[2]:\n    - [2]: a,b\n    - [1]: c\nprofile: null"
+  },
+  {
+    "name": "root array of objects",
+    "json": [
+      {
+        "id": 1,
+        "slug": "row-1",
+        "name": "Row 1",
+        "active": false,
+        "note": 1.5
+      },
+      {
+        "id": 2,
+        "slug": "row-2",
+        "name": "Row 2",
+        "active": true,
+        "note": 3
+      }
+    ],
+    "toon": "[2]{id,slug,name,active,note}:\n  1,row-1,Row 1,false,1.5\n  2,row-2,Row 2,true,3"
+  },
+  {
+    "name": "root array of scalars",
+    "json": [
+      1,
+      "two",
+      null,
+      true,
+      2.5
+    ],
+    "toon": "[5]: 1,two,null,true,2.5"
+  },
+  {
+    "name": "empty root array",
+    "json": [],
+    "toon": "[]"
+  },
+  {
+    "name": "empty root object",
+    "json": {},
+    "toon": ""
+  },
+  {
+    "name": "arrays of arrays",
+    "json": {
+      "matrix": [
+        [
+          1,
+          2
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "mixed": [
+        1,
+        [
+          2,
+          3
+        ],
+        {
+          "a": 1
+        }
+      ]
+    },
+    "toon": "matrix[2]:\n  - [2]: 1,2\n  - [2]: 3,4\nmixed[3]:\n  - 1\n  - [2]: 2,3\n  - a: 1"
+  },
+  {
+    "name": "texts that need quotes",
+    "json": {
+      "number": "42",
+      "zeros": "05",
+      "truth": "true",
+      "nullText": "null",
+      "comma": "a,b",
+      "colon": "a:b",
+      "dash": "-x",
+      "hash": "#topic",
+      "empty": "",
+      "spaces": " a ",
+      "newline": "line\nbreak",
+      "tab": "a\tb",
+      "quotes": "says \"hello\"",
+      "backslash": "a\\b",
+      "control": "\u0001",
+      "unicode": "ñandú 😀",
+      "brackets": "[x]",
+      "braces": "{y}",
+      "pipe": "a|b"
+    },
+    "toon": "number: \"42\"\nzeros: \"05\"\ntruth: \"true\"\nnullText: \"null\"\ncomma: \"a,b\"\ncolon: \"a:b\"\ndash: \"-x\"\nhash: \"#topic\"\nempty: \"\"\nspaces: \" a \"\nnewline: \"line\\nbreak\"\ntab: \"a\\tb\"\nquotes: \"says \\\"hello\\\"\"\nbackslash: \"a\\\\b\"\ncontrol: \"\\u0001\"\nunicode: ñandú 😀\nbrackets: \"[x]\"\nbraces: \"{y}\"\npipe: a|b"
+  },
+  {
+    "name": "keys with quotes",
+    "json": {
+      "x-y": 1,
+      "1a": 2,
+      "with space": 3,
+      "": 4,
+      "a.b": 5,
+      "__proto__": {
+        "k": 6
+      }
+    },
+    "toon": "\"x-y\": 1\n\"1a\": 2\n\"with space\": 3\n\"\": 4\na.b: 5\n__proto__:\n  k: 6"
+  },
+  {
+    "name": "numbers",
+    "json": {
+      "integer": 42,
+      "negative": -7,
+      "decimal": 3.25,
+      "large": 1e+21,
+      "small": 1e-7,
+      "zero": 0
+    },
+    "toon": "integer: 42\nnegative: -7\ndecimal: 3.25\nlarge: 1e+21\nsmall: 1e-7\nzero: 0"
+  },
+  {
+    "name": "scalar",
+    "json": "hello",
+    "toon": "hello"
+  }
+]

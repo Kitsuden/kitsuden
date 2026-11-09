@@ -1,0 +1,287 @@
+/**
+ * TypeScript types generator from the schema
+ * ============================================================================
+ *
+ * The equivalent of `supabase gen types typescript`, and probably the piece
+ * with the most impact on adoption in the whole SDK: it is the difference between
+ * autocomplete on every query and `Record<string, any>` on all of them.
+ *
+ * It is **pure**: introspection goes in, a string comes out. No database, no
+ * network, no file system. That way it is tested exhaustively, which matters
+ * because a badly generated type silently propagates to all of the
+ * user's code.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Three types per table, and why one is not enough
+ *
+ *   Row     — what the API RETURNS. Everything present; nullable ones carry `| null`.
+ *   Insert  — what you SEND on create. Whatever has a default or is nullable
+ *             becomes optional: requiring an `id` that the database generates would
+ *             lie about the contract.
+ *   Update  — partial of Insert, **without the primary key**: changing it is not an
+ *             update, it is another row.
+ *
+ * A single type would force `as any` on every create, which is exactly the
+ * problem this comes to solve.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+export interface IntrospectedColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+  defaultValue: string | null;
+  isPrimaryKey: boolean;
+  isForeignKey?: boolean;
+  foreignTable?: string | null;
+  foreignColumn?: string | null;
+  maxLength?: number | null;
+  isUnique?: boolean;
+  isIndexed?: boolean;
+}
+
+export interface IntrospectedTable {
+  name: string;
+  schema?: string;
+  columns: IntrospectedColumn[];
+  primaryKey?: string[];
+}
+
+export interface GenerateTypesOptions {
+  /** File header. */
+  header?: string;
+  /** Name of the table map. */
+  databaseTypeName?: string;
+  /** Tables to exclude (auth internals, migrations…). */
+  exclude?: string[];
+}
+
+// ── Type mapping ─────────────────────────────────────────────────────────────
+
+/**
+ * Postgres → TypeScript.
+ *
+ * `jsonb` maps to `unknown` and NOT to `any`: `any` would disable checking
+ * of everything that touches that field, which is the opposite of generating types.
+ * `unknown` forces narrowing, which is inconvenient on purpose.
+ *
+ * Large integers (`bigint`, `int8`) go to `string`: the Postgres driver returns
+ * them that way because they do not fit in a JS `number` without losing precision.
+ * Typing them as `number` would be a silent bug as soon as ids grow.
+ */
+const TYPE_MAP: Record<string, string> = {
+  // Text
+  text: "string",
+  varchar: "string",
+  "character varying": "string",
+  char: "string",
+  character: "string",
+  uuid: "string",
+  citext: "string",
+  name: "string",
+
+  // Numbers that do fit
+  int2: "number",
+  smallint: "number",
+  int4: "number",
+  integer: "number",
+  int: "number",
+  real: "number",
+  float4: "number",
+  float8: "number",
+  "double precision": "number",
+
+  // Numbers that do NOT fit in a JS number
+  int8: "string",
+  bigint: "string",
+  numeric: "string",
+  decimal: "string",
+  money: "string",
+
+  // Booleans
+  bool: "boolean",
+  boolean: "boolean",
+
+  // Dates: serialized as ISO 8601 when traveling over JSON.
+  timestamp: "string",
+  timestamptz: "string",
+  "timestamp with time zone": "string",
+  "timestamp without time zone": "string",
+  date: "string",
+  time: "string",
+  timetz: "string",
+  interval: "string",
+
+  // Structured
+  json: "unknown",
+  jsonb: "unknown",
+  bytea: "string",
+};
+
+/** TS type of a column, not counting nullability. */
+export function mapColumnType(pgType: string): string {
+  const normalized = pgType.toLowerCase().trim();
+
+  // Postgres arrays: `_text` or `text[]`.
+  if (normalized.startsWith("_")) {
+    return `${mapColumnType(normalized.slice(1))}[]`;
+  }
+  if (normalized.endsWith("[]")) {
+    return `${mapColumnType(normalized.slice(0, -2))}[]`;
+  }
+
+  return TYPE_MAP[normalized] ?? "unknown";
+}
+
+// ── Identifiers ──────────────────────────────────────────────────────────────
+
+/** `blog_posts` → `BlogPosts`. */
+export function toPascalCase(name: string): string {
+  return name
+    .split(/[_\-\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
+}
+
+const VALID_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+/**
+ * Property key, quoted if needed.
+ *
+ * A column can be called `order` or `2fa_enabled`; emitting it raw would give a
+ * file that does not compile, and the user would not know why.
+ */
+export function propertyKey(name: string): string {
+  return VALID_IDENTIFIER.test(name) ? name : JSON.stringify(name);
+}
+
+// ── Optionality rules ────────────────────────────────────────────────────────
+
+/**
+ * Is it optional on INSERT?
+ *
+ * Yes when the database can fill it in: it has a default, is nullable, or is
+ * an autogenerated primary key. Requiring an `id` that Postgres generates would force
+ * making it up or casting, which is the typical failure of hand-written
+ * generated types.
+ */
+export function isOptionalOnInsert(column: IntrospectedColumn): boolean {
+  if (column.defaultValue !== null && column.defaultValue !== undefined) return true;
+  if (column.nullable) return true;
+  // PK without an explicit default but of an autogenerable type.
+  if (column.isPrimaryKey && /^(uuid|serial|bigserial|int8|int4)$/i.test(column.type)) return true;
+  return false;
+}
+
+// ── Broadcast ────────────────────────────────────────────────────────────────
+
+function emitInterface(
+  name: string,
+  columns: IntrospectedColumn[],
+  mode: "row" | "insert"
+): string {
+  const lines = columns.map((col) => {
+    const base = mapColumnType(col.type);
+    const optional = mode === "insert" && isOptionalOnInsert(col);
+    // In Row, nullable means "may come back null".
+    // In Insert, nullable means "you can send null" — and it is also optional.
+    const type = col.nullable ? `${base} | null` : base;
+
+    const notes: string[] = [];
+    if (col.isPrimaryKey) notes.push("primary key");
+    if (col.isForeignKey && col.foreignTable) {
+      notes.push(`→ ${col.foreignTable}.${col.foreignColumn ?? "id"}`);
+    }
+    const comment = notes.length ? `  /** ${notes.join(" · ")} */\n` : "";
+
+    return `${comment}  ${propertyKey(col.name)}${optional ? "?" : ""}: ${type};`;
+  });
+
+  return `export interface ${name} {\n${lines.join("\n")}\n}`;
+}
+
+/**
+ * Generates the complete types file.
+ *
+ * Deterministic: tables and columns are emitted in a stable order, so
+ * regenerating with no schema changes produces an empty diff. Without that, the
+ * generated file would dirty every commit.
+ */
+export function generateTypes(
+  tables: IntrospectedTable[],
+  options: GenerateTypesOptions = {}
+): string {
+  const dbName = options.databaseTypeName ?? "Database";
+  const exclude = new Set(options.exclude ?? []);
+
+  const usable = tables
+    .filter((t) => !exclude.has(t.name) && t.columns.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const header =
+    options.header ??
+    `/**
+ * GENERATED BY \`kitsuden gen types\` — DO NOT EDIT BY HAND.
+ *
+ * Regenerate after every migration:
+ *   kitsuden gen types --out src/kitsuden.types.ts
+ *
+ * Usage with the SDK:
+ *   const client = createClient<${dbName}>({ baseUrl });
+ *   const posts = await client.from("blog_posts").list();  // typed
+ */`;
+
+  if (usable.length === 0) {
+    return `${header}\n\nexport interface ${dbName} {}\n`;
+  }
+
+  const blocks: string[] = [];
+  const mapEntries: string[] = [];
+
+  for (const table of usable) {
+    const base = toPascalCase(table.name);
+    const columns = [...table.columns].sort((a, b) => a.name.localeCompare(b.name));
+
+    const pk = new Set(
+      table.primaryKey ?? columns.filter((c) => c.isPrimaryKey).map((c) => c.name)
+    );
+
+    blocks.push(
+      `// ── ${table.name} ${"─".repeat(Math.max(0, 60 - table.name.length))}\n` +
+        emitInterface(`${base}Row`, columns, "row") +
+        "\n\n" +
+        emitInterface(`${base}Insert`, columns, "insert") +
+        "\n\n" +
+        `/** Partial of Insert WITHOUT the primary key: changing it is not an update, it is another row. */\n` +
+        `export type ${base}Update = Partial<Omit<${base}Insert, ${
+          pk.size ? [...pk].map((k) => JSON.stringify(k)).join(" | ") : "never"
+        }>>;`
+    );
+
+    mapEntries.push(
+      `  ${propertyKey(table.name)}: {\n` +
+        `    Row: ${base}Row;\n` +
+        `    Insert: ${base}Insert;\n` +
+        `    Update: ${base}Update;\n` +
+        `  };`
+    );
+  }
+
+  const map =
+    `/**\n` +
+    ` * Table map. Pass it to the client so that \`from()\` knows what it is talking about:\n` +
+    ` *   createClient<${dbName}>({ baseUrl })\n` +
+    ` */\n` +
+    `export interface ${dbName} {\n${mapEntries.join("\n")}\n}`;
+
+  const helpers =
+    `/** Valid table name. */\n` +
+    `export type TableName = keyof ${dbName};\n\n` +
+    `/** Row of a table: \`Row<"blog_posts">\`. */\n` +
+    `export type Row<T extends TableName> = ${dbName}[T]["Row"];\n` +
+    `export type Insert<T extends TableName> = ${dbName}[T]["Insert"];\n` +
+    `export type Update<T extends TableName> = ${dbName}[T]["Update"];`;
+
+  return `${header}\n\n${blocks.join("\n\n")}\n\n${map}\n\n${helpers}\n`;
+}

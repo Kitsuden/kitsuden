@@ -1,0 +1,62 @@
+{
+  "previousChecksums": {
+    "0002_block_vocabulary.sql": [
+      "6c83ebdbaeb1e064",
+      "49d49c2e04761023",
+      "b97088181e46ecad",
+      "c878b281417ae65d"
+    ],
+    "0003_habitat_map_and_stat_compare.sql": [
+      "58cd3b90b1aaad09",
+      "a3b1584b9669ce79",
+      "e25871e92c19e4a7",
+      "6ca2c2d6761d3c12"
+    ],
+    "0004_dex_index.sql": [
+      "36c319931e734b74",
+      "a3f6e924bfe8ff1b",
+      "e48ac2eb28af4d35",
+      "ce3361ee7586e9a0"
+    ],
+    "0005_affinity_calculator.sql": [
+      "94baa6f13990b0ef",
+      "7e240c993b4f4c15",
+      "8b6d71e8aecb3e32",
+      "347f741db12adecb"
+    ],
+    "0006_event_search_and_race_planner.sql": [
+      "a2273d387c2a4615",
+      "2eea141169b898ad",
+      "ce61b3034eb6c981",
+      "de040f941b0f4ec6"
+    ],
+    "0007_card_games.sql": [
+      "0f8a60152a26d5ff",
+      "f48ef603c343a701",
+      "3b37abb07bcbe5d0",
+      "5501e7dedf8e4f76"
+    ],
+    "0008_embedded_deck.sql": [
+      "9b47efc61696f82c",
+      "d30aecff378db01b",
+      "299297bb58a828a3",
+      "fed609abb1c66549"
+    ],
+    "0009_block_type_without_enum.sql": [
+      "31a9650b2858b2b5",
+      "d6c8aafb9f08c9fe",
+      "fa1c6ab27ce9220c",
+      "fef13831b4cfb739"
+    ]
+  },
+  "renamed": {
+    "0002_block_vocabulary.sql": "0002_vocabulario_de_bloques.sql",
+    "0003_habitat_map_and_stat_compare.sql": "0003_mapa_de_habitats_y_comparador.sql",
+    "0004_dex_index.sql": "0004_indice_de_fichas.sql",
+    "0005_affinity_calculator.sql": "0005_calculadora_de_afinidad.sql",
+    "0006_event_search_and_race_planner.sql": "0006_buscador_y_calendario.sql",
+    "0007_card_games.sql": "0007_juegos_de_cartas.sql",
+    "0008_embedded_deck.sql": "0008_mazo_incrustado.sql",
+    "0009_block_type_without_enum.sql": "0009_tipos_de_bloque_sin_enum.sql"
+  }
+}

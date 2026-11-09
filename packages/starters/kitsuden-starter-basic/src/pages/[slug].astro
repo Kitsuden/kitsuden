@@ -1,0 +1,14 @@
+---
+/** A page-builder page by slug: `/about` → GET /api/page-builder/pages/about */
+import PageView from "../components/PageView.astro";
+import { isSlug } from "../lib/kitsuden";
+
+const slug = Astro.params.slug;
+const page = isSlug(slug) ? await Astro.locals.kitsuden.pages.get(slug) : null;
+
+if (!page) return Astro.rewrite("/404");
+// The homepage lives at `/`: one address per page
+if (page.isHomepage || page.slug === "home") return Astro.redirect("/", 301);
+---
+
+<PageView page={page} canonicalPath={`/${page.slug}`} />

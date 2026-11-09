@@ -1,0 +1,10 @@
+{
+  "id": "sharepoint",
+  "name": "Enterprise (SharePoint)",
+  "description": "A professional, high-density business theme inspired by Microsoft SharePoint and Office 365.",
+  "version": "1.0.0",
+  "type": "theme",
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "css_entry": "variables.css",
+  "theme_type": "enterprise"
+}

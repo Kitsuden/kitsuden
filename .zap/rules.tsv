@@ -1,0 +1,3 @@
+# OWASP ZAP rules for the API scan (.github/workflows/security.yml, job zap).
+# One rule per line, three TAB-separated fields: alert id, then IGNORE, INFO, WARN or FAIL,
+# then the alert's name and why. Every IGNORE must say why it does not apply.

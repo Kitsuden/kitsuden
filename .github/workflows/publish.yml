@@ -1,0 +1,131 @@
+name: Publish to npm
+
+# Only on a `v*` tag or by hand. Nothing is published until the whole CI has
+# passed for this commit, and the tag must match the version of each package.
+#
+# Needs, in the repository settings: the secret NPM_TOKEN, and a `release`
+# environment (add required reviewers there to gate each publication).
+#
+# Published, in this order: @kitsuden/shared, @kitsuden/codegen, @kitsuden/cli,
+# @kitsuden/sdk and @kitsuden/mcp-server. codegen goes before the CLI because the CLI
+# depends on it; its `publishConfig` swaps the TypeScript sources it uses in the
+# workspace for the built dist/, so `npx @kitsuden/cli` runs plain JavaScript.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Package to publish"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - shared
+          - codegen
+          - cli
+          - sdk
+          - mcp-server
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "9.15.4"
+  BUN_VERSION: "1.3.14"
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  # Its blocking scanners (secrets, dependencies, IaC, CodeQL) gate the release too
+  security:
+    name: Security
+    uses: ./.github/workflows/security.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+  publish:
+    name: Publish
+    needs: [ci, security]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      # npm provenance: a signed link from each package to this workflow run
+      id-token: write
+    steps:
+      # Actions are pinned by commit in this job: it holds the npm token, and a
+      # moved tag would run inside it. Dependabot keeps them up to date.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: "https://registry.npmjs.org"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Choose packages
+        id: packages
+        env:
+          SELECTED: ${{ inputs.package || 'all' }}
+        run: |
+          case "$SELECTED" in
+            all) echo "names=shared codegen cli sdk mcp-server" >> "$GITHUB_OUTPUT" ;;
+            shared|codegen|cli|sdk|mcp-server) echo "names=$SELECTED" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::Unknown package: $SELECTED"; exit 1 ;;
+          esac
+
+      - name: The tag matches the package versions
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          NAMES: ${{ steps.packages.outputs.names }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          for name in $NAMES; do
+            version=$(node -p "require('./packages/$name/package.json').version")
+            if [ "v$version" != "$TAG" ]; then
+              echo "::error::Tag $TAG does not match @kitsuden/$name $version"
+              exit 1
+            fi
+          done
+
+      - name: Build
+        env:
+          NAMES: ${{ steps.packages.outputs.names }}
+        run: |
+          for name in $NAMES; do
+            pnpm --filter "@kitsuden/$name" build
+          done
+
+      # `pnpm publish`, not `npm publish`: it rewrites `workspace:*` to real versions.
+      - name: Publish
+        env:
+          NAMES: ${{ steps.packages.outputs.names }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
+        run: |
+          for name in $NAMES; do
+            version=$(node -p "require('./packages/$name/package.json').version")
+            case "$version" in
+              *-*) tag=beta ;;
+              *) tag=latest ;;
+            esac
+            pnpm --filter "@kitsuden/$name" publish --access public --no-git-checks --tag "$tag"
+          done

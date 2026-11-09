@@ -1,0 +1,51 @@
+{
+  "name": "@kitsuden/mcp-server",
+  "version": "0.9.0-beta",
+  "description": "Kitsuden Model Context Protocol (MCP) server for AI agents. Runs on Bun.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "kitsuden-mcp": "./dist/standalone.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target=bun && bun build ./src/standalone.ts --outdir ./dist --target=bun",
+    "typecheck": "tsc --noEmit",
+    "dev": "bun run --watch src/standalone.ts",
+    "start": "bun run dist/standalone.js"
+  },
+  "keywords": [
+    "kitsuden",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "claude",
+    "cursor"
+  ],
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "hono": "4.13.13",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^22.19.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "name": "@kitsuden/media",
+  "version": "1.0.0",
+  "description": "Kitsuden Core Kon - Media Library (File uploads, S3/MinIO storage, image optimization)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/core/media"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/core/media#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "pnpm exec tsc",
+    "typecheck": "pnpm exec tsc --noEmit",
+    "dev": "pnpm exec tsc --watch"
+  },
+  "keywords": [
+    "kitsuden",
+    "kon",
+    "core",
+    "media",
+    "uploads",
+    "s3"
+  ],
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@kitsuden/shared": "workspace:*",
+    "hono": "^4.7.0",
+    "drizzle-orm": "^0.45.0",
+    "zod": "^4.6.7"
+  },
+  "kitsuden": {
+    "type": "kon",
+    "id": "kon-media",
+    "category": "core",
+    "order": 1,
+    "core": true,
+    "defaultEnabled": true,
+    "minVersion": "0.8.0"
+  },
+  "files": [
+    "dist",
+    "kon.json",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./kon.json": "./kon.json",
+    "./package.json": "./package.json"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "id": "kon-shop-test",
+  "name": "Shop (fixture)",
+  "version": "1.0.0",
+  "sdk": 1,
+  "type": "kon",
+  "description": "Fixture: kon whose mountPath lives ONLY in the code (like kon-ecommerce → /api/shop)."
+}

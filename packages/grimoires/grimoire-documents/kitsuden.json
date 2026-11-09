@@ -1,0 +1,9 @@
+{
+  "id": "kitsuden-documents",
+  "name": "Documents",
+  "description": "Light crimson theme: warm cream background, ergonomic for long document review sessions.",
+  "version": "1.0.0",
+  "type": "theme",
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "css_entry": "variables.css"
+}

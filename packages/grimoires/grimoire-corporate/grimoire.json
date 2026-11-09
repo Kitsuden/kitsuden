@@ -1,0 +1,21 @@
+{
+  "id": "grimoire-corporate",
+  "name": "Corporate Grimoire",
+  "description": "Professional enterprise ecosystem with clean design, document management, employee directories, and business workflows. Ideal for corporate intranets, enterprise portals, and business applications.",
+  "version": "2.0.0",
+  "type": "grimoire",
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "industry": "enterprise",
+  "keywords": ["corporate", "enterprise", "business", "professional"],
+  "kons": ["kon-crm", "kon-dms", "kon-directory"],
+  "optional_kons": [],
+  "config": {
+    "theme": {
+      "css_entry": "variables.css",
+      "primary_color": "#3b82f6",
+      "accent_color": "#64748b"
+    }
+  },
+  "konConfig": {},
+  "seed": null
+}

@@ -1,0 +1,20 @@
+{
+  "id": "grimoire-sharepoint",
+  "name": "SharePoint Grimoire",
+  "description": "Microsoft 365 and SharePoint integration grimoire. Enables seamless connection with SharePoint sites, document libraries, and Microsoft Graph API.",
+  "version": "2.0.0",
+  "type": "grimoire",
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "industry": "microsoft",
+  "keywords": ["sharepoint", "microsoft", "office365", "enterprise"],
+  "kons": ["kon-dms"],
+  "optional_kons": ["kon-directory"],
+  "config": {
+    "integrations": {
+      "microsoft_graph": true,
+      "sharepoint_sites": true
+    }
+  },
+  "konConfig": {},
+  "seed": null
+}

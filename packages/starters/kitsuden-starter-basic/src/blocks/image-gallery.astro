@@ -1,0 +1,38 @@
+---
+/** `image-gallery` (admin editor): `images[]` with `url`, `alt`, `caption` */
+import { imageSrc } from "../lib/media";
+import type { BlockProps } from "./types";
+
+type Item = { url?: unknown; mediaId?: unknown; alt?: unknown; caption?: unknown };
+const props = Astro.props as BlockProps;
+const data = props as Record<string, unknown>;
+const items = (Array.isArray(data.images) ? (data.images as Item[]) : [])
+  .map((item) => ({
+    src: imageSrc(item?.mediaId, "medium") ?? imageSrc(item?.url, "medium"),
+    alt: typeof item?.alt === "string" ? item.alt : "",
+    caption: typeof item?.caption === "string" ? item.caption : "",
+  }))
+  .filter((item) => item.src);
+const columns = Math.min(4, Math.max(1, Number(data.columns) || 3));
+---
+
+{
+  items.length > 0 && (
+    <div class="gallery" style={`--columns:${columns}`}>
+      {items.map((item) => (
+        <figure>
+          <img src={item.src} alt={item.alt} loading="lazy" decoding="async" />
+          {item.caption && <figcaption>{item.caption}</figcaption>}
+        </figure>
+      ))}
+    </div>
+  )
+}
+
+<style>
+  .gallery { display: grid; gap: 1rem; grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); }
+  @media (max-width: 40rem) { .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  figure { margin: 0; }
+  img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); }
+  figcaption { margin-top: 0.35rem; color: var(--muted); font-size: 0.85rem; }
+</style>

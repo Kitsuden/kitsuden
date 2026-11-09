@@ -1,0 +1,49 @@
+{
+  "name": "E-Commerce",
+  "description": "Online store with products, orders, and inventory",
+  "template": "ecommerce",
+  "kons": ["kon-auth", "kon-datasets", "kon-media"],
+  "datasets": [
+    {
+      "name": "products",
+      "displayName": "Products",
+      "schema": {
+        "name": { "type": "string", "required": true },
+        "slug": { "type": "string", "required": true, "unique": true },
+        "description": { "type": "richtext" },
+        "price": { "type": "number", "required": true },
+        "currency": { "type": "string", "default": "USD" },
+        "sku": { "type": "string", "unique": true },
+        "stock": { "type": "number", "default": 0 },
+        "images": { "type": "media", "multiple": true },
+        "published": { "type": "boolean", "default": false },
+        "category": { "type": "relation", "target": "categories" }
+      }
+    },
+    {
+      "name": "categories",
+      "displayName": "Categories",
+      "schema": {
+        "name": { "type": "string", "required": true },
+        "slug": { "type": "string", "required": true, "unique": true },
+        "parentId": { "type": "relation", "target": "categories" }
+      }
+    },
+    {
+      "name": "orders",
+      "displayName": "Orders",
+      "schema": {
+        "customerEmail": { "type": "string", "required": true },
+        "status": {
+          "type": "enum",
+          "options": ["pending", "processing", "shipped", "delivered", "cancelled"],
+          "default": "pending"
+        },
+        "total": { "type": "number", "required": true },
+        "currency": { "type": "string", "default": "USD" },
+        "items": { "type": "json" }
+      }
+    }
+  ],
+  "seed": true
+}

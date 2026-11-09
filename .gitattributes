@@ -1,0 +1,11 @@
+# Every text file is stored and checked out with LF, on every platform;
+# core.autocrlf does not override this. It matters beyond taste: `. .env.test` in a
+# shell keeps the CR in each value, and Docker copies the working tree into the images.
+# The code and the tests still have to cope with a CRLF checkout.
+* text=auto eol=lf
+
+*.sh text eol=lf
+
+# cmd.exe needs CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf

@@ -1,0 +1,5 @@
+-- Documents Grimoire — seed
+-- No seed data required: the ocr_documents table (kon-ocr) is populated
+-- automatically when jobs go through /api/ocr/gateway/jobs/extract.
+-- The OCR pipeline state lives in the host's Postgres and the
+-- engine's template store lives in the OCR service (its own SQLite).

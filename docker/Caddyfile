@@ -1,0 +1,87 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Kitsuden — TLS termination (production on a VPS)
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build
+#
+# Caddy obtains and renews the certificates on its own (Let's Encrypt). The
+# DNS A records (and AAAA with IPv6) of the THREE names must point to the
+# server, and ports 80 and 443 must reach it:
+#
+#   {$SITE_DOMAIN}        the public website (the neutral starter)
+#   www.{$SITE_DOMAIN}    redirects to the one above
+#   {$KITSUDEN_DOMAIN}    the admin panel, and the API the browser uses (/api/*)
+#
+# docker-compose.tls.yml sets the variables from .env.
+#
+# The website talks to the API over the internal Docker network
+# (KITSUDEN_API_URL), so its domain does not need the API. The panel's nginx
+# forwards /api/* to the API, which is how the browser reaches it.
+# ═══════════════════════════════════════════════════════════════════════════
+
+{
+	email {$ACME_EMAIL}
+}
+
+# Common headers. HSTS without `includeSubDomains` or `preload` on purpose:
+# with includeSubDomains, any subdomain without TLS becomes unreachable for a
+# year. Add them once you know every subdomain has a certificate.
+#
+# X-Frame-Options: without it, any website could put the panel or the site in an
+# iframe (clickjacking). SAMEORIGIN and not DENY because the site itself may
+# be framed; the panel's previews use `srcdoc`, which does not depend on this.
+# No CSP in this shared block: a website has its own embeds and inline scripts.
+# The panel gets its CSP below.
+(headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# ── The admin panel and the API ────────────────────────────────────────────
+{$KITSUDEN_DOMAIN} {
+	import headers
+	encode zstd gzip
+
+	# Same limit nginx has for `/api/`: the media library uploads large files.
+	request_body {
+		max_size 100MB
+	}
+
+	# Uploaded files (`/media/*`) are served by the API itself.
+	handle /media/* {
+		reverse_proxy kitsuden_api:3000
+	}
+
+	# The API sets its own headers.
+	handle /api/* {
+		reverse_proxy kitsuden_admin:8080
+	}
+
+	# Same policy as docker/nginx-admin.conf: the reasons for each directive are
+	# there, including why script-src 'unsafe-inline' does not let any inline
+	# script run (the panel's own <meta> policy carries the hash of its one script).
+	handle {
+		header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+		reverse_proxy kitsuden_admin:8080
+	}
+}
+
+# ── The website ────────────────────────────────────────────────────────────
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} 308
+}
+
+{$SITE_DOMAIN} {
+	import headers
+	encode zstd gzip
+
+	# The starter serves images from its own origin (/img/…, /media/…) and
+	# proxies them from the API, so everything goes to the site.
+	handle {
+		reverse_proxy kitsuden_web:4321
+	}
+}

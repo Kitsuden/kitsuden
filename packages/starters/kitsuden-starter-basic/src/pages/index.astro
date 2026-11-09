@@ -1,0 +1,36 @@
+---
+/**
+ * Home: the page marked as homepage in the page builder (or the one with
+ * slug `home`), followed by the latest posts. Without such a page, a short
+ * "you are connected" note, so a fresh install never shows an empty screen.
+ */
+import Base from "../layouts/Base.astro";
+import PageView from "../components/PageView.astro";
+import PostList from "../components/PostList.astro";
+import { t } from "../i18n";
+import { site } from "../lib/site";
+
+const { kitsuden } = Astro.locals;
+const [page, posts] = await Promise.all([kitsuden.pages.home(), kitsuden.posts.list({ limit: 3, locale: site.locale })]);
+const latest = posts?.docs ?? [];
+---
+
+{
+  page ? (
+    <PageView page={page} canonicalPath="/">
+      {latest.length > 0 && <PostList title={t(site.locale, "home.latest")} posts={latest} />}
+    </PageView>
+  ) : (
+    <Base description={t(site.locale, "home.empty.body")}>
+      <section class="empty">
+        <h1>{t(site.locale, "home.empty.title")}</h1>
+        <p class="muted">{t(site.locale, "home.empty.body")}</p>
+      </section>
+      {latest.length > 0 && <PostList title={t(site.locale, "home.latest")} posts={latest} />}
+    </Base>
+  )
+}
+
+<style>
+  .empty { padding: 3rem 0; max-width: 40rem; }
+</style>

@@ -1,0 +1,77 @@
+{
+  "name": "@kitsuden/testing",
+  "version": "0.9.0-beta",
+  "description": "Kitsuden Testing Framework - Minimalist kon testing",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/testing"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/testing#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./sandbox-drizzle": {
+      "import": "./dist/sandbox-drizzle.js",
+      "types": "./dist/sandbox-drizzle.d.ts"
+    },
+    "./drizzle": {
+      "import": "./dist/drizzle.js",
+      "types": "./dist/drizzle.d.ts"
+    },
+    "./bun": {
+      "import": "./dist/bun.js",
+      "types": "./dist/bun.d.ts"
+    },
+    "./vitest": {
+      "import": "./dist/vitest.js",
+      "types": "./dist/vitest.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@kitsuden/shared": "workspace:*",
+    "hono": "^4.12.3",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "@types/pg": "^8.16.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "peerDependencies": {
+    "vitest": "^4.0.0",
+    "drizzle-orm": "^0.45.0",
+    "pg": "^8.20.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    },
+    "pg-mem": {
+      "optional": true
+    }
+  },
+  "optionalDependencies": {
+    "pg-mem": "^3.0.14"
+  },
+  "keywords": [
+    "kitsuden",
+    "testing",
+    "kons"
+  ]
+}

@@ -1,0 +1,18 @@
+# Kitsuden MCP server for Codex (docs/agents/coding-agents.md).
+# Copy to ~/.codex/config.toml, or to .codex/config.toml in the project (Codex loads a
+# project file only for trusted projects).
+#
+# No token or URL is written here: env_vars forwards the two variables from the
+# environment Codex runs in. Set them per agent, from outside the repository.
+
+[mcp_servers.kitsuden]
+command = "kitsuden"
+args = ["mcp", "--stdio"]
+env_vars = ["KITSUDEN_API_URL", "KITSUDEN_API_TOKEN"]
+startup_timeout_sec = 20
+
+# Without the CLI on the PATH, point at the monorepo's build instead
+# (pnpm --filter @kitsuden/cli build):
+#
+# command = "node"
+# args = ["C:/path/to/kitsuden/packages/cli/dist/index.js", "mcp", "--stdio"]

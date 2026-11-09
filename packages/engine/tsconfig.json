@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // No `baseUrl`, on purpose: with `baseUrl: "."`, Bun resolved the bare import
+    // `"zod"` in any engine file to `./zod.ts` (the `@kitsuden/engine/zod` entry),
+    // which then imported itself. The `paths` below are relative to this file.
+    "paths": {
+      "@kitsuden/shared": ["../shared/src/index.ts"],
+      "@kitsuden/shared/*": ["../shared/src/*"],
+      // The engine re-exports host modules (apps/api) by relative path. Those files
+      // use the `@/` alias of apps/api, so it has to be declared here too.
+      "@/*": ["../../apps/api/src/*"]
+    }
+  },
+  // Limited to its own files: without `include`, tsc pulls in half the monorepo, with
+  // aliases this project does not declare. Each package type-checks its own code.
+  "include": ["index.ts", "src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/**/tests/**"]
+}

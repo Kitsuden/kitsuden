@@ -1,0 +1,71 @@
+{
+  "name": "@kitsuden/codegen",
+  "version": "0.9.0-beta",
+  "description": "Frontend code generation for Kitsuden collections",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/codegen"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/codegen#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/generators/react.ts",
+    "./vue": "./src/generators/vue.ts",
+    "./svelte": "./src/generators/svelte.ts",
+    "./generators/types": "./src/generators/types.ts"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "tsup": "^8.0.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
+      },
+      "./react": {
+        "types": "./dist/generators/react.d.ts",
+        "import": "./dist/generators/react.js",
+        "require": "./dist/generators/react.cjs"
+      },
+      "./vue": {
+        "types": "./dist/generators/vue.d.ts",
+        "import": "./dist/generators/vue.js",
+        "require": "./dist/generators/vue.cjs"
+      },
+      "./svelte": {
+        "types": "./dist/generators/svelte.d.ts",
+        "import": "./dist/generators/svelte.js",
+        "require": "./dist/generators/svelte.cjs"
+      },
+      "./generators/types": {
+        "types": "./dist/generators/types.d.ts",
+        "import": "./dist/generators/types.js",
+        "require": "./dist/generators/types.cjs"
+      }
+    }
+  }
+}

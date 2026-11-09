@@ -1,0 +1,34 @@
+{
+  "name": "create-kitsuden",
+  "version": "0.9.0-beta",
+  "description": "npm create kitsuden: a new Kitsuden project (Docker with prebuilt images, or local development) with its secrets generated.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/create-kitsuden"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/create-kitsuden#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "type": "module",
+  "bin": {
+    "create-kitsuden": "./bin/create-kitsuden.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "sync-templates": "node scripts/sync-templates.mjs",
+    "prepack": "node scripts/sync-templates.mjs"
+  }
+}

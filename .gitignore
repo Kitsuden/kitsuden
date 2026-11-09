@@ -1,0 +1,111 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+bun.lock
+bun.lockb
+
+# Build output
+dist/
+dist-*/
+build/
+.astro/
+.next/
+.svelte-kit/
+.turbo/
+.cache/
+*.tsbuildinfo
+*.js.map
+*.d.ts.map
+
+# TypeScript compiled in place by accident (the sources are .ts and .svelte.ts)
+apps/api/src/**/*.js
+apps/api/src/**/*.d.ts
+apps/api/scripts/**/*.js
+apps/api/scripts/**/*.d.ts
+packages/core/**/*.js
+packages/core/**/*.d.ts
+packages/engine/src/**/*.js
+packages/engine/src/**/*.d.ts
+packages/shared/src/**/*.js
+packages/shared/src/**/*.d.ts
+tests/**/*.js
+tests/**/*.d.ts
+scripts/*.js
+scripts/*.d.ts
+!tests/types/**/*.d.ts
+!packages/admin/src/**/*.svelte.ts
+
+# Environment files: only the *.example files are tracked
+.env
+.env.*
+!.env.example
+!.env.*.example
+!**/.env.example
+
+# Secrets, dumps and archives
+*.pem
+*.key
+*.dump
+*.sql.gz
+*.tgz
+*.bak
+
+# Local Kitsuden state
+apps/api/data/
+apps/api/llms.txt
+apps/api/drizzle/vault/
+.kitsuden/
+kitsuden.kons.json
+kitsuden.kons.lock
+
+# Kons are installed by `kitsuden kon add` and live in their own repository.
+# Only the workspace root of this folder is tracked.
+packages/kons/*
+!packages/kons/package.json
+!packages/kons/README.md
+
+# Local overrides of the Compose stack
+docker-compose.override.yml
+
+# Test and tool output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.schemathesis/
+.eslintcache
+*-progress.txt
+
+# Logs
+logs/
+*.log
+*.err
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist-py/
+
+# Editors and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.DS_Store
+Thumbs.db
+
+# Tools local to each developer. Of .claude/, only the shared settings and skills are tracked:
+# settings.local.json, worktrees and the rest stay local.
+.claude/*
+!.claude/settings.json
+!.claude/skills/
+.cursor/
+.aig/
+.llms/
+graphify-out/
+.security/

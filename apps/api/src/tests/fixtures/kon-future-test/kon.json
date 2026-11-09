@@ -1,0 +1,9 @@
+{
+  "id": "kon-future-test",
+  "name": "Future (fixture)",
+  "version": "1.0.0",
+  "sdk": 99,
+  "type": "kon",
+  "mount": { "path": "/api/future-test" },
+  "description": "Fixture: kon written for a kon SDK that this core does not offer."
+}

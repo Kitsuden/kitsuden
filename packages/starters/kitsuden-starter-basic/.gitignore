@@ -1,0 +1,7 @@
+# Build output and local state of this starter
+dist/
+.astro/
+node_modules/
+.env
+.inti/
+.kitsuden/

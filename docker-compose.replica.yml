@@ -1,0 +1,57 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Kitsuden — a streaming replica of the database (override)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+#   docker compose -f docker-compose.yml -f docker-compose.replica.yml up -d kitsuden_db_replica
+#
+# A hot standby that follows the primary over the replication protocol,
+# seconds behind. What it is for, what it is NOT (automatic failover) and the
+# manual failover procedure: docs/install/high-availability.md.
+#
+# Before the first start, on the primary:
+#   1. KITSUDEN_PITR=on in .env and restart the database once (it allows
+#      replication connections; see docker/postgres-entrypoint.sh);
+#   2. CREATE ROLE kitsuden_replicator WITH REPLICATION LOGIN PASSWORD '<REPLICATION_PASSWORD>';
+#   3. REPLICATION_PASSWORD in .env (no URL encoding needed: it goes in a .pgpass).
+#
+# On the SAME host this protects against a corrupted data directory or a
+# Postgres that will not start, not against losing the machine. For that, run
+# the replica on another host: same file, with PRIMARY_HOST set to the
+# primary's address and the primary's port reachable from there (over a
+# private network or a tunnel, never the open internet).
+#
+# The API does not use it: there is no read routing (see the docs).
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  kitsuden_db_replica:
+    image: pgvector/pgvector:pg16
+    container_name: ${KITSUDEN_INSTANCE:-kitsuden}_db_replica
+    restart: unless-stopped
+    entrypoint: ["sh", "/kitsuden/replica-entrypoint.sh"]
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      PRIMARY_HOST: ${REPLICA_PRIMARY_HOST:-kitsuden_db}
+      REPLICATION_USER: ${REPLICATION_USER:-kitsuden_replicator}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:?REPLICATION_PASSWORD is required - see docker-compose.replica.yml}
+      REPLICATION_SLOT: ${REPLICATION_SLOT:-kitsuden_replica}
+    volumes:
+      - kitsuden_postgres_replica:/var/lib/postgresql/data
+      - ./docker/replica-entrypoint.sh:/kitsuden/replica-entrypoint.sh:ro
+    # Local only, like the primary: read-only queries for reports through an SSH tunnel.
+    ports:
+      - "127.0.0.1:${DB_REPLICA_PORT:-5433}:5432"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kitsuden} -d ${POSTGRES_DB:-kitsuden_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10m
+    networks:
+      - kitsuden_net_prod
+
+volumes:
+  kitsuden_postgres_replica:
+    name: ${KITSUDEN_INSTANCE:-kitsuden}_postgres_replica
+    driver: local

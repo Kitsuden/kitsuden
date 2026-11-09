@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "kitsuden": {
+      "type": "stdio",
+      "command": "kitsuden",
+      "args": ["mcp", "--stdio"],
+      "env": {
+        "KITSUDEN_API_URL": "${KITSUDEN_API_URL}",
+        "KITSUDEN_API_TOKEN": "${KITSUDEN_API_TOKEN}"
+      }
+    }
+  }
+}

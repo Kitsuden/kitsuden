@@ -1,0 +1,24 @@
+{
+  "name": "@kitsuden/grimoires",
+  "version": "0.9.0-beta",
+  "description": "Kitsuden Grimoires — Multi-tenant domain configurations (e.g., grimoire-esports, grimoire-finance).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/grimoires"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/grimoires#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build step needed'"
+  },
+  "dependencies": {
+    "@kitsuden/shared": "workspace:*",
+    "@kitsuden/engine": "workspace:*"
+  }
+}

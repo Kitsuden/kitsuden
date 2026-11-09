@@ -1,0 +1,83 @@
+# syntax=docker/dockerfile:1.7-labs
+# ^ needed for `COPY --parents`, same as in Dockerfile.prod.
+# ===================================================================
+# Kitsuden — public website image (the neutral starter)
+#
+# Builds packages/starters/kitsuden-starter-basic, an Astro site rendered
+# on the server that reads pages, the blog and the media library from the
+# Kitsuden API on every request. It is the `kitsuden_web` service of
+# docker-compose.tls.yml (Caddy in front adds TLS):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tls.yml build kitsuden_web
+#
+# or on its own:
+#
+#   docker build -f docker/Dockerfile.web --target web \
+#     --build-arg SITE_URL=https://example.com -t kitsuden-web .
+#   docker run -p 4321:4321 -e KITSUDEN_API_URL=http://<api>:3000 kitsuden-web
+#
+# ── BUILD TIME vs RUN TIME ──────────────────────────────────────────
+#
+# Written into the build (change = rebuild): SITE_URL (canonical URLs,
+# Open Graph, sitemap), SITE_NAME, SITE_LOCALE.
+#
+# Read when the container starts: KITSUDEN_API_URL (where this server
+# reaches the API, usually the internal Docker address), KITSUDEN_SITE_KEY
+# (= SITE_API_KEY of the API, a secret: never a build argument), and
+# PORT / HOST.
+#
+# This image is built WITHOUT Inti. To build it with the visual editor, add
+# @intijs/* to the starter (see its README) and pass --build-arg INTI=true.
+# ===================================================================
+
+# ── 1. Base: node + pnpm (the starter needs Node 22.12+, not bun) ───
+FROM node:22-alpine AS base
+WORKDIR /app
+RUN npm install -g pnpm@9.15.4
+
+# ── 2. Dependencies of the starter (and of the root manifest) ───────
+FROM base AS dependencies
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Every manifest of the workspace, not just the starter: `pnpm deploy` (below)
+# resolves the root manifest, whose workspace: dependencies must exist.
+COPY --parents apps/*/package.json packages/*/package.json packages/*/*/package.json ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --filter "@kitsuden/starter-basic..." --ignore-scripts
+
+# ── 3. Build ────────────────────────────────────────────────────────
+FROM dependencies AS builder
+COPY packages/starters/kitsuden-starter-basic ./packages/starters/kitsuden-starter-basic
+# Build scripts of the starter's own dependencies only (esbuild…). The
+# install above skipped them: it also touches the root project, whose
+# @kitsuden/shared `prepare` needs bun and is not used by the site.
+RUN pnpm rebuild --filter @kitsuden/starter-basic
+
+ARG SITE_URL="http://localhost:4321"
+ARG SITE_NAME="Kitsuden Starter"
+ARG SITE_LOCALE="en"
+ARG INTI="false"
+ENV ASTRO_TELEMETRY_DISABLED=1
+
+WORKDIR /app/packages/starters/kitsuden-starter-basic
+RUN SITE_URL="$SITE_URL" SITE_NAME="$SITE_NAME" SITE_LOCALE="$SITE_LOCALE" INTI="$INTI" \
+    pnpm exec astro build
+
+# Runtime dependencies only, without links into the rest of the workspace
+WORKDIR /app
+RUN pnpm --filter @kitsuden/starter-basic deploy --prod /out \
+ && cp -r packages/starters/kitsuden-starter-basic/dist /out/dist
+
+# ── 4. Runtime: node, not root ──────────────────────────────────────
+FROM node:22-alpine AS web
+# Alpine security fixes the base image may lag behind (Trivy in CI)
+RUN apk upgrade --no-cache
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=4321
+WORKDIR /app
+COPY --from=builder --chown=node:node /out ./
+USER node
+EXPOSE 4321
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD wget -q --spider http://127.0.0.1:4321/robots.txt || exit 1
+CMD ["node", "./dist/server/entry.mjs"]

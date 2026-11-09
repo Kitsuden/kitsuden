@@ -1,0 +1,42 @@
+{
+  "name": "@kitsuden/vector-search",
+  "version": "0.9.0-beta",
+  "description": "Vector search extension for Kitsuden datasets — semantic search with embeddings",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/core/vector-search"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/core/vector-search#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@kitsuden/shared": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.3",
+    "openai": "^6.46.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "postgres": "^3.4.5"
+  }
+}

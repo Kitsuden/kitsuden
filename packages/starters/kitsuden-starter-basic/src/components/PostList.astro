@@ -1,0 +1,63 @@
+---
+/** A list of blog posts as cards (blog index and home) */
+import { formatDate, t } from "../i18n";
+import type { Post } from "../lib/kitsuden";
+import { mediaUrl } from "../lib/media";
+import { site } from "../lib/site";
+
+interface Props {
+  posts: Post[];
+  title?: string;
+  /** Heading level of each post title */
+  level?: 2 | 3;
+}
+
+const { posts, title, level = title ? 3 : 2 } = Astro.props;
+const Heading = `h${level}` as "h2" | "h3";
+const locale = site.locale;
+---
+
+<section class="posts">
+  {title && <h2 class="posts__title">{title}</h2>}
+  <ul role="list">
+    {
+      posts.map((post, i) => {
+        const image = mediaUrl(post.featuredImageId, "medium");
+        const date = formatDate(locale, post.publishedAt);
+        return (
+          <li class="post-card">
+            {image && <img src={image} alt="" loading={i < 2 ? "eager" : "lazy"} decoding="async" />}
+            <div>
+              <Heading class="post-card__title">
+                <a href={`/blog/${post.slug}`}>{post.title}</a>
+              </Heading>
+              {date && (
+                <p class="muted post-card__meta">
+                  <time datetime={post.publishedAt ?? undefined}>{date}</time>
+                  {post.readingTime ? ` · ${t(locale, "blog.minutes", { n: post.readingTime })}` : ""}
+                </p>
+              )}
+              {post.excerpt && <p class="post-card__excerpt">{post.excerpt}</p>}
+            </div>
+          </li>
+        );
+      })
+    }
+  </ul>
+</section>
+
+<style>
+  .posts { margin-top: 3rem; }
+  .posts:first-child { margin-top: 0; }
+  .posts__title { font-size: 1.5rem; margin: 0 0 1.25rem; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.5rem; }
+  .post-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+  .post-card:has(img) { grid-template-columns: 12rem minmax(0, 1fr); }
+  @media (max-width: 40rem) { .post-card:has(img) { grid-template-columns: minmax(0, 1fr); } }
+  .post-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); }
+  .post-card__title { margin: 0 0 0.25rem; font-size: 1.3rem; line-height: 1.3; }
+  .post-card__title a { color: var(--fg); text-decoration: none; }
+  .post-card__title a:hover { color: var(--accent); }
+  .post-card__meta { margin: 0 0 0.5rem; font-size: 0.9rem; }
+  .post-card__excerpt { margin: 0; }
+</style>

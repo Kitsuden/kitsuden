@@ -1,0 +1,31 @@
+{
+  "name": "Blog",
+  "description": "Content-focused blog with posts, tags, and media",
+  "template": "blog",
+  "kons": ["kon-auth", "kon-datasets", "kon-media", "kon-blog"],
+  "datasets": [
+    {
+      "name": "posts",
+      "displayName": "Blog Posts",
+      "schema": {
+        "title": { "type": "string", "required": true },
+        "slug": { "type": "string", "required": true, "unique": true },
+        "excerpt": { "type": "text" },
+        "content": { "type": "richtext", "required": true },
+        "coverImage": { "type": "media" },
+        "published": { "type": "boolean", "default": false },
+        "publishedAt": { "type": "datetime" },
+        "tags": { "type": "relation", "target": "tags", "multiple": true }
+      }
+    },
+    {
+      "name": "tags",
+      "displayName": "Tags",
+      "schema": {
+        "name": { "type": "string", "required": true, "unique": true },
+        "slug": { "type": "string", "required": true, "unique": true }
+      }
+    }
+  ],
+  "seed": true
+}

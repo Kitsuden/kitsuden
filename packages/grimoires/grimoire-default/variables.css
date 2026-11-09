@@ -1,0 +1,14 @@
+:root {
+  --kitsuden-bg: #09090b;
+  --kitsuden-card: #18181b;
+  --kitsuden-text: #e4e4e7;
+  --kitsuden-text-dim: #a1a1aa;
+  --kitsuden-subtle: #52525b;
+  --kitsuden-border: #27272a;
+
+  --kitsuden-cyan: #22d3ee;
+  --kitsuden-purple: #c084fc;
+  --kitsuden-pink: #f472b6;
+  --kitsuden-green: #4ade80;
+  --kitsuden-amber: #fbbf24;
+}

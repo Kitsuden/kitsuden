@@ -1,0 +1,748 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Kitsuden MCP Tool Reference",
+  "description": "Machine-readable schema of all Kitsuden MCP tools. Designed for LLM agent consumption.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "kitsuden_list_datasets",
+      "description": "List all available datasets and kons with their UUIDs, slugs, and field schemas. Use this as the first call before any CRUD operation when you do not know the dataset UUID.",
+      "whenToUse": [
+        "Discovering what data collections exist in the Kitsuden instance",
+        "Finding the UUID of a dataset before querying it",
+        "Checking whether a kon was successfully installed (new datasets appear)",
+        "Exploring the data model of an unfamiliar project"
+      ],
+      "whenNotToUse": [
+        "You already know the dataset UUID and only need records — use kitsuden_query_dataset directly",
+        "You need table-level introspection of kon SQL tables — use the kitsuden://tables resource or kitsuden_get_schema"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": ["auto", "json", "toon", "tron"],
+            "default": "auto",
+            "description": "Result format. 'auto' (default): compact JSON, TOON or TRON, whichever is shortest for this result and decodes back to the same data; _meta['kitsuden/format'] says which. 'json' forces compact JSON."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "What datasets do I have?",
+          "toolCall": "kitsuden_list_datasets",
+          "parameters": { "format": "json" }
+        },
+        {
+          "userSays": "List my collections in compact format",
+          "toolCall": "kitsuden_list_datasets",
+          "parameters": { "format": "toon" }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_query_dataset",
+      "description": "Query records from a specific dataset. Respects RLS policies automatically. Supports pagination and status filtering; results come in the shortest lossless format.",
+      "whenToUse": [
+        "Reading records from a JSONB dataset",
+        "Filtering by status (published, draft, archived)",
+        "Paginating through large result sets",
+        "Returning a long list to the LLM (the default 'auto' format keeps it compact)"
+      ],
+      "whenNotToUse": [
+        "You need to query a native SQL table owned by a kon — use kitsuden_query_table or the kon's REST endpoint",
+        "You don't know the dataset UUID — call kitsuden_list_datasets first",
+        "You need to mutate data — use insert/update/delete instead"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "UUID of the dataset (not the slug). Obtain from kitsuden_list_datasets."
+          },
+          "limit": {
+            "type": "number",
+            "default": 50,
+            "description": "Maximum records to return. Hard cap at 100."
+          },
+          "offset": {
+            "type": "number",
+            "default": 0,
+            "description": "Pagination offset."
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by status: published, draft, archived."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["auto", "json", "toon", "tron"],
+            "default": "auto",
+            "description": "Result format. 'auto' (default): compact JSON, TOON or TRON, whichever is shortest for this result and decodes back to the same data; _meta['kitsuden/format'] says which. 'json' forces compact JSON."
+          }
+        },
+        "required": ["datasetId"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Show me all published blog posts",
+          "toolCall": "kitsuden_query_dataset",
+          "parameters": {
+            "datasetId": "uuid-from-list",
+            "status": "published",
+            "limit": 25
+          }
+        },
+        {
+          "userSays": "Get the latest 5 tasks",
+          "toolCall": "kitsuden_query_dataset",
+          "parameters": {
+            "datasetId": "uuid-from-list",
+            "limit": 5,
+            "format": "toon"
+          }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_insert_record",
+      "description": "Insert a new record into a dataset. The record is stored as JSONB in data_entries. Validates against the dataset schema if one is defined.",
+      "whenToUse": [
+        "Creating a new entry in a JSONB dataset",
+        "Adding a blog post, task, product, or any custom entity",
+        "Seeding initial data after creating a dataset"
+      ],
+      "whenNotToUse": [
+        "The target is a native SQL table from a kon — use the kon's API or kitsuden_create_record",
+        "You are bulk-inserting hundreds of rows — use kitsuden_batch_operations or the import API",
+        "You only want to update an existing record — use kitsuden_update_record"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "UUID of the target dataset."
+          },
+          "data": {
+            "type": "object",
+            "description": "Record payload matching the dataset schema."
+          },
+          "status": {
+            "type": "string",
+            "default": "draft",
+            "description": "Initial status: draft, published, or archived."
+          }
+        },
+        "required": ["datasetId", "data"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Create a blog post titled 'Hello World' with content 'My first post'",
+          "toolCall": "kitsuden_insert_record",
+          "parameters": {
+            "datasetId": "uuid-from-list",
+            "data": {
+              "title": "Hello World",
+              "content": "My first post",
+              "slug": "hello-world"
+            },
+            "status": "published"
+          }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_update_record",
+      "description": "Update an existing record by entry ID. Merges the provided data with the existing JSONB payload.",
+      "whenToUse": [
+        "Patching specific fields of an existing record",
+        "Changing status from draft to published",
+        "Correcting data after user feedback"
+      ],
+      "whenNotToUse": [
+        "You don't know the entryId — query first with kitsuden_query_dataset",
+        "You want to replace the entire record — delete and re-insert",
+        "The record is in a native SQL table — use kitsuden_update_record for datasets only"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "description": "UUID of the entry to update."
+          },
+          "data": {
+            "type": "object",
+            "description": "Fields to merge into the existing record."
+          },
+          "status": {
+            "type": "string",
+            "description": "Optional new status."
+          }
+        },
+        "required": ["entryId", "data"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Change the title of blog post abc-123 to 'Updated Title'",
+          "toolCall": "kitsuden_update_record",
+          "parameters": {
+            "entryId": "abc-123",
+            "data": { "title": "Updated Title" }
+          }
+        },
+        {
+          "userSays": "Publish draft entry xyz-789",
+          "toolCall": "kitsuden_update_record",
+          "parameters": {
+            "entryId": "xyz-789",
+            "data": {},
+            "status": "published"
+          }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_delete_record",
+      "description": "Hard-delete a record by entry ID. This is permanent and cannot be undone.",
+      "whenToUse": [
+        "User explicitly asks to remove a record",
+        "Cleaning up test data",
+        "GDPR/data-deletion requests"
+      ],
+      "whenNotToUse": [
+        "You are not 100% sure which record — query first and confirm with the user",
+        "You want a soft delete — use kitsuden_update_record to set status to 'archived' instead",
+        "The record is owned by a kon with cascading relations — use the kon's delete endpoint"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "description": "UUID of the entry to delete."
+          }
+        },
+        "required": ["entryId"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Delete the blog post with ID abc-123",
+          "toolCall": "kitsuden_delete_record",
+          "parameters": { "entryId": "abc-123" }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_create_dataset",
+      "description": "Create a new JSONB dataset with a user-defined schema. Use this for custom data structures when no kon exists.",
+      "whenToUse": [
+        "User needs a custom collection that no kon covers",
+        "Prototyping a new domain before building a kon",
+        "Storing configuration or metadata objects"
+      ],
+      "whenNotToUse": [
+        "A kon already exists for this domain — prefer kitsuden_install_kon",
+        "You need complex SQL relations (FKs, JOINs, triggers) — kons handle this better",
+        "You only need a one-off table — consider if a dataset is overkill"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Dataset name in kebab-case, e.g. 'project-tasks'."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Schema fields defining the dataset structure.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "description": "Field key, e.g. 'title'" },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "number",
+                    "boolean",
+                    "date",
+                    "richtext",
+                    "json",
+                    "reference",
+                    "email",
+                    "url",
+                    "select"
+                  ],
+                  "description": "Field data type."
+                },
+                "required": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether the field is mandatory."
+                },
+                "options": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "For 'select' type: allowed values."
+                }
+              },
+              "required": ["name", "type"]
+            }
+          },
+          "enableRls": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable owner-only RLS by default. Always true unless user explicitly opts out."
+          }
+        },
+        "required": ["name", "fields"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "I need a dataset to store project tasks with title, priority, and due date",
+          "toolCall": "kitsuden_create_dataset",
+          "parameters": {
+            "name": "project-tasks",
+            "fields": [
+              { "name": "title", "type": "text", "required": true },
+              {
+                "name": "priority",
+                "type": "select",
+                "required": true,
+                "options": ["low", "medium", "high"]
+              },
+              { "name": "dueDate", "type": "date", "required": false }
+            ],
+            "enableRls": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_install_kon",
+      "description": "Install a domain kon (pre-built module). Automatically runs migrations, registers routes, and creates datasets.",
+      "whenToUse": [
+        "User wants a standard domain feature: blog, CRM, booking, courses, games, etc.",
+        "User wants admin UI, validation, and relations out of the box",
+        "You need dependencies (e.g., kon-media for image handling)"
+      ],
+      "whenNotToUse": [
+        "The domain is completely custom and no kon covers it — use kitsuden_create_dataset",
+        "You are in production and cannot afford migration downtime — test in staging first",
+        "The kon is already installed — check kitsuden_list_datasets first"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "konId": {
+            "type": "string",
+            "description": "Kon identifier, e.g. 'kon-blog', 'kon-crm'."
+          },
+          "autoInstallDependencies": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically install upstream kons (e.g., kon-media)."
+          }
+        },
+        "required": ["konId"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "I want to add a blog to my site",
+          "toolCall": "kitsuden_install_kon",
+          "parameters": { "konId": "kon-blog", "autoInstallDependencies": true }
+        },
+        {
+          "userSays": "Install the CRM module",
+          "toolCall": "kitsuden_install_kon",
+          "parameters": { "konId": "kon-crm", "autoInstallDependencies": true }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_define_action",
+      "description": "Register an automation action. Triggers can be HTTP, event, cron, or agent-based. The action runs code, webhooks, or dispatches to workers.",
+      "whenToUse": [
+        "User says 'when X happens, do Y'",
+        "Sending a welcome email after signup",
+        "Calling a webhook when a record status changes",
+        "Running a scheduled cleanup job"
+      ],
+      "whenNotToUse": [
+        "You only need a one-off worker job — use kitsuden_dispatch_worker directly",
+        "The logic is complex and better suited to a custom kon — build a kon instead",
+        "You need real-time reactive logic — use WebSockets or the realtime layer"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "trigger": {
+            "type": "string",
+            "description": "Trigger descriptor. Examples: 'event:user_signup', 'http.post:/webhooks/stripe', 'cron:0 9 * * *', 'agent.tool:search_customers'"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["code", "webhook_out", "webhook_in", "agent"],
+            "description": "Action execution type."
+          },
+          "config": {
+            "type": "object",
+            "description": "Action-specific configuration.",
+            "properties": {
+              "url": { "type": "string", "description": "For webhook_out: target URL." },
+              "method": {
+                "type": "string",
+                "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                "description": "HTTP method for webhooks."
+              },
+              "template": { "type": "string", "description": "Email or message template ID." },
+              "code": {
+                "type": "string",
+                "description": "JavaScript/TypeScript code to run in the worker sandbox."
+              },
+              "queueName": {
+                "type": "string",
+                "description": "Queue to dispatch to for async execution."
+              }
+            }
+          }
+        },
+        "required": ["trigger", "type", "config"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "When a user signs up, send them a welcome email",
+          "toolCall": "kitsuden_define_action",
+          "parameters": {
+            "trigger": "event:user_signup",
+            "type": "code",
+            "config": {
+              "queueName": "email",
+              "template": "welcome",
+              "code": "await ctx.queue.add('email', 'sendWelcome', { to: payload.email, template: 'welcome' });"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_enable_auth",
+      "description": "Enable authentication for the Kitsuden instance. Supports email/password, OAuth (Google, Discord), and API keys.",
+      "whenToUse": [
+        "User wants login, signup, or user accounts",
+        "RLS policies require an authenticated user context",
+        "Installing a kon that requires auth (CRM, booking, LMS, etc.)"
+      ],
+      "whenNotToUse": [
+        "Auth is already enabled — check /api/health or kitsuden_list_datasets for auth_users",
+        "The project is a fully public read-only site with no user data",
+        "You only need machine-to-machine API keys — those are managed separately in Admin → API Keys"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "methods": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["email", "google", "discord", "github"]
+            },
+            "default": ["email"],
+            "description": "Auth methods to enable."
+          },
+          "defaultRole": {
+            "type": "string",
+            "default": "user",
+            "description": "Default role for new signups."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Enable user authentication with email and Google",
+          "toolCall": "kitsuden_enable_auth",
+          "parameters": {
+            "methods": ["email", "google"],
+            "defaultRole": "user"
+          }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_dispatch_worker",
+      "description": "Enqueue an asynchronous background job on the Postgres queue (transactional outbox).",
+      "whenToUse": [
+        "Sending emails asynchronously",
+        "Processing images, videos, or imports",
+        "Calling external webhooks without blocking the response",
+        "Running scheduled or triggered background tasks"
+      ],
+      "whenNotToUse": [
+        "You need the result immediately — run synchronously via kitsuden_api_request or a direct API call",
+        "Valkey is not running — the job will fail (see troubleshooting)",
+        "The payload exceeds 1 MB — use direct API or chunked upload instead"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "queueName": {
+            "type": "string",
+            "description": "Queue name: 'email', 'webhooks', or a custom queue."
+          },
+          "jobName": {
+            "type": "string",
+            "description": "Job handler name (e.g., 'sendWelcome', 'processImage')."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Data passed to the worker."
+          }
+        },
+        "required": ["queueName", "jobName", "payload"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Send a password reset email to john@example.com",
+          "toolCall": "kitsuden_dispatch_worker",
+          "parameters": {
+            "queueName": "email",
+            "jobName": "sendPasswordReset",
+            "payload": { "to": "john@example.com", "resetUrl": "https://app.com/reset?token=abc" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_query_collection",
+      "description": "Query any collection — dataset or native table — with pagination, search and sort; results come in the shortest lossless format. No UUID needed; uses slug/table name.",
+      "whenToUse": [
+        "Reading records from any collection without needing the dataset UUID",
+        "Querying native kon tables directly",
+        "Paginating or filtering results with search/sort"
+      ],
+      "whenNotToUse": [
+        "You need to write raw SQL — this is abstracted",
+        "You are mutating data — use create/update/delete instead"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection": { "type": "string", "description": "Dataset slug or native table name." },
+          "limit": { "type": "integer", "default": 50 },
+          "offset": { "type": "integer", "default": 0 },
+          "search": { "type": "string" },
+          "sort": { "type": "string" },
+          "where": { "type": "object", "description": "Filter by field=value (datasets only)." },
+          "format": {
+            "type": "string",
+            "enum": ["auto", "json", "toon", "tron"],
+            "default": "auto"
+          }
+        },
+        "required": ["collection"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Show me all blog posts",
+          "toolCall": "kitsuden_query_collection",
+          "parameters": { "collection": "blog-posts", "limit": 50 }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_create_record",
+      "description": "Create a record in any collection — dataset or native table.",
+      "whenToUse": [
+        "Inserting into a dataset or native table",
+        "Creating entries without knowing the dataset UUID"
+      ],
+      "whenNotToUse": ["The collection does not exist yet", "Bulk inserts — use batch API instead"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection": { "type": "string" },
+          "data": { "type": "object" },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "published", "archived"],
+            "default": "published"
+          }
+        },
+        "required": ["collection", "data"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Create a blog post titled Hello World",
+          "toolCall": "kitsuden_create_record",
+          "parameters": {
+            "collection": "blog-posts",
+            "data": { "title": "Hello World" },
+            "status": "published"
+          }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_update_record",
+      "description": "Update a record in any collection — dataset or native table.",
+      "whenToUse": ["Patching fields on an existing record"],
+      "whenNotToUse": ["You don't know the record ID — query first"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection": { "type": "string" },
+          "id": { "type": "string" },
+          "data": { "type": "object" }
+        },
+        "required": ["collection", "id", "data"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Update blog post abc-123 title to Updated",
+          "toolCall": "kitsuden_update_record",
+          "parameters": {
+            "collection": "blog-posts",
+            "id": "abc-123",
+            "data": { "title": "Updated" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_delete_record",
+      "description": "Delete a record from any collection — dataset or native table.",
+      "whenToUse": ["Removing a specific record by ID"],
+      "whenNotToUse": [
+        "You are not sure which record — query and confirm first",
+        "You want soft delete — update status to archived instead"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection": { "type": "string" },
+          "id": { "type": "string" }
+        },
+        "required": ["collection", "id"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Delete blog post abc-123",
+          "toolCall": "kitsuden_delete_record",
+          "parameters": { "collection": "blog-posts", "id": "abc-123" }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_describe_collection",
+      "description": "Get the schema/fields of any collection — dataset or native table. Results come in the shortest lossless format.",
+      "whenToUse": [
+        "Discovering the fields of a collection before generating code",
+        "Inspecting a kon's native table structure"
+      ],
+      "whenNotToUse": ["You only need record counts — query with limit=0 instead"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection": { "type": "string" },
+          "format": {
+            "type": "string",
+            "enum": ["auto", "json", "toon", "tron"],
+            "default": "auto"
+          }
+        },
+        "required": ["collection"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "What fields does the blog-posts dataset have?",
+          "toolCall": "kitsuden_describe_collection",
+          "parameters": { "collection": "blog-posts", "format": "toon" }
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_system_status",
+      "description": "Check system health: database connectivity, queue depth, memory usage, and active kons.",
+      "whenToUse": [
+        "Diagnosing why a tool call failed",
+        "Monitoring system health before batch operations"
+      ],
+      "whenNotToUse": ["You just want data — this is operational metadata"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Is the system healthy?",
+          "toolCall": "kitsuden_system_status",
+          "parameters": {}
+        }
+      ]
+    },
+    {
+      "name": "kitsuden_generate_frontend_hook",
+      "description": "Generate complete, strongly-typed frontend code (React hooks, Vue composables, Svelte stores, components, forms, types) for any collection. Uses the real codegen engine.",
+      "whenToUse": [
+        "User wants frontend code to query Kitsuden",
+        "Building a vibecoder MVP and need data fetching boilerplate",
+        "Creating typed hooks/components for a specific collection"
+      ],
+      "whenNotToUse": [
+        "The user only wants backend changes — this tool is frontend-only",
+        "The collection does not exist yet — create or install it first"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection": {
+            "type": "string",
+            "description": "Dataset slug or kon table name, e.g. 'blog-posts' or 'games'."
+          },
+          "framework": {
+            "type": "string",
+            "enum": ["react", "vue", "svelte"],
+            "default": "react",
+            "description": "Target frontend framework."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["hook", "component", "form", "types", "all"],
+            "default": "all",
+            "description": "What to generate."
+          }
+        },
+        "required": ["collection"],
+        "additionalProperties": false
+      },
+      "exampleConversation": [
+        {
+          "userSays": "Give me a React hook to fetch my projects",
+          "toolCall": "kitsuden_generate_frontend_hook",
+          "parameters": { "collection": "projects", "framework": "react", "type": "all" }
+        }
+      ]
+    }
+  ]
+}

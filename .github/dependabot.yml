@@ -1,0 +1,37 @@
+# Security and version updates for the dependencies.
+#
+# `hono` is pinned to an exact version: Dependabot opens a PR when an advisory
+# comes out, and the bump is reviewed by hand rather than taken by a `^` range.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      hono:
+        patterns: ["hono", "@hono/*"]
+      drizzle:
+        patterns: ["drizzle-orm", "drizzle-kit"]
+    labels: ["dependencies"]
+
+  # The publishing workflows pin actions by commit, so this is what moves them.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+
+  # Base images of the Dockerfiles.
+  - package-ecosystem: docker
+    directories:
+      - /docker
+      - /docker/mcp
+    schedule:
+      interval: monthly
+
+  # Images pinned by digest in the compose files.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: monthly

@@ -1,0 +1,29 @@
+{
+  "id": "kon-datasets",
+  "name": "DataSets",
+  "description": "Dynamic data collections with automatic REST API, validation, and RLS. The foundation of Kitsuden content management.",
+  "version": "1.0.0",
+  "maturity": "stable",
+  "type": "core-den",
+  "kitsuden": ">=0.9.0",
+  "icon": "Database",
+  "category": "core",
+  "order": 0,
+  "core": true,
+  "defaultEnabled": true,
+  "minKitsudenVersion": "0.8.0",
+  "mount": {
+    "path": "/api/datasets"
+  },
+  "admin": {
+    "category": "core",
+    "order": 0,
+    "icon": "Database"
+  },
+  "tables": ["data_sets", "data_entries"],
+  "features": ["dynamic-schema", "auto-api", "rls", "validation", "relations"],
+  "dependencies": {
+    "kons": ["kon-media"],
+    "core": ["auth"]
+  }
+}

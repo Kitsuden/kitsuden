@@ -1,0 +1,41 @@
+---
+/**
+ * A page-builder page inside the layout: SEO from the page, title (unless
+ * the first block is a hero, which carries the page's <h1>), and the blocks.
+ */
+import BlockRenderer from "./BlockRenderer.astro";
+import Base from "../layouts/Base.astro";
+import { isEditor } from "../inti/runtime";
+import type { Page } from "../lib/kitsuden";
+import { mediaUrl } from "../lib/media";
+
+interface Props {
+  page: Page;
+  canonicalPath: string;
+}
+
+const { page, canonicalPath } = Astro.props;
+const editor = await isEditor(Astro);
+const heroFirst = page.blocks[0]?.type === "hero";
+
+// An editor gets a page that must not be cached by anything shared
+if (editor) Astro.response.headers.set("cache-control", "private, no-store");
+---
+
+<Base
+  title={page.metaTitle || page.title}
+  description={page.metaDescription || page.description}
+  image={mediaUrl(page.ogImageId, "large")}
+  canonicalPath={canonicalPath}
+  editor={editor}
+>
+  <article class="page">
+    {!heroFirst && <h1 class="page__title">{page.title}</h1>}
+    <BlockRenderer blocks={page.blocks} documentId={page.id} editable={editor} />
+  </article>
+  <slot />
+</Base>
+
+<style>
+  .page__title { font-size: clamp(2rem, 4vw, 2.75rem); line-height: 1.15; margin: 0 0 2rem; }
+</style>

@@ -1,0 +1,71 @@
+---
+/**
+ * One post. The body is what the API serves already sanitized: `blocksHtml`
+ * (the post's blocks rendered by the API) and then `content` (HTML).
+ */
+import Base from "../../layouts/Base.astro";
+import { formatDate, t } from "../../i18n";
+import { isSlug } from "../../lib/kitsuden";
+import { mediaUrl } from "../../lib/media";
+import { site } from "../../lib/site";
+
+const slug = Astro.params.slug;
+const post = isSlug(slug) ? await Astro.locals.kitsuden.posts.get(slug) : null;
+if (!post) return Astro.rewrite("/404");
+
+const locale = site.locale;
+const cover = mediaUrl(post.featuredImageId, "large");
+const social = mediaUrl(post.ogImageId ?? post.featuredImageId, "large");
+const date = formatDate(locale, post.publishedAt);
+const author = post.author?.displayName?.trim();
+const blocksHtml = typeof post.blocksHtml === "string" ? post.blocksHtml : "";
+const contentHtml = typeof post.content === "string" ? post.content : "";
+const translations = (post.translations ?? []).filter((tr) => isSlug(tr.slug));
+---
+
+<Base
+  title={post.metaTitle || post.title}
+  description={post.metaDescription || post.excerpt}
+  image={social}
+  canonicalPath={`/blog/${post.slug}`}
+  type="article"
+  publishedTime={post.publishedAt}
+>
+  <article class="post narrow">
+    <header>
+      <h1>{post.title}</h1>
+      <p class="muted post__meta">
+        {date && <time datetime={post.publishedAt ?? undefined}>{date}</time>}
+        {author && <span> · {t(locale, "blog.by", { author })}</span>}
+        {post.readingTime ? <span> · {t(locale, "blog.minutes", { n: post.readingTime })}</span> : null}
+      </p>
+      {post.excerpt && <p class="post__excerpt">{post.excerpt}</p>}
+    </header>
+    {cover && <img class="post__cover" src={cover} alt="" fetchpriority="high" decoding="async" />}
+    {blocksHtml && <div class="prose" set:html={blocksHtml} />}
+    {contentHtml && <div class="prose" set:html={contentHtml} />}
+    {
+      translations.length > 0 && (
+        <p class="muted post__translations">
+          {t(locale, "blog.alsoIn")}{" "}
+          {translations.map((tr, i) => (
+            <>
+              {i > 0 && ", "}
+              <a href={`/blog/${tr.slug}`} hreflang={tr.locale}>
+                {tr.title} ({tr.locale})
+              </a>
+            </>
+          ))}
+        </p>
+      )
+    }
+  </article>
+</Base>
+
+<style>
+  .post h1 { font-size: clamp(2rem, 4vw, 2.75rem); line-height: 1.15; margin: 0 0 0.5rem; }
+  .post__meta { margin: 0 0 1rem; }
+  .post__excerpt { font-size: 1.2rem; color: var(--muted); }
+  .post__cover { display: block; width: 100%; height: auto; border-radius: var(--radius-lg); margin: 1.5rem 0 2rem; }
+  .post__translations { margin-top: 3rem; font-size: 0.95rem; }
+</style>

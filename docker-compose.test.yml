@@ -1,0 +1,72 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Kitsuden — PostgreSQL for TESTS
+#
+# Services:
+#   - PostgreSQL 16 + pgvector (configurable port, default 5434)
+#   - Valkey 7 (default 6380, the one in REDIS_URL in .env.test)
+#
+# USAGE:
+#   pnpm test:db:up   (copies .env.test.example to .env.test if it does not exist)
+#
+# NOTE: This DB is independent of the development DB (port 5432).
+#       It is destroyed and recreated clean on every test run.
+#
+# CONFIGURATION:
+#   Credentials and port are read from .env.test (or use the defaults
+#   below for local development). NEVER configure real secrets here.
+#
+# ISOLATED: its OWN project and network, so that a `down --remove-orphans` run
+# with this file does not touch any other stack. And it only listens on 127.0.0.1: the
+# default password is in the repo.
+# ═══════════════════════════════════════════════════════════════════════════
+
+name: kitsuden-test
+
+services:
+  kitsuden_test_db:
+    image: pgvector/pgvector:0.8.1-pg16@sha256:33198da2828a14c30348d2ccb4750833d5ed9a44c88d840a0e523d7417120337
+    container_name: kitsuden_test_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kitsuden}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kitsuden_test_secure_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-kitsuden_test}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - kitsuden_test_postgres_data:/var/lib/postgresql/data
+      - ./docker/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql:ro
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kitsuden} -d ${POSTGRES_DB:-kitsuden_test}"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+    networks:
+      - kitsuden_test_net
+
+  # Valkey for tests: `.env.test` points to redis://localhost:6380. Without it, each
+  # integration test that touched the queue or realtime hung for 5 s and failed
+  # (or they had to be run without REDIS_URL). No volume: it is emptied on every startup.
+  kitsuden_test_valkey:
+    image: valkey/valkey:7.2.15-alpine@sha256:f8c1a646f4b31ae4dc3980ff06723a20b533ea1123b9796d450d78ed53ad6d3e
+    container_name: kitsuden_test_valkey
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+    networks:
+      - kitsuden_test_net
+
+volumes:
+  kitsuden_test_postgres_data:
+    name: kitsuden_test_postgres_data
+    driver: local
+
+networks:
+  kitsuden_test_net:
+    name: kitsuden_test_net
+    driver: bridge

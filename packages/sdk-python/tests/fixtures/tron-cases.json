@@ -1,0 +1,421 @@
+{
+  "library": "@tron-format/tron@0.1.3",
+  "cases": [
+    {
+      "tron": "null",
+      "json": null
+    },
+    {
+      "tron": "true",
+      "json": true
+    },
+    {
+      "tron": "false",
+      "json": false
+    },
+    {
+      "tron": "0",
+      "json": 0
+    },
+    {
+      "tron": "-12",
+      "json": -12
+    },
+    {
+      "tron": "3.25",
+      "json": 3.25
+    },
+    {
+      "tron": "1e+21",
+      "json": 1e+21
+    },
+    {
+      "tron": "\"plain\"",
+      "json": "plain"
+    },
+    {
+      "tron": "\"with \\\"quotes\\\", commas, colons: and\\nnewlines\\ttabs \\\\ backslash\"",
+      "json": "with \"quotes\", commas, colons: and\nnewlines\ttabs \\ backslash"
+    },
+    {
+      "tron": "\"unicode: ñandú, 日本語, emoji 😀\"",
+      "json": "unicode: ñandú, 日本語, emoji 😀"
+    },
+    {
+      "tron": "\"\"",
+      "json": ""
+    },
+    {
+      "tron": "[]",
+      "json": []
+    },
+    {
+      "tron": "{}",
+      "json": {}
+    },
+    {
+      "tron": "[1,2,3]",
+      "json": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "tron": "[\"x\",null,true,1.5,{\"a\":1}]",
+      "json": [
+        "x",
+        null,
+        true,
+        1.5,
+        {
+          "a": 1
+        }
+      ]
+    },
+    {
+      "tron": "{\"a\":1,\"b\":\"two\",\"c\":[true,false],\"d\":{\"e\":null}}",
+      "json": {
+        "a": 1,
+        "b": "two",
+        "c": [
+          true,
+          false
+        ],
+        "d": {
+          "e": null
+        }
+      }
+    },
+    {
+      "tron": "class A: id,name,price,active,tags,meta\nclass B: rank,note\n\n{\"docs\":[A(\"0c6e1c2e-0000-4000-8000-000000000001\",\"Item 1\",1.5,false,[\"a\",\"t1\"],B(1,null)),A(\"0c6e1c2e-0000-4000-8000-000000000002\",\"Item 2\",3,true,[\"a\",\"t2\"],B(2,null)),A(\"0c6e1c2e-0000-4000-8000-000000000003\",\"Item 3\",4.5,false,[\"a\",\"t3\"],B(3,null))],\"totalDocs\":3,\"page\":1,\"limit\":10,\"hasNextPage\":false}",
+      "json": {
+        "docs": [
+          {
+            "id": "0c6e1c2e-0000-4000-8000-000000000001",
+            "name": "Item 1",
+            "price": 1.5,
+            "active": false,
+            "tags": [
+              "a",
+              "t1"
+            ],
+            "meta": {
+              "rank": 1,
+              "note": null
+            }
+          },
+          {
+            "id": "0c6e1c2e-0000-4000-8000-000000000002",
+            "name": "Item 2",
+            "price": 3,
+            "active": true,
+            "tags": [
+              "a",
+              "t2"
+            ],
+            "meta": {
+              "rank": 2,
+              "note": null
+            }
+          },
+          {
+            "id": "0c6e1c2e-0000-4000-8000-000000000003",
+            "name": "Item 3",
+            "price": 4.5,
+            "active": false,
+            "tags": [
+              "a",
+              "t3"
+            ],
+            "meta": {
+              "rank": 3,
+              "note": null
+            }
+          }
+        ],
+        "totalDocs": 3,
+        "page": 1,
+        "limit": 10,
+        "hasNextPage": false
+      }
+    },
+    {
+      "tron": "class A: id,name,price,active,tags,meta\nclass B: rank,note\n\n[A(\"0c6e1c2e-0000-4000-8000-000000000001\",\"Item 1\",1.5,false,[\"a\",\"t1\"],B(1,null)),A(\"0c6e1c2e-0000-4000-8000-000000000002\",\"Item 2\",3,true,[\"a\",\"t2\"],B(2,null)),A(\"0c6e1c2e-0000-4000-8000-000000000003\",\"Item 3\",4.5,false,[\"a\",\"t3\"],B(3,null)),A(\"0c6e1c2e-0000-4000-8000-000000000004\",\"Item 4\",6,true,[\"a\",\"t4\"],B(4,null))]",
+      "json": [
+        {
+          "id": "0c6e1c2e-0000-4000-8000-000000000001",
+          "name": "Item 1",
+          "price": 1.5,
+          "active": false,
+          "tags": [
+            "a",
+            "t1"
+          ],
+          "meta": {
+            "rank": 1,
+            "note": null
+          }
+        },
+        {
+          "id": "0c6e1c2e-0000-4000-8000-000000000002",
+          "name": "Item 2",
+          "price": 3,
+          "active": true,
+          "tags": [
+            "a",
+            "t2"
+          ],
+          "meta": {
+            "rank": 2,
+            "note": null
+          }
+        },
+        {
+          "id": "0c6e1c2e-0000-4000-8000-000000000003",
+          "name": "Item 3",
+          "price": 4.5,
+          "active": false,
+          "tags": [
+            "a",
+            "t3"
+          ],
+          "meta": {
+            "rank": 3,
+            "note": null
+          }
+        },
+        {
+          "id": "0c6e1c2e-0000-4000-8000-000000000004",
+          "name": "Item 4",
+          "price": 6,
+          "active": true,
+          "tags": [
+            "a",
+            "t4"
+          ],
+          "meta": {
+            "rank": 4,
+            "note": null
+          }
+        }
+      ]
+    },
+    {
+      "tron": "class A: x,y\n\n{\"data\":[A(1,2),A(4,3),{\"x\":5,\"y\":6,\"z\":7}],\"meta\":{\"total\":3}}",
+      "json": {
+        "data": [
+          {
+            "x": 1,
+            "y": 2
+          },
+          {
+            "y": 3,
+            "x": 4
+          },
+          {
+            "x": 5,
+            "y": 6,
+            "z": 7
+          }
+        ],
+        "meta": {
+          "total": 3
+        }
+      }
+    },
+    {
+      "tron": "{\"nested\":{\"level\":{\"deeper\":[{\"k\":\"v\",\"n\":[1,[2,[3]]]}]}}}",
+      "json": {
+        "nested": {
+          "level": {
+            "deeper": [
+              {
+                "k": "v",
+                "n": [
+                  1,
+                  [
+                    2,
+                    [
+                      3
+                    ]
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "tron": "{\"123\":3,\"key with spaces\":1,\"kebab-key\":2,\"ünïcode\":4}",
+      "json": {
+        "123": 3,
+        "key with spaces": 1,
+        "kebab-key": 2,
+        "ünïcode": 4
+      }
+    },
+    {
+      "tron": "class A: a,b\n\n[A(1,2),A(3,4),{\"a\":5},{\"b\":6}]",
+      "json": [
+        {
+          "a": 1,
+          "b": 2
+        },
+        {
+          "a": 3,
+          "b": 4
+        },
+        {
+          "a": 5
+        },
+        {
+          "b": 6
+        }
+      ]
+    },
+    {
+      "tron": "{\"empty\":{\"obj\":{},\"arr\":[],\"str\":\"\"}}",
+      "json": {
+        "empty": {
+          "obj": {},
+          "arr": [],
+          "str": ""
+        }
+      }
+    },
+    {
+      "tron": "class A: id,label,ok\n\n{\"big\":[A(0,\"row 0\",true),A(1,\"row 1\",false),A(2,\"row 2\",false),A(3,\"row 3\",true),A(4,\"row 4\",false),A(5,\"row 5\",false),A(6,\"row 6\",true),A(7,\"row 7\",false),A(8,\"row 8\",false),A(9,\"row 9\",true),A(10,\"row 10\",false),A(11,\"row 11\",false),A(12,\"row 12\",true),A(13,\"row 13\",false),A(14,\"row 14\",false),A(15,\"row 15\",true),A(16,\"row 16\",false),A(17,\"row 17\",false),A(18,\"row 18\",true),A(19,\"row 19\",false),A(20,\"row 20\",false),A(21,\"row 21\",true),A(22,\"row 22\",false),A(23,\"row 23\",false),A(24,\"row 24\",true)]}",
+      "json": {
+        "big": [
+          {
+            "id": 0,
+            "label": "row 0",
+            "ok": true
+          },
+          {
+            "id": 1,
+            "label": "row 1",
+            "ok": false
+          },
+          {
+            "id": 2,
+            "label": "row 2",
+            "ok": false
+          },
+          {
+            "id": 3,
+            "label": "row 3",
+            "ok": true
+          },
+          {
+            "id": 4,
+            "label": "row 4",
+            "ok": false
+          },
+          {
+            "id": 5,
+            "label": "row 5",
+            "ok": false
+          },
+          {
+            "id": 6,
+            "label": "row 6",
+            "ok": true
+          },
+          {
+            "id": 7,
+            "label": "row 7",
+            "ok": false
+          },
+          {
+            "id": 8,
+            "label": "row 8",
+            "ok": false
+          },
+          {
+            "id": 9,
+            "label": "row 9",
+            "ok": true
+          },
+          {
+            "id": 10,
+            "label": "row 10",
+            "ok": false
+          },
+          {
+            "id": 11,
+            "label": "row 11",
+            "ok": false
+          },
+          {
+            "id": 12,
+            "label": "row 12",
+            "ok": true
+          },
+          {
+            "id": 13,
+            "label": "row 13",
+            "ok": false
+          },
+          {
+            "id": 14,
+            "label": "row 14",
+            "ok": false
+          },
+          {
+            "id": 15,
+            "label": "row 15",
+            "ok": true
+          },
+          {
+            "id": 16,
+            "label": "row 16",
+            "ok": false
+          },
+          {
+            "id": 17,
+            "label": "row 17",
+            "ok": false
+          },
+          {
+            "id": 18,
+            "label": "row 18",
+            "ok": true
+          },
+          {
+            "id": 19,
+            "label": "row 19",
+            "ok": false
+          },
+          {
+            "id": 20,
+            "label": "row 20",
+            "ok": false
+          },
+          {
+            "id": 21,
+            "label": "row 21",
+            "ok": true
+          },
+          {
+            "id": 22,
+            "label": "row 22",
+            "ok": false
+          },
+          {
+            "id": 23,
+            "label": "row 23",
+            "ok": false
+          },
+          {
+            "id": 24,
+            "label": "row 24",
+            "ok": true
+          }
+        ]
+      }
+    }
+  ]
+}

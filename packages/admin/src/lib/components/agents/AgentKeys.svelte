@@ -1,0 +1,300 @@
+<!--
+  An agent's keys: create with expiry, rotate without downtime (the old
+  one stays valid during the grace period), revoke instantly and see the last use.
+  The secret is shown only once, with TokenDisplay.
+-->
+<script lang="ts">
+  import { t, localeFormat } from "$lib/i18n";
+  import { KeyRound, RefreshCw, Ban, Plus } from "lucide-svelte";
+  import { onMount } from "svelte";
+  import { toast } from "svelte-sonner";
+
+  import TokenDisplay from "$lib/components/agents/TokenDisplay.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
+  import Modal from "$lib/components/ui/Modal.svelte";
+  import {
+    createAgentKey,
+    listAgentKeys,
+    revokeAgentKey,
+    rotateAgentKey,
+  } from "$lib/services/agents";
+  import type { AgentApiKey } from "$lib/types/agents";
+
+  interface Props {
+    agentId: string;
+  }
+  const { agentId }: Props = $props();
+
+  let keys = $state<AgentApiKey[]>([]);
+  let loading = $state(true);
+  let error = $state<string | null>(null);
+  let secret = $state<string | undefined>();
+
+  let creating = $state(false);
+  let name = $state("");
+  let expiry = $state<string>("90");
+
+  let rotating = $state<AgentApiKey | null>(null);
+  let grace = $state<string>("24");
+  let revoking = $state<AgentApiKey | null>(null);
+  let busy = $state(false);
+
+  onMount(load);
+
+  async function load() {
+    try {
+      loading = true;
+      error = null;
+      keys = await listAgentKeys(agentId);
+    } catch (e) {
+      error = e instanceof Error ? e.message : t("agentKeys.errorLoading");
+    } finally {
+      loading = false;
+    }
+  }
+
+  const days = (v: string): number | null => (v === "never" ? null : Number(v));
+
+  async function create() {
+    try {
+      busy = true;
+      const r = await createAgentKey(agentId, {
+        name: name || undefined,
+        expiresInDays: days(expiry),
+      });
+      secret = r.apiKey;
+      creating = false;
+      name = "";
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("agentKeys.errorCreating"));
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function rotate() {
+    if (!rotating) return;
+    try {
+      busy = true;
+      const r = await rotateAgentKey(agentId, rotating.id, { graceHours: Number(grace) });
+      secret = r.apiKey;
+      rotating = null;
+      await load();
+      toast.success(t("agentKeys.rotated"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("agentKeys.errorRotating"));
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function revoke() {
+    if (!revoking) return;
+    try {
+      busy = true;
+      await revokeAgentKey(agentId, revoking.id);
+      revoking = null;
+      await load();
+      toast.success(t("agentKeys.revoked"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("agentKeys.errorRevoking"));
+    } finally {
+      busy = false;
+    }
+  }
+
+  const date = (v: string | null) => (v ? new Date(v).toLocaleString(localeFormat()) : "—");
+
+  const STATUS: Record<AgentApiKey["status"], { text: () => string; kind: string }> = {
+    active: { text: () => t("agentKeys.statusActive"), kind: "bg-emerald-500/15 text-emerald-300" },
+    expiring: { text: () => t("agentKeys.statusExpiring"), kind: "bg-amber-500/15 text-amber-300" },
+    expired: { text: () => t("agentKeys.statusExpired"), kind: "bg-zinc-700/40 text-zinc-400" },
+    revoked: { text: () => t("agentKeys.statusRevoked"), kind: "bg-red-500/15 text-red-300" },
+  };
+  const alive = (k: AgentApiKey) => k.status === "active" || k.status === "expiring";
+</script>
+
+<div class="space-y-4" data-testid="agent-keys">
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="min-w-0">
+      <h3 class="text-sm font-semibold text-zinc-300">{t("agentKeys.title")}</h3>
+      <p class="text-xs text-zinc-500">{t("agentKeys.help")}</p>
+    </div>
+    <div class="flex-1"></div>
+    <Button variant="primary" size="sm" onclick={() => (creating = true)}>
+      <Plus size={14} class="mr-1" />{t("agentKeys.newKey")}
+    </Button>
+  </div>
+
+  {#if loading}
+    <div class="flex items-center justify-center h-24">
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+    </div>
+  {:else if error}
+    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+  {:else if keys.length === 0}
+    <p class="text-sm text-zinc-500">{t("agentKeys.none")}</p>
+  {:else}
+    <div class="overflow-x-auto border border-zinc-800 rounded-lg">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-zinc-500">
+          <tr>
+            <th class="text-left px-3 py-2">{t("agentKeys.key")}</th>
+            <th class="text-left px-3 py-2">{t("agentKeys.status")}</th>
+            <th class="text-left px-3 py-2">{t("agentKeys.created")}</th>
+            <th class="text-left px-3 py-2">{t("agentKeys.lastUsed")}</th>
+            <th class="text-left px-3 py-2">{t("agentKeys.expires")}</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-800/70">
+          {#each keys as k (k.id)}
+            <tr data-testid="key-row">
+              <td class="px-3 py-2 min-w-0">
+                <div class="flex items-center gap-2">
+                  <KeyRound size={14} class="text-zinc-500 shrink-0" />
+                  <span class="text-zinc-200">{k.name || t("agentKeys.unnamed")}</span>
+                </div>
+                <code class="text-[11px] text-zinc-500 break-all">{k.prefix}</code>
+                {#if k.rotatedFrom}
+                  <div class="text-[11px] text-zinc-500">{t("agentKeys.rotatedFromNote")}</div>
+                {/if}
+              </td>
+              <td class="px-3 py-2">
+                <span class="text-[11px] px-1.5 py-0.5 rounded {STATUS[k.status].kind}"
+                  >{STATUS[k.status].text()}</span
+                >
+              </td>
+              <td class="px-3 py-2 text-zinc-400 whitespace-nowrap">{date(k.createdAt)}</td>
+              <td class="px-3 py-2 text-zinc-400 whitespace-nowrap"
+                >{k.lastUsedAt ? date(k.lastUsedAt) : t("agentKeys.never")}</td
+              >
+              <td class="px-3 py-2 text-zinc-400 whitespace-nowrap">
+                {k.revokedAt
+                  ? date(k.revokedAt)
+                  : k.expiresAt
+                    ? date(k.expiresAt)
+                    : t("agentKeys.noExpiry")}
+              </td>
+              <td class="px-3 py-2">
+                {#if alive(k)}
+                  <div class="flex justify-end gap-1">
+                    <Button variant="ghost" size="sm" onclick={() => (rotating = k)}>
+                      <RefreshCw size={14} class="mr-1" />{t("agentKeys.rotate")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      class="text-red-400 hover:text-red-300"
+                      onclick={() => (revoking = k)}
+                    >
+                      <Ban size={14} class="mr-1" />{t("agentKeys.revoke")}
+                    </Button>
+                  </div>
+                {/if}
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
+</div>
+
+<Modal
+  open={creating}
+  title={t("agentKeys.newKey")}
+  description={t("agentKeys.newKeyHelp")}
+  onClose={() => (creating = false)}
+>
+  <form
+    class="space-y-4"
+    onsubmit={(e) => {
+      e.preventDefault();
+      create();
+    }}
+  >
+    <div>
+      <label for="key-name" class="block text-sm font-medium text-zinc-300 mb-1.5"
+        >{t("agentKeys.name")}</label
+      >
+      <input
+        id="key-name"
+        bind:value={name}
+        placeholder={t("agentKeys.namePlaceholder")}
+        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+      />
+    </div>
+    <div>
+      <label for="key-expiry" class="block text-sm font-medium text-zinc-300 mb-1.5"
+        >{t("agentKeys.expiry")}</label
+      >
+      <select
+        id="key-expiry"
+        bind:value={expiry}
+        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+      >
+        <option value="30">{t("agentKeys.days", { n: 30 })}</option>
+        <option value="90">{t("agentKeys.days", { n: 90 })}</option>
+        <option value="365">{t("agentKeys.days", { n: 365 })}</option>
+        <option value="never">{t("agentKeys.noExpiry")}</option>
+      </select>
+    </div>
+    <div class="flex justify-end gap-3 pt-2">
+      <Button type="button" variant="secondary" onclick={() => (creating = false)}
+        >{t("common.cancel")}</Button
+      >
+      <Button type="submit" variant="primary" loading={busy}>{t("agentKeys.create")}</Button>
+    </div>
+  </form>
+</Modal>
+
+<Modal
+  open={!!rotating}
+  title={t("agentKeys.rotateTitle")}
+  description={t("agentKeys.rotateHelp")}
+  onClose={() => (rotating = null)}
+>
+  <div class="space-y-4">
+    <div>
+      <label for="key-grace" class="block text-sm font-medium text-zinc-300 mb-1.5"
+        >{t("agentKeys.grace")}</label
+      >
+      <select
+        id="key-grace"
+        bind:value={grace}
+        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+      >
+        <option value="0">{t("agentKeys.graceNow")}</option>
+        <option value="1">{t("agentKeys.hours", { n: 1 })}</option>
+        <option value="24">{t("agentKeys.hours", { n: 24 })}</option>
+        <option value="72">{t("agentKeys.hours", { n: 72 })}</option>
+        <option value="168">{t("agentKeys.hours", { n: 168 })}</option>
+      </select>
+    </div>
+    <div class="flex justify-end gap-3">
+      <Button variant="secondary" onclick={() => (rotating = null)}>{t("common.cancel")}</Button>
+      <Button variant="primary" loading={busy} onclick={rotate}>{t("agentKeys.rotate")}</Button>
+    </div>
+  </div>
+</Modal>
+
+<Modal
+  open={!!revoking}
+  title={t("agentKeys.revokeTitle")}
+  description={t("agentKeys.revokeHelp")}
+  size="sm"
+  onClose={() => (revoking = null)}
+>
+  <div class="flex justify-end gap-3">
+    <Button variant="secondary" onclick={() => (revoking = null)}>{t("common.cancel")}</Button>
+    <Button variant="danger" loading={busy} onclick={revoke}>{t("agentKeys.revoke")}</Button>
+  </div>
+</Modal>
+
+{#if secret}
+  {#key secret}
+    <TokenDisplay token={secret} />
+  {/key}
+{/if}

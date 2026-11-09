@@ -1,0 +1,27 @@
+# gitleaks (scripts/security/scan.mjs, check `secrets`): the default rules, plus the
+# known false positives below. Each entry says why it is not a secret. Keep them narrow:
+# a whole-file allowlist hides any real secret added to that file later.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Reports and downloaded scanners, never committed"
+paths = ['''^\.security/''', '''(^|/)node_modules/''']
+
+[[allowlists]]
+description = "Public HKDF salt: the entropy comes from the master key"
+condition = "AND"
+paths = ['''^apps/api/src/lib/secrets-key\.ts$''']
+regexes = ['''kitsuden-secrets-v1''']
+
+[[allowlists]]
+description = "Example Idempotency-Key (a random UUID) in the docs"
+condition = "AND"
+paths = ['''^docs/install/errors-and-retries\.md$''']
+regexes = ['''2f1d9c0e-8a4b-4b8e-9d55-1c0b6f0e7a21''']
+
+[[allowlists]]
+description = "Fake keys that the tests feed to the key and secret detectors"
+condition = "AND"
+paths = ['''^tests/unit/(agent-auth|code-promotion)\.test\.ts$''']
+regexes = ['''kitsuden_sk_abc123''', '''AKIAABCDEFGHIJKLMNOP''']

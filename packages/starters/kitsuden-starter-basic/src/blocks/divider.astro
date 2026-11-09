@@ -1,0 +1,24 @@
+---
+/** `divider`: palette styles (solid/dashed/dotted) and admin ones (line/gradient/dots/space) */
+import { str } from "../lib/text";
+import { oneOf, type BlockProps } from "./types";
+
+const STYLES = ["solid", "dashed", "dotted", "line", "gradient", "dots", "space"] as const;
+const props = Astro.props as BlockProps;
+const data = props as Record<string, unknown>;
+const style = oneOf(data.style, STYLES, "solid");
+const partial = data.width === "partial";
+// Only a plain CSS color: the API already rejects anything else, this is a second fence
+const color = /^#[0-9a-f]{3,8}$|^[a-z]{3,20}$/i.test(str(data.color)) ? str(data.color) : undefined;
+---
+
+{style === "space" ? <div class="divider-space" aria-hidden="true" /> : <hr class:list={["divider", `divider--${style}`, { "divider--partial": partial }]} style={color ? `--line:${color}` : undefined} />}
+
+<style>
+  .divider { border: 0; border-top: 1px solid var(--line, var(--border)); margin: 0; }
+  .divider--dashed { border-top-style: dashed; }
+  .divider--dotted, .divider--dots { border-top: 3px dotted var(--line, var(--border)); }
+  .divider--gradient { height: 1px; border: 0; background: linear-gradient(90deg, transparent, var(--line, var(--accent)), transparent); }
+  .divider--partial { width: 33%; margin-inline: auto; }
+  .divider-space { height: 2rem; }
+</style>

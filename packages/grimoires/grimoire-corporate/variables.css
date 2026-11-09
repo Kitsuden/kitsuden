@@ -1,0 +1,17 @@
+/* Kitsuden Corporate — Light Enterprise Theme */
+:root {
+  --kitsuden-bg: #faf9f8;
+  --kitsuden-card: #ffffff;
+  --kitsuden-text: #323130;
+  --kitsuden-text-dim: #605e5c;
+  --kitsuden-subtle: #a19f9d;
+  --kitsuden-border: #e1dfdd;
+
+  --kitsuden-cyan: #0078d4;
+  --kitsuden-purple: #8764b8;
+  --kitsuden-pink: #e3008c;
+  --kitsuden-green: #107c10;
+  --kitsuden-amber: #ffb900;
+
+  --kitsuden-heading: #201f1e;
+}

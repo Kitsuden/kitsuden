@@ -1,0 +1,43 @@
+{
+  "name": "SaaS",
+  "description": "SaaS starter with teams, subscriptions, and user management",
+  "template": "saas",
+  "kons": ["kon-auth", "kon-datasets", "kon-media"],
+  "datasets": [
+    {
+      "name": "teams",
+      "displayName": "Teams",
+      "schema": {
+        "name": { "type": "string", "required": true },
+        "slug": { "type": "string", "required": true, "unique": true },
+        "plan": { "type": "enum", "options": ["free", "pro", "enterprise"], "default": "free" },
+        "ownerId": { "type": "string", "required": true }
+      }
+    },
+    {
+      "name": "team_members",
+      "displayName": "Team Members",
+      "schema": {
+        "teamId": { "type": "relation", "target": "teams", "required": true },
+        "userId": { "type": "string", "required": true },
+        "role": { "type": "enum", "options": ["owner", "admin", "member"], "default": "member" }
+      }
+    },
+    {
+      "name": "invoices",
+      "displayName": "Invoices",
+      "schema": {
+        "teamId": { "type": "relation", "target": "teams", "required": true },
+        "amount": { "type": "number", "required": true },
+        "currency": { "type": "string", "default": "USD" },
+        "status": {
+          "type": "enum",
+          "options": ["pending", "paid", "overdue"],
+          "default": "pending"
+        },
+        "dueDate": { "type": "datetime" }
+      }
+    }
+  ],
+  "seed": true
+}

@@ -1,0 +1,48 @@
+---
+/** `image`: one image from the media library, with caption and optional link */
+import { fieldAttributes } from "../lib/inti-markup";
+import { imageSrc } from "../lib/media";
+import { isExternal, safeHref } from "../lib/text";
+import { oneOf, pick, type BlockProps } from "./types";
+
+const props = Astro.props as BlockProps;
+const data = props as Record<string, unknown>;
+const edit = props.block?.editable;
+const ref = data.mediaId ?? data.imageUrl ?? data.url;
+const src = imageSrc(ref, "large");
+const srcset = typeof data.mediaId === "string" && src
+  ? (["small", "medium", "large"] as const)
+      .map((preset, i) => `${imageSrc(data.mediaId, preset)} ${[400, 800, 1200][i]}w`)
+      .join(", ")
+  : undefined;
+const alt = pick(data, "altText", "alt");
+const caption = pick(data, "caption");
+const align = oneOf(data.alignment, ["left", "center", "right", "full"] as const, "center");
+const href = safeHref(data.linkUrl);
+const newTab = data.openInNewTab === true;
+const eager = props.block?.isFirst;
+---
+
+{
+  src && (
+    <figure class:list={["image", `image--${align}`]}>
+      {href ? (
+        <a href={href} target={newTab ? "_blank" : undefined} rel={newTab || isExternal(href) ? "noopener" : undefined}>
+          <img src={src} srcset={srcset} sizes="(max-width: 48rem) 100vw, 48rem" alt={alt?.value ?? ""} loading={eager ? "eager" : "lazy"} decoding="async" />
+        </a>
+      ) : (
+        <img src={src} srcset={srcset} sizes="(max-width: 48rem) 100vw, 48rem" alt={alt?.value ?? ""} loading={eager ? "eager" : "lazy"} decoding="async" />
+      )}
+      {caption && <figcaption {...fieldAttributes(edit, caption.key)}>{caption.value}</figcaption>}
+    </figure>
+  )
+}
+
+<style>
+  .image { margin: 0; }
+  .image img { display: block; max-width: 100%; height: auto; border-radius: var(--radius); }
+  .image--center img { margin-inline: auto; }
+  .image--right img { margin-inline: auto 0; }
+  .image--full img { width: 100%; }
+  figcaption { margin-top: 0.5rem; color: var(--muted); font-size: 0.9rem; text-align: center; }
+</style>

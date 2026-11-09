@@ -1,0 +1,106 @@
+{
+  "name": "@kitsuden/sdk",
+  "version": "0.9.0-beta",
+  "description": "Kitsuden SDK: typed client generated from the API's OpenAPI 3.1 (every kon operation), plus CRUD helpers. Zero runtime dependencies. Node, Bun, Deno and browsers.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./openapi.json": "./openapi/kitsuden.openapi.json",
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./realtime": {
+      "import": {
+        "types": "./dist/realtime/realtime.d.ts",
+        "default": "./dist/realtime/realtime.js"
+      },
+      "require": {
+        "types": "./dist/realtime/realtime.d.cts",
+        "default": "./dist/realtime/realtime.cjs"
+      }
+    },
+    "./rpc": {
+      "import": {
+        "types": "./dist/rpc/rpc.d.ts",
+        "default": "./dist/rpc/rpc.js"
+      },
+      "require": {
+        "types": "./dist/rpc/rpc.d.cts",
+        "default": "./dist/rpc/rpc.cjs"
+      }
+    },
+    "./toon-protocol": {
+      "import": {
+        "types": "./dist/toon-protocol/toon-protocol.d.ts",
+        "default": "./dist/toon-protocol/toon-protocol.js"
+      },
+      "require": {
+        "types": "./dist/toon-protocol/toon-protocol.d.cts",
+        "default": "./dist/toon-protocol/toon-protocol.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "openapi",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit && tsc -p tests/tsconfig.json",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config tests/integration/vitest.config.ts"
+  },
+  "devDependencies": {
+    "hono": "4.13.13",
+    "tsup": "^8.0.0",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [
+    "kitsuden",
+    "cms",
+    "baas",
+    "sdk",
+    "typescript",
+    "edge",
+    "serverless",
+    "realtime",
+    "websocket",
+    "openapi",
+    "ai-agents",
+    "mcp",
+    "typed-client"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "hono": "^4.7.0"
+  },
+  "peerDependenciesMeta": {
+    "hono": {
+      "optional": true
+    }
+  },
+  "sideEffects": false
+}

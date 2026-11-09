@@ -1,0 +1,43 @@
+---
+/** `quote`: a quotation with author, role and author picture */
+import { fieldAttributes } from "../lib/inti-markup";
+import { imageSrc } from "../lib/media";
+import { oneOf, pick, type BlockProps } from "./types";
+
+const props = Astro.props as BlockProps;
+const data = props as Record<string, unknown>;
+const edit = props.block?.editable;
+const quote = pick(data, "quote", "text", "content");
+const author = pick(data, "author");
+const role = pick(data, "authorTitle");
+const picture = imageSrc(data.authorImageId, "thumbnail");
+const style = oneOf(data.style, ["default", "large", "minimal"] as const, "default");
+---
+
+{
+  quote && (
+    <figure class:list={["quote", `quote--${style}`]}>
+      <blockquote {...fieldAttributes(edit, quote.key)}>{quote.value}</blockquote>
+      {(author || role) && (
+        <figcaption>
+          {picture && <img src={picture} alt="" width="48" height="48" loading="lazy" />}
+          <span>
+            {author && <strong {...fieldAttributes(edit, author.key)}>{author.value}</strong>}
+            {role && <span class="quote__role" {...fieldAttributes(edit, role.key)}>{role.value}</span>}
+          </span>
+        </figcaption>
+      )}
+    </figure>
+  )
+}
+
+<style>
+  .quote { margin: 0; padding: 1.5rem 1.75rem; border-left: 4px solid var(--accent); background: var(--surface-2); border-radius: var(--radius); }
+  .quote--minimal { background: none; padding-block: 0.25rem; }
+  .quote--large blockquote { font-size: 1.6rem; }
+  blockquote { margin: 0; font-size: 1.2rem; line-height: 1.5; font-style: italic; }
+  figcaption { display: flex; align-items: center; gap: 0.75rem; margin-top: 1rem; }
+  figcaption img { border-radius: 50%; object-fit: cover; }
+  figcaption > span { display: flex; flex-direction: column; }
+  .quote__role { color: var(--muted); font-size: 0.9rem; }
+</style>

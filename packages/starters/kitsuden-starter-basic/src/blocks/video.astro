@@ -1,0 +1,48 @@
+---
+/**
+ * `video`: a YouTube/Vimeo URL (`embedUrl`), or a self-hosted file given as
+ * its `/media/...` URL (`url`). A bare `mediaId` cannot be played: the public
+ * API has no route from a media id to its file (`GET /api/media/:id` is for
+ * staff only), so such a block renders nothing.
+ */
+import { imageSrc } from "../lib/media";
+import { videoEmbedUrl } from "../lib/text";
+import type { BlockProps } from "./types";
+
+const props = Astro.props as BlockProps;
+const data = props as Record<string, unknown>;
+const embed = videoEmbedUrl(data.embedUrl ?? data.url);
+const file = embed ? null : imageSrc(data.url ?? data.src, "large");
+const flags = {
+  autoplay: data.autoplay === true,
+  loop: data.loop === true,
+  muted: data.muted !== false,
+  controls: data.controls !== false,
+};
+---
+
+{
+  embed && (
+    <div class="video">
+      <iframe
+        src={embed}
+        title="Video"
+        loading="lazy"
+        allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen
+      />
+    </div>
+  )
+}
+{
+  file && (
+    <video class="video-file" src={file} autoplay={flags.autoplay} loop={flags.loop} muted={flags.muted} controls={flags.controls} playsinline preload="metadata" />
+  )
+}
+
+<style>
+  .video { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: #000; }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .video-file { display: block; width: 100%; border-radius: var(--radius); }
+</style>

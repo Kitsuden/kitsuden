@@ -1,0 +1,43 @@
+/**
+ * Enterprise (SharePoint) Theme — CSS Variables
+ *
+ * Loaded dynamically by App.vue via GET /api/system/theme-css/sharepoint
+ * when this theme is activated. Overrides :root variables from kitsuden-default.
+ */
+
+:root {
+  /* ── Surfaces ── */
+  --kitsuden-bg: #faf9f8;
+  --kitsuden-card: #ffffff;
+  --kitsuden-text: #323130;
+  --kitsuden-text-dim: #605e5c;
+  --kitsuden-subtle: #a19f9d;
+  --kitsuden-border: #e1dfdd;
+  --kitsuden-heading: #201f1e;
+
+  /* ── Brand Accents ── */
+  --kitsuden-cyan: #03787c;
+  --kitsuden-purple: #5b5fc7;
+  --kitsuden-pink: #c239b3;
+  --kitsuden-green: #107c10;
+  --kitsuden-amber: #ffb900;
+
+  /* ── Design tokens used by global.css ── */
+  --color-cyan: #03787c;
+  --color-pink: #c239b3;
+  --color-bg: #faf9f8;
+  --color-surface: #ffffff;
+  --color-border: #e1dfdd;
+
+  /* ── Typography ── */
+  --font-display:
+    "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto,
+    "Helvetica Neue", sans-serif;
+  --font-body: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* ── Overrides for glass-card ── */
+  --glass-bg: #ffffff;
+  --glass-border: #e1dfdd;
+  --glass-radius: 2px;
+  --glass-shadow: 0 1.6px 3.6px 0 rgba(0, 0, 0, 0.13), 0 0.3px 0.9px 0 rgba(0, 0, 0, 0.11);
+}

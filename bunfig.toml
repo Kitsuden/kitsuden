@@ -1,0 +1,25 @@
+[test]
+# Exclude Playwright specs and integration test dirs. They are run via `npx playwright test`.
+exclude = [
+  "tests/**/*.spec.ts",
+  "tests/e2e/**",
+  "tests/api/**",
+  "tests/auth/**",
+  "tests/modules/**",
+  "tests/navigation/**",
+  "apps/api/src/tests-unit/**",
+]
+
+# Coverage exclusions: ignore alpha kons, build artifacts, codegen, and test files
+coverageSkipTestFiles = true
+coverageExclude = [
+  # Build artifacts
+  "dist/**",
+  # Alpha kons (not part of beta coverage target)
+  "packages/kons/**",
+  # Code generators (dev tooling)
+  "packages/codegen/**",
+  # Test files
+  "**/*.test.ts",
+  "**/*.spec.ts",
+]

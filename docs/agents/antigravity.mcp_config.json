@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "kitsuden": {
+      "command": "kitsuden",
+      "args": ["mcp", "--stdio", "--agent-env-file", "~/.kitsuden/antigravity.env"],
+      "timeoutSeconds": 30
+    }
+  }
+}

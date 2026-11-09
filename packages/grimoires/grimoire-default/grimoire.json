@@ -1,0 +1,21 @@
+{
+  "id": "grimoire-default",
+  "name": "Default Grimoire",
+  "description": "Standard Kitsuden grimoire with core functionality. The foundation for custom grimoires and a starting point for new projects.",
+  "version": "2.0.0",
+  "type": "grimoire",
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "industry": "general",
+  "keywords": ["default", "core", "foundation"],
+  "kons": [],
+  "optional_kons": ["kon-crm"],
+  "config": {
+    "theme": {
+      "css_entry": "variables.css",
+      "primary_color": "#00e5ff",
+      "accent_color": "#ff2a6d"
+    }
+  },
+  "konConfig": {},
+  "seed": null
+}

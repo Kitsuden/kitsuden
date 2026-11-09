@@ -1,0 +1,117 @@
+---
+/** `hero`: headline, text, optional background image and up to two buttons */
+import { imageSrc } from "../lib/media";
+import { fieldAttributes } from "../lib/inti-markup";
+import { isExternal, safeHref } from "../lib/text";
+import { oneOf, pick, type BlockProps } from "./types";
+
+type Button = { label?: unknown; url?: unknown; variant?: unknown };
+const props = Astro.props as BlockProps;
+const data = props as Record<string, unknown>;
+const edit = props.block?.editable;
+
+const headline = pick(data, "headline", "title");
+const sub = pick(data, "subheadline", "subtitle");
+const description = pick(data, "description");
+const align = oneOf(data.alignment, ["left", "center", "right"] as const, "center");
+const height = oneOf(data.minHeight, ["sm", "md", "lg", "xl"] as const, "md");
+
+// Palette shape: `mediaId`; admin shape: `imageUrl`
+const background = imageSrc(data.mediaId, "hero") ?? imageSrc(data.imageUrl, "hero");
+const focal = data.focalPoint as { x?: unknown; y?: unknown } | undefined;
+const position =
+  typeof focal?.x === "number" && typeof focal?.y === "number"
+    ? `${Math.round(focal.x * 100)}% ${Math.round(focal.y * 100)}%`
+    : "center";
+
+const buttonOf = (b: Button | undefined, label: unknown, url: unknown, variant: string) => {
+  const href = safeHref(b?.url ?? url);
+  const text = typeof (b?.label ?? label) === "string" ? String(b?.label ?? label).trim() : "";
+  return href && text ? { href, text, variant: oneOf(b?.variant, ["primary", "secondary", "outline"] as const, variant as "primary") } : null;
+};
+const primary = buttonOf(data.primaryButton as Button, data.ctaLabel, data.ctaUrl, "primary");
+const secondary = buttonOf(data.secondaryButton as Button, data.ctaSecondaryLabel, data.ctaSecondaryUrl, "outline");
+const eager = props.block?.isFirst;
+---
+
+<section class:list={["hero", `hero--${align}`, `hero--${height}`, { "hero--image": background }]}>
+  {
+    background && (
+      <img
+        class="hero__bg"
+        src={background}
+        alt=""
+        style={`object-position:${position}`}
+        loading={eager ? "eager" : "lazy"}
+        fetchpriority={eager ? "high" : undefined}
+        decoding="async"
+      />
+    )
+  }
+  <div class="hero__inner">
+    {headline && (props.block?.isFirst ? <h1 {...fieldAttributes(edit, headline.key)}>{headline.value}</h1> : <h2 {...fieldAttributes(edit, headline.key)}>{headline.value}</h2>)}
+    {sub && <p class="hero__sub" {...fieldAttributes(edit, sub.key)}>{sub.value}</p>}
+    {description && <p class="hero__text" {...fieldAttributes(edit, description.key)}>{description.value}</p>}
+    {
+      (primary || secondary) && (
+        <p class="hero__actions">
+          {primary && (
+            <a class={`button button--${primary.variant}`} href={primary.href} rel={isExternal(primary.href) ? "noopener" : undefined}>
+              {primary.text}
+            </a>
+          )}
+          {secondary && (
+            <a class={`button button--${secondary.variant}`} href={secondary.href} rel={isExternal(secondary.href) ? "noopener" : undefined}>
+              {secondary.text}
+            </a>
+          )}
+        </p>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    display: grid;
+    align-items: center;
+    padding: clamp(2.5rem, 6vw, 5rem) var(--gutter);
+    border-radius: var(--radius-lg);
+    background: var(--surface-2);
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .hero--sm { min-height: 14rem; }
+  .hero--md { min-height: 20rem; }
+  .hero--lg { min-height: 28rem; }
+  .hero--xl { min-height: 36rem; }
+  .hero--left { text-align: left; }
+  .hero--center { text-align: center; }
+  .hero--right { text-align: right; }
+  .hero__bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+  }
+  .hero--image::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg, rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.65));
+  }
+  .hero--image { color: #fff; }
+  .hero__inner { max-width: 46rem; margin-inline: auto; width: 100%; }
+  .hero--left .hero__inner { margin-inline: 0 auto; }
+  .hero--right .hero__inner { margin-inline: auto 0; }
+  .hero h1, .hero h2 { font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.1; margin: 0 0 0.75rem; }
+  .hero__sub { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.5rem; }
+  .hero__text { font-size: 1.1rem; margin: 0; opacity: 0.9; }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1.5rem 0 0; }
+  .hero--center .hero__actions { justify-content: center; }
+  .hero--right .hero__actions { justify-content: flex-end; }
+</style>

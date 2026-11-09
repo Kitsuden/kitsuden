@@ -1,0 +1,4 @@
+# Installed by `node scripts/bench/bench.mjs setup`
+.tools/
+# Results of a run (keep the ones you publish elsewhere)
+bench-*.json

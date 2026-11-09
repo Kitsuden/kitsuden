@@ -1,0 +1,9 @@
+{
+  "id": "kitsuden-default",
+  "name": "Kitsuden Default",
+  "description": "Standard Cyberpunk Theme",
+  "version": "1.0.0",
+  "type": "theme",
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "css_entry": "variables.css"
+}

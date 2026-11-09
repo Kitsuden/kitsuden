@@ -1,0 +1,298 @@
+{
+  "_comment": "Test cases for anti-hallucination validation",
+  "testSuite": "VALIDATION_CASES",
+  "description": "Declarative validation tests with Zod to prevent invalid data",
+  "version": "1.0.0",
+  "createdAt": "2026-03-29",
+
+  "tests": [
+    {
+      "id": "VAL-001",
+      "name": "Reject negative mana_cost",
+      "category": "numeric_range",
+      "description": "A skill with a negative mana_cost must be rejected",
+      "input": {
+        "dataset": "skills",
+        "data": {
+          "name": "Test Skill",
+          "mana_cost": -10,
+          "damage": 100,
+          "cooldown_seconds": 5
+        }
+      },
+      "expectedResult": {
+        "success": false,
+        "errors": [
+          {
+            "field": "mana_cost",
+            "message": "Number must be greater than or equal to 0"
+          }
+        ]
+      },
+      "aiRecoveryHint": "The 'mana_cost' field must be a positive number (>= 0). Skills cannot have a negative mana cost."
+    },
+    {
+      "id": "VAL-002",
+      "name": "Reject invalid rarity",
+      "category": "numeric_range",
+      "description": "A character with rarity greater than 5 must be rejected",
+      "input": {
+        "dataset": "characters",
+        "data": {
+          "name": "God Character",
+          "rarity": 10,
+          "element": "pyro",
+          "hp": 1000,
+          "atk": 100,
+          "def": 50
+        }
+      },
+      "expectedResult": {
+        "success": false,
+        "errors": [
+          {
+            "field": "rarity",
+            "message": "Number must be less than or equal to 5"
+          }
+        ]
+      },
+      "aiRecoveryHint": "Rarity must be between 3 (rare) and 5 (legendary). There are no rarities above 5 in this system."
+    },
+    {
+      "id": "VAL-003",
+      "name": "Reject invalid element",
+      "category": "enum_validation",
+      "description": "A character with element 'darkness' must be rejected",
+      "input": {
+        "dataset": "characters",
+        "data": {
+          "name": "Dark Knight",
+          "rarity": 5,
+          "element": "darkness",
+          "hp": 1000,
+          "atk": 100,
+          "def": 50
+        }
+      },
+      "expectedResult": {
+        "success": false,
+        "errors": [
+          {
+            "field": "element",
+            "message": "Invalid element. Options: pyro, hydro, electro, cryo, anemo, geo, dendro"
+          }
+        ]
+      },
+      "aiRecoveryHint": "The valid elements are: pyro (fire), hydro (water), electro (lightning), cryo (ice), anemo (wind), geo (earth), dendro (nature)."
+    },
+    {
+      "id": "VAL-004",
+      "name": "Reject slug with uppercase letters",
+      "category": "pattern_validation",
+      "description": "A slug with uppercase letters must be rejected",
+      "input": {
+        "dataset": "characters",
+        "data": {
+          "name": "Test Character",
+          "rarity": 4,
+          "element": "pyro",
+          "slug": "Test-Character-123",
+          "hp": 1000,
+          "atk": 100,
+          "def": 50
+        }
+      },
+      "expectedResult": {
+        "success": false,
+        "errors": [
+          {
+            "field": "slug",
+            "message": "Slug can only contain lowercase letters, numbers and hyphens"
+          }
+        ]
+      },
+      "aiRecoveryHint": "The slug must be lowercase, without spaces, using only hyphens (-) as separators. Example: 'test-character-123'"
+    },
+    {
+      "id": "VAL-005",
+      "name": "Transactional batch - Rollback",
+      "category": "batch_validation",
+      "description": "If one operation of the batch fails, all of them must roll back",
+      "input": {
+        "transaction": true,
+        "operations": [
+          {
+            "op": "create",
+            "dataset": "characters",
+            "data": {
+              "name": "Hero",
+              "rarity": 5,
+              "element": "pyro",
+              "hp": 1000,
+              "atk": 100,
+              "def": 50
+            },
+            "alias": "hero"
+          },
+          {
+            "op": "create",
+            "dataset": "skills",
+            "data": {
+              "name": "Impossible Skill",
+              "character_id": "@ref:hero.id",
+              "mana_cost": -50
+            }
+          }
+        ]
+      },
+      "expectedResult": {
+        "success": false,
+        "rolledBack": true,
+        "error": {
+          "op": 1,
+          "message": "Validation failed: mana_cost: Number must be >= 0"
+        }
+      },
+      "note": "The character 'Hero' must NOT be created because the batch rolls back"
+    },
+    {
+      "id": "VAL-006",
+      "name": "Conditional if/then validation",
+      "category": "conditional_validation",
+      "description": "If element is pyro, weapon_type cannot be bow",
+      "input": {
+        "dataset": "characters",
+        "data": {
+          "name": "Pyro Archer",
+          "rarity": 4,
+          "element": "pyro",
+          "weapon_type": "bow",
+          "hp": 1000,
+          "atk": 100,
+          "def": 50
+        },
+        "conditionalRules": [
+          {
+            "if": { "field": "element", "eq": "pyro" },
+            "then": { "field": "weapon_type", "neq": "bow", "message": "Pyro cannot use bows" }
+          }
+        ]
+      },
+      "expectedResult": {
+        "success": false,
+        "errors": [
+          {
+            "field": "weapon_type",
+            "message": "Pyro cannot use bows"
+          }
+        ]
+      },
+      "aiRecoveryHint": "Pyro characters cannot use bows according to the game rules. Valid options: sword, claymore, polearm, catalyst."
+    },
+    {
+      "id": "VAL-007",
+      "name": "Circular reference validation",
+      "category": "reference_validation",
+      "description": "Circular references in @ref must not be allowed",
+      "input": {
+        "operations": [
+          {
+            "op": "create",
+            "dataset": "skills",
+            "data": {
+              "name": "Circular",
+              "character_id": "@ref:skill1.id"
+            },
+            "alias": "skill1"
+          }
+        ]
+      },
+      "expectedResult": {
+        "success": false,
+        "errors": [
+          {
+            "field": "character_id",
+            "message": "Reference not found: skill1"
+          }
+        ]
+      },
+      "note": "An alias defined in the same operation cannot be referenced"
+    },
+    {
+      "id": "VAL-008",
+      "name": "Accept valid data",
+      "category": "positive_test",
+      "description": "A fully valid character must pass",
+      "input": {
+        "dataset": "characters",
+        "data": {
+          "name": "Hu Tao",
+          "rarity": 5,
+          "element": "pyro",
+          "weapon_type": "polearm",
+          "hp": 15552,
+          "atk": 106,
+          "def": 876,
+          "slug": "hu-tao",
+          "mana_cost": 0
+        }
+      },
+      "expectedResult": {
+        "success": true,
+        "errors": []
+      }
+    },
+    {
+      "id": "VAL-009",
+      "name": "Reject empty name",
+      "category": "required_validation",
+      "description": "A character without a name must be rejected",
+      "input": {
+        "dataset": "characters",
+        "data": {
+          "name": "",
+          "rarity": 5,
+          "element": "pyro",
+          "hp": 1000,
+          "atk": 100,
+          "def": 50
+        }
+      },
+      "expectedResult": {
+        "success": false,
+        "errors": [
+          {
+            "field": "name",
+            "message": "String must contain at least 1 character(s)"
+          }
+        ]
+      },
+      "aiRecoveryHint": "The character's name is required and must have at least 1 character."
+    },
+    {
+      "id": "VAL-010",
+      "name": "Reject excessive cooldown",
+      "category": "numeric_range",
+      "description": "A skill with cooldown > 3600 seconds must be rejected",
+      "input": {
+        "dataset": "skills",
+        "data": {
+          "name": "Slow Skill",
+          "mana_cost": 10,
+          "damage": 100,
+          "cooldown_seconds": 7200
+        }
+      },
+      "expectedResult": {
+        "success": false,
+        "errors": [
+          {
+            "field": "cooldown_seconds",
+            "message": "Number must be less than or equal to 3600"
+          }
+        ]
+      },
+      "aiRecoveryHint": "The maximum allowed cooldown is 3600 seconds (1 hour). Consider using a different charge system for slower abilities."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+name: kitsuden
+description: A minimal Kitsuden client for Dart and Flutter apps (datasets and entries).
+version: 0.1.0
+repository: https://github.com/Kitsuden/kitsuden/tree/main/packages/sdk-dart
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  http: ^1.2.0
+
+dev_dependencies:
+  test: ^1.25.0

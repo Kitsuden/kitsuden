@@ -1,0 +1,21 @@
+{
+  "id": "grimoire-documents",
+  "name": "Documents",
+  "description": "Intelligent document processing (IDP) platform: OCR, document management and review flows.",
+  "version": "1.0.0",
+  "type": "grimoire",
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "industry": "document-processing",
+  "keywords": ["idp", "ocr", "documents", "digitization"],
+  "kons": ["kon-vekstudio", "kon-dms"],
+  "optional_kons": ["kon-ocr-training", "kon-directory", "kon-members"],
+  "config": {
+    "theme": {
+      "css_entry": "variables.css",
+      "primary_color": "#c1292e",
+      "accent_color": "#d4a017"
+    }
+  },
+  "konConfig": {},
+  "seed": null
+}

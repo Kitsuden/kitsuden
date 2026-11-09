@@ -1,0 +1,319 @@
+# syntax=docker/dockerfile:1.7-labs
+# ^ needed for `COPY --parents`, which preserves the source path.
+# ===================================================================
+# Kitsuden - Production Dockerfile (Multi-Stage + BuildKit Cache)
+#
+# Builds:
+#   - API (Bun runtime)
+#   - Admin (SvelteKit static + nginx)
+#
+# USAGE:
+#   docker build -f docker/Dockerfile.prod --target api -t ghcr.io/kitsuden/kitsuden/api:latest .
+#   docker build -f docker/Dockerfile.prod --target admin -t ghcr.io/kitsuden/kitsuden/admin:latest .
+#
+# BUILDKIT REQUIRED for cache mounts:
+#   export DOCKER_BUILDKIT=1
+#   docker build ...
+#
+# OPTIMIZATIONS:
+#   - BuildKit cache mounts for pnpm store (fast rebuilds)
+#   - Sharp compiled in builder, not in final image
+#   - No build dependencies in final image (python3, make, g++)
+# ===================================================================
+
+# syntax=docker/dockerfile:1
+
+# ===================================================================
+# STAGE 1: Base with pnpm
+# ===================================================================
+FROM oven/bun:1.3.14-alpine AS base
+RUN apk add --no-cache nodejs npm curl
+WORKDIR /app
+RUN npm install -g pnpm@9.15.4
+
+# ===================================================================
+# Kons: default context EMPTY. `--build-context kons=<path>` (or
+# `additional_contexts` in compose) replaces it with a checkout of
+# kitsuden-kons; see the `dependencies` stage.
+# ===================================================================
+FROM scratch AS kons
+
+# ===================================================================
+# STAGE 2: Dependencies - Install all dependencies with cache
+# ===================================================================
+FROM base AS dependencies
+
+# Copy workspace configuration
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Manifests of ALL the workspace's projects, to cache the installation.
+#
+# A hand-written list falls behind without visibly failing: the
+# dependencies of the missing package are not installed, and the build dies much
+# later with a `Could not resolve` that looks like something else.
+#
+# `--parents` preserves the source path. Without it, `COPY packages/kons/*/package.json
+# ./packages/kons/` FLATTENS the files onto the same destination and only
+# the last one survives.
+#
+# The globs follow `pnpm-workspace.yaml`: `apps/*`, `packages/*` and the two-level ones
+# levels (`packages/core/*`, `packages/kons/*`, `packages/starters/*`).
+COPY --parents apps/*/package.json packages/*/package.json packages/*/*/package.json ./
+
+# ── Installed kons ────────────────────────────────────────────────────────
+#
+# The kons no longer live in this repository (kitsuden-kons repo). The image
+# installs those named by KITSUDEN_KONS ("blog,wiki,…"), copying them from the
+# ADDITIONAL build context `kons`:
+#
+#   docker build --build-context kons=../kitsuden-kons #     --build-arg KITSUDEN_KONS="blog,wiki" -f docker/Dockerfile.prod --target api .
+#
+# (with compose: `additional_contexts: { kons: … }` and `args: { KITSUDEN_KONS: … }`).
+# By default the context is the empty `kons` stage (above) and the list is
+# empty: the public image carries only the core. Copies of packages/kons/kon-* in the
+# working tree do NOT get in (.dockerignore): what is in the image is what is
+# declared, not whatever is in the builder's folder.
+#
+# It goes BEFORE `pnpm install` because each kon is a workspace package with its
+# own dependencies. It also writes /app/kitsuden.kons.json, which is what
+# the API reads to know what is installed.
+ARG KITSUDEN_KONS=""
+COPY docker/install-kons.mjs ./docker/install-kons.mjs
+RUN --mount=type=bind,from=kons,target=/kons-src     KITSUDEN_KONS="${KITSUDEN_KONS}" node docker/install-kons.mjs /kons-src
+
+# Install dependencies with BuildKit cache mount for pnpm store
+# This makes reinstalls almost instant on rebuilds
+#
+# --ignore-scripts is NOT optional here, and it is worth knowing why:
+#
+# This layer only has the `package.json` files copied in — on purpose, so that
+# changing code does not invalidate the install. But `@kitsuden/shared` declares
+# `prepare: bun run scripts/build.ts`, and pnpm runs the `prepare` of workspace
+# packages on install. That file does not exist yet in the
+# image: bun aborts with `Module not found "scripts/build.ts"` and takes the
+# whole `pnpm install` down with it. The `|| pnpm install` fallback failed
+# for the same reason, of course.
+#
+# The dependencies' scripts (sharp, esbuild, msgpackr...) are not lost:
+# `builder` runs `pnpm rebuild` once it has all the code, and it is from
+# `builder` —not from this stage— that the runtime copies `node_modules`.
+#
+# --frozen-lockfile and NO fallback: the production image cannot carry
+# dependencies nobody has reviewed, so an out-of-date lockfile fails the build
+# with ERR_PNPM_OUTDATED_LOCKFILE. Watch out for the
+# kons in KITSUDEN_KONS: their package.json files come from kitsuden-kons and must
+# be in pnpm-lock.yaml AS IS (install them in the tree with `kitsuden kon
+# add`, `pnpm install` and commit the lockfile before building).
+#
+# Few connections and more retries: with an empty cache, parallel downloads hit
+# ECONNRESET, and an optional dependency that fails is skipped without a word.
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    --mount=type=cache,target=/root/.cache \
+    pnpm install --frozen-lockfile --prefer-offline --ignore-scripts --network-concurrency=4 --fetch-retries=6
+
+# ===================================================================
+# STAGE 3: Builder - Compile everything
+# ===================================================================
+FROM dependencies AS builder
+
+# Build tools for native modules (sharp, etc.)
+RUN apk add --no-cache python3 make g++
+
+# API URL for admin build (empty = relative /api/* calls via nginx proxy)
+ARG PUBLIC_API_URL=""
+ENV PUBLIC_API_URL=${PUBLIC_API_URL}
+ENV VITE_API_URL=${PUBLIC_API_URL}
+
+# Copy source code
+COPY . .
+
+# Now the dependencies' install scripts DO run, which the previous
+# stage skipped with --ignore-scripts. All the code is here now: sharp
+# compiles against musl and esbuild places its platform binary. It costs no
+# cache — the `COPY . .` above already invalidates on any code change.
+RUN pnpm rebuild
+
+# Build workspace packages in dependency order
+# Only packages that actually produce dist/ artifacts need explicit builds here.
+# Packages like engine, core, grimoires, kons(root) have no-op build scripts
+# and are consumed as TS source by Bun.
+
+RUN --mount=type=cache,target=/app/packages/shared/.tsbuildinfo \
+    pnpm --filter @kitsuden/shared build
+
+RUN --mount=type=cache,target=/app/packages/sdk/.tsbuildinfo \
+    pnpm --filter @kitsuden/sdk build
+
+RUN --mount=type=cache,target=/app/packages/mcp-server/.tsbuildinfo \
+    pnpm --filter @kitsuden/mcp-server build
+
+# Compile (tsc) the kons that have a build script.
+#
+# Bun runs them as TS source, so their dist/ is not used at runtime: this
+# step is the TYPE CHECK of the kons. A kon that does not compile stops the
+# build: that is what we want.
+#
+# With no kons installed there is nothing to filter: pnpm warns and exits 0.
+RUN pnpm --filter "@kitsuden/kon-*" build
+
+# Build API
+#
+# NODE_ENV=production WHEN BUILDING, not just when running: `bun build` replaces
+# the literal expression `process.env.NODE_ENV` with the value it has at that
+# moment, and without this it was frozen as "development" (production guards
+# compiled as `if (false)`). The code already reads it at runtime
+# (apps/api/src/lib/environment.ts); this closes whatever is left or newly written.
+RUN --mount=type=cache,target=/app/apps/api/.tsbuildinfo \
+    NODE_ENV=production pnpm --filter @kitsuden/api build
+
+# Remove conflicting generated JS files before admin build
+RUN find packages/admin/src -name "+layout.js" -type f -delete 2>/dev/null || true
+
+# Build Admin (SvelteKit)
+RUN --mount=type=cache,target=/app/packages/admin/.vite \
+    pnpm --filter @kitsuden/admin build
+
+# Rebuild sharp for Alpine/musl
+RUN SHARP_IGNORE_GLOBAL_LIBVIPS=1 pnpm rebuild sharp
+
+# ===================================================================
+# STAGE 4: API Runtime - Minimal image for backend
+# ===================================================================
+FROM oven/bun:1.3.14-alpine AS api
+WORKDIR /app
+
+# nodejs: the user-code sandbox runs its interpreter (QuickJS) in a
+# child process with `node --permission` (no writes, no processes, no threads;
+# it only reads the QuickJS packages). Without Node it would fall back to Bun, which has no permission
+# model. See apps/api/src/lib/worker-sandbox.ts and docs/agents/sandbox.md.
+# `apk upgrade`: the base image's own packages (OpenSSL above all) lag behind
+# Alpine's security fixes; Trivy in CI fails on a fixable HIGH or CRITICAL one.
+RUN apk upgrade --no-cache && apk add --no-cache postgresql-client curl nodejs
+
+# Copy built API artifact
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+
+# Copy API source for dynamic imports used by startup scripts & module-loader
+COPY --from=builder /app/apps/api/src ./apps/api/src
+COPY --from=builder /app/apps/api/drizzle ./apps/api/drizzle
+# The migration runner lives here and runs at container startup
+# (start-with-check.sh step 4). Without this copy, the container starts unable to
+# migrate and the API comes up against an outdated schema.
+COPY --from=builder /app/apps/api/scripts ./apps/api/scripts
+COPY --from=builder /app/apps/api/migrations ./apps/api/migrations
+COPY --from=builder /app/apps/api/kitsuden.config.ts ./apps/api/kitsuden.config.ts
+COPY --from=builder /app/apps/api/drizzle.config.ts ./apps/api/drizzle.config.ts
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+
+# The dependency links of apps/api.
+#
+# They are needed because the bundle does NOT contain the native modules (`sharp`,
+# `@node-rs/argon2`): those go `--external`, so they are resolved at
+# runtime from the bundle folder, `/app/apps/api/dist/`. Without this COPY,
+# the lookup goes up through `apps/api/node_modules` —which did not exist—, `apps/` and
+# `/app/node_modules`, and finds nothing: the container died with
+# `Failed to load native binding`, with the binary right there inside the image.
+#
+# They are symbolic links pointing to `/app/node_modules/.pnpm/...`, which is already
+# copied just below, so this takes almost no space: it is the map, not the territory.
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/docker ./docker
+
+# Copy workspace packages that API imports dynamically
+# engine, core, grimoires are consumed as TS source (Bun runs TS natively)
+COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/packages/engine ./packages/engine
+COPY --from=builder /app/packages/core ./packages/core
+COPY --from=builder /app/packages/codegen ./packages/codegen
+COPY --from=builder /app/packages/sdk ./packages/sdk
+COPY --from=builder /app/packages/mcp-server ./packages/mcp-server
+# The COPIES of the installed kons (see the `dependencies` stage) and the list
+# the API reads to know what is installed.
+COPY --from=builder /app/packages/kons ./packages/kons
+COPY --from=builder /app/kitsuden.kons.json ./kitsuden.kons.json
+COPY --from=builder /app/packages/grimoires ./packages/grimoires
+
+# Copy node_modules with pnpm symlinks intact
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+
+# Folders the API WRITES to at runtime, owned by user `bun`
+# (uid/gid 1000, provided by the base image; the same as the `user: "1000:1000"` of
+# docker-compose.tls.yml):
+#
+#   /app/data                    STORAGE_LOCAL_PATH: the media volume
+#   /app/uploads, /app/logs      local uploads and logs
+#   /app/apps/api/.kitsuden      local API data (the sandbox no longer writes here)
+#   /app/apps/api/drizzle/vault  vault DDL snapshots (if enabled)
+#   /tmp                         already world-writable (1777) in the base image
+#
+# An EMPTY named volume copies its folder's owner when first
+# mounted, so on a new machine everything works with no action. An
+# ALREADY EXISTING volume keeps its owner: if root filled it (`docker cp`, a
+# restore, an earlier image that ran as root), uploads fail
+# with EACCES until you run `chown -R 1000:1000` on the volume — see
+# docs/install/server.md.
+#
+# The rest of /app (code, node_modules) stays root-owned and read-only
+# for the API: an API flaw cannot rewrite its own code.
+RUN mkdir -p uploads logs data apps/api/.kitsuden apps/api/drizzle/vault \
+ && chown -R bun:bun uploads logs data apps/api/.kitsuden apps/api/drizzle/vault
+
+# No root. start-with-check.sh needs no privileges: migrating, creating the
+# application role and verifying RLS are Postgres connections (using the
+# admin URL), not system operations; and on disk it only writes the above.
+USER bun
+
+ENV NODE_ENV=production
+ENV PORT=3000
+# All interfaces INSIDE the container (Docker forwards to its IP, not to its
+# loopback). What gets published on the host is decided by compose's `ports:`.
+ENV HOST=0.0.0.0
+ENV KITSUDEN_AUTO_SETUP=true
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+# 127.0.0.1 and /live, for the same reason as in the admin image and in
+# docker-compose.yml:
+#
+#   · 127.0.0.1, not `localhost`: today bun listens dual-stack (`:::3000`) and
+#     both work, but nginx —with `listen 80;`— only listened on IPv4 and
+#     `localhost` resolved to ::1: the container served the site and showed up as
+#     `unhealthy` forever. The rule is applied here too so that it does not
+#     depend on the runtime remaining dual-stack.
+#
+#   · /live, not /api/health: pure liveness. /api/health checks database, queue and
+#     cache, so a temporary Valkey failure would mark the API dead and
+#     Docker would restart it in a loop. And it carries NO /api prefix: the
+#     observability routes are mounted at the root (src/lib/critical-features.ts).
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/live || exit 1
+
+CMD ["sh", "/app/docker/start-with-check.sh"]
+
+# ===================================================================
+# STAGE 5: Admin Runtime - Static files served by nginx
+#
+# nginx-unprivileged instead of nginx:alpine, whose master process runs as root.
+# It runs as uid 101 and listens on 8080 (docker/nginx-admin.conf).
+# ===================================================================
+FROM nginxinc/nginx-unprivileged:1.29-alpine AS admin
+
+# Alpine security fixes the image does not have yet (Trivy in CI); back to nginx's
+# unprivileged user (101) afterwards.
+USER root
+RUN apk upgrade --no-cache
+USER 101
+
+COPY --from=builder /app/packages/admin/build /usr/share/nginx/html
+COPY docker/nginx-admin.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+# 127.0.0.1, NOT localhost: in this image `localhost` resolves first to `::1`
+# and nginx listens only on IPv4 (`listen 8080;` in nginx-admin.conf).
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

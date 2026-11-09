@@ -1,0 +1,38 @@
+{
+  "name": "@kitsuden/engine",
+  "version": "0.9.0-beta",
+  "description": "Kitsuden Engine — The Unstoppable Motor (Nivel 1). Auth, DB, Workers, RLS, Cache, Storage, TOON.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/engine"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/engine#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "echo 'No build step needed'"
+  },
+  "dependencies": {
+    "@kitsuden/shared": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": "*",
+    "nodemailer": "*"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/sdk": {
+      "optional": true
+    },
+    "nodemailer": {
+      "optional": true
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "name": "@kitsuden/blocks",
+  "version": "1.0.0",
+  "description": "Lego-style block system for dynamic page layouts with drag & drop",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
+    "directory": "packages/core/blocks"
+  },
+  "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/core/blocks#readme",
+  "bugs": {
+    "url": "https://github.com/Kitsuden/kitsuden/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "pnpm exec tsc",
+    "dev": "pnpm exec tsc --watch"
+  },
+  "keywords": [
+    "kitsuden",
+    "kon",
+    "blocks",
+    "layout",
+    "cms"
+  ],
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@kitsuden/shared": "workspace:*",
+    "hono": "^4.7.0",
+    "drizzle-orm": "^0.45.0"
+  },
+  "kitsuden": {
+    "type": "kon",
+    "id": "kon-blocks",
+    "category": "core",
+    "order": 4,
+    "core": true,
+    "defaultEnabled": true,
+    "minVersion": "0.8.0"
+  },
+  "files": [
+    "dist",
+    "kon.json",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./kon.json": "./kon.json",
+    "./package.json": "./package.json"
+  }
+}

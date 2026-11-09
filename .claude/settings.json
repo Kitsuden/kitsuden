@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm format:check)",
+      "Bash(pnpm qa)",
+      "Bash(pnpm test:unit)",
+      "Bash(pnpm test:unit:*)",
+      "Bash(pnpm test:cli)",
+      "Bash(pnpm test:api)",
+      "Bash(pnpm test:db:up)",
+      "Bash(pnpm test:db:down)",
+      "Bash(pnpm test:db:migrate)",
+      "Bash(pnpm sdk:check)",
+      "Bash(node scripts/test-db.mjs up)",
+      "Bash(node scripts/test-db.mjs down)",
+      "Bash(node scripts/test-db.mjs migrate)",
+      "Bash(node scripts/test-db.mjs api)",
+      "Bash(node scripts/test-db.mjs exec:*)",
+      "Bash(node ../../scripts/test-db.mjs exec:*)",
+      "Bash(pnpm vitest run:*)",
+      "Bash(pnpm exec vitest run:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Bash(pnpm prod:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker compose down:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(git push:*)",
+      "Bash(pnpm publish:*)"
+    ]
+  }
+}

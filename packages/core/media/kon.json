@@ -1,0 +1,58 @@
+{
+  "id": "kon-media",
+  "name": "Media Library",
+  "description": "File uploads, S3/MinIO storage, image optimization (WebP), and signed URLs. Manage media assets with automatic thumbnails and transformations.",
+  "version": "1.0.0",
+  "maturity": "stable",
+  "type": "core-den",
+  "kitsuden": ">=0.9.0",
+  "icon": "Image",
+  "category": "core",
+  "order": 1,
+  "core": true,
+  "defaultEnabled": true,
+  "minKitsudenVersion": "0.8.0",
+  "mount": {
+    "path": "/api/media"
+  },
+  "admin": {
+    "category": "core",
+    "order": 1,
+    "defaultView": "grid",
+    "icon": "Image"
+  },
+  "tables": ["media", "media_folders"],
+  "features": [
+    "file-upload",
+    "s3-storage",
+    "image-optimization",
+    "signed-urls",
+    "thumbnails",
+    "folder-management",
+    "transform-on-the-fly",
+    "focal-point",
+    "transform-presets"
+  ],
+  "dependencies": {
+    "kons": [],
+    "core": ["auth"]
+  },
+  "config": {
+    "storage": {
+      "provider": "minio",
+      "endpoint": "${S3_ENDPOINT}",
+      "bucket": "${S3_BUCKET}",
+      "publicUrl": "${S3_PUBLIC_URL}"
+    },
+    "upload": {
+      "maxSize": "10MB",
+      "allowedTypes": ["image/*", "video/*", "application/pdf"],
+      "autoOptimize": true
+    }
+  },
+  "schema": {
+    "entry": "./media.schema.ts",
+    "strategy": "drizzle",
+    "authoritative": true
+  }
+}
