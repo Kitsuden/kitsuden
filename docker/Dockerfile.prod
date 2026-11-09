@@ -298,7 +298,7 @@ CMD ["sh", "/app/docker/start-with-check.sh"]
 # nginx-unprivileged instead of nginx:alpine, whose master process runs as root.
 # It runs as uid 101 and listens on 8080 (docker/nginx-admin.conf).
 # ===================================================================
-FROM nginxinc/nginx-unprivileged:1.29-alpine AS admin
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS admin
 
 # Alpine security fixes the image does not have yet (Trivy in CI); back to nginx's
 # unprivileged user (101) afterwards.
