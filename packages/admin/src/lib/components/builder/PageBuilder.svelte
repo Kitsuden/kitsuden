@@ -189,7 +189,7 @@
     }}
   >
     <div
-      class="sticky top-0 z-10 flex items-center justify-between px-4 py-2.5 border-b border-kitsuden-border bg-kitsuden-card/95 backdrop-blur-sm"
+      class="sticky top-0 z-10 flex items-center justify-between px-4 py-2.5 border-b border-kitsuden-border bg-kitsuden-card/95 backdrop-blur-xs"
     >
       <div class="flex items-center gap-2">
         <LayoutGrid class="w-4 h-4 text-kitsuden-accent" />
@@ -234,7 +234,7 @@
             }}
             class="group rounded-xl border transition-all duration-200 cursor-pointer {selectedBlockId ===
             block.id
-              ? 'border-kitsuden-accent-50 shadow-[0_0_20px_rgba(168, 85, 247, 0.1)] bg-kitsuden-accent/[0.03]'
+              ? 'border-kitsuden-accent-50 shadow-[0_0_20px_rgba(168, 85, 247, 0.1)] bg-kitsuden-accent/3'
               : 'border-kitsuden-border hover:border-kitsuden-border/80 bg-kitsuden-card'} {dragOverIdx ===
               idx && dragSourceIdx !== idx
               ? 'ring-2 ring-kitsuden-accent-30 ring-inset'
@@ -261,7 +261,7 @@
                 <p class="text-[10px] text-kitsuden-subtle truncate">{getBlockPreview(block)}</p>
               </div>
               <span
-                class="text-[9px] font-mono text-kitsuden-subtle bg-kitsuden-bg rounded px-1.5 py-0.5 shrink-0"
+                class="text-[9px] font-mono text-kitsuden-subtle bg-kitsuden-bg rounded-sm px-1.5 py-0.5 shrink-0"
                 >{idx + 1}</span
               >
               <div
@@ -298,7 +298,7 @@
                     e.stopPropagation();
                     removeBlock(idx);
                   }}
-                  class="btn-icon p-1 hover:!text-kitsuden-accent-2"
+                  class="btn-icon p-1 hover:text-kitsuden-accent-2!"
                   title={t("common.delete")}><Trash2 class="w-3.5 h-3.5" /></button
                 >
               </div>
@@ -306,7 +306,7 @@
             {#if block.type === "divider"}
               <div class="px-4 pb-3">
                 {#if block.data.style === "gradient"}<div
-                    class="h-px bg-gradient-to-r from-transparent via-kitsuden-accent/30 to-transparent"
+                    class="h-px bg-linear-to-r from-transparent via-kitsuden-accent/30 to-transparent"
                   ></div>{:else if block.data.style === "line"}<div
                     class="h-px bg-kitsuden-border"
                   ></div>{:else if block.data.style === "dots"}<div

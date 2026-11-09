@@ -76,7 +76,7 @@
   {:else}
     {#if !canPropose}
       <p
-        class="text-xs text-zinc-400 bg-zinc-800/40 border border-zinc-800 rounded px-3 py-2"
+        class="text-xs text-zinc-400 bg-zinc-800/40 border border-zinc-800 rounded-sm px-3 py-2"
         data-testid="no-scope-note"
       >
         {t("agentPromotion.noScope")}
@@ -84,7 +84,7 @@
     {/if}
     {#if mode === "turbo" && !turboGlobal}
       <p
-        class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded px-3 py-2"
+        class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-sm px-3 py-2"
         data-testid="turbo-capped-note"
       >
         {t("agentPromotion.turboCapped")}

@@ -372,7 +372,7 @@
           <tr class="border-b border-kitsuden-border/50 hover:bg-kitsuden-surface/40">
             <td class="py-2 font-medium">{campaign.subject}</td>
             <td>
-              <span class="px-2 py-0.5 rounded text-xs {STATUS_STYLE[campaign.status] ?? ''}">
+              <span class="px-2 py-0.5 rounded-sm text-xs {STATUS_STYLE[campaign.status] ?? ''}">
                 {campaign.status}
               </span>
             </td>
@@ -424,7 +424,7 @@
             <td class="py-2">{member.email}</td>
             <td>{member.name ?? "—"}</td>
             <td>
-              <span class="px-2 py-0.5 rounded text-xs {STATUS_STYLE[member.status] ?? ''}">
+              <span class="px-2 py-0.5 rounded-sm text-xs {STATUS_STYLE[member.status] ?? ''}">
                 {member.status}
               </span>
             </td>

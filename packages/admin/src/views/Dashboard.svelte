@@ -417,7 +417,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
         >
           <LayoutDashboard class="w-5 h-5 text-kitsuden-accent" />
         </div>
@@ -456,8 +456,8 @@
           <div class="card p-4 animate-pulse">
             <div class="flex items-start justify-between">
               <div class="space-y-2">
-                <div class="h-3 w-16 bg-kitsuden-bg rounded"></div>
-                <div class="h-8 w-12 bg-kitsuden-bg rounded"></div>
+                <div class="h-3 w-16 bg-kitsuden-bg rounded-sm"></div>
+                <div class="h-8 w-12 bg-kitsuden-bg rounded-sm"></div>
               </div>
               <div class="w-10 h-10 rounded-lg bg-kitsuden-bg"></div>
             </div>
@@ -537,8 +537,8 @@
                 <div class="flex items-center gap-3 animate-pulse">
                   <div class="w-8 h-8 rounded-full bg-kitsuden-bg"></div>
                   <div class="flex-1 space-y-2">
-                    <div class="h-4 bg-kitsuden-bg rounded w-3/4"></div>
-                    <div class="h-3 bg-kitsuden-bg rounded w-1/4"></div>
+                    <div class="h-4 bg-kitsuden-bg rounded-sm w-3/4"></div>
+                    <div class="h-3 bg-kitsuden-bg rounded-sm w-1/4"></div>
                   </div>
                 </div>
               {/each}
@@ -553,7 +553,7 @@
                   <div
                     class="w-8 h-8 rounded-full {getBgClass(
                       activity.color
-                    )} flex items-center justify-center flex-shrink-0"
+                    )} flex items-center justify-center shrink-0"
                   >
                     <activity.icon class="w-4 h-4 {getTextClass(activity.color)}" />
                   </div>

@@ -141,7 +141,7 @@
           </p>
           {#if detail}
             <pre
-              class="mt-2 p-2 bg-zinc-950 border border-zinc-800 rounded text-xs text-zinc-300 whitespace-pre-wrap">{detail.systemPrompt ??
+              class="mt-2 p-2 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-300 whitespace-pre-wrap">{detail.systemPrompt ??
                 t("agentVersions.noPrompt")}</pre>
           {/if}
         </li>

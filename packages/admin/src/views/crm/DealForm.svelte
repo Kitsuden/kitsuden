@@ -189,7 +189,7 @@
           <input
             id="value"
             type="number"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-zinc-500"
+            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-zinc-500"
             bind:value={formData.value}
             placeholder="10000"
           />
@@ -223,7 +223,7 @@
             type="number"
             min="0"
             max="100"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-zinc-500"
+            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-zinc-500"
             bind:value={formData.probability}
             placeholder="50"
           />
@@ -267,7 +267,7 @@
           <input
             id="expectedCloseDate"
             type="date"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-zinc-500"
+            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-zinc-500"
             bind:value={formData.expectedCloseDate}
           />
         </div>

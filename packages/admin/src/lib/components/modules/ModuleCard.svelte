@@ -38,9 +38,9 @@
 
   const stripeClass = $derived.by(() => {
     if (isThemeModule && module.enabled)
-      return "bg-gradient-to-r from-kitsuden-accent-2/60 via-kitsuden-purple/30 to-transparent";
-    if (module.enabled) return "bg-gradient-to-r from-green-500/60 via-green-400/30 to-transparent";
-    return "bg-gradient-to-r from-kitsuden-subtle/20 to-transparent";
+      return "bg-linear-to-r from-kitsuden-accent-2/60 via-kitsuden-purple/30 to-transparent";
+    if (module.enabled) return "bg-linear-to-r from-green-500/60 via-green-400/30 to-transparent";
+    return "bg-linear-to-r from-kitsuden-subtle/20 to-transparent";
   });
 
   const iconBg = $derived(
@@ -90,7 +90,7 @@
         {/if}
         {#if module.version}
           <span
-            class="text-[9px] px-1.5 py-0.5 rounded bg-kitsuden-subtle/20 text-kitsuden-text-dim border border-kitsuden-border"
+            class="text-[9px] px-1.5 py-0.5 rounded-sm bg-kitsuden-subtle/20 text-kitsuden-text-dim border border-kitsuden-border"
             >v{module.version}</span
           >
         {/if}

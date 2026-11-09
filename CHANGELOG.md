@@ -7,6 +7,22 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The admin panel runs on Tailwind CSS 4: the theme lives in `@theme` in `src/style.css` (no
+  `tailwind.config.js`), PostCSS uses `@tailwindcss/postcss`, and components that `@apply` in their
+  `<style>` declare `@reference`. The runtime theme engine still repaints the panel through the
+  `--kitsuden-*` variables.
+- Bun 1.4.4 in the images and CI; Valkey 9.1.3 in the compose files and CI; pgvector 0.8.7,
+  SeaweedFS 4.52, Caddy 2.11, nginx-unprivileged 1.31; hono 4.13.16, drizzle-orm 0.45.4,
+  typescript-eslint 8.72.1; the GitHub Actions to their current majors.
+
+### Fixed
+
+- Code actions failed on Linux and in Docker: the sandbox launched `node` without a `PATH`.
+- Runtime images no longer carry esbuild's Go binaries or the base image's npm.
+- Operations with a path parameter declare their 404 in the OpenAPI and the generated clients.
+
 ## [0.9.0-beta]
 
 First public release. Kitsuden is a JS backend where a model is declared once and agents can use

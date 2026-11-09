@@ -145,7 +145,7 @@
               <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                 <span>{formatTime(message.timestamp)}</span>
                 {#if message.metadata.provider}
-                  <span class="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-400">
+                  <span class="px-1.5 py-0.5 bg-zinc-800 rounded-sm text-zinc-400">
                     {message.metadata.provider}/{message.metadata.model}
                   </span>
                 {/if}
@@ -229,7 +229,7 @@
         bind:value={inputValue}
         placeholder={t("chatInterface.writesAMessage")}
         disabled={loading}
-        class="flex-1 px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 disabled:opacity-50"
+        class="flex-1 px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 disabled:opacity-50"
       />
       <Button
         type="submit"

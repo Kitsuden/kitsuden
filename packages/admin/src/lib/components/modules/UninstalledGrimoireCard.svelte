@@ -25,7 +25,7 @@
 >
   <!-- Dashed border indicator for uninstalled state -->
   <div
-    class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-kitsuden-subtle/40 via-kitsuden-subtle/20 to-transparent"
+    class="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-kitsuden-subtle/40 via-kitsuden-subtle/20 to-transparent"
   ></div>
 
   <div class="flex items-start gap-3">
@@ -60,14 +60,14 @@
           <div class="mt-1.5 flex flex-wrap gap-1">
             {#each kon.dataSummary.tables.slice(0, 3) as table}
               <span
-                class="text-[10px] px-1.5 py-0.5 rounded bg-kitsuden-bg border border-kitsuden-border/50 text-kitsuden-subtle font-mono"
+                class="text-[10px] px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border/50 text-kitsuden-subtle font-mono"
               >
                 {table.name}: {formatNumber(table.rows)}
               </span>
             {/each}
             {#if kon.dataSummary.tables.length > 3}
               <span
-                class="text-[10px] px-1.5 py-0.5 rounded bg-kitsuden-bg border border-kitsuden-border/50 text-kitsuden-subtle"
+                class="text-[10px] px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border/50 text-kitsuden-subtle"
               >
                 {t("common.more", { v: kon.dataSummary.tables.length - 3 })}
               </span>
@@ -118,6 +118,8 @@
 </div>
 
 <style>
+  @reference "../../../style.css";
+
   .card {
     @apply rounded-xl border border-kitsuden-border bg-kitsuden-card;
   }

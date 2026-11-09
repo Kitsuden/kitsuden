@@ -9,7 +9,7 @@
 
   import { Label } from "$lib/tallao";
 
-  const { class: className = "!block mb-1.5", ...rest }: ComponentProps<typeof Label> = $props();
+  const { class: className = "block! mb-1.5", ...rest }: ComponentProps<typeof Label> = $props();
 </script>
 
 <Label class={className} {...rest} />

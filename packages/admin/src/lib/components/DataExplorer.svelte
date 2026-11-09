@@ -440,7 +440,7 @@
           type="text"
           placeholder={t("common.search")}
           bind:value={searchQuery}
-          class="w-full pl-10 pr-4 py-2 bg-kitsuden-card border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:border-kitsuden-accent"
+          class="w-full pl-10 pr-4 py-2 bg-kitsuden-card border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
         />
       </div>
     {/if}
@@ -465,7 +465,7 @@
             <input
               type="text"
               value={activeFilters[field] || ""}
-              class="w-full px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+              class="w-full px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded-sm text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
               oninput={(e) => {
                 activeFilters = {
                   ...activeFilters,
@@ -498,7 +498,7 @@
               <input
                 type="checkbox"
                 checked={selectedRows.size === rows.length && rows.length > 0}
-                class="rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
+                class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
                 onchange={toggleSelectAll}
               />
             </th>
@@ -573,7 +573,7 @@
                   <input
                     type="checkbox"
                     checked={selectedRows.has(row.id)}
-                    class="rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
+                    class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
                     onchange={() => toggleSelectRow(row.id)}
                   />
                 </td>
@@ -609,13 +609,13 @@
                     <div class="flex items-center gap-1">
                       {#if isEditing}
                         <button
-                          class="p-1.5 rounded hover:bg-kitsuden-green/10 text-kitsuden-green"
+                          class="p-1.5 rounded-sm hover:bg-kitsuden-green/10 text-kitsuden-green"
                           onclick={saveEdit}
                         >
                           <Check class="w-4 h-4" />
                         </button>
                         <button
-                          class="p-1.5 rounded hover:bg-kitsuden-subtle/10 text-kitsuden-subtle"
+                          class="p-1.5 rounded-sm hover:bg-kitsuden-subtle/10 text-kitsuden-subtle"
                           onclick={cancelEdit}
                         >
                           <X class="w-4 h-4" />
@@ -623,7 +623,7 @@
                       {:else}
                         {#each fullConfig.rowActions as action}
                           <button
-                            class="p-1.5 rounded hover:bg-kitsuden-accent/10 text-kitsuden-subtle hover:text-kitsuden-accent"
+                            class="p-1.5 rounded-sm hover:bg-kitsuden-accent/10 text-kitsuden-subtle hover:text-kitsuden-accent"
                             onclick={() => action.handler(row)}
                             title={action.label}
                           >
@@ -635,7 +635,7 @@
                           </button>
                         {/each}
                         <button
-                          class="p-1.5 rounded hover:bg-kitsuden-accent/10 text-kitsuden-subtle hover:text-kitsuden-accent"
+                          class="p-1.5 rounded-sm hover:bg-kitsuden-accent/10 text-kitsuden-subtle hover:text-kitsuden-accent"
                           onclick={() => startEdit(row)}
                           title={t("common.edit")}
                         >
@@ -690,6 +690,8 @@
 </div>
 
 <style>
+  @reference "../../style.css";
+
   :global(.btn-secondary-sm) {
     @apply inline-flex items-center gap-1.5 px-3 py-1.5 bg-kitsuden-surface border border-kitsuden-border rounded-lg 
            text-sm text-kitsuden-text hover:border-kitsuden-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;

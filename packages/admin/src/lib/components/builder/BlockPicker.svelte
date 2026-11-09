@@ -79,7 +79,7 @@
                   if (e.dataTransfer) e.dataTransfer.setData("block-type", block.type);
                 }}
                 onclick={() => onAdd?.(block.type)}
-                class="group flex flex-col items-center gap-2 p-3 rounded-xl border border-kitsuden-border hover:border-kitsuden-accent/50 hover:bg-kitsuden-accent/[0.03] transition-all text-center"
+                class="group flex flex-col items-center gap-2 p-3 rounded-xl border border-kitsuden-border hover:border-kitsuden-accent/50 hover:bg-kitsuden-accent/3 transition-all text-center"
               >
                 {#if true}
                   {@const BlockIcon = getBlockIcon(block.icon)}

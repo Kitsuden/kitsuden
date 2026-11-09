@@ -220,7 +220,7 @@
         {#if loading[rel.table]}
           <div class="p-4 space-y-2">
             {#each Array(3) as _}
-              <div class="h-4 bg-kitsuden-border/30 rounded animate-pulse"></div>
+              <div class="h-4 bg-kitsuden-border/30 rounded-sm animate-pulse"></div>
             {/each}
           </div>
         {:else if data.length === 0}
@@ -246,7 +246,7 @@
               <tbody>
                 {#each data as record}
                   <tr
-                    class="border-b border-kitsuden-border/50 hover:bg-kitsuden-accent/[0.02] transition-colors"
+                    class="border-b border-kitsuden-border/50 hover:bg-kitsuden-accent/2 transition-colors"
                   >
                     {#each cols as col}
                       <td class="px-3 py-2 text-kitsuden-text-dim">

@@ -283,7 +283,7 @@
               data-proposal-id={p.id}
             >
               <div class="flex items-center gap-2 min-w-0">
-                <span class="text-[11px] px-1.5 py-0.5 rounded shrink-0 {KIND[p.status]}"
+                <span class="text-[11px] px-1.5 py-0.5 rounded-sm shrink-0 {KIND[p.status]}"
                   >{t(`approvals.status_${p.status}`)}</span
                 >
                 <code class="text-xs text-zinc-300 truncate min-w-0"
@@ -320,7 +320,7 @@
       <div class="border border-zinc-800 rounded-lg p-4 space-y-4">
         <div class="flex flex-wrap items-center gap-2">
           <span
-            class="text-[11px] px-1.5 py-0.5 rounded {KIND[s.status]}"
+            class="text-[11px] px-1.5 py-0.5 rounded-sm {KIND[s.status]}"
             data-testid="detail-status">{t(`approvals.status_${s.status}`)}</span
           >
           <code class="text-sm text-zinc-100 break-all">{s.method} {s.tool ?? s.path}</code>
@@ -371,7 +371,8 @@
             <dt class="text-zinc-500">{t("approvals.scopes")}</dt>
             <dd class="flex flex-wrap gap-1 mt-1">
               {#each s.scopes as sc}
-                <code class="text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">{sc}</code
+                <code class="text-[11px] px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-300"
+                  >{sc}</code
                 >
               {:else}
                 <span class="text-zinc-500">—</span>
@@ -388,7 +389,7 @@
               {#each s.files ?? [] as f (f.id)}
                 <li class="w-32 text-[11px] text-zinc-400">
                   <div
-                    class="w-32 h-32 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center overflow-hidden"
+                    class="w-32 h-32 rounded-sm border border-zinc-800 bg-zinc-950 flex items-center justify-center overflow-hidden"
                   >
                     {#if thumbnails[f.id] && thumbnails[f.id] !== "error"}
                       <img
@@ -417,7 +418,7 @@
 
         {#if s.injectionCheck && /inject|unsafe|malicious|jailbreak/i.test(s.injectionCheck.label) && s.injectionCheck.score >= 0.5}
           <p
-            class="text-xs px-3 py-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300"
+            class="text-xs px-3 py-2 rounded-sm bg-amber-500/10 border border-amber-500/20 text-amber-300"
             data-testid="proposal-injection"
           >
             {t("approvals.injectionWarning", {
@@ -442,7 +443,7 @@
               {#if choosing}
                 <p class="text-[11px] text-zinc-500 mb-1.5">{t("approvals.fieldsHint")}</p>
               {/if}
-              <div class="overflow-x-auto border border-zinc-800 rounded">
+              <div class="overflow-x-auto border border-zinc-800 rounded-sm">
                 <table class="w-full text-xs">
                   <thead class="text-zinc-500">
                     <tr>
@@ -511,7 +512,7 @@
                               bind:value={fieldChoice[f.field]!.value}
                               placeholder={t("approvals.fieldNewValue")}
                               aria-label={t("approvals.fieldNewValueAria", { field: f.field })}
-                              class="mt-1 w-full px-2 py-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-zinc-100"
+                              class="mt-1 w-full px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
                               data-testid="field-value"
                             />
                           {/if}
@@ -569,7 +570,7 @@
               {#if s.diff.changes.length === 0}
                 <p class="text-xs text-zinc-500">{t("approvals.noChanges")}</p>
               {:else}
-                <div class="overflow-x-auto border border-zinc-800 rounded">
+                <div class="overflow-x-auto border border-zinc-800 rounded-sm">
                   <table class="w-full text-xs">
                     <thead class="text-zinc-500">
                       <tr>
@@ -603,7 +604,7 @@
             {:else if s.diff.kind === "delete" && s.diff.current != null}
               <p class="text-xs text-zinc-400 mb-1">{t("approvals.current")}</p>
               <pre
-                class="text-xs bg-zinc-950 border border-zinc-800 rounded p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all text-red-300/90">{json(
+                class="text-xs bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all text-red-300/90">{json(
                   s.diff.current
                 )}</pre>
             {:else if s.diff.kind === "promotion"}
@@ -630,13 +631,13 @@
             {:else if s.diff.kind === "tool"}
               <p class="text-xs text-zinc-400 mb-1">{t("approvals.arguments")}</p>
               <pre
-                class="text-xs bg-zinc-950 border border-zinc-800 rounded p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all">{json(
+                class="text-xs bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all">{json(
                   s.diff.arguments
                 )}</pre>
             {:else}
               <p class="text-xs text-zinc-400 mb-1">{t("approvals.proposed")}</p>
               <pre
-                class="text-xs bg-zinc-950 border border-zinc-800 rounded p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all text-emerald-300/90">{json(
+                class="text-xs bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all text-emerald-300/90">{json(
                   s.diff.proposed
                 )}</pre>
             {/if}
@@ -646,7 +647,7 @@
         <details>
           <summary class="text-xs text-zinc-400 cursor-pointer">{t("approvals.body")}</summary>
           <pre
-            class="mt-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all">{json(
+            class="mt-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all">{json(
               s.body
             ) || "—"}</pre>
         </details>
@@ -772,7 +773,7 @@
                   </p>
                 {/if}
                 <pre
-                  class="bg-zinc-950 border border-zinc-800 rounded p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all">{json(
+                  class="bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all">{json(
                     s.result.body
                   ) || "—"}</pre>
               </div>
@@ -797,10 +798,10 @@
                       id="later-at"
                       type="datetime-local"
                       bind:value={reviewAt}
-                      class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-zinc-100"
+                      class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
                     />
                   </div>
-                  <div class="flex-1 min-w-[10rem]">
+                  <div class="flex-1 min-w-40">
                     <label for="later-note" class="block text-zinc-400"
                       >{t("approvals.reviewNote")}</label
                     >
@@ -809,7 +810,7 @@
                       type="text"
                       bind:value={reviewNote}
                       placeholder={t("approvals.reviewNotePlaceholder")}
-                      class="w-full px-2 py-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-zinc-100"
+                      class="w-full px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
                     />
                   </div>
                   <Button

@@ -314,7 +314,7 @@
               : 'bg-kitsuden-border'}"
           >
             <span
-              class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform {formData[
+              class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-xs transition-transform {formData[
                 field.key
               ]
                 ? 'translate-x-[18px]'
@@ -402,7 +402,7 @@
 
               <!-- Overlay actions -->
               <div
-                class="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between"
+                class="absolute inset-x-0 bottom-0 p-3 bg-linear-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between"
               >
                 <span class="text-xs text-kitsuden-text truncate max-w-[200px]"
                   >{formData[field.key].split("/").pop()}</span

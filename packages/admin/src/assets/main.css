@@ -1,8 +1,172 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap")
+layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-kitsuden-bg: rgb(var(--kitsuden-bg));
+  --color-kitsuden-card: rgb(var(--kitsuden-card));
+  --color-kitsuden-surface: rgb(var(--kitsuden-surface));
+  --color-kitsuden-border: rgb(var(--kitsuden-border));
+  --color-kitsuden-muted: rgb(var(--kitsuden-muted));
+  --color-kitsuden-subtle: rgb(var(--kitsuden-subtle));
+  --color-kitsuden-text: rgb(var(--kitsuden-text));
+  --color-kitsuden-text-dim: rgb(var(--kitsuden-text-dim));
+  --color-kitsuden-accent: rgb(var(--kitsuden-accent));
+  --color-kitsuden-accent-dim: rgb(var(--kitsuden-accent-dim));
+  --color-kitsuden-accent-hover: rgb(var(--kitsuden-accent-hover));
+  --color-kitsuden-accent-2: rgb(var(--kitsuden-accent-2));
+  --color-kitsuden-accent-2-dim: rgb(var(--kitsuden-accent-2-dim));
+  --color-kitsuden-green: rgb(var(--kitsuden-green));
+  --color-kitsuden-amber: rgb(var(--kitsuden-amber));
+  --color-kitsuden-yellow: rgb(var(--kitsuden-yellow));
+  --color-kitsuden-purple: rgb(var(--kitsuden-purple));
+  --color-kitsuden-danger: rgb(var(--kitsuden-danger));
+
+  --font-sans: var(--kitsuden-font-sans), Inter, system-ui, sans-serif;
+  --font-mono: var(--kitsuden-font-mono), JetBrains Mono, Fira Code, monospace;
+
+  --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
+  --animate-slide-in: slide-in 0.2s ease-out;
+  --animate-fade-in: fade-in 0.15s ease-out;
+
+  @keyframes glow-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
+    }
+  }
+  @keyframes slide-in {
+    from {
+      transform: translateX(-8px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility kitsuden-glow {
+  box-shadow:
+    0 0 10px rgba(168, 85, 247, 0.15),
+    0 0 40px rgba(168, 85, 247, 0.05);
+}
+
+@utility kitsuden-glow-pink {
+  box-shadow:
+    0 0 10px rgba(255, 45, 111, 0.15),
+    0 0 40px rgba(255, 45, 111, 0.05);
+}
+
+@utility kitsuden-input {
+  @apply bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50 focus:border-kitsuden-accent/50 transition-all duration-150;
+}
+
+@utility kitsuden-btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/30 focus:ring-offset-2 focus:ring-offset-kitsuden-bg disabled:opacity-50 disabled:pointer-events-none;
+}
+
+@utility kitsuden-btn-primary {
+  @apply kitsuden-btn bg-kitsuden-accent text-kitsuden-bg hover:bg-kitsuden-accent-dim active:scale-[0.98];
+}
+
+@utility kitsuden-btn-secondary {
+  @apply kitsuden-btn bg-kitsuden-card border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-muted/30;
+}
+
+@utility kitsuden-btn-danger {
+  @apply kitsuden-btn bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border border-kitsuden-accent-2/20 hover:bg-kitsuden-accent-2/20;
+}
+
+@utility kitsuden-btn-ghost {
+  @apply kitsuden-btn text-kitsuden-text-dim hover:text-kitsuden-text hover:bg-kitsuden-card;
+}
+
+@utility kitsuden-card {
+  @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
+}
+
+@utility input {
+  /* Form Elements - ensure proper theming for both light and dark modes */
+  @apply w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-150;
+}
+
+@utility select {
+  @apply w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-150 appearance-none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='white' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+}
+
+@utility textarea {
+  @apply w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-150 resize-y;
+}
+
+@utility btn-primary {
+  /* Utility aliases used across the admin panel */
+  @apply kitsuden-btn bg-kitsuden-accent text-kitsuden-bg hover:bg-kitsuden-accent-dim active:scale-[0.98];
+}
+
+@utility btn-secondary {
+  @apply kitsuden-btn bg-kitsuden-card border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-muted/30;
+}
+
+@utility btn-danger {
+  @apply kitsuden-btn bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border border-kitsuden-accent-2/20 hover:bg-kitsuden-accent-2/20;
+}
+
+@utility btn-ghost {
+  @apply kitsuden-btn text-kitsuden-text-dim hover:text-kitsuden-text hover:bg-kitsuden-card;
+}
+
+@utility btn-sm {
+  @apply px-3 py-1.5 text-xs gap-1.5;
+}
+
+@utility btn-icon {
+  @apply inline-flex items-center justify-center rounded-lg p-2 transition-colors;
+}
+
+@utility card {
+  @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
+}
+
+@utility label {
+  @apply text-kitsuden-subtle;
+}
 
 @layer base {
   * {
@@ -24,91 +188,5 @@
 
   ::-webkit-scrollbar-thumb {
     @apply bg-kitsuden-muted rounded-full hover:bg-kitsuden-subtle;
-  }
-}
-
-@layer components {
-  .kitsuden-glow {
-    box-shadow:
-      0 0 10px rgba(168, 85, 247, 0.15),
-      0 0 40px rgba(168, 85, 247, 0.05);
-  }
-
-  .kitsuden-glow-pink {
-    box-shadow:
-      0 0 10px rgba(255, 45, 111, 0.15),
-      0 0 40px rgba(255, 45, 111, 0.05);
-  }
-
-  .kitsuden-input {
-    @apply bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50 focus:border-kitsuden-accent/50 transition-all duration-150;
-  }
-
-  .kitsuden-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-kitsuden-accent/30 focus:ring-offset-2 focus:ring-offset-kitsuden-bg disabled:opacity-50 disabled:pointer-events-none;
-  }
-
-  .kitsuden-btn-primary {
-    @apply kitsuden-btn bg-kitsuden-accent text-kitsuden-bg hover:bg-kitsuden-accent-dim active:scale-[0.98];
-  }
-
-  .kitsuden-btn-secondary {
-    @apply kitsuden-btn bg-kitsuden-card border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-muted/30;
-  }
-
-  .kitsuden-btn-danger {
-    @apply kitsuden-btn bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border border-kitsuden-accent-2/20 hover:bg-kitsuden-accent-2/20;
-  }
-
-  .kitsuden-btn-ghost {
-    @apply kitsuden-btn text-kitsuden-text-dim hover:text-kitsuden-text hover:bg-kitsuden-card;
-  }
-
-  .kitsuden-card {
-    @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
-  }
-
-  /* Form Elements - ensure proper theming for both light and dark modes */
-  .input {
-    @apply w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-150;
-  }
-
-  .select {
-    @apply w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-150 appearance-none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='white' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 1rem;
-    padding-right: 2.5rem;
-  }
-
-  .textarea {
-    @apply w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-150 resize-y;
-  }
-
-  /* Utility aliases used across the admin panel */
-  .btn-primary {
-    @apply kitsuden-btn bg-kitsuden-accent text-kitsuden-bg hover:bg-kitsuden-accent-dim active:scale-[0.98];
-  }
-  .btn-secondary {
-    @apply kitsuden-btn bg-kitsuden-card border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-muted/30;
-  }
-  .btn-danger {
-    @apply kitsuden-btn bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border border-kitsuden-accent-2/20 hover:bg-kitsuden-accent-2/20;
-  }
-  .btn-ghost {
-    @apply kitsuden-btn text-kitsuden-text-dim hover:text-kitsuden-text hover:bg-kitsuden-card;
-  }
-  .btn-sm {
-    @apply px-3 py-1.5 text-xs gap-1.5;
-  }
-  .btn-icon {
-    @apply inline-flex items-center justify-center rounded-lg p-2 transition-colors;
-  }
-  .card {
-    @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
-  }
-  .label {
-    @apply text-kitsuden-subtle;
   }
 }

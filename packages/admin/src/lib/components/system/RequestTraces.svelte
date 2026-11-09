@@ -100,7 +100,7 @@
       <select
         bind:value={hours}
         onchange={load}
-        class="bg-zinc-900 border border-zinc-800 rounded px-1 py-0.5"
+        class="bg-zinc-900 border border-zinc-800 rounded-sm px-1 py-0.5"
       >
         <option value={1}>1 h</option>
         <option value={24}>24 h</option>
@@ -122,7 +122,7 @@
         {t("systemTraces.onlyErrors")}
       </label>
       <input
-        class="text-xs bg-zinc-900 border border-zinc-800 rounded px-2 py-1 w-56"
+        class="text-xs bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 w-56"
         placeholder={t("systemTraces.actorPlaceholder")}
         bind:value={actor}
         onkeydown={(e) => e.key === "Enter" && load()}
@@ -189,7 +189,7 @@
                 <td class="px-3 py-1.5">
                   {#each tr.denial_details ?? [] as b}
                     <span
-                      class="inline-block mr-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300"
+                      class="inline-block mr-1 px-1.5 py-0.5 rounded-sm bg-amber-500/15 text-amber-300"
                       >{b.operation} {b.table}: {reason(b.reason)}</span
                     >
                   {/each}

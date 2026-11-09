@@ -264,14 +264,14 @@
                   onclick={() => selectSingle(item)}
                   class="flex items-center gap-3 w-full px-3 py-2 text-left text-sm hover:bg-kitsuden-border/30 transition-colors {value ===
                   item.id
-                    ? 'bg-kitsuden-accent/[0.06] text-kitsuden-accent'
+                    ? 'bg-kitsuden-accent/6 text-kitsuden-accent'
                     : ''}"
                 >
                   {#if item.image}
                     <img
                       src={item.image}
                       alt={item.label}
-                      class="w-6 h-6 rounded object-cover shrink-0"
+                      class="w-6 h-6 rounded-sm object-cover shrink-0"
                     />
                   {/if}
                   <div class="min-w-0 flex-1">
@@ -297,7 +297,7 @@
     <div bind:this={wrapperRef}>
       <button
         type="button"
-        class="input min-h-[2.5rem] flex flex-wrap items-center gap-1.5 cursor-text w-full text-left"
+        class="input min-h-10 flex flex-wrap items-center gap-1.5 cursor-text w-full text-left"
         onclick={openMulti}
       >
         {#each selectedIds as id}
@@ -321,7 +321,7 @@
           bind:value={searchQuery}
           type="text"
           placeholder={selectedIds.length === 0 ? placeholder : ""}
-          class="flex-1 min-w-[60px] bg-transparent text-sm outline-none placeholder:text-kitsuden-subtle"
+          class="flex-1 min-w-[60px] bg-transparent text-sm outline-hidden placeholder:text-kitsuden-subtle"
           onfocus={() => (open = true)}
         />
       </button>
@@ -349,7 +349,7 @@
                   class="flex items-center gap-3 w-full px-3 py-2 text-left text-sm hover:bg-kitsuden-border/30 transition-colors {selectedIds.includes(
                     item.id
                   )
-                    ? 'bg-kitsuden-accent/[0.06]'
+                    ? 'bg-kitsuden-accent/6'
                     : ''}"
                 >
                   <div
@@ -367,7 +367,7 @@
                     <img
                       src={item.image}
                       alt={item.label}
-                      class="w-6 h-6 rounded object-cover shrink-0"
+                      class="w-6 h-6 rounded-sm object-cover shrink-0"
                     />
                   {/if}
                   <div class="min-w-0 flex-1">

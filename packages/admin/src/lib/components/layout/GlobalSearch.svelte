@@ -397,7 +397,7 @@
       bind:this={searchInput}
       type="text"
       placeholder={tr("common.search")}
-      class="w-full h-9 pl-10 pr-4 text-sm rounded-lg border border-kitsuden-border bg-kitsuden-card text-kitsuden-text placeholder:text-kitsuden-text-dim/60 focus:outline-none focus:ring-2 focus:ring-kitsuden-accent/30 focus:border-kitsuden-accent/50 transition-all"
+      class="w-full h-9 pl-10 pr-4 text-sm rounded-lg border border-kitsuden-border bg-kitsuden-card text-kitsuden-text placeholder:text-kitsuden-text-dim/60 focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/30 focus:border-kitsuden-accent/50 transition-all"
       bind:value={query}
       onfocus={handleInputFocus}
       onblur={handleBlur}

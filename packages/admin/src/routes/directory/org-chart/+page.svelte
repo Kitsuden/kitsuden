@@ -152,7 +152,7 @@
       <select
         bind:value={selectedOrg}
         onchange={loadOrgChart}
-        class="px-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-white focus:border-kitsuden-accent/50 focus:outline-none"
+        class="px-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-white focus:border-kitsuden-accent/50 focus:outline-hidden"
       >
         {#each organizations as org}
           <option value={org.id}>{org.name}</option>
@@ -169,7 +169,7 @@
         type="text"
         placeholder={t("orgChartPage.searchEmployee")}
         bind:value={searchQuery}
-        class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-white placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-none"
+        class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-white placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-hidden"
       />
     </div>
   </div>
@@ -224,7 +224,7 @@
   {#if selectedEmployee}
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        class="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        class="absolute inset-0 bg-black/70 backdrop-blur-xs"
         onclick={() => (selectedEmployee = null)}
       ></div>
 
@@ -284,7 +284,7 @@
 {#if showCreateOrgModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div
-      class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      class="absolute inset-0 bg-black/60 backdrop-blur-xs"
       onclick={() => (showCreateOrgModal = false)}
     ></div>
     <div
@@ -309,7 +309,7 @@
             bind:value={newOrgName}
             type="text"
             placeholder={t("orgChartPage.ejAcmeCorp")}
-            class="w-full px-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-white placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-none"
+            class="w-full px-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-white placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-hidden"
             required
           />
         </div>
@@ -365,7 +365,7 @@
       <!-- Expand/Collapse -->
       {#if node.children && node.children.length > 0}
         <button
-          class="p-1 rounded hover:bg-white/10 transition-colors"
+          class="p-1 rounded-sm hover:bg-white/10 transition-colors"
           onclick={(e) => {
             e.stopPropagation();
             toggleNode(node.id);
@@ -440,6 +440,8 @@
 {/snippet}
 
 <style>
+  @reference "../../../style.css";
+
   .card {
     @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
   }

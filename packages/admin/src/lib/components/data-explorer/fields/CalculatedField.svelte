@@ -57,7 +57,7 @@
 
 {#if isBadge}
   <span
-    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-kitsuden-accent/10 text-kitsuden-accent"
+    class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-kitsuden-accent/10 text-kitsuden-accent"
   >
     {displayValue}
   </span>

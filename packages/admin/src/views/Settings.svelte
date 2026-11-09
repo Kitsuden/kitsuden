@@ -1033,7 +1033,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-green/20 to-kitsuden-accent/20 border border-kitsuden-green/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-green/20 to-kitsuden-accent/20 border border-kitsuden-green/20 flex items-center justify-center"
         >
           <Settings class="w-5 h-5 text-kitsuden-green" />
         </div>
@@ -1159,7 +1159,7 @@
                   {@const view = brandPreview(field.key)}
                   <div class="space-y-2 rounded-lg border border-kitsuden-border p-3">
                     <p class="text-xs font-semibold text-kitsuden-text">{field.label}</p>
-                    <div class="flex h-20 items-center justify-center rounded bg-kitsuden-bg">
+                    <div class="flex h-20 items-center justify-center rounded-sm bg-kitsuden-bg">
                       {#if view}
                         <img src={view} alt="" class="max-h-16 max-w-full object-contain" />
                       {:else}
@@ -1212,7 +1212,7 @@
                 {t("settings.defaultMetadataJson")}
               </label>
               <Textarea
-                class="!font-mono"
+                class="font-mono!"
                 id="defaultmetadata"
                 bind:value={defaultMetadata}
                 rows={5}
@@ -1290,7 +1290,7 @@
               </p>
               {#each youtubeChannels as channel, i (i)}
                 <div class="flex flex-wrap items-end gap-2">
-                  <div class="flex-1 min-w-[10rem] space-y-1">
+                  <div class="flex-1 min-w-40 space-y-1">
                     <span class="block text-[11px] text-kitsuden-subtle"
                       >{t("settings.visibleName")}</span
                     >
@@ -1300,12 +1300,12 @@
                       placeholder={t("common.kitsuden")}
                     />
                   </div>
-                  <div class="flex-[2] min-w-[12rem] space-y-1">
+                  <div class="flex-2 min-w-48 space-y-1">
                     <span class="block text-[11px] text-kitsuden-subtle"
                       >{t("settings.channelId")}</span
                     >
                     <Input
-                      class="!font-mono"
+                      class="font-mono!"
                       bind:value={channel.id}
                       type="text"
                       placeholder={t("settings.ucxxxxxxxxxxxxxxxxxxxxxx")}
@@ -1382,7 +1382,7 @@
 
                 <div class="flex items-center gap-2 max-w-lg relative">
                   <Input
-                    class="!font-mono !text-xs !pr-12 !text-kitsuden-green !bg-black/40 !border-kitsuden-green/30"
+                    class="font-mono! text-xs! pr-12! text-kitsuden-green! bg-black/40! border-kitsuden-green/30!"
                     type="text"
                     readonly
                     value={newlyGeneratedToken}
@@ -1390,7 +1390,7 @@
                   <Button
                     variant="ghost"
                     size="icon"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 !text-kitsuden-green"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-kitsuden-green!"
                     onclick={copyToClipboard}
                     title={t("settings.copyToClipboard")}
                     ariaLabel={t("settings.copyToClipboard")}
@@ -1445,7 +1445,7 @@
                   <TableHead>{t("settings.hint")}</TableHead>
                   <TableHead>{t("settings.created")}</TableHead>
                   <TableHead>{t("settings.lastUsed")}</TableHead>
-                  <TableHead class="!text-right">{t("common.actions")}</TableHead>
+                  <TableHead class="text-right!">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1456,20 +1456,20 @@
                     </TableCell>
                     <TableCell>
                       <span
-                        class="font-mono text-xs bg-kitsuden-bg px-2 py-1 rounded text-kitsuden-text-dim border border-kitsuden-border"
+                        class="font-mono text-xs bg-kitsuden-bg px-2 py-1 rounded-sm text-kitsuden-text-dim border border-kitsuden-border"
                       >
                         {k.hint}
                       </span>
                     </TableCell>
-                    <TableCell class="!text-kitsuden-text-dim">
+                    <TableCell class="text-kitsuden-text-dim!">
                       {new Date(k.createdAt).toLocaleDateString(localeFormat())}
                     </TableCell>
-                    <TableCell class="!text-kitsuden-text-dim">
+                    <TableCell class="text-kitsuden-text-dim!">
                       {k.lastUsedAt
                         ? new Date(k.lastUsedAt).toLocaleDateString(localeFormat())
                         : t("settings.never")}
                     </TableCell>
-                    <TableCell class="!text-right">
+                    <TableCell class="text-right!">
                       <Button
                         variant="danger-ghost"
                         size="icon"
@@ -1561,13 +1561,13 @@
 
                 <div class="flex flex-wrap gap-1 mb-3">
                   {#each agent.scopes.slice(0, 3) as scope}
-                    <span class="px-1.5 py-0.5 text-xs rounded {getScopeColor(scope)}">
+                    <span class="px-1.5 py-0.5 text-xs rounded-sm {getScopeColor(scope)}">
                       {scope}
                     </span>
                   {/each}
                   {#if agent.scopes.length > 3}
                     <span
-                      class="px-1.5 py-0.5 text-xs rounded bg-kitsuden-subtle/20 text-kitsuden-subtle"
+                      class="px-1.5 py-0.5 text-xs rounded-sm bg-kitsuden-subtle/20 text-kitsuden-subtle"
                     >
                       +{agent.scopes.length - 3}
                     </span>
@@ -1594,7 +1594,7 @@
         <div>
           <h2 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
             <div
-              class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
+              class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
             >
               <LibraryBig class="w-5 h-5 text-kitsuden-accent" />
             </div>
@@ -2182,7 +2182,7 @@
               <label class="block text-sm text-kitsuden-subtle mb-2">{t("settings.scopes")}</label>
               <div class="flex flex-wrap gap-2">
                 {#each selectedAgent.scopes as scope}
-                  <span class="px-2 py-1 text-sm rounded {getScopeColor(scope)}">
+                  <span class="px-2 py-1 text-sm rounded-sm {getScopeColor(scope)}">
                     {scope}
                   </span>
                 {/each}
@@ -2310,12 +2310,12 @@
                     <span class="text-kitsuden-text capitalize">{action.replace("_", " ")}</span>
                     <div class="flex gap-2">
                       <span
-                        class="px-2 py-0.5 text-xs rounded bg-kitsuden-green/20 text-kitsuden-green"
+                        class="px-2 py-0.5 text-xs rounded-sm bg-kitsuden-green/20 text-kitsuden-green"
                         >{(data as any).success} {t("settings.ok")}</span
                       >
                       {#if (data as any).failed > 0}
                         <span
-                          class="px-2 py-0.5 text-xs rounded bg-kitsuden-accent-2/20 text-kitsuden-accent-2"
+                          class="px-2 py-0.5 text-xs rounded-sm bg-kitsuden-accent-2/20 text-kitsuden-accent-2"
                           >{(data as any).failed} {t("settings.fail")}</span
                         >
                       {/if}
@@ -2376,7 +2376,7 @@
       <div>
         <Label for="headers">{t("settings.headersJson")}</Label>
         <Textarea
-          class="!font-mono"
+          class="font-mono!"
           id="headers"
           bind:value={dataSourceForm.headers}
           placeholder={'{ "Authorization": "Bearer token" }'}

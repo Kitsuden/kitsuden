@@ -1097,7 +1097,7 @@
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-orange-500 to-amber-500 flex items-center justify-center"
         >
           <FileStack class="w-5 h-5 text-white" />
         </div>
@@ -1244,7 +1244,7 @@
               <div class="group flex items-center gap-1">
                 {#if category.children && category.children.length > 0}
                   <button
-                    class="p-1 hover:bg-kitsuden-bg rounded shrink-0"
+                    class="p-1 hover:bg-kitsuden-bg rounded-sm shrink-0"
                     onclick={() => toggleCategory(category)}
                   >
                     {#if expandedCategories.has(category.id)}
@@ -1305,7 +1305,7 @@
               <input
                 type="text"
                 placeholder={tr("dMSView.searchDocuments")}
-                class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-none focus:border-kitsuden-accent/50"
+                class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent/50"
                 bind:value={searchQuery}
                 oninput={() => {
                   currentPage = 1;
@@ -1314,7 +1314,7 @@
               />
             </div>
             <select
-              class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent/50"
+              class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
               bind:value={statusFilter}
               onchange={() => {
                 currentPage = 1;
@@ -1327,7 +1327,7 @@
               {/each}
             </select>
             <select
-              class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent/50"
+              class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
               bind:value={typeFilter}
               onchange={() => {
                 currentPage = 1;
@@ -1384,7 +1384,7 @@
                   <th class="px-4 py-3 w-10">
                     <input
                       type="checkbox"
-                      class="rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                      class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                       checked={allSelected}
                       indeterminate={someSelected}
                       onchange={toggleSelectAll}
@@ -1416,7 +1416,7 @@
                     <td class="px-4 py-3">
                       <input
                         type="checkbox"
-                        class="rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                        class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                         checked={selectedIds.has(doc.id)}
                         onchange={() => toggleSelect(doc.id)}
                       />
@@ -1859,7 +1859,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
 {#if drawerOpen}
   <div class="fixed inset-0 z-40 flex justify-end">
-    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick={closeDrawer}></div>
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-xs" onclick={closeDrawer}></div>
     <div
       class="relative w-full max-w-[60%] bg-kitsuden-card border-l border-kitsuden-border h-full flex flex-col shadow-2xl"
     >
@@ -1872,12 +1872,13 @@
             <span class="text-xs font-mono text-kitsuden-subtle">{drawerDoc?.code || "—"}</span>
             {#if drawerDoc?.isTemplate}
               <span
-                class="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[10px] font-medium"
+                class="px-1.5 py-0.5 rounded-sm bg-purple-500/10 text-purple-400 text-[10px] font-medium"
                 >{tr("dMSView.template2")}</span
               >
             {/if}
             {#if drawerDoc?.requiresReview || isOverdue(drawerDoc?.reviewDueDate)}
-              <span class="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 text-[10px] font-medium"
+              <span
+                class="px-1.5 py-0.5 rounded-sm bg-red-500/10 text-red-400 text-[10px] font-medium"
                 >{tr("dMSView.reviewOverdue2")}</span
               >
             {/if}
@@ -2087,7 +2088,7 @@
                 <input
                   type="checkbox"
                   id="reqAck"
-                  class="rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                  class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                   bind:checked={formDoc.requiresAcknowledgment}
                 />
                 <label for="reqAck" class="text-sm text-kitsuden-text"
@@ -2538,7 +2539,7 @@
                 {#each auditEntries as entry}
                   <div class="relative">
                     <div
-                      class="absolute -left-[21px] top-0 w-2.5 h-2.5 rounded-full bg-kitsuden-accent border-2 border-kitsuden-card"
+                      class="absolute left-[-21px] top-0 w-2.5 h-2.5 rounded-full bg-kitsuden-accent border-2 border-kitsuden-card"
                     ></div>
                     <div class="card p-3">
                       <div class="flex items-center justify-between">
@@ -2553,7 +2554,7 @@
                       </p>
                       {#if entry.details}
                         <pre
-                          class="text-[10px] text-kitsuden-text-dim bg-kitsuden-bg p-2 rounded mt-2 overflow-auto">{JSON.stringify(
+                          class="text-[10px] text-kitsuden-text-dim bg-kitsuden-bg p-2 rounded-sm mt-2 overflow-auto">{JSON.stringify(
                             entry.details,
                             null,
                             2
@@ -2618,7 +2619,7 @@
 {#if showCreateDocModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div
-      class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      class="absolute inset-0 bg-black/60 backdrop-blur-xs"
       onclick={() => (showCreateDocModal = false)}
     ></div>
     <div
@@ -2749,7 +2750,7 @@
 {#if showCreateCatModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div
-      class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      class="absolute inset-0 bg-black/60 backdrop-blur-xs"
       onclick={() => (showCreateCatModal = false)}
     ></div>
     <div
@@ -2855,7 +2856,7 @@
 {#if showConfirmDeleteModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div
-      class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      class="absolute inset-0 bg-black/60 backdrop-blur-xs"
       onclick={() => (showConfirmDeleteModal = false)}
     ></div>
     <div
@@ -2889,7 +2890,7 @@
 {#if showCreateVersionModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div
-      class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      class="absolute inset-0 bg-black/60 backdrop-blur-xs"
       onclick={() => (showCreateVersionModal = false)}
     ></div>
     <div
@@ -2943,7 +2944,7 @@
 {#if showCreateDiagramModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div
-      class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      class="absolute inset-0 bg-black/60 backdrop-blur-xs"
       onclick={() => (showCreateDiagramModal = false)}
     ></div>
     <div
@@ -2995,7 +2996,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
 <!-- TOASTS -->
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="fixed bottom-6 right-6 z-[60] space-y-2 pointer-events-none">
+<div class="fixed bottom-6 right-6 z-60 space-y-2 pointer-events-none">
   {#each toasts as toast}
     <div
       class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium min-w-[280px] transition-all duration-300
@@ -3014,6 +3015,8 @@
 </div>
 
 <style>
+  @reference "../../style.css";
+
   .btn-primary {
     @apply inline-flex items-center gap-2 px-4 py-2 bg-kitsuden-accent text-kitsuden-bg rounded-lg font-medium hover:bg-kitsuden-accent-dim active:scale-[0.98] transition-all disabled:opacity-50;
   }
@@ -3027,6 +3030,6 @@
     @apply px-3 py-1.5 text-xs gap-1.5;
   }
   .kitsuden-input {
-    @apply bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50 focus:border-kitsuden-accent/50 transition-all duration-150;
+    @apply bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50 focus:border-kitsuden-accent/50 transition-all duration-150;
   }
 </style>

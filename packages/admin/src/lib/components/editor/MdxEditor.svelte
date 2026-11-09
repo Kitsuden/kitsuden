@@ -250,7 +250,7 @@
 </script>
 
 <div
-  class="mdx-editor h-full flex flex-col sm:flex-row overflow-hidden border border-kitsuden-border rounded-xl bg-kitsuden-card shadow-sm relative z-0"
+  class="mdx-editor h-full flex flex-col sm:flex-row overflow-hidden border border-kitsuden-border rounded-xl bg-kitsuden-card shadow-xs relative z-0"
 >
   <!-- Code Editor Pane -->
   <div
@@ -276,7 +276,7 @@
   -->
   <div class="h-1/2 sm:h-full w-full sm:w-1/2 flex flex-col bg-kitsuden-bg">
     <div
-      class="flex items-center justify-between px-4 py-2 border-b border-kitsuden-border bg-kitsuden-bg flex-shrink-0"
+      class="flex items-center justify-between px-4 py-2 border-b border-kitsuden-border bg-kitsuden-bg shrink-0"
     >
       <h3 class="text-xs font-semibold uppercase tracking-wider text-kitsuden-text-dim">
         {t("common.contentPreview")}

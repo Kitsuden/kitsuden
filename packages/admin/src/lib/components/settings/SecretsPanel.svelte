@@ -243,7 +243,7 @@
             id="secret-key"
             class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border {keyValid
               ? 'border-kitsuden-border'
-              : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-none"
+              : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
             placeholder={t("secretsPanel.openaiApiKey")}
             bind:value={formKey}
           />
@@ -262,7 +262,7 @@
               <input
                 id="secret-value"
                 type="text"
-                class="w-full px-3 py-2 pr-10 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text font-mono focus:border-kitsuden-accent outline-none"
+                class="w-full px-3 py-2 pr-10 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
                 placeholder="sk-..."
                 bind:value={formValue}
               />
@@ -270,7 +270,7 @@
               <input
                 id="secret-value"
                 type="password"
-                class="w-full px-3 py-2 pr-10 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text font-mono focus:border-kitsuden-accent outline-none"
+                class="w-full px-3 py-2 pr-10 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
                 placeholder="sk-..."
                 bind:value={formValue}
               />
@@ -290,7 +290,7 @@
           >
           <input
             id="secret-desc"
-            class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text focus:border-kitsuden-accent outline-none"
+            class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
             placeholder={t("secretsPanel.productionApiKeyOf")}
             bind:value={formDescription}
           />
@@ -302,7 +302,7 @@
             >
             <select
               id="secret-cat"
-              class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text focus:border-kitsuden-accent outline-none"
+              class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
               bind:value={formCategory}
             >
               {#each categories as cat (cat)}

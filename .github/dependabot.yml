@@ -9,7 +9,6 @@
 # Kept out on purpose (bumped by hand, across every place at once):
 #   - Node majors: .nvmrc, NODE_VERSION in the workflows and the web image move together.
 #   - Bun: BUN_VERSION in the workflows, the API and MCP images and @types/bun move together.
-#   - Tailwind 4: a migration of the panel's theme, not a version bump.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -26,9 +25,6 @@ updates:
         patterns: ["typescript-eslint", "@typescript-eslint/*"]
       minor-and-patch:
         update-types: ["minor", "patch"]
-    ignore:
-      - dependency-name: tailwindcss
-        update-types: ["version-update:semver-major"]
     labels: ["dependencies"]
 
   # The workflows pin actions by commit, so this is what moves them.

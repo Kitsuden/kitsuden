@@ -191,7 +191,7 @@
       <h3 class="text-sm font-semibold text-zinc-300">{t("promotion.settingsTitle")}</h3>
       {#if !settings.codeActionsEnabled}
         <p
-          class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded px-3 py-2"
+          class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-sm px-3 py-2"
           data-testid="code-actions-off"
         >
           {t("promotion.codeActionsOff")}
@@ -222,7 +222,7 @@
             min="1"
             max="1440"
             bind:value={draftConfig.watchMinutes}
-            class="mt-1 w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm text-zinc-200"
+            class="mt-1 w-full bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-sm text-zinc-200"
           />
         </label>
         <label class="text-xs text-zinc-400">
@@ -232,7 +232,7 @@
             min="1"
             max="1000"
             bind:value={draftConfig.minExecutions}
-            class="mt-1 w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm text-zinc-200"
+            class="mt-1 w-full bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-sm text-zinc-200"
           />
         </label>
         <label class="text-xs text-zinc-400">
@@ -243,7 +243,7 @@
             max="1"
             step="0.05"
             bind:value={draftConfig.maxErrorRate}
-            class="mt-1 w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm text-zinc-200"
+            class="mt-1 w-full bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-sm text-zinc-200"
           />
         </label>
       </fieldset>
@@ -253,7 +253,7 @@
         </Button>
       {/if}
 
-      <div class="overflow-x-auto border border-zinc-800 rounded" data-testid="promotion-agents">
+      <div class="overflow-x-auto border border-zinc-800 rounded-sm" data-testid="promotion-agents">
         <table class="w-full text-xs">
           <thead class="text-zinc-500">
             <tr>
@@ -273,7 +273,7 @@
                 >
                 <td class="px-3 py-1.5">
                   <select
-                    class="bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-zinc-200"
+                    class="bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-zinc-200"
                     value={a.mode}
                     disabled={!isAdmin()}
                     onchange={(e) =>
@@ -300,7 +300,7 @@
     <section class="space-y-3 min-w-0">
       <div class="flex items-center gap-2">
         <select
-          class="bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200"
+          class="bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-xs text-zinc-200"
           bind:value={filter}
           onchange={load}
           data-testid="promotion-filter"
@@ -445,7 +445,7 @@
 
           <!-- 2. Scan -->
           <div
-            class="border rounded p-3 {stepClass(v.scanReport ? v.scanReport.passed : null)}"
+            class="border rounded-sm p-3 {stepClass(v.scanReport ? v.scanReport.passed : null)}"
             data-testid="step-scan"
           >
             <h4 class="text-xs font-semibold text-zinc-300">
@@ -476,7 +476,7 @@
           </div>
 
           <!-- 3. Capabilities -->
-          <div class="border rounded p-3 border-zinc-800" data-testid="step-capabilities">
+          <div class="border rounded-sm p-3 border-zinc-800" data-testid="step-capabilities">
             <h4 class="text-xs font-semibold text-zinc-300">{t("promotion.stepCapabilities")}</h4>
             <div class="text-xs text-zinc-400 mt-1 space-y-0.5 break-all">
               <div>
@@ -508,7 +508,7 @@
           </div>
 
           <!-- 4. Decision -->
-          <div class="border rounded p-3 border-zinc-800" data-testid="step-decision">
+          <div class="border rounded-sm p-3 border-zinc-800" data-testid="step-decision">
             <h4 class="text-xs font-semibold text-zinc-300">
               {t("promotion.stepDecision")} — {v.decision?.route === "turbo"
                 ? t("promotion.routeTurbo")
@@ -544,7 +544,7 @@
 
           <!-- 5. Activation and monitoring -->
           {#if v.activatedAt || v.rolledBackAt}
-            <div class="border rounded p-3 border-zinc-800" data-testid="step-watch">
+            <div class="border rounded-sm p-3 border-zinc-800" data-testid="step-watch">
               <h4 class="text-xs font-semibold text-zinc-300">{t("promotion.stepWatch")}</h4>
               <div class="text-xs text-zinc-400 mt-1 space-y-0.5">
                 {#if v.activatedAt}<div>
@@ -584,7 +584,7 @@
                   bind:value={comment}
                   rows="2"
                   placeholder={t("promotion.commentPlaceholder")}
-                  class="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm text-zinc-200"
+                  class="w-full bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-sm text-zinc-200"
                 ></textarea>
                 <div class="flex gap-2">
                   <Button
@@ -608,7 +608,7 @@
                 <input
                   bind:value={returnReason}
                   placeholder={t("promotion.rollbackReason")}
-                  class="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm text-zinc-200"
+                  class="w-full bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-sm text-zinc-200"
                 />
                 <Button
                   variant="secondary"
@@ -634,7 +634,7 @@
           <details open>
             <summary class="text-xs text-zinc-400 cursor-pointer">{t("promotion.code")}</summary>
             <pre
-              class="text-xs bg-zinc-950 border border-zinc-800 rounded p-2 max-h-80 overflow-auto whitespace-pre-wrap break-all text-zinc-200"
+              class="text-xs bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-80 overflow-auto whitespace-pre-wrap break-all text-zinc-200"
               data-testid="promotion-code">{v.code}</pre>
           </details>
           {#if detail.previous}
@@ -645,7 +645,7 @@
                 })}</summary
               >
               <pre
-                class="text-xs bg-zinc-950 border border-zinc-800 rounded p-2 max-h-80 overflow-auto whitespace-pre-wrap break-all text-zinc-400">{detail
+                class="text-xs bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-80 overflow-auto whitespace-pre-wrap break-all text-zinc-400">{detail
                   .previous.code}</pre>
             </details>
           {/if}
@@ -654,7 +654,7 @@
               >{t("promotion.testCases")}</summary
             >
             <pre
-              class="text-xs bg-zinc-950 border border-zinc-800 rounded p-2 max-h-60 overflow-auto whitespace-pre-wrap break-all">{json(
+              class="text-xs bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-60 overflow-auto whitespace-pre-wrap break-all">{json(
                 v.tests
               )}</pre>
           </details>

@@ -223,7 +223,7 @@
                 <td class="px-3 py-2">
                   <select
                     bind:value={line.accountId}
-                    class="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-sm"
+                    class="w-full bg-zinc-900 border border-zinc-700 rounded-sm px-2 py-1 text-sm"
                   >
                     <option value="">{t("common.select")}</option>
                     {#each accounts as a}
@@ -253,7 +253,7 @@
                 <td class="px-3 py-2">
                   <select
                     bind:value={line.currency}
-                    class="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-sm"
+                    class="w-full bg-zinc-900 border border-zinc-700 rounded-sm px-2 py-1 text-sm"
                   >
                     {#each currencies as c}<option value={c.code}>{c.code}</option>{/each}
                   </select>

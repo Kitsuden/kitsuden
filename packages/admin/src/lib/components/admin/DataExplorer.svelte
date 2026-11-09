@@ -1322,7 +1322,7 @@
         </button>
 
         <button
-          class="group inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-kitsuden-accent to-kitsuden-accent text-black rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
+          class="group inline-flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-kitsuden-accent to-kitsuden-accent text-black rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
           onclick={openCreateModal}
         >
           <Plus class="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
@@ -1339,7 +1339,7 @@
         {#each views as v}
           <button
             class="px-3 py-1.5 text-sm rounded-md transition-colors {activeView?.id === v.id
-              ? 'bg-kitsuden-card text-kitsuden-text shadow-sm'
+              ? 'bg-kitsuden-card text-kitsuden-text shadow-xs'
               : 'text-kitsuden-text-dim hover:text-kitsuden-text'}"
             onclick={() => switchView(v.id)}
           >
@@ -1421,13 +1421,13 @@
             </div>
             {#each columns as col}
               <label
-                class="flex items-center gap-2 px-2 py-1.5 hover:bg-kitsuden-bg rounded cursor-pointer"
+                class="flex items-center gap-2 px-2 py-1.5 hover:bg-kitsuden-bg rounded-sm cursor-pointer"
               >
                 <input
                   type="checkbox"
                   checked={!hiddenColumns.has(col.name)}
                   onchange={() => toggleColumnVisibility(col.name)}
-                  class="w-3.5 h-3.5 rounded border-kitsuden-border accent-kitsuden-accent"
+                  class="w-3.5 h-3.5 rounded-sm border-kitsuden-border accent-kitsuden-accent"
                 />
                 <span class="text-sm text-kitsuden-text-dim truncate">
                   {col.name
@@ -1619,7 +1619,7 @@
           <div class="w-px h-6 bg-kitsuden-border mx-1"></div>
 
           <button
-            class="group inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-red-500/10 to-red-600/10 text-red-400 border border-red-500/20 hover:from-red-500/20 hover:to-red-600/20 hover:border-red-500/30 transition-all duration-200 disabled:opacity-50"
+            class="group inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-linear-to-r from-red-500/10 to-red-600/10 text-red-400 border border-red-500/20 hover:from-red-500/20 hover:to-red-600/20 hover:border-red-500/30 transition-all duration-200 disabled:opacity-50"
             onclick={confirmBulkDelete}
             disabled={bulkActionLoading}
             title={tr("dataExplorer.deleteSelected")}
@@ -1643,7 +1643,7 @@
                   checked={data.length > 0 && selectedRows.size === data.length}
                   indeterminate={selectedRows.size > 0 && selectedRows.size < data.length}
                   onchange={toggleAllSelection}
-                  class="w-4 h-4 rounded border-kitsuden-border accent-kitsuden-accent"
+                  class="w-4 h-4 rounded-sm border-kitsuden-border accent-kitsuden-accent"
                 />
               </th>
               {#each displayColumns as column}
@@ -1698,7 +1698,7 @@
                 <tr class="border-b border-kitsuden-border">
                   {#each Array(Math.min(displayColumns.length + 2, 10)) as __}
                     <td class="p-3">
-                      <div class="h-4 bg-kitsuden-border/30 rounded animate-pulse"></div>
+                      <div class="h-4 bg-kitsuden-border/30 rounded-sm animate-pulse"></div>
                     </td>
                   {/each}
                 </tr>
@@ -1730,14 +1730,14 @@
             {:else}
               {#each data as row}
                 <tr
-                  class="border-b border-kitsuden-border hover:bg-kitsuden-accent/[0.03] transition-colors"
+                  class="border-b border-kitsuden-border hover:bg-kitsuden-accent/3 transition-colors"
                 >
                   <td class="p-3">
                     <input
                       type="checkbox"
                       checked={selectedRows.has(row.id)}
                       onchange={() => toggleRowSelection(row.id)}
-                      class="w-4 h-4 rounded border-kitsuden-border accent-kitsuden-accent"
+                      class="w-4 h-4 rounded-sm border-kitsuden-border accent-kitsuden-accent"
                     />
                   </td>
                   {#each displayColumns as column}
@@ -1821,7 +1821,7 @@
                         {#if value}
                           <div class="flex items-center gap-2">
                             <div
-                              class="w-5 h-5 rounded border border-kitsuden-border shrink-0"
+                              class="w-5 h-5 rounded-sm border border-kitsuden-border shrink-0"
                               style="background-color: {value}"
                             ></div>
                             <span class="text-xs text-kitsuden-text-dim font-mono">{value}</span>
@@ -1842,11 +1842,11 @@
                           <img
                             src={value}
                             alt=""
-                            class="w-10 h-10 object-cover rounded border border-kitsuden-border"
+                            class="w-10 h-10 object-cover rounded-sm border border-kitsuden-border"
                           />
                         {:else}
                           <div
-                            class="w-10 h-10 bg-kitsuden-border/30 rounded flex items-center justify-center text-xs text-kitsuden-text-dim"
+                            class="w-10 h-10 bg-kitsuden-border/30 rounded-sm flex items-center justify-center text-xs text-kitsuden-text-dim"
                           >
                             N/A
                           </div>
@@ -1856,7 +1856,7 @@
                       {:else if colType === "json"}
                         {#if value !== null && value !== undefined}
                           <span
-                            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-kitsuden-surface text-kitsuden-subtle"
+                            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-mono bg-kitsuden-surface text-kitsuden-subtle"
                             title={JSON.stringify(value, null, 2)}
                           >
                             <FileJson class="w-3 h-3" />
@@ -1940,7 +1940,7 @@
 
         <div class="flex items-center gap-2">
           <select
-            class="px-3 py-2 text-sm rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text focus:outline-none focus:ring-2 focus:ring-kitsuden-accent/50 focus:border-kitsuden-accent/50 transition-all duration-200 hover:border-kitsuden-accent/30 cursor-pointer"
+            class="px-3 py-2 text-sm rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/50 focus:border-kitsuden-accent/50 transition-all duration-200 hover:border-kitsuden-accent/30 cursor-pointer"
             bind:value={pageSize}
             onchange={() => {
               currentPage = 1;
@@ -2040,7 +2040,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs"
     onclick={() => {
       showDeleteConfirm = false;
       deleteTarget = null;
@@ -2072,7 +2072,7 @@
           {tr("common.cancel")}
         </button>
         <button
-          class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
+          class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-linear-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
           disabled={deleting}
           onclick={() => handleDelete(deleteTarget)}
         >
@@ -2089,7 +2089,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs"
     onclick={() => {
       showBulkDeleteConfirm = false;
     }}
@@ -2121,7 +2121,7 @@
           {tr("common.cancel")}
         </button>
         <button
-          class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
+          class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-linear-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
           disabled={bulkActionLoading}
           onclick={executeBulkDelete}
         >

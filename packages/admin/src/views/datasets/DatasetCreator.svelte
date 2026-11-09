@@ -283,7 +283,7 @@
             type="text"
             bind:value={datasetLabel}
             placeholder={tr("datasetCreator.eGSalesOrders")}
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
           />
         </div>
 
@@ -296,7 +296,7 @@
             type="text"
             bind:value={datasetName}
             placeholder={tr("datasetCreator.eGSalesOrders2")}
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text font-mono focus:outline-none focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text font-mono focus:outline-hidden focus:border-kitsuden-accent"
           />
           <p class="mt-1 text-xs text-kitsuden-subtle">
             {tr("datasetCreator.usedInApiEndpointsAuto")}
@@ -312,7 +312,7 @@
             bind:value={description}
             placeholder={tr("datasetCreator.whatDataDoesThisDataset")}
             rows="3"
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
           ></textarea>
         </div>
       </div>
@@ -356,7 +356,7 @@
                         type="text"
                         bind:value={field.label}
                         placeholder={tr("datasetCreator.fieldLabel")}
-                        class="flex-1 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded text-sm"
+                        class="flex-1 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded-sm text-sm"
                         onblur={() => {
                           if (!field.name) {
                             field.name = field.label.toLowerCase().replace(/[^a-z0-9]+/g, "_");
@@ -367,18 +367,18 @@
                         type="text"
                         bind:value={field.name}
                         placeholder="name"
-                        class="w-32 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded text-sm font-mono"
+                        class="w-32 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded-sm text-sm font-mono"
                       />
                       <select
                         bind:value={field.type}
-                        class="px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded text-sm"
+                        class="px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded-sm text-sm"
                       >
                         {#each nativeFieldTypes as type}
                           <option value={type.id}>{type.label}</option>
                         {/each}
                       </select>
                       <button
-                        class="p-1.5 text-kitsuden-green hover:bg-kitsuden-green/10 rounded"
+                        class="p-1.5 text-kitsuden-green hover:bg-kitsuden-green/10 rounded-sm"
                         onclick={() => (editingField = null)}
                       >
                         <Save class="w-4 h-4" />
@@ -387,11 +387,12 @@
                   {:else}
                     <div class="flex items-center gap-3">
                       <span class="font-medium text-kitsuden-text">{field.label}</span>
-                      <code class="text-xs text-kitsuden-subtle bg-kitsuden-bg px-2 py-0.5 rounded"
+                      <code
+                        class="text-xs text-kitsuden-subtle bg-kitsuden-bg px-2 py-0.5 rounded-sm"
                         >{field.name}</code
                       >
                       <span
-                        class="text-xs text-kitsuden-subtle px-2 py-0.5 bg-kitsuden-accent/10 text-kitsuden-accent rounded"
+                        class="text-xs text-kitsuden-subtle px-2 py-0.5 bg-kitsuden-accent/10 text-kitsuden-accent rounded-sm"
                       >
                         {nativeFieldTypes.find((t) => t.id === field.type)?.label}
                       </span>
@@ -463,7 +464,7 @@
                   <div class="flex items-center gap-2">
                     <span class="font-medium text-kitsuden-text">{cf.label}</span>
                     {#if cf.isKpi}
-                      <span class="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded"
+                      <span class="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-sm"
                         >{tr("datasetCreator.kpi")}</span
                       >
                     {/if}
@@ -476,7 +477,7 @@
                   {/if}
                 </div>
                 <div class="flex items-center gap-2">
-                  <span class="text-xs text-kitsuden-subtle px-2 py-1 bg-kitsuden-bg rounded">
+                  <span class="text-xs text-kitsuden-subtle px-2 py-1 bg-kitsuden-bg rounded-sm">
                     {cf.format?.type}
                   </span>
                   <button
@@ -604,6 +605,8 @@
 {/if}
 
 <style>
+  @reference "../../style.css";
+
   .btn-primary {
     @apply px-4 py-2 bg-kitsuden-accent text-black font-medium rounded-lg hover:brightness-110 transition-all;
   }

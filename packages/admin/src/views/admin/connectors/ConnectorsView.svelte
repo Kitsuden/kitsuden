@@ -221,7 +221,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-purple/20 to-kitsuden-accent/20 border border-kitsuden-purple/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-purple/20 to-kitsuden-accent/20 border border-kitsuden-purple/20 flex items-center justify-center"
         >
           <Plug class="w-5 h-5 text-kitsuden-purple" />
         </div>
@@ -317,7 +317,7 @@
             bind:value={formName}
             placeholder={t("connectorsView.eGLegacyMysql")}
             required
-            class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+            class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
           />
         </div>
         <div>
@@ -327,7 +327,7 @@
           <select
             id="formtype"
             bind:value={formType}
-            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
           >
             <option value="database">{t("connectorsView.databaseMysqlMariadb")}</option>
             <option value="api">{t("connectorsView.restApi")}</option>
@@ -346,7 +346,7 @@
               type="text"
               bind:value={formHost}
               placeholder="localhost"
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
           <div>
@@ -358,7 +358,7 @@
               type="text"
               bind:value={formPort}
               placeholder="3306"
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
           <div>
@@ -368,7 +368,7 @@
             <select
               id="formdialect"
               bind:value={formDialect}
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             >
               <option value="mysql">{t("connectorsView.mysql")}</option>
               <option value="mariadb">{t("connectorsView.mariadb")}</option>
@@ -386,7 +386,7 @@
               bind:value={formDbName}
               placeholder="my_database"
               required
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
           <div>
@@ -399,7 +399,7 @@
               bind:value={formUser}
               placeholder="root"
               required
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
           <div>
@@ -411,7 +411,7 @@
               type="password"
               bind:value={formPass}
               placeholder="********"
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
         </div>
@@ -427,7 +427,7 @@
               bind:value={formBaseUrl}
               placeholder="https://api.example.com/v1"
               required
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
           <div>
@@ -439,7 +439,7 @@
               type="password"
               bind:value={formApiKey}
               placeholder="sk-..."
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
         </div>
@@ -589,7 +589,7 @@
 
   <!-- Browse Modal -->
   {#if browsing}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
       <div
         class="bg-kitsuden-card border border-kitsuden-border rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col"
       >

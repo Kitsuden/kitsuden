@@ -411,7 +411,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
         >
           <Zap class="w-5 h-5 text-kitsuden-accent" />
         </div>
@@ -434,7 +434,7 @@
       </button>
       <button
         onclick={() => openCreateModal("webhook_out")}
-        class="group inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-kitsuden-accent to-kitsuden-accent text-black rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
+        class="group inline-flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-kitsuden-accent to-kitsuden-accent text-black rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
       >
         <Webhook class="w-4 h-4 group-hover:rotate-12 transition-transform" />
         {t("actionsView.newWebhook")}
@@ -545,7 +545,7 @@
           </button>
           <button
             onclick={() => openCreateModal("webhook_out")}
-            class="group inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-kitsuden-accent to-kitsuden-accent text-black rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
+            class="group inline-flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-kitsuden-accent to-kitsuden-accent text-black rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
           >
             <Webhook class="w-4 h-4 group-hover:rotate-12 transition-transform" />
             {t("actionsView.newWebhook")}
@@ -666,7 +666,7 @@
 {#if showCreateModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div
-      class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      class="absolute inset-0 bg-black/60 backdrop-blur-xs"
       onclick={() => (showCreateModal = false)}
     ></div>
 
@@ -698,7 +698,7 @@
             placeholder={createType === "code"
               ? t("actionsView.exDailyEmailDigest")
               : t("actionsView.exNotifySlack")}
-            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             required
           />
         </div>
@@ -712,7 +712,7 @@
             bind:value={formDescription}
             type="text"
             placeholder={t("actionsView.whatThisActionDoes")}
-            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
           />
         </div>
 
@@ -724,7 +724,7 @@
             <select
               id="formtrigger"
               bind:value={formTrigger}
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             >
               {#if createType === "code"}
                 <option value="cron">{t("actionsView.cronSchedule")}</option>
@@ -746,7 +746,7 @@
                 bind:value={formCronExpression}
                 type="text"
                 placeholder="0 * * * *"
-                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-none"
+                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
               />
             </div>
           {:else if formTrigger === "event"}
@@ -757,7 +757,7 @@
               <select
                 id="formeventname"
                 bind:value={formEventName}
-                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
               >
                 <option value="entry.created">{t("actionsView.entryCreated")}</option>
                 <option value="entry.updated">{t("actionsView.entryUpdated")}</option>
@@ -777,7 +777,7 @@
               id="formcode"
               bind:value={formCode}
               rows="6"
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
             ></textarea>
           </div>
         {:else}
@@ -790,7 +790,7 @@
               bind:value={formUrl}
               type="url"
               placeholder="https://hooks.slack.com/services/..."
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
               required
             />
           </div>
@@ -804,7 +804,7 @@
               bind:value={formHeaders}
               rows="3"
               placeholder={'{"Authorization": "Bearer token"}'}
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-none"
+              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
             ></textarea>
           </div>
         {/if}
@@ -820,7 +820,7 @@
           <button
             type="submit"
             disabled={saving || !formName || (createType === "webhook_out" && !formUrl)}
-            class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-kitsuden-accent to-kitsuden-accent text-black shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
+            class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-linear-to-r from-kitsuden-accent to-kitsuden-accent text-black shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
           >
             {#if saving}
               <Loader2 class="w-4 h-4 animate-spin" />

@@ -371,7 +371,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
         >
           <Briefcase class="w-5 h-5 text-kitsuden-accent" />
         </div>
@@ -396,8 +396,8 @@
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-lg bg-kitsuden-bg"></div>
             <div class="space-y-2">
-              <div class="h-3 w-20 bg-kitsuden-bg rounded"></div>
-              <div class="h-6 w-24 bg-kitsuden-bg rounded"></div>
+              <div class="h-3 w-20 bg-kitsuden-bg rounded-sm"></div>
+              <div class="h-6 w-24 bg-kitsuden-bg rounded-sm"></div>
             </div>
           </div>
         </div>
@@ -480,8 +480,8 @@
           {#if overviewLoading}
             {#each [1, 2, 3] as _}
               <div class="p-3 animate-pulse flex justify-between">
-                <div class="h-4 w-32 bg-kitsuden-bg rounded"></div>
-                <div class="h-4 w-16 bg-kitsuden-bg rounded"></div>
+                <div class="h-4 w-32 bg-kitsuden-bg rounded-sm"></div>
+                <div class="h-4 w-16 bg-kitsuden-bg rounded-sm"></div>
               </div>
             {/each}
           {:else if !recentDeals.length}
@@ -497,7 +497,7 @@
                     {d.source || tr("crmDashboard.noSource")}
                   </p>
                 </div>
-                <div class="text-right flex-shrink-0 ml-3">
+                <div class="text-right shrink-0 ml-3">
                   <p class="text-sm font-semibold text-kitsuden-text">
                     {fmtCur(d.value, d.currency)}
                   </p>
@@ -528,8 +528,8 @@
           {#if overviewLoading}
             {#each [1, 2, 3] as _}
               <div class="p-3 animate-pulse flex justify-between">
-                <div class="h-4 w-32 bg-kitsuden-bg rounded"></div>
-                <div class="h-4 w-16 bg-kitsuden-bg rounded"></div>
+                <div class="h-4 w-32 bg-kitsuden-bg rounded-sm"></div>
+                <div class="h-4 w-16 bg-kitsuden-bg rounded-sm"></div>
               </div>
             {/each}
           {:else if !recentContacts.length}
@@ -546,7 +546,7 @@
                   </p>
                   <p class="text-xs text-kitsuden-subtle">{c.email}</p>
                 </div>
-                <div class="text-right flex-shrink-0 ml-3">
+                <div class="text-right shrink-0 ml-3">
                   <span
                     class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full border {cCols[
                       c.status
@@ -602,7 +602,7 @@
                 loadDeals();
               }}
               placeholder={tr("crmDashboard.searchDeals")}
-              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:border-kitsuden-accent"
+              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
             />
           </div>
           <select
@@ -611,7 +611,7 @@
               dealsPag.offset = 0;
               loadDeals();
             }}
-            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             ><option value="">{tr("crmDashboard.allStatuses")}</option><option value="open"
               >{tr("crmDashboard.open")}</option
             ><option value="won">{tr("crmDashboard.won")}</option><option value="lost"
@@ -624,7 +624,7 @@
               dealsPag.offset = 0;
               loadDeals();
             }}
-            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             ><option value="">{tr("crmDashboard.allPipelines")}</option
             >{#each pipelines as p}<option value={p.id}>{p.name}</option>{/each}</select
           >
@@ -697,7 +697,7 @@
             <tbody class="divide-y divide-kitsuden-border">
               {#if dealsLoading}{#each [1, 2, 3, 4] as _}<tr class="animate-pulse"
                     ><td colspan={9} class="px-4 py-3"
-                      ><div class="h-4 bg-kitsuden-bg rounded w-full"></div></td
+                      ><div class="h-4 bg-kitsuden-bg rounded-sm w-full"></div></td
                     ></tr
                   >{/each}
               {:else if !deals.length}<tr
@@ -731,10 +731,10 @@
                     <td class="px-4 py-3"
                       ><div class="flex flex-wrap gap-1">
                         {#each (d.tags ?? []).slice(0, 3) as t}<span
-                            class="px-1.5 py-0.5 text-[10px] rounded bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
+                            class="px-1.5 py-0.5 text-[10px] rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
                             >{t}</span
                           >{/each}{#if (d.tags ?? []).length > 3}<span
-                            class="px-1.5 py-0.5 text-[10px] rounded bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
+                            class="px-1.5 py-0.5 text-[10px] rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
                             >+{(d.tags ?? []).length - 3}</span
                           >{/if}
                       </div></td
@@ -796,7 +796,7 @@
                 loadContacts();
               }}
               placeholder={tr("crmDashboard.searchContacts")}
-              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:border-kitsuden-accent"
+              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
             />
           </div>
           <select
@@ -805,7 +805,7 @@
               contactsPag.offset = 0;
               loadContacts();
             }}
-            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             ><option value="">{tr("crmDashboard.allStatuses")}</option><option value="lead"
               >{tr("crmDashboard.lead")}</option
             ><option value="prospect">{tr("crmDashboard.prospect")}</option><option value="customer"
@@ -865,7 +865,7 @@
             <tbody class="divide-y divide-kitsuden-border">
               {#if contactsLoading}{#each [1, 2, 3, 4] as _}<tr class="animate-pulse"
                     ><td colspan={9} class="px-4 py-3"
-                      ><div class="h-4 bg-kitsuden-bg rounded w-full"></div></td
+                      ><div class="h-4 bg-kitsuden-bg rounded-sm w-full"></div></td
                     ></tr
                   >{/each}
               {:else if !contacts.length}<tr
@@ -956,7 +956,7 @@
                 loadCompanies();
               }}
               placeholder={tr("crmDashboard.searchCompanies")}
-              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:border-kitsuden-accent"
+              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
             />
           </div>
           <select
@@ -965,7 +965,7 @@
               companiesPag.offset = 0;
               loadCompanies();
             }}
-            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             ><option value="">{tr("crmDashboard.allIndustries")}</option
             >{#each [...new Set(companies.map((c) => c.industry).filter(Boolean))] as i}<option
                 value={i}>{i}</option
@@ -1022,7 +1022,7 @@
             <tbody class="divide-y divide-kitsuden-border">
               {#if companiesLoading}{#each [1, 2, 3, 4] as _}<tr class="animate-pulse"
                     ><td colspan={9} class="px-4 py-3"
-                      ><div class="h-4 bg-kitsuden-bg rounded w-full"></div></td
+                      ><div class="h-4 bg-kitsuden-bg rounded-sm w-full"></div></td
                     ></tr
                   >{/each}
               {:else if !companies.length}<tr
@@ -1096,7 +1096,7 @@
       {#if pipelinesLoading}
         <div class="space-y-3">
           {#each [1, 2, 3] as _}<div class="card p-4 animate-pulse">
-              <div class="h-4 w-48 bg-kitsuden-bg rounded"></div>
+              <div class="h-4 w-48 bg-kitsuden-bg rounded-sm"></div>
             </div>{/each}
         </div>
       {:else if !pipelines.length}
@@ -1183,6 +1183,8 @@
 </div>
 
 <style>
+  @reference "../../style.css";
+
   .btn-danger {
     @apply inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border border-kitsuden-accent-2/20 hover:bg-kitsuden-accent-2/20 transition-colors;
   }

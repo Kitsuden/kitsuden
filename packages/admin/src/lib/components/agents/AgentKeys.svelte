@@ -162,7 +162,7 @@
                 {/if}
               </td>
               <td class="px-3 py-2">
-                <span class="text-[11px] px-1.5 py-0.5 rounded {STATUS[k.status].kind}"
+                <span class="text-[11px] px-1.5 py-0.5 rounded-sm {STATUS[k.status].kind}"
                   >{STATUS[k.status].text()}</span
                 >
               </td>

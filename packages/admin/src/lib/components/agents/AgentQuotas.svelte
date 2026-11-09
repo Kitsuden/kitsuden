@@ -104,7 +104,7 @@
               ? t("agentQuotas.usedOf", { used: q.used, limit: q.limit })
               : t("agentQuotas.usedUnlimited", { used: q.used })}
           </div>
-          <div class="h-1.5 rounded bg-zinc-800 overflow-hidden">
+          <div class="h-1.5 rounded-sm bg-zinc-800 overflow-hidden">
             <div
               class="h-full {percentage(q.used, q.limit) >= 90 ? 'bg-red-500' : 'bg-indigo-500'}"
               style="width: {percentage(q.used, q.limit)}%"

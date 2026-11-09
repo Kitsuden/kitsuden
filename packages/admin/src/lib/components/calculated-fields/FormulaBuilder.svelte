@@ -260,7 +260,7 @@
             {/if}
 
             <button
-              class="ml-1 p-1 rounded hover:bg-kitsuden-accent-2/20 text-kitsuden-subtle hover:text-kitsuden-accent-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              class="ml-1 p-1 rounded-sm hover:bg-kitsuden-accent-2/20 text-kitsuden-subtle hover:text-kitsuden-accent-2 opacity-0 group-hover:opacity-100 transition-opacity"
               onclick={() => removeToken(index)}
             >
               <Trash2 class="w-3.5 h-3.5" />
@@ -282,7 +282,7 @@
     {#if previewValue !== null && !error}
       <div class="mt-3 flex items-center gap-2 text-sm">
         <span class="text-kitsuden-subtle">{tr("formulaBuilder.preview")}</span>
-        <span class="font-mono text-kitsuden-accent bg-kitsuden-accent/10 px-2 py-0.5 rounded">
+        <span class="font-mono text-kitsuden-accent bg-kitsuden-accent/10 px-2 py-0.5 rounded-sm">
           {previewValue}
         </span>
         <Check class="w-4 h-4 text-kitsuden-green" />
@@ -381,7 +381,7 @@
     <textarea
       id="expression"
       bind:value={expression}
-      class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm font-mono text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+      class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm font-mono text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
       rows="2"
       oninput={(e) => {
         expression = e.currentTarget.value;

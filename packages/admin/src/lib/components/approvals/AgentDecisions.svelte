@@ -54,7 +54,7 @@
       bind:value={days}
       onchange={load}
       aria-label={t("agentDecisions.days", { n: days })}
-      class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-zinc-200"
+      class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-200"
     >
       {#each PERIODS as p}
         <option value={p}>{t("agentDecisions.days", { n: p })}</option>

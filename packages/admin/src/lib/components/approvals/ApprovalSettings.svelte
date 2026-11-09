@@ -161,7 +161,7 @@
       </div>
       {#if !a.config.enabled && watched.length > 0}
         <p
-          class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded px-3 py-2"
+          class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-sm px-3 py-2"
           data-testid="global-off-warning"
         >
           {t("approvals.globalOffWarning", { names: watched.join(", ") })}
@@ -251,7 +251,7 @@
                           ag.name,
                           (e.currentTarget as HTMLSelectElement).value as ApprovalMode
                         )}
-                      class="w-full px-2 py-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-zinc-100"
+                      class="w-full px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
                     >
                       {#each a.modes as m}
                         <option value={m}>{t(`approvals.mode_${m}`)}</option>
@@ -281,7 +281,7 @@
           class="w-56 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
         />
       </div>
-      <div class="overflow-x-auto max-h-96 overflow-y-auto border border-zinc-800 rounded">
+      <div class="overflow-x-auto max-h-96 overflow-y-auto border border-zinc-800 rounded-sm">
         <table class="w-full text-xs">
           <thead class="text-zinc-500 sticky top-0 bg-zinc-900">
             <tr>
@@ -298,7 +298,7 @@
                   <div class="text-zinc-500 break-all">{o.key}</div>
                   {#if o.readOnly && o.method !== "GET"}
                     <span
-                      class="inline-block mt-0.5 px-1.5 rounded bg-sky-500/10 text-sky-300 text-[10px]"
+                      class="inline-block mt-0.5 px-1.5 rounded-sm bg-sky-500/10 text-sky-300 text-[10px]"
                       data-testid="read-only-post">{t("approvals.readOnlyPost")}</span
                     >
                   {/if}
@@ -344,7 +344,7 @@
         <h3 class="text-sm font-semibold text-zinc-200">{t("approvals.toolsTitle")}</h3>
         <p class="text-xs text-zinc-500">{t("approvals.toolsHelp")}</p>
       </div>
-      <div class="overflow-x-auto border border-zinc-800 rounded">
+      <div class="overflow-x-auto border border-zinc-800 rounded-sm">
         <table class="w-full text-xs">
           <tbody class="divide-y divide-zinc-800/70">
             {#each a.mcpTools as h (h.key)}
@@ -403,7 +403,7 @@
             bind:value={rule.method}
             disabled={!editable}
             aria-label={t("approvals.method")}
-            class="w-28 px-2 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-xs text-zinc-100"
+            class="w-28 px-2 py-1.5 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
           >
             {#each ["*", "GET", "POST", "PUT", "PATCH", "DELETE"] as m}
               <option value={m}>{m}</option>
@@ -413,7 +413,7 @@
             bind:value={rule.path}
             disabled={!editable}
             aria-label={t("approvals.path")}
-            class="flex-1 min-w-48 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded text-xs text-zinc-100 font-mono"
+            class="flex-1 min-w-48 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100 font-mono"
           />
           {#if editable}
             <Button

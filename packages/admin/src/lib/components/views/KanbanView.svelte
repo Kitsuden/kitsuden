@@ -104,7 +104,7 @@
         <!-- Cards -->
         {#each group.entries as entry (entry.id)}
           <div
-            class="bg-kitsuden-card border border-kitsuden-border rounded-lg p-3 shadow-sm hover:border-kitsuden-accent/50 cursor-grab active:cursor-grabbing group transition-all"
+            class="bg-kitsuden-card border border-kitsuden-border rounded-lg p-3 shadow-xs hover:border-kitsuden-accent/50 cursor-grab active:cursor-grabbing group transition-all"
             draggable="true"
             ondragstart={(e) => onDragStart(e, entry)}
             onclick={() => onEdit?.(entry)}
@@ -114,7 +114,7 @@
           >
             <!-- Thumbnail if available -->
             {#if (entry as any).thumbnailId}
-              <div class="mb-2 rounded overflow-hidden h-24 bg-black/20">
+              <div class="mb-2 rounded-sm overflow-hidden h-24 bg-black/20">
                 <div
                   class="w-full h-full flex items-center justify-center text-xs text-kitsuden-text-dim"
                 >

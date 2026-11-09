@@ -980,7 +980,7 @@
       <div>
         <h1 class="text-xl font-bold text-kitsuden-text flex items-center gap-3">
           <div
-            class="w-9 h-9 rounded-xl bg-gradient-to-br from-kitsuden-green/20 to-kitsuden-accent/20 border border-kitsuden-green/20 flex items-center justify-center"
+            class="w-9 h-9 rounded-xl bg-linear-to-br from-kitsuden-green/20 to-kitsuden-accent/20 border border-kitsuden-green/20 flex items-center justify-center"
           >
             <FileText class="w-4 h-4 text-kitsuden-green" />
           </div>
@@ -1169,7 +1169,7 @@
                   {tr("blogPostEditor.postTitle")}
                 </label>
                 <Input
-                  class="!text-2xl !font-bold !py-3"
+                  class="text-2xl! font-bold! py-3!"
                   id="title"
                   type="text"
                   bind:value={title}
@@ -1207,7 +1207,7 @@
                     type="text"
                     bind:value={slug}
                     placeholder="your-post-slug"
-                    class="flex-1 bg-transparent text-sm text-kitsuden-accent font-mono outline-none"
+                    class="flex-1 bg-transparent text-sm text-kitsuden-accent font-mono outline-hidden"
                   />
                 </div>
               </div>
@@ -1261,7 +1261,7 @@
                 </div>
 
                 {#if contentMode === "markdown"}
-                  <div class="h-[32rem] overflow-hidden rounded-lg border border-kitsuden-border">
+                  <div class="h-128 overflow-hidden rounded-lg border border-kitsuden-border">
                     <MdxEditor
                       bind:this={editorMarkdown}
                       value={content}
@@ -1344,7 +1344,7 @@
                 {:else}
                   <Button
                     variant="outline"
-                    class="w-full !flex-col !gap-3 !p-8 !rounded-xl !border-2 !border-dashed !border-kitsuden-border hover:!border-kitsuden-accent/50"
+                    class="w-full flex-col! gap-3! p-8! rounded-xl! border-2! border-dashed! border-kitsuden-border! hover:border-kitsuden-accent/50!"
                     onclick={requestCoverImage}
                   >
                     <Image class="w-8 h-8 text-kitsuden-subtle" />
@@ -1367,7 +1367,7 @@
                   {tr("blogPostEditor.excerptSummary")}
                 </label>
                 <Textarea
-                  class="!resize-none"
+                  class="resize-none!"
                   id="excerpt"
                   bind:value={excerpt}
                   rows={3}
@@ -1423,7 +1423,7 @@
                     of old.
                   -->
                   <div>
-                    <Checkbox bind:checked={commentsEnabled} class="!text-xs"
+                    <Checkbox bind:checked={commentsEnabled} class="text-xs!"
                       >{tr("blogPostEditor.allowComments")}</Checkbox
                     >
                     <p class="text-xs opacity-60 mt-1">
@@ -1460,7 +1460,7 @@
                       {tr("blogPostEditor.groupTranslation")}
                     </label>
                     <Input
-                      class="!font-mono !text-xs"
+                      class="font-mono! text-xs!"
                       id="translation-group"
                       type="text"
                       bind:value={translationGroupId}
@@ -1507,7 +1507,7 @@
                         {tr("blogPostEditor.publishDate")}
                       </label>
                       <Input
-                        class="!text-sm"
+                        class="text-sm!"
                         id="publishedat"
                         type="datetime-local"
                         bind:value={publishedAt}
@@ -1559,7 +1559,7 @@
                           type="checkbox"
                           checked={categoryIds.includes(cat.id)}
                           onchange={() => toggleCategory(cat.id)}
-                          class="rounded border-kitsuden-border"
+                          class="rounded-sm border-kitsuden-border"
                         />
                         <span>{cat.name}</span>
                         {#if cat.postCount}
@@ -1606,7 +1606,7 @@
                           type="checkbox"
                           checked={gameIds.includes(game.id)}
                           onchange={() => toggleGame(game.id)}
-                          class="rounded border-kitsuden-border"
+                          class="rounded-sm border-kitsuden-border"
                         />
                         <span>{game.title}</span>
                       </label>
@@ -1769,7 +1769,7 @@
                   </span>
                 </div>
                 <Textarea
-                  class="!resize-none"
+                  class="resize-none!"
                   bind:value={seoOverrides.metaDescription}
                   rows={3}
                   placeholder={excerpt}
@@ -1822,7 +1822,7 @@
                       >{tr("blogPostEditor.ogTitle")}</label
                     >
                     <Input
-                      class="!text-sm"
+                      class="text-sm!"
                       id="ogtitle"
                       type="text"
                       bind:value={seoOverrides.ogTitle}
@@ -1835,7 +1835,7 @@
                       >{tr("blogPostEditor.ogDescription")}</label
                     >
                     <Textarea
-                      class="!text-sm !resize-none"
+                      class="text-sm! resize-none!"
                       id="ogdescription"
                       bind:value={seoOverrides.ogDescription}
                       rows={2}
@@ -1985,7 +1985,7 @@
                   of old.
                 -->
                 <div>
-                  <Checkbox bind:checked={commentsEnabled} class="!text-xs"
+                  <Checkbox bind:checked={commentsEnabled} class="text-xs!"
                     >{tr("blogPostEditor.allowComments")}</Checkbox
                   >
                   <p class="text-xs opacity-60 mt-1">
@@ -2161,7 +2161,7 @@
         {#each availableTags as tag}
           <Toggle
             size="sm"
-            class="!rounded-full"
+            class="rounded-full!"
             pressed={tags.some((t) => t.id === tag.id)}
             onchange={() => toggleTag(tag)}
           >

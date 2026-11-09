@@ -101,7 +101,7 @@
           <input
             type="text"
             placeholder={t("tracesPage.searchTraces")}
-            class="w-full pl-8 pr-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            class="w-full pl-8 pr-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50"
           />
           <Filter size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
         </div>

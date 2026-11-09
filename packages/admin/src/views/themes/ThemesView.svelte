@@ -96,7 +96,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-purple/20 to-kitsuden-accent/20 border border-kitsuden-purple/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-purple/20 to-kitsuden-accent/20 border border-kitsuden-purple/20 flex items-center justify-center"
         >
           <Palette class="w-5 h-5 text-kitsuden-purple" />
         </div>
@@ -207,7 +207,10 @@
             style="background: rgb(var(--kitsuden-surface)); border-color: rgb(var(--kitsuden-border));"
           >
             <div class="flex items-center gap-2">
-              <div class="w-6 h-6 rounded" style="background: rgb(var(--kitsuden-primary));"></div>
+              <div
+                class="w-6 h-6 rounded-sm"
+                style="background: rgb(var(--kitsuden-primary));"
+              ></div>
               <span class="text-sm font-medium" style="color: rgb(var(--kitsuden-text));"
                 >{tr("common.dashboard")}</span
               >
@@ -241,15 +244,15 @@
               </div>
               <div class="space-y-1.5">
                 <div
-                  class="h-2 rounded w-full"
+                  class="h-2 rounded-sm w-full"
                   style="background: rgb(var(--kitsuden-border));"
                 ></div>
                 <div
-                  class="h-2 rounded w-3/4"
+                  class="h-2 rounded-sm w-3/4"
                   style="background: rgb(var(--kitsuden-border));"
                 ></div>
                 <div
-                  class="h-2 rounded w-1/2"
+                  class="h-2 rounded-sm w-1/2"
                   style="background: rgb(var(--kitsuden-border));"
                 ></div>
               </div>
@@ -295,7 +298,7 @@
             {#each cssVarEntries as entry (entry.key)}
               <div class="flex items-center gap-2.5 text-sm py-1">
                 <div
-                  class="w-5 h-5 rounded border shrink-0"
+                  class="w-5 h-5 rounded-sm border shrink-0"
                   style="background: rgb({entry.value}); border-color: rgb(var(--kitsuden-border));"
                   title={entry.value}
                 ></div>
@@ -325,7 +328,7 @@
         bind:value={jsonInput}
         rows="10"
         placeholder={'{ "id": "custom", "name": "My Theme", "description": "A custom theme", "preview": "linear-gradient(135deg, #000, #fff)", "cssVars": { "--kitsuden-primary": "137 180 250" } }'}
-        class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-xs font-mono placeholder-kitsuden-text-dim focus:outline-none focus:border-kitsuden-accent resize-y"
+        class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-xs font-mono placeholder-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent resize-y"
       ></textarea>
 
       {#if jsonError}

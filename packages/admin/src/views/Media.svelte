@@ -223,7 +223,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
         >
           <Image class="w-5 h-5 text-kitsuden-accent" />
         </div>
@@ -465,7 +465,7 @@
                   <td class="px-4 py-3">
                     <div class="flex items-center gap-3">
                       <div
-                        class="w-10 h-10 rounded-lg bg-kitsuden-surface flex items-center justify-center overflow-hidden flex-shrink-0"
+                        class="w-10 h-10 rounded-lg bg-kitsuden-surface flex items-center justify-center overflow-hidden shrink-0"
                       >
                         {#if file.mimeType.startsWith("image/")}
                           <img
@@ -483,7 +483,7 @@
                   </td>
                   <td class="px-4 py-3">
                     <span
-                      class="text-xs text-kitsuden-subtle bg-kitsuden-surface px-2 py-0.5 rounded"
+                      class="text-xs text-kitsuden-subtle bg-kitsuden-surface px-2 py-0.5 rounded-sm"
                       >{file.mimeType.split("/")[1]}</span
                     >
                   </td>
@@ -636,7 +636,7 @@
               onclick={() => setProvider(provider.id)}
             >
               <div
-                class="w-10 h-10 rounded-lg bg-kitsuden-surface flex items-center justify-center flex-shrink-0"
+                class="w-10 h-10 rounded-lg bg-kitsuden-surface flex items-center justify-center shrink-0"
               >
                 {#if provider.id === "minio"}
                   <Server class="w-5 h-5 text-kitsuden-accent" />
@@ -670,7 +670,7 @@
                   {#if field.type === "checkbox"}
                     <input
                       type="checkbox"
-                      class="w-4 h-4 rounded border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
+                      class="w-4 h-4 rounded-sm border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
                       bind:checked={config.storage[field.key]}
                     />
                     <label class="text-sm text-kitsuden-text">{field.label}</label>
@@ -741,7 +741,7 @@
             </div>
             <input
               type="checkbox"
-              class="w-5 h-5 rounded border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
+              class="w-5 h-5 rounded-sm border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
               bind:checked={config.features.thumbnails}
             />
           </div>
@@ -753,7 +753,7 @@
             </div>
             <input
               type="checkbox"
-              class="w-5 h-5 rounded border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
+              class="w-5 h-5 rounded-sm border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
               bind:checked={config.features.imageOptimization}
             />
           </div>
@@ -767,7 +767,7 @@
             </div>
             <input
               type="checkbox"
-              class="w-5 h-5 rounded border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
+              class="w-5 h-5 rounded-sm border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
               bind:checked={config.features.signedUrls}
             />
           </div>
@@ -827,7 +827,7 @@
 <!-- New Folder Dialog -->
 {#if showNewFolderDialog}
   <div
-    class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+    class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50"
     transition:fade
   >
     <div class="card p-6 w-full max-w-md mx-4" transition:slide>

@@ -446,7 +446,7 @@
             oninput={autoSlug}
             type="text"
             placeholder={tr("schemaBuilder.eGProducts")}
-            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
           />
         </div>
         <div>
@@ -456,11 +456,11 @@
               bind:value={localDef.slug}
               type="text"
               placeholder="products"
-              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono text-xs"
+              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 font-mono text-xs"
             />
             <select
               bind:value={localDef.icon}
-              class="w-20 px-2 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-center text-lg appearance-none"
+              class="w-20 px-2 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-center text-lg appearance-none"
             >
               {#each iconOptions as ic}
                 <option value={ic}>{ic}</option>
@@ -476,7 +476,7 @@
           bind:value={localDef.description}
           type="text"
           placeholder={tr("schemaBuilder.optionalDescriptionForThisData")}
-          class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+          class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
         />
       </div>
     </div>
@@ -558,7 +558,7 @@
                   class="group transition-all {dragOverIndex === idx
                     ? 'ring-2 ring-kitsuden-accent-30 ring-inset'
                     : ''} {selectedFieldId === field.id
-                    ? 'bg-kitsuden-accent/[0.04]'
+                    ? 'bg-kitsuden-accent/4'
                     : 'hover:bg-kitsuden-border/20'}"
                 >
                   <!-- Field row -->
@@ -624,7 +624,7 @@
                         e.stopPropagation();
                         removeField(idx);
                       }}
-                      class="btn-icon p-1.5 opacity-0 group-hover:opacity-100 hover:!text-kitsuden-accent-2 transition-all"
+                      class="btn-icon p-1.5 opacity-0 group-hover:opacity-100 hover:text-kitsuden-accent-2! transition-all"
                     >
                       <X class="w-3.5 h-3.5" />
                     </button>
@@ -749,11 +749,11 @@
                         bind:value={rule.field}
                         type="text"
                         placeholder="field_key"
-                        class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 flex-1 font-mono text-xs"
+                        class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 flex-1 font-mono text-xs"
                       />
                       <select
                         bind:value={rule.operator}
-                        class="px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none w-24 text-xs"
+                        class="px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 appearance-none w-24 text-xs"
                       >
                         <option value="eq">{tr("schemaBuilder.equals")}</option>
                         <option value="neq">{tr("schemaBuilder.notEqual")}</option>
@@ -765,11 +765,11 @@
                         bind:value={rule.value}
                         type="text"
                         placeholder={tr("schemaBuilder.valueOrUserId")}
-                        class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 flex-1 text-xs"
+                        class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 flex-1 text-xs"
                       />
                       <button
                         onclick={() => localDef.policyJson!.rlsRules!.splice(ri, 1)}
-                        class="btn-icon p-1.5 hover:!text-kitsuden-accent-2"
+                        class="btn-icon p-1.5 hover:text-kitsuden-accent-2!"
                       >
                         <X class="w-3.5 h-3.5" />
                       </button>
@@ -875,11 +875,11 @@
                       bind:value={localDef.workflowJson!.approverUserIds![ai]}
                       type="text"
                       placeholder={tr("common.userId")}
-                      class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 flex-1 font-mono text-xs"
+                      class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 flex-1 font-mono text-xs"
                     />
                     <button
                       onclick={() => localDef.workflowJson!.approverUserIds!.splice(ai, 1)}
-                      class="btn-icon p-1.5 hover:!text-kitsuden-accent-2"
+                      class="btn-icon p-1.5 hover:text-kitsuden-accent-2!"
                     >
                       <X class="w-3.5 h-3.5" />
                     </button>
@@ -936,7 +936,7 @@
         </div>
         <div class="flex items-center gap-2 mt-2">
           <div
-            class="w-6 h-6 rounded flex items-center justify-center"
+            class="w-6 h-6 rounded-sm flex items-center justify-center"
             style="background: {getFieldColor(selectedField.type)}15"
           >
             {#if getFieldIcon(selectedField.type)}
@@ -960,7 +960,7 @@
             oninput={() => autoFieldKey(selectedField)}
             type="text"
             placeholder={tr("schemaBuilder.eGWeaponName")}
-            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
           />
         </div>
 
@@ -972,7 +972,7 @@
             bind:value={selectedField.key}
             type="text"
             placeholder={tr("schemaBuilder.eGWeaponName2")}
-            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono text-xs"
+            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 font-mono text-xs"
           />
         </div>
 
@@ -984,7 +984,7 @@
             bind:value={selectedField.helpText}
             type="text"
             placeholder={tr("schemaBuilder.shownBelowTheField")}
-            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
           />
         </div>
 
@@ -1044,7 +1044,7 @@
               bind:value={selectedField.defaultValue}
               type="text"
               placeholder={tr("schemaBuilder.eGUnknown")}
-              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
             />
           </div>
 
@@ -1059,7 +1059,7 @@
                 bind:value={selectedField.validationRegex}
                 type="text"
                 placeholder={tr("schemaBuilder.eGAZaZ0")}
-                class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono text-xs"
+                class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 font-mono text-xs"
               />
             </div>
           {/if}
@@ -1073,7 +1073,7 @@
                   id="minvalue"
                   bind:value={selectedField.minValue}
                   type="number"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                   placeholder="0"
                 />
               </div>
@@ -1083,7 +1083,7 @@
                   id="maxvalue"
                   bind:value={selectedField.maxValue}
                   type="number"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                   placeholder="100"
                 />
               </div>
@@ -1101,7 +1101,7 @@
                   id="minlength"
                   bind:value={selectedField.minLength}
                   type="number"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                   placeholder="0"
                 />
               </div>
@@ -1113,7 +1113,7 @@
                   id="maxlength"
                   bind:value={selectedField.maxLength}
                   type="number"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                   placeholder="255"
                 />
               </div>
@@ -1134,11 +1134,11 @@
                       (opt.value = opt.label.toLowerCase().replace(/[^a-z0-9]+/g, "_"))}
                     type="text"
                     placeholder={tr("schemaBuilder.option", { v: oi + 1 })}
-                    class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 flex-1"
+                    class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 flex-1"
                   />
                   <button
                     onclick={() => selectedField.options!.splice(oi, 1)}
-                    class="btn-icon p-1.5 hover:!text-kitsuden-accent-2"
+                    class="btn-icon p-1.5 hover:text-kitsuden-accent-2!"
                   >
                     <X class="w-3.5 h-3.5" />
                   </button>
@@ -1166,7 +1166,7 @@
               {#if selectedField.relation}
                 <select
                   bind:value={selectedField.relation.target}
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
+                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 appearance-none"
                 >
                   <option value="">{tr("schemaBuilder.selectCollection")}</option>
                   <option value="games">{tr("schemaBuilder.games")}</option>
@@ -1218,7 +1218,7 @@
                   bind:value={selectedField.relation.displayField}
                   type="text"
                   placeholder={tr("schemaBuilder.eGTitleName")}
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                 />
                 <p class="text-[10px] text-kitsuden-subtle mt-1">
                   {tr("schemaBuilder.whichFieldToShowIn")}
@@ -1249,7 +1249,7 @@
                       oninput={() => autoSubKey(sub)}
                       type="text"
                       placeholder={tr("schemaBuilder.label2")}
-                      class="flex-1 px-2 py-1.5 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      class="flex-1 px-2 py-1.5 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-sm text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                     />
                     <button
                       onclick={() => moveSubField(si, -1)}
@@ -1262,7 +1262,7 @@
                     <button
                       onclick={() => removeSubField(si)}
                       title={tr("schemaBuilder.removeSubfield")}
-                      class="btn-icon p-1 hover:!text-kitsuden-accent-2"
+                      class="btn-icon p-1 hover:text-kitsuden-accent-2!"
                     >
                       <Trash2 class="w-3 h-3" />
                     </button>
@@ -1271,7 +1271,7 @@
                   <div class="grid grid-cols-2 gap-2">
                     <select
                       bind:value={sub.type}
-                      class="px-2 py-1.5 bg-slate-800 border border-slate-700 text-gray-100 rounded text-xs focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      class="px-2 py-1.5 bg-slate-800 border border-slate-700 text-gray-100 rounded-sm text-xs focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                     >
                       {#each SUBFIELD_TYPES as t}
                         <option value={t.type}>{t.label}</option>
@@ -1281,7 +1281,7 @@
                       bind:value={sub.key}
                       type="text"
                       placeholder="key"
-                      class="px-2 py-1.5 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded font-mono text-xs focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      class="px-2 py-1.5 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-sm font-mono text-xs focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
 
@@ -1323,7 +1323,7 @@
                   type="number"
                   min="0"
                   placeholder="0"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                 />
               </div>
               <div>
@@ -1335,7 +1335,7 @@
                   type="number"
                   min="0"
                   placeholder="∞"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                 />
               </div>
             </div>
@@ -1379,7 +1379,7 @@
             <div class="mt-3 space-y-2">
               <select
                 bind:value={selectedField.showIf.field}
-                class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-500"
               >
                 {#each conditionSources(selectedField) as f}
                   <option value={f.key}>{f.label || f.key}</option>
@@ -1389,7 +1389,7 @@
               <div class="grid grid-cols-2 gap-2">
                 <select
                   bind:value={selectedField.showIf.operator}
-                  class="px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  class="px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="eq">{tr("schemaBuilder.equals")}</option>
                   <option value="neq">{tr("schemaBuilder.notEquals")}</option>
@@ -1401,7 +1401,7 @@
                   bind:value={selectedField.showIf.value}
                   type="text"
                   placeholder="value"
-                  class="px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  class="px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-500"
                 />
               </div>
 
@@ -1452,7 +1452,7 @@
               bind:value={selectedField.width}
               type="number"
               placeholder={tr("schemaBuilder.auto")}
-              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
             />
           </div>
         </div>

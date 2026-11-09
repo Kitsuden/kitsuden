@@ -262,7 +262,7 @@
               <p class="text-sm text-zinc-400">{PRESET_TEXTS[p.id]?.desc() ?? ""}</p>
               <div class="flex flex-wrap gap-1">
                 {#each p.scopes as s (s)}
-                  <code class="text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300"
+                  <code class="text-[11px] px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-300"
                     >{s}</code
                   >
                 {/each}
@@ -284,7 +284,7 @@
             <label class="flex items-start gap-3 p-3 hover:bg-zinc-900/50 cursor-pointer">
               <input
                 type="checkbox"
-                class="mt-1 w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-indigo-500"
+                class="mt-1 w-4 h-4 rounded-sm border-zinc-700 bg-zinc-950 text-indigo-500"
                 checked={draft.includes(b.scope)}
                 onchange={(e) => toggle(b.scope, (e.currentTarget as HTMLInputElement).checked)}
               />
@@ -308,7 +308,7 @@
                     >
                     <div class="mt-1 flex flex-wrap gap-1">
                       {#each b.operations as o (o)}
-                        <code class="text-[11px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400"
+                        <code class="text-[11px] px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-400"
                           >{o}</code
                         >
                       {/each}
@@ -357,7 +357,7 @@
                     <code class="text-[11px] text-zinc-500 break-all">{o.scope}</code>
                   </div>
                   {#if o.sensitive}
-                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-300"
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-sm bg-red-500/10 text-red-300"
                       >{t("agentAccess.sensitive")}</span
                     >
                   {/if}
@@ -367,7 +367,7 @@
                     >
                   {/if}
                   <select
-                    class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-zinc-100"
+                    class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
                     aria-label={t("agentAccess.permissionFor", { scope: o.scope })}
                     value={choiceOf(o.scope)}
                     onchange={(e) =>
@@ -414,7 +414,7 @@
                     {#each ACTIONS as a (a)}
                       <td class="px-3 py-2">
                         <select
-                          class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-zinc-100"
+                          class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
                           aria-label={t("agentAccess.permissionFor", {
                             scope: `datasets:${d.slug}:${a}`,
                           })}
@@ -511,11 +511,11 @@
                 class="px-3 py-2 cursor-pointer text-sm text-zinc-200 flex flex-wrap items-center gap-2"
               >
                 <span class="font-medium">{g.kon}</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded {STATUS.granted.kind}"
+                <span class="text-[10px] px-1.5 py-0.5 rounded-sm {STATUS.granted.kind}"
                   >{t("agentAccess.groupGranted", { n: g.granted })}</span
                 >
                 {#if g.deniedMany}
-                  <span class="text-[10px] px-1.5 py-0.5 rounded {STATUS.denied.kind}"
+                  <span class="text-[10px] px-1.5 py-0.5 rounded-sm {STATUS.denied.kind}"
                     >{t("agentAccess.groupDenied", { n: g.deniedMany })}</span
                   >
                 {/if}
@@ -523,7 +523,7 @@
               <div class="divide-y divide-zinc-800/70 border-t border-zinc-800">
                 {#each g.ops as o (o.scope)}
                   <div class="flex flex-wrap items-center gap-2 px-3 py-2 text-sm min-w-0">
-                    <span class="text-[10px] px-1.5 py-0.5 rounded {STATUS[o.state].kind}"
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-sm {STATUS[o.state].kind}"
                       >{STATUS[o.state].text()}</span
                     >
                     <span class="font-mono text-[11px] text-zinc-500">{o.method}</span>
@@ -558,7 +558,7 @@
                   {#each ACTIONS as a (a)}
                     <td class="px-3 py-2">
                       <span
-                        class="text-[10px] px-1.5 py-0.5 rounded {STATUS[d[a].state].kind}"
+                        class="text-[10px] px-1.5 py-0.5 rounded-sm {STATUS[d[a].state].kind}"
                         title={d[a].by ?? ""}>{STATUS[d[a].state].text()}</span
                       >
                     </td>

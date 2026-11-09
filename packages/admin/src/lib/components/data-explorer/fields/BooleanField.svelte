@@ -24,7 +24,7 @@
     <input
       type="checkbox"
       checked={isTrue}
-      class="w-5 h-5 rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent"
+      class="w-5 h-5 rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent"
       onchange={(e) => onChange?.(e.currentTarget.checked)}
     />
     <span class="text-sm text-kitsuden-text"

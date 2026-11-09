@@ -138,7 +138,7 @@
     <label class="text-xs text-zinc-400"
       >{t("mcpServers.name")}
       <input
-        class="mt-1 w-full rounded bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
+        class="mt-1 w-full rounded-sm bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
         bind:value={form.name}
         required
       />
@@ -146,7 +146,7 @@
     <label class="text-xs text-zinc-400 md:col-span-2"
       >{t("mcpServers.url")}
       <input
-        class="mt-1 w-full rounded bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
+        class="mt-1 w-full rounded-sm bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
         type="url"
         bind:value={form.url}
         required
@@ -155,14 +155,14 @@
     <label class="text-xs text-zinc-400"
       >{t("mcpServers.authHeaderName")}
       <input
-        class="mt-1 w-full rounded bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
+        class="mt-1 w-full rounded-sm bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
         bind:value={form.authHeaderName}
       />
     </label>
     <label class="text-xs text-zinc-400"
       >{t("mcpServers.authHeaderValue")}
       <input
-        class="mt-1 w-full rounded bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
+        class="mt-1 w-full rounded-sm bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
         type="password"
         autocomplete="off"
         bind:value={form.authHeaderValue}
@@ -202,7 +202,7 @@
             </div>
             <div class="flex items-center gap-2">
               {#if s.needsReview > 0}
-                <span class="text-xs rounded px-2 py-0.5 bg-amber-500/10 text-amber-300"
+                <span class="text-xs rounded-sm px-2 py-0.5 bg-amber-500/10 text-amber-300"
                   >{t("mcpServers.needsReview", { count: s.needsReview })}</span
                 >
               {/if}
@@ -254,7 +254,7 @@
                         {tool.name}
                         <details class="text-xs text-zinc-400">
                           <summary class="cursor-pointer">{t("mcpServers.details")}</summary>
-                          <p class="whitespace-pre-wrap break-words mt-1">
+                          <p class="whitespace-pre-wrap wrap-break-word mt-1">
                             {tool.description ?? ""}
                           </p>
                           <pre class="mt-1 overflow-x-auto text-zinc-500">{JSON.stringify(

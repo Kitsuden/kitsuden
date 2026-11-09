@@ -419,7 +419,7 @@
                 : 'bg-kitsuden-border'}"
             >
               <span
-                class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform {block
+                class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-xs transition-transform {block
                   .data[field.key]
                   ? 'translate-x-[18px]'
                   : 'translate-x-[2px]'}"
@@ -463,7 +463,7 @@
                   <img
                     src={img.url}
                     alt={img.alt || ""}
-                    class="h-16 w-16 shrink-0 rounded object-cover"
+                    class="h-16 w-16 shrink-0 rounded-sm object-cover"
                   />
                   <div class="min-w-0 flex-1 space-y-1">
                     <input

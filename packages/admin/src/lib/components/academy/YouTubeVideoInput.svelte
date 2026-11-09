@@ -113,7 +113,7 @@
       oninput={handleInput}
       onblur={handleValidate}
       placeholder="https://www.youtube.com/watch?v=..."
-      class="w-full pl-10 pr-10 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:border-kitsuden-accent/50"
+      class="w-full pl-10 pr-10 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent/50"
     />
     {#if loading}
       <div class="absolute right-3 top-1/2 -translate-y-1/2">
@@ -137,7 +137,7 @@
   {#if videoInfo}
     <div class="card p-3 border-kitsuden-accent/20">
       <div class="flex gap-3">
-        <div class="w-32 h-20 bg-kitsuden-surface rounded-lg overflow-hidden flex-shrink-0">
+        <div class="w-32 h-20 bg-kitsuden-surface rounded-lg overflow-hidden shrink-0">
           <img
             src={videoInfo.thumbnailUrl}
             alt={t("youTubeVideoInput.thumbnail")}
@@ -167,6 +167,8 @@
 </div>
 
 <style>
+  @reference "../../../style.css";
+
   .card {
     @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
   }

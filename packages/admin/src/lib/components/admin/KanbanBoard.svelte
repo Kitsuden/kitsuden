@@ -267,7 +267,7 @@
         </h3>
         <p class="text-sm text-kitsuden-subtle mb-4">
           {t("kanbanBoard.thisKanbanViewIsConfigured")}
-          <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded text-kitsuden-accent"
+          <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded-sm text-kitsuden-accent"
             >'{view.groupBy}'</code
           >{t("kanbanBoard.butTheCurrentDatasetDoes")}
         </p>
@@ -282,7 +282,7 @@
         {@const items = grouped[stage] || []}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          class="flex-shrink-0 w-72 flex flex-col rounded-xl border-2 bg-kitsuden-bg transition-colors {dragOverColumn ===
+          class="shrink-0 w-72 flex flex-col rounded-xl border-2 bg-kitsuden-bg transition-colors {dragOverColumn ===
           stage
             ? 'border-kitsuden-accent/50 bg-kitsuden-accent/5'
             : getStageColor(stage, i)}"
@@ -305,7 +305,7 @@
               </span>
               <span class="text-xs text-kitsuden-subtle">{items.length}</span>
             </div>
-            <button class="p-1 rounded hover:bg-kitsuden-border/30">
+            <button class="p-1 rounded-sm hover:bg-kitsuden-border/30">
               <Plus class="w-3.5 h-3.5 text-kitsuden-text-dim" />
             </button>
           </div>
@@ -315,7 +315,7 @@
             {#each items as item}
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div
-                class="bg-kitsuden-card border border-kitsuden-border rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-kitsuden-accent/30 transition-all shadow-sm hover:shadow-md"
+                class="bg-kitsuden-card border border-kitsuden-border rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-kitsuden-accent/30 transition-all shadow-xs hover:shadow-md"
                 draggable="true"
                 ondragstart={() => handleDragStart(item)}
               >
@@ -331,7 +331,7 @@
                       </span>
                     {/if}
                   </div>
-                  <button class="p-1 rounded hover:bg-kitsuden-border/30 shrink-0">
+                  <button class="p-1 rounded-sm hover:bg-kitsuden-border/30 shrink-0">
                     <MoreHorizontal class="w-3.5 h-3.5 text-kitsuden-text-dim" />
                   </button>
                 </div>

@@ -152,14 +152,14 @@
     <h2 class="text-xl font-semibold text-kitsuden-text">{view.title}</h2>
     <div class="flex items-center gap-2">
       <button class="btn-secondary-sm" onclick={goToday}>{t("calendarView.today")}</button>
-      <button class="p-2 rounded hover:bg-kitsuden-border/30" onclick={prevMonth}>
+      <button class="p-2 rounded-sm hover:bg-kitsuden-border/30" onclick={prevMonth}>
         <ChevronLeft class="w-4 h-4 text-kitsuden-text-dim" />
       </button>
       <span class="text-sm font-medium text-kitsuden-text min-w-[140px] text-center">
         {MONTHS[currentMonth]}
         {currentYear}
       </span>
-      <button class="p-2 rounded hover:bg-kitsuden-border/30" onclick={nextMonth}>
+      <button class="p-2 rounded-sm hover:bg-kitsuden-border/30" onclick={nextMonth}>
         <ChevronRight class="w-4 h-4 text-kitsuden-text-dim" />
       </button>
     </div>
@@ -182,7 +182,7 @@
         </h3>
         <p class="text-sm text-kitsuden-subtle mb-4">
           {t("calendarView.thisCalendarViewIsConfigured")}
-          <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded text-kitsuden-accent"
+          <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded-sm text-kitsuden-accent"
             >'{view.dateField}'</code
           >{t("calendarView.butTheUnderlyingTableDoes")}
         </p>
@@ -228,7 +228,7 @@
               {#if cell.fullDate && eventsByDate[cell.fullDate]}
                 <div class="space-y-1">
                   {#each eventsByDate[cell.fullDate].slice(0, 3) as event, idx}
-                    <div class="text-[10px] px-1.5 py-0.5 rounded truncate {getEventColor(idx)}">
+                    <div class="text-[10px] px-1.5 py-0.5 rounded-sm truncate {getEventColor(idx)}">
                       {event[view.titleField] ||
                         event.title ||
                         event.name ||

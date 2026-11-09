@@ -50,13 +50,10 @@
 
 <div class="flex items-center gap-2 min-w-0" data-testid="current-user">
   <div class="hidden sm:flex flex-col items-end min-w-0 leading-tight">
-    <span
-      class="text-xs font-medium text-kitsuden-text truncate max-w-[10rem]"
-      data-testid="user-name"
-    >
+    <span class="text-xs font-medium text-kitsuden-text truncate max-w-40" data-testid="user-name">
       {name}
     </span>
-    <span class="text-[10px] text-kitsuden-subtle truncate max-w-[10rem]" data-testid="user-role"
+    <span class="text-[10px] text-kitsuden-subtle truncate max-w-40" data-testid="user-role"
       >{role}</span
     >
   </div>

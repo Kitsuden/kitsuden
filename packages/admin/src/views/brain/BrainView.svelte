@@ -254,7 +254,7 @@
     <div class="flex items-center gap-1">
       {#each ["Graph", "Notes"] as tab}
         <button
-          class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-[1px]"
+          class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
           class:text-kitsuden-text={activeTab === tab}
           class:text-kitsuden-text-dim={activeTab !== tab}
           class:border-kitsuden-accent={activeTab === tab}
@@ -371,7 +371,7 @@
                       <div class="flex flex-wrap gap-1 max-w-[160px]">
                         {#each note.tags.slice(0, 3) as tag}
                           <span
-                            class="text-[10px] px-1.5 py-0.5 rounded bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim"
+                            class="text-[10px] px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim"
                           >
                             {tag}
                           </span>

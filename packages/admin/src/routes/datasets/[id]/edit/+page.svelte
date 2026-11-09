@@ -142,6 +142,8 @@
 </div>
 
 <style>
+  @reference "../../../../style.css";
+
   .btn-primary {
     @apply px-4 py-2 bg-kitsuden-accent text-black rounded-lg font-medium 
            hover:bg-kitsuden-accent-hover transition-colors;

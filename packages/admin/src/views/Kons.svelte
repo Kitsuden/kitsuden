@@ -146,7 +146,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-amber/20 to-kitsuden-accent-2/20 border border-kitsuden-amber/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-amber/20 to-kitsuden-accent-2/20 border border-kitsuden-amber/20 flex items-center justify-center"
         >
           <Puzzle class="w-5 h-5 text-kitsuden-amber" />
         </div>
@@ -318,7 +318,7 @@
 
 <!-- Uninstall Confirmation Modal -->
 {#if showUninstallModal && selectedModule}
-  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
     <div class="card p-6 max-w-md w-full animate-fade-in">
       <div class="flex items-center gap-3 mb-4">
         <div class="w-10 h-10 rounded-xl bg-kitsuden-amber/10 flex items-center justify-center">
@@ -345,13 +345,13 @@
             <div class="flex flex-wrap gap-1">
               {#each selectedModule.tables.slice(0, 5) as table}
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim font-mono"
+                  class="text-[10px] px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim font-mono"
                   >{table}</span
                 >
               {/each}
               {#if selectedModule.tables.length > 5}
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
+                  class="text-[10px] px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
                   >{t("common.more", { v: selectedModule.tables.length - 5 })}</span
                 >
               {/if}
@@ -383,7 +383,7 @@
 
 <!-- Delete Confirmation Modal -->
 {#if showDeleteModal && selectedModule}
-  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
     <div class="card p-6 max-w-md w-full animate-fade-in border-kitsuden-accent-2/30">
       <div class="flex items-center gap-3 mb-4">
         <div class="w-10 h-10 rounded-xl bg-kitsuden-accent-2/10 flex items-center justify-center">
@@ -431,7 +431,7 @@
           id="deleteconfirmtext"
           type="text"
           bind:value={deleteConfirmText}
-          class="w-full px-3 py-2 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-sm focus:outline-none focus:border-kitsuden-accent-2"
+          class="w-full px-3 py-2 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-sm focus:outline-hidden focus:border-kitsuden-accent-2"
           placeholder={selectedModule.key.replace(/^grimoire-/, "")}
         />
       </div>
@@ -460,6 +460,8 @@
 {/if}
 
 <style>
+  @reference "../style.css";
+
   .card {
     @apply rounded-xl border border-kitsuden-border bg-kitsuden-card;
   }

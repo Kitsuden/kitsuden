@@ -57,7 +57,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
         >
           <Zap class="w-5 h-5 text-kitsuden-accent" />
         </div>
@@ -112,7 +112,7 @@
           <TableHead>{t("common.slug")}</TableHead>
           <TableHead>{t("common.fields")}</TableHead>
           <TableHead>{t("common.description")}</TableHead>
-          <TableHead class="!text-right">{t("common.actions")}</TableHead>
+          <TableHead class="text-right!">{t("common.actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -127,17 +127,17 @@
               </span>
             </TableCell>
             <TableCell>
-              <code class="text-xs text-kitsuden-subtle bg-kitsuden-surface px-2 py-0.5 rounded"
+              <code class="text-xs text-kitsuden-subtle bg-kitsuden-surface px-2 py-0.5 rounded-sm"
                 >{dataset.slug}</code
               >
             </TableCell>
-            <TableCell class="!text-kitsuden-text-dim">
+            <TableCell class="text-kitsuden-text-dim!">
               {t("dataSets.field", { v: dataset.fields?.length || 0 })}{(dataset.fields?.length ||
                 0) !== 1
                 ? "s"
                 : ""}
             </TableCell>
-            <TableCell class="!text-kitsuden-text-dim truncate max-w-[200px]">
+            <TableCell class="text-kitsuden-text-dim! truncate max-w-[200px]">
               {dataset.description || "—"}
             </TableCell>
             <TableCell class="text-right">

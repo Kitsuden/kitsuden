@@ -196,7 +196,7 @@
           {#each visible as c (c.id)}
             <TableHead>{c.label}</TableHead>
           {/each}
-          <TableHead class="!text-right">{t("common.actions")}</TableHead>
+          <TableHead class="text-right!">{t("common.actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

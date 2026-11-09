@@ -73,10 +73,10 @@
     <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
   {:else if status}
     <div class="flex flex-wrap gap-3 text-xs">
-      <span class="px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-300"
+      <span class="px-2 py-1 rounded-sm bg-zinc-900 border border-zinc-800 text-zinc-300"
         >{t("systemQueue.worker")}: {workerTag(status.worker)}</span
       >
-      <span class="px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-300"
+      <span class="px-2 py-1 rounded-sm bg-zinc-900 border border-zinc-800 text-zinc-300"
         >{t("systemQueue.listen")}: {status.listens
           ? t("systemQueue.yes")
           : t("systemQueue.no")}</span

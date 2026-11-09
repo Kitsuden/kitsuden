@@ -67,7 +67,7 @@
           class="flex items-center gap-2 p-4 bg-zinc-950 border border-zinc-800 rounded-lg font-mono text-sm"
         >
           <button
-            class="p-1 hover:bg-zinc-800 rounded transition-colors"
+            class="p-1 hover:bg-zinc-800 rounded-sm transition-colors"
             onclick={() => (showToken = !showToken)}
           >
             {#if showToken}

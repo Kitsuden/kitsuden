@@ -141,7 +141,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-purple/20 to-kitsuden-accent/20 border border-kitsuden-purple/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-purple/20 to-kitsuden-accent/20 border border-kitsuden-purple/20 flex items-center justify-center"
         >
           <Castle class="w-5 h-5 text-kitsuden-purple" />
         </div>
@@ -183,7 +183,7 @@
 
           <div class="flex items-start gap-4 mb-4">
             <div
-              class="w-12 h-12 rounded-xl bg-gradient-to-br from-kitsuden-purple/20 to-kitsuden-accent/20 flex items-center justify-center text-2xl shrink-0"
+              class="w-12 h-12 rounded-xl bg-linear-to-br from-kitsuden-purple/20 to-kitsuden-accent/20 flex items-center justify-center text-2xl shrink-0"
             >
               <Castle class="w-6 h-6 text-kitsuden-purple" />
             </div>
@@ -267,6 +267,8 @@
 </div>
 
 <style>
+  @reference "../../style.css";
+
   .card {
     @apply rounded-xl border border-kitsuden-border bg-kitsuden-card;
   }

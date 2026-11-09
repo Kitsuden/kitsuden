@@ -300,7 +300,7 @@
             {t("common.error")}
           </h3>
           <pre
-            class="bg-kitsuden-danger/10 text-kitsuden-danger p-3 rounded text-xs overflow-x-auto whitespace-pre-wrap">{selected.errorMessage}</pre>
+            class="bg-kitsuden-danger/10 text-kitsuden-danger p-3 rounded-sm text-xs overflow-x-auto whitespace-pre-wrap">{selected.errorMessage}</pre>
         </section>
       {/if}
 
@@ -309,7 +309,7 @@
           <h3 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-1">
             {t("runsView.payload")}
           </h3>
-          <pre class="bg-kitsuden-bg p-3 rounded text-xs overflow-x-auto">{JSON.stringify(
+          <pre class="bg-kitsuden-bg p-3 rounded-sm text-xs overflow-x-auto">{JSON.stringify(
               selected.triggerPayload,
               null,
               2
@@ -322,7 +322,7 @@
           <h3 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-1">
             {t("runsView.result")}
           </h3>
-          <pre class="bg-kitsuden-bg p-3 rounded text-xs overflow-x-auto">{JSON.stringify(
+          <pre class="bg-kitsuden-bg p-3 rounded-sm text-xs overflow-x-auto">{JSON.stringify(
               selected.result,
               null,
               2
@@ -336,7 +336,7 @@
             {t("runsView.logs", { logLinesCount: selected.logLines.length })}
           </h3>
           <pre
-            class="bg-kitsuden-bg p-3 rounded text-xs overflow-x-auto max-h-64 overflow-y-auto">{selected.logLines.join(
+            class="bg-kitsuden-bg p-3 rounded-sm text-xs overflow-x-auto max-h-64 overflow-y-auto">{selected.logLines.join(
               "\n"
             )}</pre>
         </section>

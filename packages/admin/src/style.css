@@ -1,8 +1,81 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap")
+layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-kitsuden-bg: rgb(var(--kitsuden-bg));
+  --color-kitsuden-card: rgb(var(--kitsuden-card));
+  --color-kitsuden-surface: rgb(var(--kitsuden-surface));
+  --color-kitsuden-border: rgb(var(--kitsuden-border));
+  --color-kitsuden-muted: rgb(var(--kitsuden-muted));
+  --color-kitsuden-subtle: rgb(var(--kitsuden-subtle));
+  --color-kitsuden-text: rgb(var(--kitsuden-text));
+  --color-kitsuden-text-dim: rgb(var(--kitsuden-text-dim));
+  --color-kitsuden-accent: rgb(var(--kitsuden-accent));
+  --color-kitsuden-accent-dim: rgb(var(--kitsuden-accent-dim));
+  --color-kitsuden-accent-hover: rgb(var(--kitsuden-accent-hover));
+  --color-kitsuden-accent-2: rgb(var(--kitsuden-accent-2));
+  --color-kitsuden-accent-2-dim: rgb(var(--kitsuden-accent-2-dim));
+  --color-kitsuden-green: rgb(var(--kitsuden-green));
+  --color-kitsuden-amber: rgb(var(--kitsuden-amber));
+  --color-kitsuden-yellow: rgb(var(--kitsuden-yellow));
+  --color-kitsuden-purple: rgb(var(--kitsuden-purple));
+  --color-kitsuden-danger: rgb(var(--kitsuden-danger));
+
+  --font-sans: var(--kitsuden-font-sans), Inter, system-ui, sans-serif;
+  --font-mono: var(--kitsuden-font-mono), JetBrains Mono, Fira Code, monospace;
+
+  --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
+  --animate-slide-in: slide-in 0.2s ease-out;
+  --animate-fade-in: fade-in 0.15s ease-out;
+
+  @keyframes glow-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
+    }
+  }
+  @keyframes slide-in {
+    from {
+      transform: translateX(-8px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 @layer base {
   /* ── Theme Engine CSS Variables (overridden at runtime by useThemeEngine) ── */

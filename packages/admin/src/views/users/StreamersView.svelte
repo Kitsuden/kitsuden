@@ -345,13 +345,13 @@
         <input
           bind:value={search}
           placeholder={t("streamersView.searchByNameOrChannel")}
-          class="w-full pl-9 pr-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:border-kitsuden-accent"
+          class="w-full pl-9 pr-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
         />
       </div>
       <div class="flex flex-wrap gap-3">
         <select
           bind:value={platformFilter}
-          class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+          class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
         >
           <option value="">{t("streamersView.allPlatforms")}</option>
           <option value="twitch">{t("streamersView.twitch")}</option>
@@ -369,7 +369,7 @@
         <select
           id="sortby"
           bind:value={sortBy}
-          class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+          class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
         >
           <option value="followersDesc">{t("streamersView.followers")}</option>
           <option value="viewersDesc">{t("streamersView.viewers")}</option>
@@ -575,7 +575,7 @@
 
 <!-- Modal -->
 {#if showModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
     <div class="card w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in">
       <div class="flex items-center justify-between p-4 border-b border-kitsuden-border">
         <h3 class="text-lg font-semibold text-kitsuden-text">
@@ -593,7 +593,7 @@
           <input
             id="displayname"
             bind:value={form.displayName}
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
           />
         </div>
         <div>
@@ -603,7 +603,7 @@
           <input
             id="slug"
             bind:value={form.slug}
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
           />
         </div>
         <div class="grid grid-cols-2 gap-4">
@@ -614,7 +614,7 @@
             <select
               id="platform"
               bind:value={form.platform}
-              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             >
               <option value="twitch">{t("streamersView.twitch")}</option>
               <option value="youtube">{t("streamersView.youtube")}</option>
@@ -629,7 +629,7 @@
             <input
               id="channelid"
               bind:value={form.channelId}
-              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent"
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             />
           </div>
         </div>
@@ -641,7 +641,7 @@
             id="channelurl"
             bind:value={form.channelUrl}
             placeholder="https://twitch.tv/..."
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
           />
         </div>
         <div>
@@ -652,7 +652,7 @@
             id="bio"
             bind:value={form.bio}
             rows={3}
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent resize-none"
+            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent resize-none"
           ></textarea>
         </div>
       </div>

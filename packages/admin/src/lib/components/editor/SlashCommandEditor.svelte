@@ -411,7 +411,7 @@
     <button
       type="button"
       onclick={() => wrapSelection("**", "**")}
-      class="p-1.5 rounded hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
       title={t("slashCommandEditor.boldCtrlB")}
     >
       <Bold class="w-4 h-4" />
@@ -419,7 +419,7 @@
     <button
       type="button"
       onclick={() => wrapSelection("*", "*")}
-      class="p-1.5 rounded hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
       title={t("slashCommandEditor.italicCtrlI")}
     >
       <Italic class="w-4 h-4" />
@@ -427,7 +427,7 @@
     <button
       type="button"
       onclick={() => wrapSelection("[", "](url)")}
-      class="p-1.5 rounded hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
       title={t("slashCommandEditor.linkCtrlK")}
     >
       <Link class="w-4 h-4" />
@@ -438,7 +438,7 @@
     <button
       type="button"
       onclick={() => insertAtCursor("# ")}
-      class="p-1.5 rounded hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
       title={t("slashCommandEditor.heading1")}
     >
       <Heading class="w-4 h-4" />
@@ -446,7 +446,7 @@
     <button
       type="button"
       onclick={() => insertAtCursor("- ")}
-      class="p-1.5 rounded hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
       title={t("slashCommandEditor.bulletList")}
     >
       <List class="w-4 h-4" />
@@ -454,7 +454,7 @@
     <button
       type="button"
       onclick={() => insertAtCursor("> ")}
-      class="p-1.5 rounded hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
       title={t("slashCommandEditor.quote")}
     >
       <Quote class="w-4 h-4" />
@@ -463,7 +463,7 @@
       <button
         type="button"
         onclick={requestImage}
-        class="p-1.5 rounded hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+        class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
         title={t("slashCommandEditor.insertLibraryImage")}
       >
         <Image class="w-4 h-4" />
@@ -472,7 +472,7 @@
     <button
       type="button"
       onclick={() => insertAtCursor("```\n\n```")}
-      class="p-1.5 rounded hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
       title={t("slashCommandEditor.codeBlock")}
     >
       <Code class="w-4 h-4" />
@@ -497,7 +497,7 @@
       ondragover={onDragOver}
       ondragleave={() => (dragging = false)}
       {placeholder}
-      class="w-full min-h-[300px] p-4 rounded-xl border bg-kitsuden-card text-kitsuden-text placeholder:text-kitsuden-subtle resize-y focus:outline-none focus:ring-2 focus:ring-kitsuden-accent/20 focus:border-kitsuden-accent/50 font-mono text-sm leading-relaxed {dragging
+      class="w-full min-h-[300px] p-4 rounded-xl border bg-kitsuden-card text-kitsuden-text placeholder:text-kitsuden-subtle resize-y focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/20 focus:border-kitsuden-accent/50 font-mono text-sm leading-relaxed {dragging
         ? 'border-kitsuden-accent border-dashed'
         : 'border-kitsuden-border'}"
       spellcheck="false"

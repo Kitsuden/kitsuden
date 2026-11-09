@@ -548,7 +548,7 @@
             <input
               type="text"
               placeholder={tr("academyView.searchCourses")}
-              class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-none focus:border-kitsuden-accent/50"
+              class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent/50"
               bind:value={searchQuery}
               oninput={() => (currentPage = 1)}
             />
@@ -591,7 +591,7 @@
                     <th class="px-4 py-3 w-10">
                       <input
                         type="checkbox"
-                        class="rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
+                        class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
                         checked={allSelected}
                         indeterminate={someSelected}
                         onchange={toggleSelectAll}
@@ -666,7 +666,7 @@
                       <td class="px-4 py-3">
                         <input
                           type="checkbox"
-                          class="rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
+                          class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
                           checked={selectedIds.has(r.course.id)}
                           onchange={() => toggleSelect(r.course.id)}
                         />
@@ -958,7 +958,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 {#if drawerOpen}
   <div class="fixed inset-0 z-40 flex justify-end">
-    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick={closeDrawer}></div>
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-xs" onclick={closeDrawer}></div>
     <div
       class="relative w-full max-w-xl bg-kitsuden-card border-l border-kitsuden-border h-full flex flex-col shadow-2xl"
     >
@@ -1062,7 +1062,7 @@
 {#if showDeleteModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div
-      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      class="absolute inset-0 bg-black/50 backdrop-blur-xs"
       onclick={() => (showDeleteModal = false)}
     ></div>
     <div
@@ -1092,7 +1092,7 @@
 {#if showAssignModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div
-      class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      class="absolute inset-0 bg-black/50 backdrop-blur-xs"
       onclick={() => (showAssignModal = false)}
     ></div>
     <div
@@ -1109,7 +1109,7 @@
           >
           <input
             id="assignuserids"
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent/50"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
             placeholder={tr("academyView.user1User2")}
             bind:value={assignUserIds}
           />
@@ -1120,7 +1120,7 @@
           >
           <input
             id="assigngroupids"
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-none focus:border-kitsuden-accent/50"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
             placeholder={tr("academyView.group1Group2")}
             bind:value={assignGroupIds}
           />
@@ -1145,6 +1145,8 @@
 {/if}
 
 <style>
+  @reference "../../style.css";
+
   .card {
     @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
   }

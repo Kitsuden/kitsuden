@@ -160,7 +160,7 @@
         type="text"
         placeholder={t("dataDataExplorer.searchGames")}
         bind:value={search}
-        class="w-full pl-10 pr-4 py-2 bg-kitsuden-card border border-kitsuden-border rounded-lg text-sm focus:outline-none focus:border-kitsuden-accent"
+        class="w-full pl-10 pr-4 py-2 bg-kitsuden-card border border-kitsuden-border rounded-lg text-sm focus:outline-hidden focus:border-kitsuden-accent"
       />
     </div>
     <button class="btn-secondary">
@@ -208,7 +208,9 @@
                 {#if game.platform}
                   <div class="flex gap-1">
                     {#each game.platform as p}
-                      <span class="px-1.5 py-0.5 text-[10px] bg-kitsuden-surface rounded">{p}</span>
+                      <span class="px-1.5 py-0.5 text-[10px] bg-kitsuden-surface rounded-sm"
+                        >{p}</span
+                      >
                     {/each}
                   </div>
                 {:else}
@@ -295,7 +297,7 @@
               type="text"
               bind:value={titleTemplate}
               placeholder={t("dataDataExplorer.analysisTitle")}
-              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm focus:outline-none focus:border-kitsuden-accent"
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm focus:outline-hidden focus:border-kitsuden-accent"
             />
             <p class="text-xs text-kitsuden-subtle mt-1">
               {t("dataDataExplorer.useForDynamicValuesE", {
@@ -315,7 +317,7 @@
               type="text"
               bind:value={slugPrefix}
               placeholder="analysis"
-              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm focus:outline-none focus:border-kitsuden-accent"
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm focus:outline-hidden focus:border-kitsuden-accent"
             />
             <p class="text-xs text-kitsuden-subtle mt-1">
               {t("dataDataExplorer.resultBlog")}{slugPrefix || "entry"}{t(
@@ -328,7 +330,7 @@
             <input
               type="checkbox"
               bind:checked={autoPublish}
-              class="w-4 h-4 rounded border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
+              class="w-4 h-4 rounded-sm border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
             />
             <span class="text-sm text-kitsuden-text"
               >{t("dataDataExplorer.autoPublishImmediately")}</span

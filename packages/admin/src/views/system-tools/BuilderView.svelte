@@ -165,7 +165,7 @@
           bind:value={pageTitle}
           type="text"
           placeholder={t("common.pageTitle")}
-          class="bg-transparent text-xl font-bold text-kitsuden-text outline-none border-b border-transparent focus:border-kitsuden-accent/50 transition-colors placeholder:text-kitsuden-subtle"
+          class="bg-transparent text-xl font-bold text-kitsuden-text outline-hidden border-b border-transparent focus:border-kitsuden-accent/50 transition-colors placeholder:text-kitsuden-subtle"
         />
         <div class="flex items-center gap-2 mt-1">
           <span class="text-xs text-kitsuden-subtle">/</span>
@@ -173,7 +173,7 @@
             bind:value={pageSlug}
             type="text"
             placeholder="page-slug"
-            class="bg-transparent text-xs text-kitsuden-text-dim outline-none border-b border-transparent focus:border-kitsuden-accent/50 transition-colors placeholder:text-kitsuden-subtle/50 font-mono"
+            class="bg-transparent text-xs text-kitsuden-text-dim outline-hidden border-b border-transparent focus:border-kitsuden-accent/50 transition-colors placeholder:text-kitsuden-subtle/50 font-mono"
           />
         </div>
       </div>

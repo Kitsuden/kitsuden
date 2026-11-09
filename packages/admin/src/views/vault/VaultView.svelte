@@ -313,7 +313,7 @@
             class="w-full md:w-72 px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border {newCollection ===
               '' || NAME_RE.test(newCollection)
               ? 'border-kitsuden-border'
-              : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-none"
+              : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
             placeholder={tr("vaultView.exampleCollection")}
             bind:value={newCollection}
           />
@@ -331,12 +331,12 @@
                 class="w-44 px-3 py-1.5 text-sm rounded-lg bg-kitsuden-bg border {col.name === '' ||
                 (NAME_RE.test(col.name) && !RESERVED.has(col.name))
                   ? 'border-kitsuden-border'
-                  : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-none"
+                  : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
                 placeholder={tr("vaultView.exampleColumn")}
                 bind:value={col.name}
               />
               <select
-                class="px-2 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text focus:border-kitsuden-accent outline-none"
+                class="px-2 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
                 bind:value={col.type}
               >
                 {#each COLUMN_TYPES as t (t)}
@@ -438,7 +438,7 @@
               </button>
               {#if dropTarget === col.collection}
                 <input
-                  class="w-36 px-2 py-1 text-xs rounded-lg bg-kitsuden-bg border border-kitsuden-accent-2/50 text-kitsuden-text font-mono outline-none"
+                  class="w-36 px-2 py-1 text-xs rounded-lg bg-kitsuden-bg border border-kitsuden-accent-2/50 text-kitsuden-text font-mono outline-hidden"
                   placeholder={tr("vaultView.writes", { collection: col.collection })}
                   bind:value={dropConfirmText}
                 />
@@ -512,12 +512,12 @@
                 {#if addColTarget === col.collection}
                   <div class="flex flex-wrap items-center gap-2">
                     <input
-                      class="w-44 px-3 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text font-mono focus:border-kitsuden-accent outline-none"
+                      class="w-44 px-3 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
                       placeholder={tr("vaultView.exampleNewColumn")}
                       bind:value={addColDraft.name}
                     />
                     <select
-                      class="px-2 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text outline-none"
+                      class="px-2 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text outline-hidden"
                       bind:value={addColDraft.type}
                     >
                       {#each COLUMN_TYPES as t (t)}

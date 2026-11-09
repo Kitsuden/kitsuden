@@ -219,7 +219,7 @@
     </Button>
 
     {#if loading}
-      <div class="animate-pulse h-6 w-48 bg-zinc-800 rounded"></div>
+      <div class="animate-pulse h-6 w-48 bg-zinc-800 rounded-sm"></div>
     {:else if agent}
       <div class="flex items-center gap-3">
         <div class="p-2 bg-indigo-500/10 rounded-lg">
@@ -348,7 +348,7 @@
                 id="name"
                 type="text"
                 bind:value={formData.name}
-                class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50"
               />
             </div>
 
@@ -360,7 +360,7 @@
                 id="description"
                 bind:value={formData.description}
                 rows={3}
-                class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
+                class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50 resize-none"
               ></textarea>
             </div>
 
@@ -371,7 +371,7 @@
               <select
                 id="model"
                 bind:value={formData.model}
-                class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50"
               >
                 <option value="gpt-4">{t("idPage.gpt4")}</option>
                 <option value="gpt-4-turbo">{t("idPage.gpt4Turbo")}</option>

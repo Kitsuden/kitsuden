@@ -254,7 +254,7 @@
 {#if open}
   <!-- Backdrop -->
   <div
-    class="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[18vh] bg-black/60 backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[18vh] bg-black/60 backdrop-blur-xs"
     transition:fade={{ duration: 150 }}
     onclick={handleBackdropClick}
   >
@@ -275,10 +275,10 @@
           bind:value={query}
           type="text"
           placeholder={t("commandPalette.searchCommandsPagesAndRecent")}
-          class="flex-1 bg-transparent text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none"
+          class="flex-1 bg-transparent text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden"
         />
         <kbd
-          class="hidden items-center gap-1 rounded border border-kitsuden-border bg-kitsuden-bg px-2 py-1 font-mono text-[10px] text-kitsuden-text-dim sm:inline-flex"
+          class="hidden items-center gap-1 rounded-sm border border-kitsuden-border bg-kitsuden-bg px-2 py-1 font-mono text-[10px] text-kitsuden-text-dim sm:inline-flex"
         >
           ESC
         </kbd>
@@ -308,7 +308,7 @@
               <span class="flex-1 truncate">{item.label}</span>
               {#if item.shortcut}
                 <kbd
-                  class="rounded border border-kitsuden-border bg-kitsuden-bg px-1.5 py-0.5 font-mono text-[10px] text-kitsuden-text-dim"
+                  class="rounded-sm border border-kitsuden-border bg-kitsuden-bg px-1.5 py-0.5 font-mono text-[10px] text-kitsuden-text-dim"
                 >
                   {item.shortcut}
                 </kbd>
@@ -325,16 +325,19 @@
       >
         <div class="flex items-center gap-3 text-[10px] text-kitsuden-subtle">
           <span class="flex items-center gap-1">
-            <kbd class="rounded border border-kitsuden-border bg-kitsuden-bg px-1 py-0.5 font-mono"
+            <kbd
+              class="rounded-sm border border-kitsuden-border bg-kitsuden-bg px-1 py-0.5 font-mono"
               >↑</kbd
             >
-            <kbd class="rounded border border-kitsuden-border bg-kitsuden-bg px-1 py-0.5 font-mono"
+            <kbd
+              class="rounded-sm border border-kitsuden-border bg-kitsuden-bg px-1 py-0.5 font-mono"
               >↓</kbd
             >
             <span>{t("commandPalette.toNavigate")}</span>
           </span>
           <span class="flex items-center gap-1">
-            <kbd class="rounded border border-kitsuden-border bg-kitsuden-bg px-1 py-0.5 font-mono"
+            <kbd
+              class="rounded-sm border border-kitsuden-border bg-kitsuden-bg px-1 py-0.5 font-mono"
               >↵</kbd
             >
             <span>{t("commandPalette.toSelect")}</span>

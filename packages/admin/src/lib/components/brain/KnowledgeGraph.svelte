@@ -225,7 +225,7 @@
 
     <!-- Legend -->
     <div
-      class="absolute bottom-3 left-3 max-w-[220px] rounded-lg border border-kitsuden-border bg-kitsuden-card/90 backdrop-blur-sm p-2.5 shadow-lg"
+      class="absolute bottom-3 left-3 max-w-[220px] rounded-lg border border-kitsuden-border bg-kitsuden-card/90 backdrop-blur-xs p-2.5 shadow-lg"
     >
       <p class="text-[10px] font-semibold uppercase tracking-wider text-kitsuden-subtle mb-2">
         {t("knowledgeGraph.categories")}

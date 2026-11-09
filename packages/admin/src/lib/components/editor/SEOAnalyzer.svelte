@@ -97,7 +97,7 @@
       <input
         value={data.slug}
         oninput={(e) => onUpdate({ ...data, slug: e.currentTarget.value })}
-        class="flex-1 bg-transparent px-3 py-2 text-sm text-kitsuden-accent font-mono outline-none"
+        class="flex-1 bg-transparent px-3 py-2 text-sm text-kitsuden-accent font-mono outline-hidden"
         placeholder="post-slug"
       />
     </div>

@@ -474,7 +474,7 @@
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
+          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
         >
           <Gamepad2 class="w-5 h-5 text-kitsuden-accent" />
         </div>
@@ -505,8 +505,8 @@
           <div class="flex items-center gap-3">
             <div class="w-9 h-9 rounded-lg bg-kitsuden-muted/20"></div>
             <div class="space-y-2">
-              <div class="h-3 w-16 bg-kitsuden-muted/20 rounded"></div>
-              <div class="h-5 w-10 bg-kitsuden-muted/20 rounded"></div>
+              <div class="h-3 w-16 bg-kitsuden-muted/20 rounded-sm"></div>
+              <div class="h-5 w-10 bg-kitsuden-muted/20 rounded-sm"></div>
             </div>
           </div>
         </div>
@@ -575,12 +575,12 @@
   {#if activeTab === "games"}
     <div class="space-y-3 animate-fade-in">
       <div class="flex flex-wrap items-center gap-3">
-        <div class="relative flex-1 min-w-[12rem]">
+        <div class="relative flex-1 min-w-48">
           <Search class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-kitsuden-subtle" />
           <input
             type="text"
             placeholder={tr("gamesView.searchByTitleOrDeveloper")}
-            class="w-full bg-kitsuden-card border border-kitsuden-border rounded-lg pl-9 pr-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+            class="w-full bg-kitsuden-card border border-kitsuden-border rounded-lg pl-9 pr-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
             bind:value={gamesSearch}
             onkeydown={(e) => {
               if (e.key === "Enter") {
@@ -591,7 +591,7 @@
           />
         </div>
         <select
-          class="bg-kitsuden-card border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+          class="bg-kitsuden-card border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
           bind:value={gamesStatus}
           onchange={() => {
             gamesPage = 1;
@@ -635,7 +635,7 @@
               <th class="px-4 py-3 w-10"
                 ><input
                   type="checkbox"
-                  class="rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                  class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                   checked={selectedGameIds.size === games.length && games.length > 0}
                   onchange={toggleAll}
                 /></th
@@ -706,14 +706,14 @@
                   <td class="px-4 py-2.5"
                     ><input
                       type="checkbox"
-                      class="rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                      class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                       checked={selectedGameIds.has(game.id)}
                       onchange={() => toggleSelection(game.id)}
                     /></td
                   >
                   <td class="px-4 py-2.5">
                     <div
-                      class="w-8 h-10 rounded bg-kitsuden-muted/20 overflow-hidden border border-kitsuden-border"
+                      class="w-8 h-10 rounded-sm bg-kitsuden-muted/20 overflow-hidden border border-kitsuden-border"
                     >
                       {#if game.coverArtId}<img
                           src={`/api/media/preset/${game.coverArtId}/thumbnail`}
@@ -769,7 +769,7 @@
                   <td class="px-4 py-2.5 text-center"
                     ><input
                       type="checkbox"
-                      class="rounded border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                      class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                       checked={!!game.isFeaturedOnHome}
                       onchange={() => toggleFeatured(game)}
                     /></td
@@ -824,25 +824,25 @@
           {tr("gamesView.newCollection")}
         </h3>
         <div class="flex flex-wrap items-end gap-3">
-          <div class="flex-1 min-w-[12rem]">
+          <div class="flex-1 min-w-48">
             <label for="coll-name" class="block text-xs text-kitsuden-subtle mb-1"
               >{tr("common.name")}</label
             ><input
               id="coll-name"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGIndieGems")}
               value={newCollectionName}
               oninput={(e) => onCollName(e.currentTarget.value)}
             />
           </div>
-          <div class="flex-1 min-w-[12rem]">
+          <div class="flex-1 min-w-48">
             <label for="coll-slug" class="block text-xs text-kitsuden-subtle mb-1"
               >{tr("common.slug")}</label
             ><input
               id="coll-slug"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.exampleTagSlug")}
               bind:value={newCollectionSlug}
             />
@@ -886,20 +886,20 @@
                   {#if editingCollectionId === c.id}
                     <td class="px-4 py-2.5"
                       ><input
-                        class="w-full bg-kitsuden-bg border border-kitsuden-border rounded px-2 py-1 text-sm"
+                        class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-sm px-2 py-1 text-sm"
                         bind:value={editCollectionName}
                       /></td
                     >
                     <td class="px-4 py-2.5"
                       ><input
-                        class="w-full bg-kitsuden-bg border border-kitsuden-border rounded px-2 py-1 text-sm"
+                        class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-sm px-2 py-1 text-sm"
                         bind:value={editCollectionSlug}
                       /></td
                     >
                     <td class="px-4 py-2.5"
                       ><input
                         type="number"
-                        class="w-20 bg-kitsuden-bg border border-kitsuden-border rounded px-2 py-1 text-sm"
+                        class="w-20 bg-kitsuden-bg border border-kitsuden-border rounded-sm px-2 py-1 text-sm"
                         bind:value={editCollectionOrder}
                       /></td
                     >
@@ -948,36 +948,36 @@
           {tr("gamesView.newPlatform")}
         </h3>
         <div class="flex flex-wrap items-end gap-3">
-          <div class="flex-1 min-w-[10rem]">
+          <div class="flex-1 min-w-40">
             <label for="plat-name" class="block text-xs text-kitsuden-subtle mb-1"
               >{tr("common.name")}</label
             ><input
               id="plat-name"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGPlaystation5")}
               value={newPlatformName}
               oninput={(e) => onPlatName(e.currentTarget.value)}
             />
           </div>
-          <div class="flex-1 min-w-[10rem]">
+          <div class="flex-1 min-w-40">
             <label for="plat-slug" class="block text-xs text-kitsuden-subtle mb-1"
               >{tr("common.slug")}</label
             ><input
               id="plat-slug"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGPs5")}
               bind:value={newPlatformSlug}
             />
           </div>
-          <div class="flex-1 min-w-[10rem]">
+          <div class="flex-1 min-w-40">
             <label for="plat-mfr" class="block text-xs text-kitsuden-subtle mb-1"
               >{tr("gamesView.manufacturer")}</label
             ><input
               id="plat-mfr"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGSony")}
               bind:value={newPlatformManufacturer}
             />
@@ -988,7 +988,7 @@
             ><input
               id="plat-short"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder="PS5"
               bind:value={newPlatformShort}
             />
@@ -1048,25 +1048,25 @@
           {tr("gamesView.newTag")}
         </h3>
         <div class="flex flex-wrap items-end gap-3">
-          <div class="flex-1 min-w-[10rem]">
+          <div class="flex-1 min-w-40">
             <label for="tag-name" class="block text-xs text-kitsuden-subtle mb-1"
               >{tr("common.name")}</label
             ><input
               id="tag-name"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGRpg")}
               value={newTagName}
               oninput={(e) => onTagName(e.currentTarget.value)}
             />
           </div>
-          <div class="flex-1 min-w-[10rem]">
+          <div class="flex-1 min-w-40">
             <label for="tag-slug" class="block text-xs text-kitsuden-subtle mb-1"
               >{tr("common.slug")}</label
             ><input
               id="tag-slug"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGRpg2")}
               bind:value={newTagSlug}
             />
@@ -1077,18 +1077,18 @@
             ><input
               id="tag-color"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder="#ff00ff"
               bind:value={newTagColor}
             />
           </div>
-          <div class="flex-1 min-w-[10rem]">
+          <div class="flex-1 min-w-40">
             <label for="tag-cat" class="block text-xs text-kitsuden-subtle mb-1"
               >{tr("common.category")}</label
             ><input
               id="tag-cat"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-none focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGGenre")}
               bind:value={newTagCategory}
             />
