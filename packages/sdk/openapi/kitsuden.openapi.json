@@ -223,9 +223,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -415,10 +415,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -578,10 +578,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -1036,10 +1036,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -1240,10 +1240,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -1399,10 +1399,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -1557,9 +1557,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -1751,10 +1751,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -2052,10 +2052,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -2216,10 +2216,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -2744,10 +2744,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -2940,10 +2940,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -3434,10 +3434,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -4039,9 +4039,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -4207,10 +4207,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -4394,10 +4394,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -4581,10 +4581,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -4772,10 +4772,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -5199,9 +5199,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -5422,10 +5422,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -5578,9 +5578,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -5801,10 +5801,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -5995,10 +5995,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -6357,10 +6357,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -7905,10 +7905,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -10222,9 +10222,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -10369,10 +10369,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -10597,9 +10597,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -12925,10 +12925,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -13259,10 +13259,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -13819,10 +13819,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -14138,10 +14138,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -14561,10 +14561,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -14727,8 +14727,8 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
-            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
             "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -15409,10 +15409,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -15776,10 +15776,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -16054,10 +16054,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -16149,6 +16149,16 @@
               }
             }
           },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
             "content": {
@@ -16193,6 +16203,7 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -16382,10 +16393,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -16822,10 +16833,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -16995,6 +17006,16 @@
               }
             }
           },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
             "content": {
@@ -17053,6 +17074,7 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
@@ -17208,9 +17230,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -17940,6 +17962,16 @@
               }
             }
           },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
             "content": {
@@ -17997,6 +18029,7 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
@@ -18773,10 +18806,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -19996,9 +20029,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -20154,10 +20187,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -20472,10 +20505,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -20907,9 +20940,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -21120,10 +21153,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -21442,10 +21475,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -21709,10 +21742,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -22080,10 +22113,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -22350,10 +22383,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -23623,10 +23656,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -23981,10 +24014,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -24266,10 +24299,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -24640,10 +24673,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -24769,6 +24802,16 @@
               }
             }
           },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
             "content": {
@@ -24826,6 +24869,7 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
@@ -25638,10 +25682,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -26428,9 +26472,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -26621,10 +26665,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -26895,8 +26939,8 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
-            "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -27027,8 +27071,8 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
-            "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -27586,9 +27630,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -27731,9 +27775,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -27916,10 +27960,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -28083,10 +28127,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -28296,10 +28340,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
@@ -28443,9 +28487,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -28633,10 +28677,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -28779,9 +28823,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -28977,10 +29021,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -29157,10 +29201,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -29303,9 +29347,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -29487,10 +29531,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -29643,9 +29687,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -29798,9 +29842,9 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -29965,10 +30009,10 @@
           "errors": [
             "KITSUDEN_E_VALIDATION",
             "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
-            "KITSUDEN_E_NOT_FOUND",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],

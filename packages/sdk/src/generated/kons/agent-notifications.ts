@@ -48,9 +48,9 @@ export type SetAgentNotificationResponse = {
 
 /** Runtime description of every operation of kon-agent-notifications (path, method, pagination…). */
 export const operations = {
-  "agentNotification": {"kon":"kon-agent-notifications","id":"agent-notification","operationId":"agent-notifications.agent-notification","method":"GET","path":"/admin/agents/{id}/notify","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:agent-notifications:agent-notification","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "rotateNotificationSecret": {"kon":"kon-agent-notifications","id":"rotate-notification-secret","operationId":"agent-notifications.rotate-notification-secret","method":"POST","path":"/admin/agents/{id}/notify/rotate","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:agent-notifications:rotate-notification-secret","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "setAgentNotification": {"kon":"kon-agent-notifications","id":"set-agent-notification","operationId":"agent-notifications.set-agent-notification","method":"PUT","path":"/admin/agents/{id}/notify","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:agent-notifications:set-agent-notification","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "agentNotification": {"kon":"kon-agent-notifications","id":"agent-notification","operationId":"agent-notifications.agent-notification","method":"GET","path":"/admin/agents/{id}/notify","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:agent-notifications:agent-notification","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "rotateNotificationSecret": {"kon":"kon-agent-notifications","id":"rotate-notification-secret","operationId":"agent-notifications.rotate-notification-secret","method":"POST","path":"/admin/agents/{id}/notify/rotate","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:agent-notifications:rotate-notification-secret","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "setAgentNotification": {"kon":"kon-agent-notifications","id":"set-agent-notification","operationId":"agent-notifications.set-agent-notification","method":"PUT","path":"/admin/agents/{id}/notify","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:agent-notifications:set-agent-notification","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
 } as const satisfies Record<string, OperationInfo>;
 
 /**
@@ -66,7 +66,7 @@ export interface AgentNotificationsApi {
    *
    * REST: `GET /api/admin/agents/{id}/notify` · scope `kon:agent-notifications:agent-notification`
    * idempotent (safe to retry)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly agentNotification: Operation<AgentNotificationParams, AgentNotificationResponse>;
   /**
@@ -76,7 +76,7 @@ export interface AgentNotificationsApi {
    *
    * REST: `POST /api/admin/agents/{id}/notify/rotate` · scope `kon:agent-notifications:rotate-notification-secret`
    * not idempotent (an Idempotency-Key is sent automatically)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly rotateNotificationSecret: Operation<RotateNotificationSecretParams, RotateNotificationSecretResponse>;
   /**
@@ -86,7 +86,7 @@ export interface AgentNotificationsApi {
    *
    * REST: `PUT /api/admin/agents/{id}/notify` · scope `kon:agent-notifications:set-agent-notification`
    * idempotent (safe to retry)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly setAgentNotification: Operation<SetAgentNotificationParams, SetAgentNotificationResponse>;
 }

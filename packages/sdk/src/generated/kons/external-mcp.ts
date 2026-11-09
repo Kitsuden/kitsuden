@@ -97,13 +97,13 @@ export type UpdateMcpServerResponse = Record<string, unknown>;
 
 /** Runtime description of every operation of kon-external-mcp (path, method, pagination…). */
 export const operations = {
-  "approveMcpServerTool": {"kon":"kon-external-mcp","id":"approve-mcp-server-tool","operationId":"external-mcp.approve-mcp-server-tool","method":"POST","path":"/admin/mcp-servers/{id}/tools/approve","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:approve-mcp-server-tool","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "approveMcpServerTool": {"kon":"kon-external-mcp","id":"approve-mcp-server-tool","operationId":"external-mcp.approve-mcp-server-tool","method":"POST","path":"/admin/mcp-servers/{id}/tools/approve","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:approve-mcp-server-tool","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "createMcpServer": {"kon":"kon-external-mcp","id":"create-mcp-server","operationId":"external-mcp.create-mcp-server","method":"POST","path":"/admin/mcp-servers","pathParams":[],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:create-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "deleteMcpServer": {"kon":"kon-external-mcp","id":"delete-mcp-server","operationId":"external-mcp.delete-mcp-server","method":"DELETE","path":"/admin/mcp-servers/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:external-mcp:delete-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "listMcpServerTools": {"kon":"kon-external-mcp","id":"list-mcp-server-tools","operationId":"external-mcp.list-mcp-server-tools","method":"GET","path":"/admin/mcp-servers/{id}/tools","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:external-mcp:list-mcp-server-tools","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "deleteMcpServer": {"kon":"kon-external-mcp","id":"delete-mcp-server","operationId":"external-mcp.delete-mcp-server","method":"DELETE","path":"/admin/mcp-servers/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:external-mcp:delete-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "listMcpServerTools": {"kon":"kon-external-mcp","id":"list-mcp-server-tools","operationId":"external-mcp.list-mcp-server-tools","method":"GET","path":"/admin/mcp-servers/{id}/tools","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:external-mcp:list-mcp-server-tools","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "listMcpServers": {"kon":"kon-external-mcp","id":"list-mcp-servers","operationId":"external-mcp.list-mcp-servers","method":"GET","path":"/admin/mcp-servers","pathParams":[],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:external-mcp:list-mcp-servers","mcpTool":null,"errors":["KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "refreshMcpServer": {"kon":"kon-external-mcp","id":"refresh-mcp-server","operationId":"external-mcp.refresh-mcp-server","method":"POST","path":"/admin/mcp-servers/{id}/refresh","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:refresh-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "updateMcpServer": {"kon":"kon-external-mcp","id":"update-mcp-server","operationId":"external-mcp.update-mcp-server","method":"PATCH","path":"/admin/mcp-servers/{id}","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:update-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "refreshMcpServer": {"kon":"kon-external-mcp","id":"refresh-mcp-server","operationId":"external-mcp.refresh-mcp-server","method":"POST","path":"/admin/mcp-servers/{id}/refresh","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:refresh-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "updateMcpServer": {"kon":"kon-external-mcp","id":"update-mcp-server","operationId":"external-mcp.update-mcp-server","method":"PATCH","path":"/admin/mcp-servers/{id}","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:update-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
 } as const satisfies Record<string, OperationInfo>;
 
 /**
@@ -119,7 +119,7 @@ export interface ExternalMcpApi {
    *
    * REST: `POST /api/admin/mcp-servers/{id}/tools/approve` · scope `kon:external-mcp:approve-mcp-server-tool`
    * not idempotent (an Idempotency-Key is sent automatically)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly approveMcpServerTool: Operation<ApproveMcpServerToolParams, ApproveMcpServerToolResponse>;
   /**
@@ -139,7 +139,7 @@ export interface ExternalMcpApi {
    *
    * REST: `DELETE /api/admin/mcp-servers/{id}` · scope `kon:external-mcp:delete-mcp-server`
    * idempotent (safe to retry) · sensitive: may come back as a proposal pending human approval
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly deleteMcpServer: Operation<DeleteMcpServerParams, DeleteMcpServerResponse>;
   /**
@@ -149,7 +149,7 @@ export interface ExternalMcpApi {
    *
    * REST: `GET /api/admin/mcp-servers/{id}/tools` · scope `kon:external-mcp:list-mcp-server-tools`
    * idempotent (safe to retry)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly listMcpServerTools: Operation<ListMcpServerToolsParams, ListMcpServerToolsResponse>;
   /**
@@ -169,7 +169,7 @@ export interface ExternalMcpApi {
    *
    * REST: `POST /api/admin/mcp-servers/{id}/refresh` · scope `kon:external-mcp:refresh-mcp-server`
    * not idempotent (an Idempotency-Key is sent automatically)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly refreshMcpServer: Operation<RefreshMcpServerParams, RefreshMcpServerResponse>;
   /**
@@ -179,7 +179,7 @@ export interface ExternalMcpApi {
    *
    * REST: `PATCH /api/admin/mcp-servers/{id}` · scope `kon:external-mcp:update-mcp-server`
    * not idempotent (an Idempotency-Key is sent automatically)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly updateMcpServer: Operation<UpdateMcpServerParams, UpdateMcpServerResponse>;
 }

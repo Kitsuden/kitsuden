@@ -103,10 +103,10 @@ export type ReadDraftResponse = {
 
 /** Runtime description of every operation of kon-promotion (path, method, pagination…). */
 export const operations = {
-  "activateVersion": {"kon":"kon-promotion","id":"activate-version","operationId":"promotion.activate-version","method":"POST","path":"/promotion/versions/{id}/activate","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":true,"scope":"kon:promotion:activate-version","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "activateVersion": {"kon":"kon-promotion","id":"activate-version","operationId":"promotion.activate-version","method":"POST","path":"/promotion/versions/{id}/activate","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":true,"scope":"kon:promotion:activate-version","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "listDrafts": {"kon":"kon-promotion","id":"list-drafts","operationId":"promotion.list-drafts","method":"GET","path":"/promotion/drafts","pathParams":[],"queryParams":["status","slug","limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:promotion:list-drafts","mcpTool":"promotion_list","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"versions","limit":"limit"}},
   "proposeDraft": {"kon":"kon-promotion","id":"propose-draft","operationId":"promotion.propose-draft","method":"POST","path":"/promotion/drafts","pathParams":[],"queryParams":[],"body":"json","responses":{"200":"json","201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:promotion:propose-draft","mcpTool":"promotion_propose","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "readDraft": {"kon":"kon-promotion","id":"read-draft","operationId":"promotion.read-draft","method":"GET","path":"/promotion/drafts/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:promotion:read-draft","mcpTool":"promotion_status","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "readDraft": {"kon":"kon-promotion","id":"read-draft","operationId":"promotion.read-draft","method":"GET","path":"/promotion/drafts/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:promotion:read-draft","mcpTool":"promotion_status","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
 } as const satisfies Record<string, OperationInfo>;
 
 /**
@@ -122,7 +122,7 @@ export interface PromotionApi {
    *
    * REST: `POST /api/promotion/versions/{id}/activate` · scope `kon:promotion:activate-version`
    * not idempotent (an Idempotency-Key is sent automatically) · sensitive: may come back as a proposal pending human approval
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly activateVersion: Operation<ActivateVersionParams, ActivateVersionResponse>;
   /**
@@ -152,7 +152,7 @@ export interface PromotionApi {
    *
    * REST: `GET /api/promotion/drafts/{id}` · scope `kon:promotion:read-draft`
    * idempotent (safe to retry) · MCP tool `promotion_status`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly readDraft: Operation<ReadDraftParams, ReadDraftResponse>;
 }

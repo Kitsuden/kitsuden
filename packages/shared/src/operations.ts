@@ -372,6 +372,9 @@ export function operationErrors(
   // uuid, number out of range) in params, query or body — `toErrorEnvelope`
   // translates it from the SQLSTATE (Schemathesis).
   if (op.input?.params || op.input?.query || op.input?.body) list.push("KITSUDEN_E_BAD_REQUEST");
+  // 404: a path parameter names a resource, and it may not exist (or not be
+  // visible to the caller). Every such operation can answer it (Schemathesis).
+  if (op.input?.params) list.push("KITSUDEN_E_NOT_FOUND");
   if (op.access === "session" || op.permission) list.push("KITSUDEN_E_UNAUTHENTICATED");
   if (op.permission) list.push("KITSUDEN_E_FORBIDDEN");
   // Every non-GET operation announces `Idempotency-Key`; reusing a

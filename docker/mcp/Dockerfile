@@ -45,6 +45,11 @@ RUN pnpm --filter @kitsuden/shared build
 WORKDIR /app/packages/mcp-server
 RUN bun run build
 
+# esbuild ships a Go binary (one per version) that only the build uses. Removed
+# here, before node_modules is copied to the runtime image: Trivy flags its old Go
+# standard library, and nothing at runtime runs it.
+RUN rm -rf /app/node_modules/.pnpm/@esbuild+*
+
 # Production stage
 FROM oven/bun:1.3.14-alpine AS production
 WORKDIR /app

@@ -38,8 +38,8 @@ export type ProposalStatusResponse = Record<string, unknown>;
 /** Runtime description of every operation of kon-proposals (path, method, pagination…). */
 export const operations = {
   "myProposals": {"kon":"kon-proposals","id":"my-proposals","operationId":"proposals.my-proposals","method":"GET","path":"/proposals","pathParams":[],"queryParams":["status","limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:proposals:my-proposals","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":null,"limit":"limit"}},
-  "proposalEvents": {"kon":"kon-proposals","id":"proposal-events","operationId":"proposals.proposal-events","method":"GET","path":"/proposals/{id}/events","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"event-stream"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:proposals:proposal-events","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"stream":true},
-  "proposalStatus": {"kon":"kon-proposals","id":"proposal-status","operationId":"proposals.proposal-status","method":"GET","path":"/proposals/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:proposals:proposal-status","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "proposalEvents": {"kon":"kon-proposals","id":"proposal-events","operationId":"proposals.proposal-events","method":"GET","path":"/proposals/{id}/events","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"event-stream"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:proposals:proposal-events","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"stream":true},
+  "proposalStatus": {"kon":"kon-proposals","id":"proposal-status","operationId":"proposals.proposal-status","method":"GET","path":"/proposals/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:proposals:proposal-status","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
 } as const satisfies Record<string, OperationInfo>;
 
 /**
@@ -65,7 +65,7 @@ export interface ProposalsApi {
    *
    * REST: `GET /api/proposals/{id}/events` · scope `kon:proposals:proposal-events`
    * idempotent (safe to retry)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly proposalEvents: StreamOperation<ProposalEventsParams, ProposalEventsEvent>;
   /**
@@ -75,7 +75,7 @@ export interface ProposalsApi {
    *
    * REST: `GET /api/proposals/{id}` · scope `kon:proposals:proposal-status`
    * idempotent (safe to retry)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly proposalStatus: Operation<ProposalStatusParams, ProposalStatusResponse>;
 }
