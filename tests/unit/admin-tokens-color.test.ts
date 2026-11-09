@@ -168,34 +168,40 @@ describe("the admin's color tokens", () => {
     ).toEqual([]);
   });
 
-  it("Tailwind keys match the CSS variables", () => {
-    /**
-     * The trap that broke the build: the keys of `tailwind.config.js` do not
-     * carry the `kitsuden-` prefix, so a rename over
-     * `kitsuden-cyan` leaves them untouched. The markup asks for a class that the
-     * configuration no longer defines, and that is not seen until the CSS is compiled.
-     */
-    const config = readFileSync(join(ADMIN, "tailwind.config.js"), "utf-8");
+  it.each(["src/style.css", "src/assets/main.css"])(
+    "Tailwind keys match the CSS variables (%s)",
+    (sheet) => {
+      /**
+       * The trap that broke the build: the theme keys (Tailwind 4: `--color-kitsuden-<key>`
+       * in `@theme`; before, the keys of `tailwind.config.js`) are renamed apart from
+       * the `--kitsuden-<variable>` they read, so a rename over `kitsuden-cyan` leaves
+       * one side untouched. The markup asks for a class that the theme no longer
+       * defines, and that is not seen until the CSS is compiled.
+       */
+      const css = readFileSync(join(ADMIN, sheet), "utf-8");
 
-    // Each line `key: "rgb(var(--kitsuden-XXX) / <alpha-value>)"`.
-    const pairs = [...config.matchAll(/"?([\w-]+)"?:\s*"rgb\(var\(--kitsuden-([\w-]+)\)/g)];
+      // Each line `--color-kitsuden-<key>: rgb(var(--kitsuden-<variable>));` in `@theme`.
+      const pairs = [
+        ...css.matchAll(/--color-kitsuden-([\w-]+):\s*rgb\(var\(--kitsuden-([\w-]+)\)\)/g),
+      ];
 
-    expect(pairs.length, "no colors found in tailwind.config.js").toBeGreaterThan(5);
+      expect(pairs.length, `no theme colors found in ${sheet}`).toBeGreaterThan(5);
 
-    const misaligned = pairs
-      .filter(([, key, variable]) => key !== variable)
-      .map(([, key, variable]) => `key '${key}' -> variable '--kitsuden-${variable}'`);
+      const misaligned = pairs
+        .filter(([, key, variable]) => key !== variable)
+        .map(([, key, variable]) => `key '${key}' -> variable '--kitsuden-${variable}'`);
 
-    expect(
-      misaligned,
-      `tailwind.config.js has keys that do not match their variable:\n\n` +
-        `${misaligned.join("\n")}\n\n` +
-        `The class is named by the KEY (bg-kitsuden-<key>) and takes the value of ` +
-        `the VARIABLE. If they diverge, the markup asks for a class that does not exist and the ` +
-        `build fails with "The \`bg-kitsuden-...\` class does not exist" — or worse, ` +
-        `the class exists and paints the wrong color.`
-    ).toEqual([]);
-  });
+      expect(
+        misaligned,
+        `${sheet} has theme keys that do not match their variable:\n\n` +
+          `${misaligned.join("\n")}\n\n` +
+          `The class is named by the KEY (bg-kitsuden-<key>) and takes the value of ` +
+          `the VARIABLE. If they diverge, the markup asks for a class that does not exist and the ` +
+          `build fails with "The \`bg-kitsuden-...\` class does not exist" — or worse, ` +
+          `the class exists and paints the wrong color.`
+      ).toEqual([]);
+    }
+  );
 
   it("theme.svelte.ts does not declare the same variable twice", () => {
     /**

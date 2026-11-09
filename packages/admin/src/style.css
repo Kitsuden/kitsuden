@@ -33,10 +33,10 @@ layer(base);
   @keyframes glow-pulse {
     0%,
     100% {
-      box-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+      box-shadow: 0 0 5px rgb(var(--kitsuden-accent) / 0.3);
     }
     50% {
-      box-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
+      box-shadow: 0 0 20px rgb(var(--kitsuden-accent) / 0.6);
     }
   }
   @keyframes slide-in {
