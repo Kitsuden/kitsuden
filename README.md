@@ -184,22 +184,6 @@ public reads moved within the run-to-run noise of that machine. The figures
 are pessimistic: there, a round trip to Postgres took 1.3 ms when idle and
 much more under load.
 
-## When NOT to use Kitsuden
-
-Compared with Directus, Payload or Strapi:
-
-- **Fewer roles.** Users are `admin`, `editor` or `user`, and agents have
-  scopes. There is no per-collection, per-field role editor.
-- **No drafts-and-preview workflow.** Content has a draft/published status,
-  but no versioned drafts, scheduled publishing or live preview of
-  unpublished changes.
-- **It is beta and young.** The others have years of releases, plugins and
-  community answers; Kitsuden has a small number of deployments.
-- **Not every kon is mature**: each one declares itself stable, beta or
-  experimental (see [Kons](#kons-installable-modules)).
-- **Nothing is published yet**: no npm or PyPI packages and no container
-  images on GHCR. You build from a checkout.
-
 ## Quickstart
 
 You only need Docker Engine 24+ with `docker compose` v2.
@@ -291,17 +275,6 @@ Docker image installs the kons listed in `KITSUDEN_KONS`. See
 [docs/kons/installing.md](docs/kons/installing.md), and
 [docs/kons/core-and-kons.md](docs/kons/core-and-kons.md) for what is core and
 why.
-
-## Pairs well with: Inti
-
-[Inti](https://github.com/Kitsuden/inti) is a separate project:
-Astro for modernizing CMSs in the AI era. It sits on top of any headless CMS
-(WordPress, Strapi, Kitsuden…) and lets editors change content in place on
-the real page. Kitsuden does not need Inti, and Inti does not need Kitsuden.
-Together, `@intijs/adapter-kitsuden` writes page-builder blocks back with an
-agent key scoped to `content:edit`, and both sides test against a
-versioned contract (`GET /api/version`). See
-[docs/install/inti.md](docs/install/inti.md).
 
 ## Requirements
 
