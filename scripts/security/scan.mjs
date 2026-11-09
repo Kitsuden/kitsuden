@@ -9,6 +9,7 @@
  *   node scripts/security/scan.mjs                     secrets, deps, iac
  *   node scripts/security/scan.mjs --only=deps         one or more (comma-separated)
  *   node scripts/security/scan.mjs --image=kitsuden-api:ci   scan a built image
+ *   node scripts/security/scan.mjs --root=../kitsuden-kons   scan another repository
  *
  * | check   | tool                         | fails on                                   |
  * | ------- | ---------------------------- | ------------------------------------------ |
@@ -32,9 +33,19 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const OUT = join(ROOT, ".security");
-const BIN = join(OUT, "bin");
+// The repository to scan: this one, or another one with `--root=<dir>` (the kons
+// repository runs this script from its checkout of the core). Its exception files
+// (.gitleaks.toml, osv-scanner.toml, .checkov.yaml, .trivyignore.yaml) are read
+// from that root, and the reports land in its `.security/`.
+let ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+let OUT = join(ROOT, ".security");
+let BIN = join(OUT, "bin");
+
+function setRoot(dir) {
+  ROOT = resolve(dir);
+  OUT = join(ROOT, ".security");
+  BIN = join(OUT, "bin");
+}
 
 export const CHECKOV = "checkov==3.4.3";
 
@@ -279,6 +290,8 @@ async function image(ref) {
 
 async function main() {
   const argv = process.argv.slice(2);
+  const root = argv.find((a) => a.startsWith("--root="))?.slice("--root=".length);
+  if (root) setRoot(root);
   const only = argv.find((a) => a.startsWith("--only="))?.slice(7);
   const images = argv.filter((a) => a.startsWith("--image=")).map((a) => a.slice(8));
   const checks = only ? only.split(",") : images.length ? [] : ["secrets", "deps", "iac"];

@@ -45,6 +45,7 @@ The CI and a laptop run the same script, with the same versions and exceptions:
 pnpm security:scan                                   # secrets, deps, iac
 node scripts/security/scan.mjs --only=deps           # one check
 node scripts/security/scan.mjs --image=kitsuden-api:ci   # a built image
+node scripts/security/scan.mjs --root=../kitsuden-kons # another repository, with its own exceptions
 ```
 
 It needs Node and, for Checkov, `uv`. gitleaks, OSV-Scanner and Trivy are
@@ -68,6 +69,12 @@ record it next to the tool, with the reason:
 
 `tests/unit/security-scanners.test.ts` keeps the scanners pinned, the blocking jobs
 blocking and every Checkov and gitleaks exception explained.
+
+## The kons
+
+The official kons (`Kitsuden/kitsuden-kons`) run the same script from their checkout
+of this repository, with `--root=.`, plus CodeQL: same versions, their own exception
+files. Kons from other authors are not scanned by anyone but their authors.
 
 ## Settings only the repository owner can turn on
 
