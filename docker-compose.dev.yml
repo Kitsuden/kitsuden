@@ -48,7 +48,7 @@ services:
   # lets anyone in. S3 on MINIO_PORT, its panel on MINIO_CONSOLE_PORT.
   # ═══════════════════════════════════════════════════════════════════════
   kitsuden_seaweedfs:
-    image: chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
+    image: chrislusf/seaweedfs:4.52@sha256:57877e32bb90073b37dc109b438ba66e84fd5ed9ced5f5c04f56444ef243ce59
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_seaweedfs
     restart: unless-stopped
     entrypoint: ["/bin/sh", "/kitsuden/startup.sh"]
