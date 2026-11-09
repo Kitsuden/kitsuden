@@ -76,7 +76,7 @@ services:
   # Valkey (Redis-compatible) OPTIONAL: cache and Pub/Sub shared between replicas. The queue lives in Postgres.
   # ═══════════════════════════════════════════════════════════════════════
   kitsuden_cache:
-    image: valkey/valkey:7.2.15-alpine@sha256:f8c1a646f4b31ae4dc3980ff06723a20b533ea1123b9796d450d78ed53ad6d3e
+    image: valkey/valkey:9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_cache
     restart: unless-stopped
     command: valkey-server --maxmemory 128mb --maxmemory-policy noeviction

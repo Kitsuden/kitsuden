@@ -89,7 +89,7 @@ services:
   # value that needs no URL encoding (openssl rand -hex 32): it goes in REDIS_URL.
   # ═══════════════════════════════════════════════════════════════════════
   kitsuden_state:
-    image: valkey/valkey:7-alpine
+    image: valkey/valkey:9-alpine
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_state_prod
     restart: unless-stopped
     # The password reaches valkey-server on stdin (`-` reads config from it), not
