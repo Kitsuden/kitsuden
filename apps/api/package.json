@@ -89,7 +89,7 @@
   },
   "devDependencies": {
     "@toon-format/toon": "4.4.0",
-    "@types/bun": "^1.2.0",
+    "@types/bun": "^1.4.4",
     "@types/nodemailer": "^6.4.0",
     "@types/pg": "^8.16.0",
     "drizzle-kit": "^0.31.11",

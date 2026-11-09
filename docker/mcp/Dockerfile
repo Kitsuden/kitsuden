@@ -11,7 +11,7 @@
 #     -e KITSUDEN_API_TOKEN=... -e MCP_AUTH_TOKEN=... <image>
 # ===================================================================
 
-FROM oven/bun:1.3.14-alpine AS base
+FROM oven/bun:1.4.4-alpine AS base
 WORKDIR /app
 
 # Install pnpm (project uses pnpm, not bun for package management)
@@ -51,7 +51,7 @@ RUN bun run build
 RUN rm -rf /app/node_modules/.pnpm/@esbuild+*
 
 # Production stage
-FROM oven/bun:1.3.14-alpine AS production
+FROM oven/bun:1.4.4-alpine AS production
 WORKDIR /app
 
 # `apk upgrade`: Alpine security fixes the base image lags behind (Trivy in CI)

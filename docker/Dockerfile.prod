@@ -26,7 +26,7 @@
 # ===================================================================
 # STAGE 1: Base with pnpm
 # ===================================================================
-FROM oven/bun:1.3.14-alpine AS base
+FROM oven/bun:1.4.4-alpine AS base
 RUN apk add --no-cache nodejs npm curl
 WORKDIR /app
 RUN npm install -g pnpm@9.15.4
@@ -185,7 +185,7 @@ RUN rm -rf /app/node_modules/.pnpm/@esbuild+* /app/node_modules/.pnpm/esbuild@*/
 # ===================================================================
 # STAGE 4: API Runtime - Minimal image for backend
 # ===================================================================
-FROM oven/bun:1.3.14-alpine AS api
+FROM oven/bun:1.4.4-alpine AS api
 WORKDIR /app
 
 # nodejs: the user-code sandbox runs its interpreter (QuickJS) in a

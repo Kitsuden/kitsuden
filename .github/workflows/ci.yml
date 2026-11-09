@@ -36,8 +36,8 @@ env:
   NODE_VERSION: "22"
   PNPM_VERSION: "9.15.4"
   # Bun pinned, not `latest`: a new bun version changed the CI result
-  # with no commit. 1.3.14 is the one in the images and the @types/bun one in the lockfile.
-  BUN_VERSION: "1.3.14"
+  # with no commit. 1.4.4 is the one in the images and the @types/bun one in the lockfile.
+  BUN_VERSION: "1.4.4"
 
 jobs:
   lint-and-format:

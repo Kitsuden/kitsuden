@@ -85,7 +85,7 @@ from this repository, as a pnpm workspace, and the images are built from it.
 
 **Local development, in addition:**
 
-- [Bun](https://bun.sh) 1.3+ (the API runs on Bun; tested 1.3.14). Install it
+- [Bun](https://bun.sh) 1.3+ (the API runs on Bun; tested 1.4.4). Install it
   **before** `pnpm install`: the `prepare` script of `@kitsuden/shared` builds
   with Bun.
 - Node.js **22.12** or newer (22.23.4+ to build the starter: Astro requires it) and
