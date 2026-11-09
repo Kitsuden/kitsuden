@@ -21,7 +21,7 @@ services:
   # PostgreSQL 16 with pgvector
   # ═══════════════════════════════════════════════════════════════════════
   kitsuden_db:
-    image: pgvector/pgvector:0.8.1-pg16@sha256:33198da2828a14c30348d2ccb4750833d5ed9a44c88d840a0e523d7417120337
+    image: pgvector/pgvector:0.8.7-pg16@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_db
     restart: unless-stopped
     environment:
@@ -48,7 +48,7 @@ services:
   # lets anyone in. S3 on MINIO_PORT, its panel on MINIO_CONSOLE_PORT.
   # ═══════════════════════════════════════════════════════════════════════
   kitsuden_seaweedfs:
-    image: chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
+    image: chrislusf/seaweedfs:4.52@sha256:57877e32bb90073b37dc109b438ba66e84fd5ed9ced5f5c04f56444ef243ce59
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_seaweedfs
     restart: unless-stopped
     entrypoint: ["/bin/sh", "/kitsuden/startup.sh"]
@@ -76,7 +76,7 @@ services:
   # Valkey (Redis-compatible) OPTIONAL: cache and Pub/Sub shared between replicas. The queue lives in Postgres.
   # ═══════════════════════════════════════════════════════════════════════
   kitsuden_cache:
-    image: valkey/valkey:7.2.15-alpine@sha256:f8c1a646f4b31ae4dc3980ff06723a20b533ea1123b9796d450d78ed53ad6d3e
+    image: valkey/valkey:9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_cache
     restart: unless-stopped
     command: valkey-server --maxmemory 128mb --maxmemory-policy noeviction

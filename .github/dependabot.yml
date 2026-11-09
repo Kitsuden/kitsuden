@@ -2,6 +2,14 @@
 #
 # `hono` is pinned to an exact version: Dependabot opens a PR when an advisory
 # comes out, and the bump is reviewed by hand rather than taken by a `^` range.
+#
+# Updates are grouped so that one run of CI covers many of them: the first run
+# on a new repository opened 18 PRs at once and filled the Actions queue.
+#
+# Kept out on purpose (bumped by hand, across every place at once):
+#   - Node majors: .nvmrc, NODE_VERSION in the workflows and the web image move together.
+#   - Bun: BUN_VERSION in the workflows, the API and MCP images and @types/bun move together.
+#   - Tailwind 4: a migration of the panel's theme, not a version bump.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -14,13 +22,23 @@ updates:
         patterns: ["hono", "@hono/*"]
       drizzle:
         patterns: ["drizzle-orm", "drizzle-kit"]
+      typescript-eslint:
+        patterns: ["typescript-eslint", "@typescript-eslint/*"]
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
     labels: ["dependencies"]
 
-  # The publishing workflows pin actions by commit, so this is what moves them.
+  # The workflows pin actions by commit, so this is what moves them.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
 
   # Base images of the Dockerfiles.
   - package-ecosystem: docker
@@ -29,9 +47,19 @@ updates:
       - /docker/mcp
     schedule:
       interval: monthly
+    groups:
+      images:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+      - dependency-name: oven/bun
 
   # Images pinned by digest in the compose files.
   - package-ecosystem: docker-compose
     directory: /
     schedule:
       interval: monthly
+    groups:
+      images:
+        patterns: ["*"]
