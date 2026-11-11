@@ -42,7 +42,7 @@ two intervals.
 KITSUDEN_PITR=on
 # optional: PG_ARCHIVE_TIMEOUT=300  BACKUP_BASE_DAYS=7  BACKUP_BASE_KEEP=2
 
-docker compose up -d kitsuden_db kitsuden_backup      # restarts Postgres: a few seconds of downtime
+docker compose -f docker-compose.yml up -d kitsuden_db kitsuden_backup      # restarts Postgres: a few seconds of downtime
 docker exec -w /app/apps/api <instance>_backup_prod bun run scripts/backup.ts --base --force
 docker exec -w /app/apps/api <instance>_backup_prod bun run scripts/backup.ts --list
 ```
@@ -152,7 +152,7 @@ docker exec -u postgres <instance>_db_replica pg_ctl promote -D /var/lib/postgre
 # DATABASE_URL / DATABASE_ADMIN_URL / DATABASE_DDL_URL use the host
 # <instance>_db_prod; change it to <instance>_db_replica (or swap the volumes)
 # and recreate them:
-docker compose up -d kitsuden_api kitsuden_backup
+docker compose -f docker-compose.yml up -d kitsuden_api kitsuden_backup
 ```
 
 The promoted replica is now the primary on a new timeline. The old primary must

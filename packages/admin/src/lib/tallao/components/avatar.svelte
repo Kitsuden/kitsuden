@@ -107,8 +107,8 @@
     padding: 0 0.25rem;
     font-size: 0.5625rem;
     line-height: 1rem;
-    color: white;
-    background: rgb(var(--ta-accent));
+    color: rgb(var(--ta-on-accent));
+    background: var(--ta-accent-fill, color-mix(in srgb, rgb(var(--ta-accent)) 88%, black));
     border: 2px solid rgb(var(--ta-bg));
     border-radius: 9999px;
   }

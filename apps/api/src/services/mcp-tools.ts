@@ -1524,7 +1524,7 @@ async function kitsudenUpdateRecord(
   if (!recordId || !data) return "Missing: id (or entryId), data";
 
   if (legacyEntryId && !collection) {
-    // Legacy MCP mode: entryId es un dataEntries.id
+    // Legacy MCP mode: entryId is a dataEntries.id
     const [existing] = await bd()
       .select()
       .from(dataEntries)

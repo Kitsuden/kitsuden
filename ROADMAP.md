@@ -93,7 +93,7 @@ hides 5xx detail in production. Details in `CHANGELOG.md`.
 ### Before 1.0 and packaging
 
 - `data_sets.game_id` removed (migration 0073).
-- `npm create kitsuden` (`packages/create-kitsuden`), with an offline scaffold.
+- `npm create kitsuden` (`packages/create-kitsuden`, not on npm yet), with an offline scaffold.
 - A kon's typed client without a running API: `node scripts/sdk/generate.mjs --from-kon=<dir>`.
 - A macOS CI job (typecheck, unit and CLI tests).
 

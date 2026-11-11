@@ -4,9 +4,13 @@ Official Python client for **Kitsuden**, the self-hosted, AI-native backend
 framework. This package is the twin of `@kitsuden/sdk` (TypeScript): same
 endpoints, same names, same semantics.
 
+It is not on PyPI yet. Install it from a clone of the Kitsuden repository:
+
 ```bash
-pip install kitsuden          # not on PyPI yet: pip install ./packages/sdk-python
+pip install ./packages/sdk-python     # from the repository root
 ```
+
+Once it is published, `pip install kitsuden` will do the same.
 
 Its only dependency is `httpx`, on purpose: an SDK that drags in half of PyPI
 causes conflicts in the user's project.

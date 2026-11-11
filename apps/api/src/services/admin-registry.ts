@@ -551,8 +551,7 @@ export async function buildAdminRegistry(): Promise<KonAdminConfig[]> {
    *
    * It was THIRTEEN out of twenty-six: booking, members, payments, newsletter, wiki,
    * maps, cardsim, tierlist, builder, formulas, directory, ocr-training and
-   * broadcast-moba. All listed as optional in grimoire-gremius,
-   * grimoire-viggo or grimoire-documents.
+   * broadcast-moba. All of them listed only as optional in some grimoire.
    *
    * The symptom did not look like this: `/api/admin/registry/kon-booking` returned
    * 404, the panel fell back to its default configuration —a single view with

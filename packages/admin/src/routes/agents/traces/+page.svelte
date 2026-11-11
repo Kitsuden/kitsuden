@@ -6,7 +6,7 @@
   import Timeline from "$lib/components/agents/Timeline.svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import Card from "$lib/components/ui/Card.svelte";
-  import { listTraces, getTrace } from "$lib/services/agents";
+  import { listTracesPage, getTrace } from "$lib/services/agents";
   import type { AgentTrace, AgentTraceStep } from "$lib/types/agents";
 
   let traces: AgentTrace[] = $state([]);
@@ -25,8 +25,12 @@
     try {
       loading = true;
       error = null;
-      traces = await listTraces({ limit, offset });
-      total = traces.length;
+      // `total` is the API's count, not this page's length: with `traces.length` the
+      // condition for "Load more" (`traces.length < total`) could never be true. And a
+      // further page is ADDED to the list; it used to replace it.
+      const page = await listTracesPage({ limit, offset });
+      traces = offset === 0 ? page.traces : [...traces, ...page.traces];
+      total = Math.max(page.total, traces.length);
     } catch (e) {
       error = e instanceof Error ? e.message : t("tracesPage.errorLoadingTraces");
     } finally {
@@ -58,7 +62,7 @@
 
   function getStatusIcon(status: string) {
     switch (status) {
-      case "completed":
+      case "success":
         return "✓";
       case "error":
         return "✗";
@@ -71,7 +75,7 @@
 
   function getStatusColor(status: string): string {
     switch (status) {
-      case "completed":
+      case "success":
         return "text-emerald-400";
       case "error":
         return "text-red-400";

@@ -76,8 +76,8 @@ because they are coupled to the runtime:
 ## Level 3 — Kons (installed, not part of the core)
 
 **Domain** modules — a blog, a wiki, a CRM, tournaments… — are **not part of
-the Kitsuden core**. They live in a separate repository, `kitsuden-kons` (MIT;
-not public yet), and are installed into a project with
+the Kitsuden core**. They live in a separate repository,
+[`kitsuden-kons`](https://github.com/Kitsuden/kitsuden-kons) (MIT), and are installed into a project with
 `kitsuden kon add <name>`, which copies the kon to `packages/kons/<kon-id>/`
 (git-ignored here) and declares it in `kitsuden.kons.json`. A fresh clone of
 Kitsuden has no kon and is a complete backend for agents.

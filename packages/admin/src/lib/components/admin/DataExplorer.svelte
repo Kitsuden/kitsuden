@@ -41,6 +41,9 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
 
+  import { explorerEndpoint, isApiBase } from "$lib/explorer-endpoint";
+  import { knownTables } from "$lib/explorer-tables";
+
   import AutoFormModal from "./AutoFormModal.svelte";
   import CalendarView from "./CalendarView.svelte";
   import KanbanBoard from "./KanbanBoard.svelte";
@@ -260,7 +263,7 @@
    *
    * and read `activeViewId` in the second branch, so the effect was DEPENDENT
    * on `activeViewId`. When a tab was clicked, `switchView` wrote
-   * `activeViewId = otra`, that fired the effect again, `requested` was still
+   * `activeViewId = another`, that fired the effect again, `requested` was still
    * the original prop… and it put it back. The tab bounced back
    * the instant you clicked it.
    *
@@ -315,24 +318,18 @@
    */
   function getEndpoint(tblName?: string): string {
     const table = tblName ?? activeTable ?? grimoireId;
-    const base = config?.apiEndpoint;
-    if (!base) return `/api/explorer/${table}`;
-    // Count path segments after removing leading slash
-    const segments = base.replace(/^\//, "").split("/");
-    // If 3+ segments (e.g., /api/explorer/games, /api/datasets/id/entries), it's a full path
-    if (segments.length >= 3) return base;
-    // 2 segments (e.g., /api/directory, /api/crm) → append table name
-    return `${base}/${table}`;
+    // The rule (and why `directory_employees` is asked as `/employees`) is in
+    // `$lib/explorer-endpoint`, shared with the form modal.
+    return explorerEndpoint(config?.apiEndpoint, table);
   }
 
   /** The base API endpoint (without table) — used by AutoFormModal */
   const apiBaseEndpoint = $derived.by(() => {
     const ep = config?.apiEndpoint;
     if (!ep) return undefined;
-    const segments = ep.replace(/^\//, "").split("/");
     // Only pass base paths (/api/directory, /api/crm) — 2 segments
     // Full paths (/api/explorer/games, /api/datasets/id/entries) should not be passed
-    return segments.length <= 2 ? ep : undefined;
+    return isApiBase(ep) ? ep : undefined;
   });
 
   // FK column detection
@@ -759,9 +756,13 @@
     const relationCols = columns.filter((c) => isRelationColumn(c.name));
     if (relationCols.length === 0 || data.length === 0) return;
 
+    // The related table is a GUESS from the column's name (`managerId` → `managers`).
+    // Only the ones the explorer really has are asked: the rest were a 404 per column.
+    const known = await knownTables();
+
     for (const col of relationCols) {
       const relTable = getRelatedTable(col.name);
-      if (!relTable || fkDisplayCache[relTable]) continue;
+      if (!relTable || fkDisplayCache[relTable] || !known.has(relTable)) continue;
 
       try {
         const res = await fetch(`${API_URL}/api/explorer/${relTable}/options`, {

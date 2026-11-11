@@ -2,14 +2,22 @@
 
 ## Supported versions
 
-Kitsuden is in beta. Only the latest release on `main` receives security fixes.
+Kitsuden is in beta. Only the latest version on `main` receives security fixes.
 
 ## Reporting a vulnerability
 
-Please do not open a public issue. Report it privately through
-[GitHub private vulnerability reporting](https://github.com/Kitsuden/kitsuden/security/advisories/new).
+Please do not put the details of a vulnerability in a public issue, pull request or
+discussion. Report it privately through
+[GitHub private vulnerability reporting](https://github.com/Kitsuden/kitsuden/security/advisories/new)
+(the **Report a vulnerability** button on the repository's _Security_ tab).
 
-Include what you can of:
+If that page is not available to you, open a
+[new issue](https://github.com/Kitsuden/kitsuden/issues/new) whose title and text say only
+"Security contact requested". Do not describe the problem, the affected part or how to
+reproduce it there. A maintainer answers on that issue with a private channel, and the report
+continues there.
+
+In the private report, include what you can of:
 
 - the affected route, package or file, and the version or commit;
 - the steps to reproduce it, ideally with a request or a failing test;

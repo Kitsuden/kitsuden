@@ -96,7 +96,7 @@ function maskPassword(url: string | undefined): string {
  * site's content. It was a narrow escape: that database was not up.
  *
  * So the name has to declare itself as a test one. It is a cheap convention
- * (`kitsuden_test`, `gremius_test`) and the cost of getting it wrong cannot be undone. With
+ * (`kitsuden_test`, `myapp_test`) and the cost of getting it wrong cannot be undone. With
  * `KITSUDEN_ALLOW_UNSAFE_TEST_DB=1` it can be skipped, for
  * anyone who really has a test database with another name.
  */

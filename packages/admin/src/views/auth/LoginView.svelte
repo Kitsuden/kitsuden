@@ -348,7 +348,7 @@
             bind:value={email}
             type="email"
             id="email"
-            placeholder={t("loginView.adminKitsudenGg")}
+            placeholder={t("loginView.emailPlaceholder")}
             class="field-input"
             autocomplete="email"
             required
@@ -440,7 +440,7 @@
             bind:value={email}
             type="email"
             id="magic-email"
-            placeholder={t("loginView.adminKitsudenGg")}
+            placeholder={t("loginView.emailPlaceholder")}
             class="field-input"
             autocomplete="email"
             required
@@ -465,7 +465,7 @@
             bind:value={email}
             type="email"
             id="forgot-email"
-            placeholder={t("loginView.adminKitsudenGg")}
+            placeholder={t("loginView.emailPlaceholder")}
             class="field-input"
             autocomplete="email"
             required

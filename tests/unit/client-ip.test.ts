@@ -162,8 +162,14 @@ describe("rate-limiter.ts", () => {
   });
 });
 
+// This test pays for a cold import of the rate limiter: vitest transforms it and everything
+// it imports on the spot. On a loaded machine that alone took 16 to 22 seconds, against the
+// suite's 20-second default, so the test timed out before its two assertions ran. The budget
+// is for the import, not for the assertions.
+const COLD_IMPORT_TIMEOUT_MS = 90_000;
+
 describe("limits on anonymous routes that send mail", () => {
-  it("the members' magic link has its own limit", async () => {
+  it("the members' magic link has its own limit", { timeout: COLD_IMPORT_TIMEOUT_MS }, async () => {
     const { RATE_LIMIT_CONFIGS } = await import("../../apps/api/src/lib/rate-limiter");
     expect(RATE_LIMIT_CONFIGS["/api/members/signin"]?.limit).toBeLessThanOrEqual(5);
     expect(RATE_LIMIT_CONFIGS["/api/auth/sign-in/email"]?.limit).toBeLessThanOrEqual(10);

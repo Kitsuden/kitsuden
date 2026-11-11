@@ -12,6 +12,7 @@
   import {
     listRequestTraces,
     requestTraceSummary,
+    requestTraceTime,
     type OperationSummary,
     type RequestTrace,
   } from "$lib/services/system";
@@ -54,7 +55,10 @@
     }
   }
 
-  const date = (v: string) => new Date(v).toLocaleString(localeFormat());
+  const date = (v: string) => {
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString(localeFormat());
+  };
   const ms = (v: number | null) =>
     v === null || v === undefined ? "—" : `${Math.round(Number(v))} ms`;
   const reason = (m: string) =>
@@ -164,7 +168,9 @@
           <tbody class="divide-y divide-zinc-800/70">
             {#each traces as tr, i (`${tr.request_id ?? ""}-${i}`)}
               <tr data-testid="trace-row">
-                <td class="px-3 py-1.5 whitespace-nowrap text-zinc-400">{date(tr.createdAt)}</td>
+                <td class="px-3 py-1.5 whitespace-nowrap text-zinc-400"
+                  >{date(requestTraceTime(tr))}</td
+                >
                 <td class="px-3 py-1.5 font-mono text-zinc-200">{tr.method} {tr.route}</td>
                 <td
                   class="px-3 py-1.5 {tr.status >= 500

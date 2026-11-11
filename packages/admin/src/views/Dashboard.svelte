@@ -27,6 +27,7 @@
   import type { ComponentType, SvelteComponent } from "svelte";
 
   import { isAdmin } from "../lib/auth.svelte";
+  import { activityLabel, newestFirst } from "../lib/dashboard-activity";
   import StatusBadge from "../lib/components/ui/StatusBadge.svelte";
   import { Badge, Button } from "../lib/tallao";
   import { componentRegistry } from "../lib/registry.svelte";
@@ -52,6 +53,8 @@
     color: string;
     text: string;
     time: string;
+    /** When it happened, as the API sent it: the list is sorted by this, not by `time`. */
+    at: string;
     href?: string;
   };
 
@@ -181,8 +184,9 @@
             ...data.data.slice(0, 3).map((log: any) => ({
               icon: Activity,
               color: log.success ? "cyan" : "pink",
-              text: t("dashboard.agentExecuted", { v: log.action || "action" }),
+              text: activityLabel(log.action, t),
               time: formatTimeAgo(log.createdAt),
+              at: log.createdAt,
               // `/agents/logs` is NOT a route: it matches `/agents/[id]` and opens the page
               // of an agent called "logs", which does not exist. It resolved in the link
               // probe for that very reason, and failed just the same on click.
@@ -201,6 +205,7 @@
               color: action.status === "active" ? "green" : "subtle",
               text: t("dashboard.action", { status: action.status, name: action.name }),
               time: formatTimeAgo(action.createdAt),
+              at: action.createdAt,
               href: `/actions`,
             }))
           );
@@ -216,19 +221,15 @@
               color: "amber",
               text: t("dashboard.datasetCreated", { name: ds.name }),
               time: formatTimeAgo(ds.createdAt),
+              at: ds.createdAt,
               href: `/datasets`,
             }))
           );
         }
       }
 
-      // Sort by time (most recent first) - parse the time strings
-      recentActivity = activities
-        .sort((a, b) => {
-          // Simple string comparison for time ago format
-          return a.time.localeCompare(b.time);
-        })
-        .slice(0, 6);
+      // Most recent first, by the real moment (see `$lib/dashboard-activity`).
+      recentActivity = newestFirst(activities).slice(0, 6);
     } catch (err) {
       console.error("Failed to load activity:", err);
       recentActivity = [];

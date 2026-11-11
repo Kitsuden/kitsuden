@@ -388,13 +388,18 @@
     try {
       const res = await fetch(`${API}/api/health`);
       apiOnline = res.ok;
+      // Only the status matters. The body was never read, so the connection stayed open
+      // until it was collected (and the dev tools showed the request as pending).
+      void res.body?.cancel().catch(() => {});
     } catch {
       apiOnline = false;
     }
 
     // Fetch modules into shared store (if not already loaded)
-    if (moduleStore.modules.length === 0 && currentUserIsAdmin()) {
-      await moduleStore.fetchModules();
+    if (!moduleStore.loaded && currentUserIsAdmin()) {
+      // `whenLoaded`, not `fetchModules`: a page mounted inside this layout (the post
+      // editor) may have asked already, and a second request would supersede the first.
+      await moduleStore.whenLoaded();
     }
   });
 

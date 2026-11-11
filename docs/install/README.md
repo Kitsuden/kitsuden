@@ -53,16 +53,16 @@ A command that changed after that date carries no test mark.
   editor  ──► public website with INTI=true ──(agent key)──► API
 ```
 
-| Piece               | Where it lives                                                                                                                                                         | Required                                                                              |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| API                 | `apps/api`                                                                                                                                                             | yes                                                                                   |
-| Database            | Postgres **16** with the **pgvector** extension (image `pgvector/pgvector:pg16`)                                                                                       | yes                                                                                   |
-| Valkey (or Redis 7) | shared cache and rate-limit counters across several API replicas                                                                                                       | no for one API; the root compose file starts it anyway and requires `VALKEY_PASSWORD` |
-| Admin panel         | `packages/admin` (static SvelteKit build served by nginx)                                                                                                              | yes, to administer it                                                                 |
-| Kons (plugins)      | core: `packages/core/*`; the rest installed with `kitsuden kon add` from the `kitsuden-kons` repository (not public yet) or a registry ([kons](../kons/installing.md)) | the ones you install and enable                                                       |
-| Public website      | `packages/starters/kitsuden-starter-basic` (Astro 7, server-rendered)                                                                                                  | no (Kitsuden is headless)                                                             |
-| Inti                | a separate repository (`@intijs/*`), installed from git                                                                                                                | no: only for on-page editing                                                          |
-| Backups             | the `kitsuden_backup` service (same image as the API)                                                                                                                  | yes in production                                                                     |
+| Piece                                   | Where it lives                                                                                                                                                                                     | Required                                                                                                                                  |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| API                                     | `apps/api`                                                                                                                                                                                         | yes                                                                                                                                       |
+| Database                                | Postgres **16** with the **pgvector** extension (image `pgvector/pgvector:pg16`)                                                                                                                   | yes                                                                                                                                       |
+| Valkey 9 (or a Redis-compatible server) | shared cache and rate-limit counters across several API replicas                                                                                                                                   | optional for the API (one replica runs without it); required by the root compose file, which always starts it and needs `VALKEY_PASSWORD` |
+| Admin panel                             | `packages/admin` (static SvelteKit build served by nginx)                                                                                                                                          | yes, to administer it                                                                                                                     |
+| Kons (plugins)                          | core: `packages/core/*`; the rest installed with `kitsuden kon add` from the [`kitsuden-kons`](https://github.com/Kitsuden/kitsuden-kons) repository or a registry ([kons](../kons/installing.md)) | the ones you install and enable                                                                                                           |
+| Public website                          | `packages/starters/kitsuden-starter-basic` (Astro 7, server-rendered)                                                                                                                              | no (Kitsuden is headless)                                                                                                                 |
+| Inti                                    | a separate repository (`@intijs/*`), installed from git                                                                                                                                            | no: only for on-page editing                                                                                                              |
+| Backups                                 | the `kitsuden_backup` service (same image as the API)                                                                                                                                              | yes in production                                                                                                                         |
 
 The monorepo packages (`@kitsuden/*`) are **not** published on npm (nor on
 PyPI), and the Docker images are **not** published to GHCR: the packages are used
@@ -125,10 +125,13 @@ The API is stricter when `NODE_ENV=production` (the Docker images) or
 
 ## Known caveats
 
-- **Fixed names in the compose file.** `container_name`, volumes with `name:` and
-  the `kitsuden_net_prod` network are fixed: only **one** installation fits on a
-  machine. A second one (for testing) needs an overlay that renames them
-  ([server.md](server.md#a-second-installation-on-the-same-machine)).
+- **Names take the `KITSUDEN_INSTANCE` prefix** (default `kitsuden`): containers,
+  named volumes and the network (`kitsuden_db_prod`, `kitsuden_net_prod`…). Two
+  installations on one machine must not share a prefix, or the second would clash
+  with the first or use its volumes. `./install.sh` picks a free prefix and free
+  ports by itself; by hand, set them in `.env`
+  ([server.md](server.md#a-second-installation-on-the-same-machine)). Only one
+  stack per machine can use the TLS overlay: it publishes ports 80 and 443.
 - **`docker compose up` without `-f` merges `docker-compose.override.yml`**
   wherever that file exists (it is a local development file, not in a clean
   clone; it starts SeaweedFS). On a server always use `-f docker-compose.yml`

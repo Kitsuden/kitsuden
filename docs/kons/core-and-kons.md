@@ -7,7 +7,7 @@ human approval, MCP, TOON, Row-Level Security, datasets, media, the page
 builder, the admin panel, `@kitsuden/shared`, the CLI and the **kon SDK**.
 
 **Kons** are optional modules that add a domain on top of the core. They live in
-their own repository, `kitsuden-kons` (MIT, not public yet), each with a
+their own repository, [`kitsuden-kons`](https://github.com/Kitsuden/kitsuden-kons) (MIT), each with a
 declared maturity, and are installed with `kitsuden kon add <name>`
 ([installing kons](installing.md)). The core does not depend on any of them: a
 fresh clone of Kitsuden installs, builds and passes its tests with no kon

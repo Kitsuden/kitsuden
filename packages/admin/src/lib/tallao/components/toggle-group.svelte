@@ -204,8 +204,8 @@
   }
   .ta-toggle-group .ta-toggle-group-button--solid[aria-pressed="true"] {
     color: var(--ta-toggle-on-accent, rgb(var(--ta-on-accent)));
-    background: var(--ta-toggle-accent, rgb(var(--ta-accent)));
-    border-color: var(--ta-toggle-accent, rgb(var(--ta-accent)));
+    background: var(--ta-toggle-accent, var(--ta-accent-fill, color-mix(in srgb, rgb(var(--ta-accent)) 88%, black)));
+    border-color: var(--ta-toggle-accent, var(--ta-accent-fill, color-mix(in srgb, rgb(var(--ta-accent)) 88%, black)));
   }
 
   /* bare: the button is its content (an icon), no frame or background; when pressed, a ring. */

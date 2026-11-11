@@ -214,6 +214,14 @@
    * comes from that relation, so without this there would be no way for it to appear.
    */
   let gameIds = $state<string[]>([]);
+  /**
+   * Whether `gameIds` holds what the post really has. Saving sent `gameIds: []` on every
+   * edit, and for the API `[]` means "remove them all": with kon-games off (nothing to load,
+   * nothing to tick) or a post whose answer did not bring the field, an edit of the title
+   * wiped the post's games. It is sent only when it was loaded and kon-games is on.
+   */
+  let gameIdsLoaded = false;
+  let gameKonOn = false;
   let availableGames = $state<Array<{ id: string; title: string }>>([]);
   let availableCategories = $state<BlogCategory[]>([]);
   let showCategoryModal = $state(false);
@@ -528,9 +536,9 @@
         .map((id) => availableTags.find((t) => t.id === id))
         .filter((t): t is { id: string; name: string; slug: string } => !!t);
 
-      gameIds = Array.isArray((post as { gameIds?: string[] }).gameIds)
-        ? ((post as { gameIds?: string[] }).gameIds as string[])
-        : [];
+      gameIdsLoaded = Array.isArray((post as { gameIds?: string[] }).gameIds);
+      gameIds = gameIdsLoaded ? ((post as { gameIds?: string[] }).gameIds as string[]) : [];
+      keepPostAuthor(post as { authorId?: string | null; author?: PostAuthor | null });
       categoryIds = Array.isArray((post as { categoryIds?: string[] }).categoryIds)
         ? ((post as { categoryIds?: string[] }).categoryIds as string[])
         : [];
@@ -551,7 +559,8 @@
   }
 
   async function loadGames() {
-    if (!(await hasGameKon())) return;
+    gameKonOn = await hasGameKon();
+    if (!gameKonOn) return;
     try {
       const responseValue = await api.getGames({ limit: 100 });
       availableGames = (responseValue.docs ?? []).map((game) => ({
@@ -639,6 +648,22 @@
       : [];
   }
 
+  type PostAuthor = { id?: string; displayName?: string | null; name?: string | null };
+
+  /**
+   * The post's own author stays in the list. There is no account listing, so the options
+   * were only the session user: a post written by someone else showed the selector blank,
+   * as if it had no author. `GET /api/blog/:id` sends `author: { id, displayName, image }`.
+   */
+  function keepPostAuthor(post: { authorId?: string | null; author?: PostAuthor | null }) {
+    const id = post.authorId || post.author?.id;
+    if (!id || availableAuthors.some((a) => a.id === id)) return;
+    availableAuthors = [
+      ...availableAuthors,
+      { id, name: post.author?.displayName || post.author?.name || id, email: "" },
+    ];
+  }
+
   /**
    * Tags and games come from kon-games. If the admin has it turned off (we
    * know this from /api/modules), requesting them only produced two 404s on each opening of the
@@ -646,8 +671,12 @@
    */
   async function hasGameKon(): Promise<boolean> {
     if (!isAdmin()) return true;
-    if (moduleStore.modules.length === 0) await moduleStore.fetchModules();
-    return moduleStore.modules.length === 0 || moduleStore.activeKon("kon-games");
+    // Joins the request the layout already made: a second `fetchModules()` here superseded
+    // it, came back with the list still empty, and "empty" was read as "may be on".
+    await moduleStore.whenLoaded();
+    // No list at all (the request failed): unknown, so they are tried, as for the editor.
+    if (!moduleStore.loaded) return true;
+    return moduleStore.activeKon("kon-games");
   }
 
   // ─── Helpers ────────────────────────────────────────
@@ -858,7 +887,8 @@
       if (postId || categoryIds.length > 0) postData.categoryIds = categoryIds;
 
       // Same treatment as categories: `[]` removes all, omitting it touches nothing.
-      if (postId || gameIds.length > 0) postData.gameIds = gameIds;
+      // …but only what was really loaded: see `gameIdsLoaded`.
+      if (gameKonOn && (postId ? gameIdsLoaded : gameIds.length > 0)) postData.gameIds = gameIds;
 
       if (postId) {
         if (loadedVersion) postData.expectedUpdatedAt = loadedVersion;
@@ -2020,7 +2050,9 @@
               <Select bind:value={authorId}>
                 <option value="">{tr("blogPostEditor.selectAuthor")}</option>
                 {#each availableAuthors as author}
-                  <option value={author.id}>{author.name} ({author.email})</option>
+                  <option value={author.id}
+                    >{author.name}{author.email ? ` (${author.email})` : ""}</option
+                  >
                 {/each}
               </Select>
             </div>

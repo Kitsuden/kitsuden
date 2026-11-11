@@ -22,7 +22,10 @@ export interface TraceBlocking {
 }
 
 export interface RequestTrace {
-  createdAt: string;
+  /** The row as Postgres names it (`SELECT *` from `kitsuden_traces_list`). */
+  created_at: string;
+  /** Not sent by the API: kept so an older answer or a mock still shows its date. */
+  createdAt?: string;
   request_id: string | null;
   method: string;
   route: string;
@@ -108,4 +111,9 @@ export function retryJob(id: string): Promise<{ success: boolean }> {
 
 export function discardJob(id: string): Promise<{ success: boolean }> {
   return fetchJson(`${ROOT}/api/admin/queue/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/** When the request happened. The API sends `created_at`; the panel read `createdAt` and showed "Invalid Date". */
+export function requestTraceTime(tr: Pick<RequestTrace, "created_at" | "createdAt">): string {
+  return tr.created_at ?? tr.createdAt ?? "";
 }

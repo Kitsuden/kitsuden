@@ -136,6 +136,7 @@
     min-width: 10rem;
     max-width: min(20rem, calc(100vw - 1rem));
     max-height: min(24rem, calc(100vh - 2rem));
+    max-height: min(24rem, var(--ta-available-height, calc(100dvh - 2rem)));
     overflow-y: auto;
     padding: 0.25rem;
     color: rgb(var(--ta-text));

@@ -78,4 +78,9 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+
+  /* On touch screens: 44px items for the finger. */
+  @media (pointer: coarse) {
+    .ta-menu-item { min-height: 2.75rem; }
+  }
 </style>

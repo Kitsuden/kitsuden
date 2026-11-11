@@ -20,6 +20,8 @@ import type {
   UpdateAgentInput,
 } from "$lib/types/agents";
 
+import { toAgent, toTrace, toTracePage } from "./agent-mappers";
+
 // With VITE_API_URL (panel and API on different origins) a relative path went to the
 // panel server and returned its index.html with a 404.
 const ROOT = import.meta.env.VITE_API_URL ?? "";
@@ -48,11 +50,12 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 // ============== Agents ==============
 
 export async function listAgents(): Promise<Agent[]> {
-  return fetchJson<Agent[]>(`${API_BASE}/agents`);
+  const rows = await fetchJson<unknown>(`${API_BASE}/agents`);
+  return Array.isArray(rows) ? rows.map(toAgent) : [];
 }
 
 export async function getAgent(id: string): Promise<Agent> {
-  return fetchJson<Agent>(`${API_BASE}/agents/${id}`);
+  return toAgent(await fetchJson<unknown>(`${API_BASE}/agents/${id}`));
 }
 
 export async function createAgent(
@@ -66,11 +69,13 @@ export async function createAgent(
 }
 
 export async function updateAgent(id: string, data: UpdateAgentInput): Promise<Agent> {
-  return fetchJson<Agent>(`${API_BASE}/agents/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
+  return toAgent(
+    await fetchJson<unknown>(`${API_BASE}/agents/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+  );
 }
 
 export async function deleteAgent(id: string): Promise<void> {
@@ -93,6 +98,13 @@ interface ListTracesOptions {
 }
 
 export async function listTraces(options: ListTracesOptions = {}): Promise<AgentTrace[]> {
+  return (await listTracesPage(options)).traces;
+}
+
+/** A page of traces with the TOTAL the API counts, which "Load more" needs. */
+export async function listTracesPage(
+  options: ListTracesOptions = {}
+): Promise<{ traces: AgentTrace[]; total: number }> {
   const { agentId, sessionId, limit = 20, offset = 0 } = options;
   const params = new URLSearchParams();
   params.set("limit", String(limit));
@@ -102,16 +114,12 @@ export async function listTraces(options: ListTracesOptions = {}): Promise<Agent
   if (agentId) params.set("agentId", agentId);
 
   // /api/v1/traces responds { traces, total }
-  const res = await fetchJson<{ traces: AgentTrace[] } | AgentTrace[]>(
-    `${API_BASE}/traces?${params}`
-  );
-  return Array.isArray(res) ? res : (res.traces ?? []);
+  return toTracePage(await fetchJson<unknown>(`${API_BASE}/traces?${params}`));
 }
 
 export async function getTrace(id: string): Promise<AgentTrace & { steps: AgentTraceStep[] }> {
-  return fetchJson<AgentTrace & { steps: AgentTraceStep[] }>(
-    `${API_BASE}/traces/${id}?expand=steps`
-  );
+  const trace = toTrace(await fetchJson<unknown>(`${API_BASE}/traces/${id}?expand=steps`));
+  return { ...trace, steps: Array.isArray(trace.steps) ? trace.steps : [] };
 }
 
 export async function listTraceSteps(traceId: string): Promise<AgentTraceStep[]> {

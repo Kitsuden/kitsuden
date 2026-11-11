@@ -15,6 +15,7 @@ import { t as tr } from "$lib/i18n";
  */
 
 import { getUser } from "./auth.svelte";
+import { registryEntry } from "./registry-entry";
 import type { AdminConfig } from "./types/admin";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
@@ -281,7 +282,9 @@ export async function getGrimoireConfig(grimoireId: string): Promise<GrimoireAdm
 
     if (res.ok) {
       const data = await res.json();
-      return data.grimoire || null;
+      // `GET /api/admin/registry/:konId` answers `{ success, kon }`. It was read as
+      // `data.grimoire`, a name from before the rename, so this fallback always gave null.
+      return registryEntry<GrimoireAdminConfig>(data);
     }
   } catch (e) {
     console.error(`[GrimoireLoader] Failed to fetch config for ${grimoireId}:`, e);

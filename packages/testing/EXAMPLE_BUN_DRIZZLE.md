@@ -231,8 +231,10 @@ describe("Blog API", () => {
 ## Recommended Setup
 
 ```bash
-# 1. Install dependencies
-bun add -d @kitsuden/testing pg-mem
+# 1. Install dependencies. @kitsuden/testing is not on npm yet: inside the Kitsuden
+#    workspace, add "@kitsuden/testing": "workspace:*" and "pg-mem" to your kon's
+#    devDependencies and run `pnpm install` (see QUICKSTART.md). Once it is published:
+#    bun add -d @kitsuden/testing pg-mem
 
 # 2. Add to package.json scripts
 {

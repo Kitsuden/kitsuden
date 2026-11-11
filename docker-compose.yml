@@ -62,6 +62,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-kitsuden_prod}
       KITSUDEN_PITR: ${KITSUDEN_PITR:-off}
       PG_ARCHIVE_TIMEOUT: ${PG_ARCHIVE_TIMEOUT:-300}
+      # WAL kept for a replica that has fallen behind (docker/postgres-entrypoint.sh)
+      PG_MAX_SLOT_WAL_KEEP_SIZE: ${PG_MAX_SLOT_WAL_KEEP_SIZE:-10GB}
     volumes:
       - kitsuden_postgres_prod:/var/lib/postgresql/data
       - ./docker/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql:ro
@@ -82,7 +84,11 @@ services:
       - kitsuden_net_prod
 
   # ═══════════════════════════════════════════════════════════════════════
-  # Valkey 9 (REQUIRED) - Cache, Pub/Sub, Queue backend
+  # Valkey 9 (REQUIRED by this file) - Cache, Pub/Sub, Queue backend
+  #
+  # The API itself runs without Valkey when there is a single replica (it keeps
+  # these in memory and in Postgres); this stack always starts one, and the API
+  # waits for it (`depends_on`).
   #
   # Password required: any process on the host can reach a published port, and
   # an open Valkey lets it read and rewrite the cache, including sessions. Use a
@@ -140,8 +146,9 @@ services:
   # volume) stay inside Docker's network.
   # ═══════════════════════════════════════════════════════════════════════
   kitsuden_seaweedfs:
-    # Pinned version, like Postgres and Valkey: `latest` is exactly what left
-    # MinIO frozen without anything warning
+    # An exact version, never `latest`: `latest` is exactly what left MinIO frozen
+    # without anything warning. (Postgres and Valkey above follow their major:
+    # `pg16`, `9-alpine`. The dev and test compose files pin them by digest.)
     image: chrislusf/seaweedfs:4.52
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_seaweedfs_prod
     restart: unless-stopped
@@ -270,7 +277,19 @@ services:
       # continue if any still points to localhost.
       - KITSUDEN_PUBLIC=${KITSUDEN_PUBLIC:-false}
       - KITSUDEN_SIGNUP=${KITSUDEN_SIGNUP:-}
-      - KITSUDEN_SANDBOX_ALLOW_INTERNAL_FETCH=${KITSUDEN_SANDBOX_ALLOW_INTERNAL_FETCH:-}
+      # optional | required: must admins use an authenticator app. Empty = optional.
+      - KITSUDEN_ADMIN_MFA=${KITSUDEN_ADMIN_MFA:-}
+      # Social sign-in. A provider is on only when both its id and its secret are set;
+      # empty = off. The callback is BETTER_AUTH_URL/api/auth/callback/<provider>.
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
+      - AZURE_AD_CLIENT_ID=${AZURE_AD_CLIENT_ID:-}
+      - AZURE_AD_CLIENT_SECRET=${AZURE_AD_CLIENT_SECRET:-}
+      - AZURE_AD_TENANT_ID=${AZURE_AD_TENANT_ID:-}
       - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
       - ADMIN_URL=${ADMIN_URL:-http://localhost:3001}
       # OAuth issuer for MCP. Empty = BETTER_AUTH_URL (lib/oauth/config.ts).
@@ -304,11 +323,25 @@ services:
       # map of the API. To see it locally, `ENABLE_SWAGGER=true` in `.env`.
       - ENABLE_SWAGGER=${ENABLE_SWAGGER:-false}
       - ENABLE_MCP=${ENABLE_MCP:-true}
+      # Code actions and functions (docs/agents/sandbox.md). Empty = the code's
+      # default, which is off in production; `true` turns them on.
+      - ENABLE_CODE_ACTIONS=${ENABLE_CODE_ACTIONS:-}
+      # What that code, webhooks and external MCP servers may reach. Empty = the
+      # strict default of each: no extra fetch hosts, public addresses only, and
+      # customer data to no host (docs/agents/sandbox.md, egress.md, external-mcp.md).
+      - KITSUDEN_SANDBOX_FETCH_ALLOW=${KITSUDEN_SANDBOX_FETCH_ALLOW:-}
+      - KITSUDEN_SANDBOX_ALLOW_INTERNAL_FETCH=${KITSUDEN_SANDBOX_ALLOW_INTERNAL_FETCH:-}
+      - KITSUDEN_WEBHOOK_ALLOW_INTERNAL=${KITSUDEN_WEBHOOK_ALLOW_INTERNAL:-}
+      - KITSUDEN_CUSTOMER_DATA_HOSTS=${KITSUDEN_CUSTOMER_DATA_HOSTS:-}
+      - KITSUDEN_EXTERNAL_MCP_ALLOW_INTERNAL=${KITSUDEN_EXTERNAL_MCP_ALLOW_INTERNAL:-}
+      # kon-payments: the plan/price ids that can be bought, comma-separated.
+      # Empty = nothing is sold. Only read when that kon is installed.
+      - PAYMENTS_ALLOWED_PLANS=${PAYMENTS_ALLOWED_PLANS:-}
       # Rate limiting
       - RATE_LIMIT_ENABLED=true
       # Key shared with the public site (Astro): with it the quota is
       # counted per visitor and not for the whole site at once. Empty = no effect.
-      # Ver apps/api/src/lib/rate-limiter.ts (siteVisitor).
+      # See apps/api/src/lib/rate-limiter.ts (siteVisitor).
       - SITE_API_KEY=${SITE_API_KEY:-}
       # Top-level routes of YOUR web that a game cannot occupy (in addition
       # to the common ones from @kitsuden/shared), comma-separated. Empty = only
@@ -410,7 +443,7 @@ services:
   #
   # RESTORING a dump requires pg_restore 17 (the one in THIS image): the one in the
   # Postgres 16 image says «unsupported version (1.16) in file header».
-  # Ver docs/install/upgrade-and-backups.md.
+  # See docs/install/upgrade-and-backups.md.
   # ═══════════════════════════════════════════════════════════════════════
   kitsuden_backup:
     image: ${KITSUDEN_API_IMAGE:-ghcr.io/kitsuden/kitsuden/api:latest}

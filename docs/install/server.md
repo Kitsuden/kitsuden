@@ -35,9 +35,9 @@ with a real domain.
 | `kitsuden_api`    | `docker/Dockerfile.prod --target api`      | 127.0.0.1:3000                                 |
 | `kitsuden_admin`  | `docker/Dockerfile.prod --target admin`    | 127.0.0.1:3001 (the container listens on 8080) |
 | `kitsuden_db`     | `pgvector/pgvector:pg16`                   | 127.0.0.1:5432                                 |
-| `kitsuden_state`  | `valkey/valkey:7-alpine`                   | 127.0.0.1:6379                                 |
+| `kitsuden_state`  | `valkey/valkey:9-alpine`                   | 127.0.0.1:6379                                 |
 | `kitsuden_backup` | the API image                              | none                                           |
-| `kitsuden_proxy`  | `caddy:2.10-alpine` (TLS overlay only)     | 80, 443 (the only public ones)                 |
+| `kitsuden_proxy`  | `caddy:2.11-alpine` (TLS overlay only)     | 80, 443 (the only public ones)                 |
 | `kitsuden_web`    | `docker/Dockerfile.web` (TLS overlay only) | none (only Caddy reaches it)                   |
 
 ## 1. Get the code
@@ -114,9 +114,11 @@ that was in the repository then; the panel is SvelteKit). It ends with the API a
   tagged as the API. `docker compose build` already sets the right `target`.
 - There are no published images of this project yet. The compose files never
   pull the API or panel images (`pull_policy: never`, or `build` in the TLS
-  overlay): always build first. A project made with `npm create kitsuden` is the
-  exception: it has no source to build, so its compose file pulls the published
-  `ghcr.io/kitsuden/kitsuden/*` images of its release (`pull_policy: missing`).
+  overlay): always build first. `packages/create-kitsuden` (`npm create kitsuden`)
+  is not on npm yet either. Once it and the images are published, a project made
+  with it will be the exception: it has no source to build, so its compose file
+  pulls the `ghcr.io/kitsuden/kitsuden/*` images of its release
+  (`pull_policy: missing`).
 
 ## 4. Start
 
@@ -275,7 +277,7 @@ Check without printing secrets:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.tls.yml config -q && echo OK
-./scripts/deploy.sh --check        # ("check") the same, plus the <...> placeholders and the .env permissions
+./scripts/deploy.sh --check        # the same, plus the <...> placeholders and the .env permissions
 ```
 
 ## 9. First public start

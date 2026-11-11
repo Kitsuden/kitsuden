@@ -29,14 +29,17 @@
   import Button from "$lib/components/ui/Button.svelte";
   import Card from "$lib/components/ui/Card.svelte";
   import {
+    deleteAgent,
     getAgent,
     updateAgent,
     sendPlaygroundMessage,
     listTraces,
     listTraceSteps,
   } from "$lib/services/agents";
+  import { ConfirmDialog } from "$lib/tallao";
   import type { Agent, AgentTraceStep } from "$lib/types/agents";
 
+  import { goto } from "$app/navigation";
   import { page } from "$app/stores";
 
   const agentId = $page.params.id;
@@ -45,6 +48,17 @@
   let loading = $state(true);
   let saving = $state(false);
   let error = $state<string | null>(null);
+  // The "Remove" button of the settings tab had no handler: it looked like it deleted.
+  let confirmingRemoval = $state(false);
+
+  async function handleRemove() {
+    try {
+      await deleteAgent(agentId);
+      await goto("/agents");
+    } catch (e) {
+      error = e instanceof Error ? e.message : t("agentsView.errorRemovingAgent");
+    }
+  }
   // `?tab=settings` directly opens the configuration ("Configure" button in the list).
   // Also `?tab=access`, `?tab=keys` and `?tab=quotas`; human approval, `?tab=approval` and `?tab=sponsor`.
   // `?tab=history`: versions of the definition and what the agent chose not to do.
@@ -136,10 +150,9 @@
       for (const trace of traces) {
         const steps = await listTraceSteps(trace.id);
         for (const step of steps) {
-          allSteps.push({
-            ...step,
-            toolOutput: step.content,
-          });
+          // The step as the API sends it: it already has `toolOutput`. Overwriting it
+          // with `content` showed the model's text as the tool's answer.
+          allSteps.push(step);
         }
       }
       traceSteps = allSteps.sort(
@@ -227,7 +240,11 @@
         </div>
         <div>
           <h1 class="text-xl font-semibold text-zinc-100">{agent.name}</h1>
-          <p class="text-xs text-zinc-500">{agent.model} • {agent.status}</p>
+          <p class="text-xs text-zinc-500">
+            {[agent.model ?? agent.type, t(`agentsView.status_${agent.status}`)]
+              .filter(Boolean)
+              .join(" • ")}
+          </p>
         </div>
       </div>
     {/if}
@@ -382,7 +399,11 @@
             </div>
 
             <div class="flex items-center justify-between pt-4 border-t border-zinc-800">
-              <Button variant="secondary" class="text-red-400 hover:text-red-300">
+              <Button
+                variant="secondary"
+                class="text-red-400 hover:text-red-300"
+                onclick={() => (confirmingRemoval = true)}
+              >
                 <Trash2 size={16} class="mr-2" />
                 {t("common.remove")}
               </Button>
@@ -436,3 +457,13 @@
     {/if}
   </div>
 </div>
+
+<ConfirmDialog
+  bind:open={confirmingRemoval}
+  variant="danger"
+  title={t("agentsView.removeAgent")}
+  description={t("agentsView.areYouSureThisActionNot")}
+  confirmLabel={t("common.remove")}
+  cancelLabel={t("common.cancel")}
+  onConfirm={handleRemove}
+/>

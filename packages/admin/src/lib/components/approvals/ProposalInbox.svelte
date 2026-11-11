@@ -4,6 +4,7 @@
   agent will see). Only the human team gets here (the API requires it).
 -->
 <script lang="ts">
+  import { fieldDiffRedacted, readableFieldDiff } from "$lib/approvals-diff";
   import { t, localeFormat } from "$lib/i18n";
   import { Check, X, RefreshCw, Inbox } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -61,7 +62,8 @@
 
   function resetLedger(p: ProposalDetail | null) {
     const choice: Record<string, { accept: boolean; value: string }> = {};
-    for (const f of p?.fieldDiff?.fields ?? []) choice[f.field] = { accept: true, value: "" };
+    for (const f of readableFieldDiff(p)?.fields ?? [])
+      choice[f.field] = { accept: true, value: "" };
     fieldChoice = choice;
     reviewAt = "";
     reviewNote = "";
@@ -91,7 +93,7 @@
     // Everything accepted as proposed: no `fields`, the whole request runs. Any
     // rejection or edit: EVERY field is listed, since the API rejects a field
     // the list leaves out.
-    if (approving && p.fieldDiff && p.fieldDiff.fields.length > 0) {
+    if (approving && (readableFieldDiff(p)?.fields.length ?? 0) > 0) {
       const choices = Object.entries(fieldChoice);
       if (choices.some(([, c]) => !c.accept || c.value.trim() !== "")) {
         extra.fields = choices.map(([field, c]) =>
@@ -317,6 +319,7 @@
       <p class="text-sm text-zinc-500 p-4">{t("approvals.selectHint")}</p>
     {:else}
       {@const s = selection}
+      {@const diff = readableFieldDiff(s)}
       <div class="border border-zinc-800 rounded-lg p-4 space-y-4">
         <div class="flex flex-wrap items-center gap-2">
           <span
@@ -428,16 +431,21 @@
           </p>
         {/if}
 
-        {#if s.fieldDiff}
+        {#if fieldDiffRedacted(s)}
+          <p class="text-xs text-zinc-500" data-testid="proposal-fields-redacted">
+            {t("approvals.fieldsRedacted")}
+          </p>
+        {/if}
+        {#if diff}
           {@const choosing = s.status === "pending" && s.canDecide}
           <div data-testid="proposal-fields">
             <h4 class="text-xs font-semibold text-zinc-400 mb-1.5">{t("approvals.fieldsTitle")}</h4>
-            {#if s.fieldDiff.currentUnavailable !== undefined}
+            {#if diff.currentUnavailable !== undefined}
               <p class="text-xs text-amber-300/80 mb-1.5">
-                {t("approvals.diffUnavailable", { v: String(s.fieldDiff.currentUnavailable) })}
+                {t("approvals.diffUnavailable", { v: String(diff.currentUnavailable) })}
               </p>
             {/if}
-            {#if s.fieldDiff.fields.length === 0}
+            {#if diff.fields.length === 0}
               <p class="text-xs text-zinc-500">{t("approvals.noChanges")}</p>
             {:else}
               {#if choosing}
@@ -457,7 +465,7 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-zinc-800/70">
-                    {#each s.fieldDiff.fields as f (f.field)}
+                    {#each diff.fields as f (f.field)}
                       {@const decided = decisionOf(s, f.field)}
                       <tr data-testid="field-row" data-field={f.field}>
                         <td class="px-2 py-1 align-top">

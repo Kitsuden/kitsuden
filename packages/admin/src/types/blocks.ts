@@ -186,7 +186,7 @@ export interface GameMapBlockData {
     description?: string;
     icon?: string;
   }>;
-  /** @deprecated Ver `markers`. */
+  /** @deprecated See `markers`. */
   categories?: Array<{
     name: string;
     color: string;

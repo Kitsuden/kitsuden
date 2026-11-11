@@ -331,7 +331,7 @@ async function handleSearchEntries(args: Json = {}) {
         content: [
           {
             type: "text",
-            text: `🔍 No results found for "${query}" en el dataset ${datasetId}`,
+            text: `🔍 No results found for "${query}" in dataset ${datasetId}`,
           },
         ],
       };

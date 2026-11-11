@@ -1,6 +1,6 @@
 /**
  * Brain Types
- * Types for the KITSUDEN Brain knowledge system
+ * Types for the Brain knowledge system
  */
 
 export interface BrainNote {
@@ -60,6 +60,8 @@ export interface BrainNeighborhood {
   depth: number;
 }
 
+/** `GET /api/brain/wiki`: where the generated wiki is on the server's disk. */
 export interface BrainWiki {
-  files: string[];
+  path: string;
+  index: string;
 }

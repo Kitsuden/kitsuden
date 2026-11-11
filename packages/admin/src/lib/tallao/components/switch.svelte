@@ -132,4 +132,9 @@
     .ta-switch-track,
     .ta-switch-thumb { transition: none; }
   }
+
+  /* On touch screens: the whole label is the 44px hit area; the track keeps its size. */
+  @media (pointer: coarse) {
+    .ta-switch { min-height: 2.75rem; }
+  }
 </style>

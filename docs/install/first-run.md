@@ -43,7 +43,7 @@ installed answers `409` and says how to install it.
   with another tool): first run `bun run scripts/migrate.ts --baseline`, which
   marks what is present as applied without running it. Without it, it would
   try to apply everything again.
-- **Never** `--all-kons` ("all kons") on a server (it creates the tables
+- **Never** `--all-kons` on a server (it creates the tables
   of every kon; it is a CI check) or `pnpm db:push`.
 
 ## 2. The first administrator
@@ -64,7 +64,7 @@ restart generates a new one; with several replicas, each prints and accepts its
 own, so scale to one for this step.
 
 ```bash
-docker compose logs kitsuden_api | grep -A4 "No administrator"   # the token
+docker compose -f docker-compose.yml logs kitsuden_api | grep -A4 "No administrator"   # the token
 curl -s http://127.0.0.1:3000/api/system/init-check     # {"initialized":false,"setupTokenRequired":true}
 ```
 

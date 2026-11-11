@@ -24,6 +24,91 @@
   <a href="CHANGELOG.md"><b>Changelog</b></a>
 </p>
 
+**Your agent gets a key, not the database password.** Kitsuden is an open-source
+backend for apps that AI agents use. Declare a model once and you get the REST API,
+the MCP tools and the admin panel, with scoped agent keys, an audit log and human
+approval for anything risky.
+
+<p align="center">
+  <img src="assets/readme/approval-flow.svg" width="100%" alt="Animation: an agent sends DELETE /api/notes/notes/42 with its own kitsuden_agent key. Kitsuden checks the key, the scope and row security, and because approvals are on, the delete waits for a person: the agent gets 202 and nothing runs. You see the proposal, approve it, and it runs once as the agent; the decision is written to the audit log.">
+</p>
+
+> [!WARNING]
+> **Beta (`0.9.0-beta`).** The public repository is new: expect rough edges, and read
+> [docs/install/](docs/install/README.md) before deploying.
+
+## Quickstart
+
+You only need Docker Engine 24+ with `docker compose` v2 (`install.sh` also uses `curl`,
+which macOS, Git Bash and most Linux systems already have).
+
+```bash
+git clone https://github.com/Kitsuden/kitsuden.git
+cd kitsuden
+./install.sh
+```
+
+On Windows, in PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+**Building with a coding agent?** Paste this into Claude Code, Cursor or Codex, in the
+folder of the app you are building:
+
+```text
+Set up Kitsuden as the backend for this project.
+
+1. Clone https://github.com/Kitsuden/kitsuden next to this folder and run
+   ./install.sh (on Windows: powershell -ExecutionPolicy Bypass -File install.ps1).
+   It needs Docker running and takes 5 to 15 minutes the first time.
+2. When it finishes, give me the panel URL and the one-time setup token it
+   printed, and wait while I create the administrator and an agent key.
+3. Read AGENTS.md and docs/agents/coding-agents.md in that repo, connect to
+   its MCP server with the key I give you, and read GET /llms.txt before
+   your first call. Never invent routes or scopes.
+4. Never ask me for the database password. Use only the agent key. If an
+   answer is 202 KITSUDEN_E_APPROVAL_REQUIRED, tell me and do not retry.
+```
+
+It generates every secret in `.env`, builds the images here from your checkout (5 to
+15 minutes the first time, and a few GB of RAM: nothing is published to a registry yet,
+and compose never pulls them), starts everything on this machine only and prints what
+to do next:
+
+1. Open the panel URL it prints (`http://localhost:3001`) and create the first
+   administrator. It asks for a one-time **setup token**, which the API prints in its
+   log when it starts with no administrator; the installer shows it, and you can read
+   it again with `docker compose -f docker-compose.yml logs kitsuden_api | grep -A4
+"No administrator"`. A restart prints a new one.
+2. Create an agent under **Agents** and copy its key (`kitsuden_agent_…`; it is shown once).
+3. Point your MCP client at `http://localhost:3000/api/mcp` and have it send the key in
+   the `Authorization` header. The same key works over REST:
+
+   ```bash
+   curl -H "Authorization: Bearer kitsuden_agent_…" http://localhost:3000/api/data-sets
+   ```
+
+   Ready-made MCP settings for Claude Code, Codex and Antigravity are in
+   [docs/agents/coding-agents.md](docs/agents/coding-agents.md).
+
+Public sign-up stays refused until that first administrator exists, and afterwards it
+stays closed unless you set `KITSUDEN_SIGNUP=open` (the default in production is
+`closed`).
+
+If another Kitsuden or another program already uses those names or ports, it picks free
+ones and tells you. Run it again to start a stopped install; `./install.sh --rebuild`
+after updating the code. Always pass `-f docker-compose.yml` when you use compose
+yourself, so a local `docker-compose.override.yml` is never merged by accident. Doing
+the same steps by hand: [docs/install/server.md](docs/install/server.md).
+
+For a public server with a domain, TLS and a website:
+[docs/install/server.md](docs/install/server.md) (`./scripts/deploy.sh`
+builds and starts `docker-compose.yml` + `docker-compose.tls.yml`).
+
+## How it fits
+
 An agent framework decides _what_ to do and a durable queue decides _when_;
 Kitsuden is the third layer, the one that decides **whether an agent may do it
 at all, on whose behalf, and who signs off**. Agents connect over MCP or REST
@@ -36,7 +121,8 @@ or TRON) to spend fewer tokens.
 
 It runs on **Bun + Hono + Drizzle** over **PostgreSQL 16 (pgvector)**, with a
 **SvelteKit** admin panel. Two services are enough: the API and Postgres
-(Valkey is optional, for several API replicas). It is meant for a persistent
+(Valkey is optional for the API: only several replicas need it. The Docker
+stack in `docker-compose.yml` always starts one). It is meant for a persistent
 container next to its database, **not** for edge/serverless runtimes: it keeps
 a warm connection pool and one local transaction per request.
 See the [threat model](docs/threat-model.md).
@@ -77,16 +163,13 @@ to read and write real application data without handing them a database
 password or an admin session, and who want the safe setting to be the
 default rather than a checklist.
 
-> [!WARNING]
-> **Beta (`0.9.0-beta`).** The public repository is new: expect rough edges, and read
-> [docs/install/](docs/install/README.md) before deploying.
-
 <details>
 <summary><b>Contents</b></summary>
 
+- [Quickstart](#quickstart)
+- [How it fits](#how-it-fits)
 - [For AI agents](#for-ai-agents)
 - [Why Kitsuden](#why-kitsuden)
-- [Quickstart](#quickstart)
 - [What else is in the box](#what-else-is-in-the-box)
 - [Kons: installable modules](#kons-installable-modules)
 - [Requirements](#requirements) · [Ports](#ports) · [Local development](#local-development)
@@ -247,49 +330,6 @@ much more under load.
 
 </details>
 
-## Quickstart
-
-You only need Docker Engine 24+ with `docker compose` v2.
-
-```bash
-git clone https://github.com/Kitsuden/kitsuden.git
-cd kitsuden
-./install.sh
-```
-
-On Windows, in PowerShell:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File install.ps1
-```
-
-It generates every secret in `.env`, builds the images here from your checkout (5 to
-15 minutes the first time, and a few GB of RAM: nothing is published to a registry yet,
-and compose never pulls them), starts everything on this machine only and prints what
-to do next:
-
-1. Open the panel URL it prints (`http://localhost:3001`) and create the first
-   administrator. It asks for a one-time **setup token**, which the API prints in its
-   log when it starts with no administrator; the installer shows it, and you can read
-   it again with `docker compose -f docker-compose.yml logs kitsuden_api | grep -A4
-"No administrator"`. A restart prints a new one.
-2. Create an agent under **Agents** and copy its key.
-3. Point your MCP client at `http://localhost:3000/api/mcp`.
-
-Public sign-up stays refused until that first administrator exists, and afterwards it
-stays closed unless you set `KITSUDEN_SIGNUP=open` (the default in production is
-`closed`).
-
-If another Kitsuden or another program already uses those names or ports, it picks free
-ones and tells you. Run it again to start a stopped install; `./install.sh --rebuild`
-after updating the code. Always pass `-f docker-compose.yml` when you use compose
-yourself, so a local `docker-compose.override.yml` is never merged by accident. Doing
-the same steps by hand: [docs/install/server.md](docs/install/server.md).
-
-For a public server with a domain, TLS and a website:
-[docs/install/server.md](docs/install/server.md) (`./scripts/deploy.sh`
-builds and starts `docker-compose.yml` + `docker-compose.tls.yml`).
-
 ## What else is in the box
 
 - **Content**: page builder (`kon-blocks`), media library with image
@@ -344,7 +384,7 @@ why.
 | For                           | You need                                                                                                                                                                                                                                                                                                                                 |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The server path (recommended) | Docker Engine 24+ with the `docker compose` v2 plugin (BuildKit). Builds are memory-hungry: 4 GB of RAM is tight, add swap.                                                                                                                                                                                                              |
-| Local development             | **pnpm 9** (`packageManager: pnpm@9.15.4`), **Node.js 22.12+** (22.23.4+ to build the starter: Astro requires it), **Bun 1.3+** (the API runs on Bun, and `@kitsuden/shared` builds with Bun in its `prepare` script, so install Bun **before** `pnpm install`), and Postgres 16 + pgvector (containers are fine; Valkey 7 is optional). |
+| Local development             | **pnpm 9** (`packageManager: pnpm@9.15.4`), **Node.js 22.12+** (22.23.4+ to build the starter: Astro requires it), **Bun 1.3+** (the API runs on Bun, and `@kitsuden/shared` builds with Bun in its `prepare` script, so install Bun **before** `pnpm install`), and Postgres 16 + pgvector (containers are fine; Valkey 9 is optional). |
 
 The packages are used from this monorepo (a pnpm workspace) and the images are
 built from source.
@@ -371,7 +411,9 @@ git clone https://github.com/Kitsuden/kitsuden.git
 cd kitsuden
 npm i -g pnpm@9.15.4                 # after installing Bun 1.3+
 pnpm install --frozen-lockfile
-cp apps/api/.env.example apps/api/.env   # DATABASE_URL, REDIS_URL, BETTER_AUTH_SECRET…
+cp .env.example .env                 # set POSTGRES_PASSWORD, S3_ACCESS_KEY and S3_SECRET_KEY
+pnpm dev:infra                       # Postgres 16 + pgvector on 127.0.0.1:5432 (plus Valkey and SeaweedFS)
+cp apps/api/.env.example apps/api/.env   # the same password in DATABASE_URL; BETTER_AUTH_SECRET…
 pnpm db:migrate                      # bun run scripts/migrate.ts in apps/api
 pnpm dev:api                         # API on http://localhost:3000
 pnpm dev:admin                       # panel on http://localhost:5173
@@ -383,10 +425,12 @@ in `tests/unit`; `pnpm test:cli` runs the CLI's own tests; `pnpm test:db:up`
 starts a test Postgres (`docker-compose.test.yml`, port 5434) and migrates it, and
 `pnpm test:api` runs the API's Bun tests against it, with the settings in `.env.test`
 (`pnpm test:api:all` does the whole round).
-`pnpm format:check` and `pnpm lint` run in CI and block a merge.
+CI runs `pnpm format:check` and `pnpm lint` on every push and pull request.
 
-Postgres and Valkey containers, the minimum `.env` and the caveats are in
-[docs/install/local.md](docs/install/local.md). Do not use `pnpm db:push`
+`pnpm dev:infra` is `docker compose -f docker-compose.dev.yml up -d`; it uses the
+same ports as a Docker install of Kitsuden, so do not run both on one machine
+without changing them. Starting Postgres by hand instead, the minimum `.env` and
+the caveats are in [docs/install/local.md](docs/install/local.md). Do not use `pnpm db:push`
 against a real database: migrations go through `apps/api/scripts/migrate.ts`.
 
 ## Documentation
@@ -429,10 +473,17 @@ packages/shared/     @kitsuden/shared: types, Zod schemas, API contracts
 packages/sdk/        @kitsuden/sdk: JS/TS client
 packages/sdk-python/ the Python client
 packages/sdk-react/  React bindings for the SDK
+packages/sdk-swift/, sdk-kotlin/, sdk-dart/   mobile clients (their tests have not run yet)
+packages/codegen/    @kitsuden/codegen: frontend code generation for collections
+packages/schemas/    JSON Schemas (kon.json)
 packages/mcp-server/ MCP server for AI agents
 packages/cli/        the kitsuden CLI
+packages/create-kitsuden/  `npm create kitsuden` (not on npm yet)
+packages/kitsuden/   the `kitsuden` package: the framework as one dependency (not on npm yet)
+packages/testing/    @kitsuden/testing: sandboxes and helpers for kon tests
 packages/starters/   kitsuden-starter-basic, the neutral Astro website
 docker/              Dockerfiles, Caddyfile, startup and backup scripts
+scripts/             test database, SDK generation, deploy, security scan, benchmarks
 ```
 
 ## License

@@ -50,16 +50,21 @@ export function anchor(anchorEl: Element | VirtualElement, panel: HTMLElement, o
     }
   }
 
-  const middleware: Middleware[] = [offset(opts.gap ?? 6), flip({ padding: 8 }), shift({ padding: 8 })];
-  if (opts.matchWidth) {
-    middleware.push(
-      size({
-        apply({ rects }) {
-          panel.style.minWidth = `${rects.reference.width}px`;
-        },
-      })
-    );
-  }
+  // `size` publishes the room left on the chosen side as --ta-available-height (lists cap their
+  // height with it, so they stay usable with the on-screen keyboard open) and, with
+  // `matchWidth`, makes the panel at least as wide as its trigger.
+  const middleware: Middleware[] = [
+    offset(opts.gap ?? 6),
+    flip({ padding: 8 }),
+    shift({ padding: 8 }),
+    size({
+      padding: 8,
+      apply({ rects, availableHeight }) {
+        panel.style.setProperty("--ta-available-height", `${Math.max(96, Math.floor(availableHeight))}px`);
+        if (opts.matchWidth) panel.style.minWidth = `${rects.reference.width}px`;
+      },
+    }),
+  ];
 
   const update = () =>
     computePosition(anchorEl, panel, { strategy: "fixed", placement: opts.placement ?? "bottom-start", middleware }).then(

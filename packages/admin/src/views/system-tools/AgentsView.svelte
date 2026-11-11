@@ -145,11 +145,18 @@
               </div>
               <div class="min-w-0">
                 <h3 class="font-medium text-zinc-100 truncate" title={agent.name}>{agent.name}</h3>
-                <p class="text-xs text-zinc-500 truncate">{agent.model}</p>
+                {#if agent.model ?? agent.type}
+                  <p class="text-xs text-zinc-500 truncate">{agent.model ?? agent.type}</p>
+                {/if}
               </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <span class="w-2 h-2 rounded-full {getStatusColor(agent.status)}"></span>
+              <!-- The state in words too: a dot told it by colour alone. -->
+              <span class="w-2 h-2 rounded-full {getStatusColor(agent.status)}" aria-hidden="true"
+              ></span>
+              <span class="text-xs text-zinc-400" data-testid="agent-status">
+                {t(`agentsView.status_${agent.status}`)}
+              </span>
             </div>
           </div>
 
@@ -157,18 +164,24 @@
             <p class="mt-3 text-sm text-zinc-400 line-clamp-2">{agent.description}</p>
           {/if}
 
-          <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
-            <span class="flex items-center gap-1">
-              <Activity size={14} />
-              {t("agentsView.traces", { v: agent.totalTraces || 0 })}
-            </span>
-            <span class="flex items-center gap-1">
-              <Key size={14} />
-              {t("agentsView.tokens", {
-                v: agent.totalTokens?.toLocaleString(localeFormat()) || 0,
-              })}
-            </span>
-          </div>
+          <!-- The list endpoint sends no totals: they are shown only when they come,
+               instead of a "0 traces" that was never counted. -->
+          {#if agent.totalTraces !== undefined || agent.totalTokens !== undefined}
+            <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
+              {#if agent.totalTraces !== undefined}
+                <span class="flex items-center gap-1">
+                  <Activity size={14} />
+                  {t("agentsView.traces", { v: agent.totalTraces })}
+                </span>
+              {/if}
+              {#if agent.totalTokens !== undefined}
+                <span class="flex items-center gap-1">
+                  <Key size={14} />
+                  {t("agentsView.tokens", { v: agent.totalTokens.toLocaleString(localeFormat()) })}
+                </span>
+              {/if}
+            </div>
+          {/if}
 
           <!--
             `flex-wrap` + `min-w-0`: in the three-column grid the card

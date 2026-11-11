@@ -313,7 +313,7 @@ export function generateKey(
   // limit did not exist. A `Bearer <garbage>` that is not an agent's does not even give
   // 401: it continues as an anonymous request. The user is no use here either, because the
   // limiter runs BEFORE authentication and `user` is not set yet.
-  // Ver `client-ip.ts`.
+  // See `client-ip.ts`.
   const identifier = siteVisitor(c) || limiterIdentity(c);
   const route = normalizedPath(c.req.path);
 

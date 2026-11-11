@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Kitsuden on your machine, with one command. It only needs Docker.
+# Kitsuden on your machine, with one command. It only needs Docker (and curl).
 #
 #   ./install.sh             create .env, build, start and print the URLs
 #   ./install.sh --dry-run   only create .env and say what it would use
@@ -34,6 +34,10 @@ die() { printf '\nInstall stopped: %s\n' "$1" >&2; exit 1; }
 command -v docker >/dev/null 2>&1 || die "Docker is not installed. Get it at https://docs.docker.com/get-docker/ and run this again."
 docker compose version >/dev/null 2>&1 || die "this needs the Docker Compose v2 plugin ('docker compose')."
 docker info >/dev/null 2>&1 || die "Docker is installed but not running. Start it and run this again."
+# curl is how this script knows the panel and the API answer. Without it the build
+# and the start would work and then this would wait three minutes and report a
+# failure that did not happen: say so now, before building anything.
+command -v curl >/dev/null 2>&1 || die "curl is not installed, and this script needs it to check that Kitsuden answers. Install it (Debian/Ubuntu: sudo apt install curl) and run this again."
 
 # A checkout with an override is a custom deployment: this is not for it.
 [ -f docker-compose.override.yml ] && die "this folder has a docker-compose.override.yml, so it is a custom deployment. Use your own deploy process."

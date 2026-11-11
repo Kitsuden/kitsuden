@@ -16,7 +16,11 @@
   // reactivity that effect does NOT re-run when `bind:this` assigns the
   // container. The graph was at the mercy of mount order.
   let container = $state<HTMLDivElement | null>(null);
-  let cyInstance: cytoscape.Core | null = $state(null);
+  // A plain variable ON PURPOSE. As `$state` the effect below both read it (through
+  // `initCytoscape`) and wrote it, so every init scheduled another: the graph was destroyed
+  // while cytoscape was still laying it out ("Cannot read properties of null (reading
+  // 'notify')", hundreds of times) and never painted. Nothing in the template reads it.
+  let cyInstance: cytoscape.Core | null = null;
   let error = $state<string | null>(null);
   let initVersion = 0;
 

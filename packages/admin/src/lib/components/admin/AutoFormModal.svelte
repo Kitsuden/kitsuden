@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from "$lib/i18n";
+  import { explorerEndpoint } from "$lib/explorer-endpoint";
   import { knownTables } from "$lib/explorer-tables";
   import { resolveFieldType } from "@kitsuden/shared";
   import { X, Loader2, Save } from "lucide-svelte";
@@ -281,8 +282,8 @@
     try {
       // Use custom apiEndpoint if provided, otherwise fall back to /api/explorer
       // apiEndpoint is the base path (e.g., /api/directory), tableName gets appended
-      const baseUrl = apiEndpoint ? `${API_URL}${apiEndpoint}` : `${API_URL}/api/explorer`;
-      const url = isEdit ? `${baseUrl}/${tableName}/${editData!.id}` : `${baseUrl}/${tableName}`;
+      const collection = `${API_URL}${explorerEndpoint(apiEndpoint, tableName)}`;
+      const url = isEdit ? `${collection}/${editData!.id}` : collection;
 
       const res = await fetch(url, {
         method: isEdit ? "PATCH" : "POST",

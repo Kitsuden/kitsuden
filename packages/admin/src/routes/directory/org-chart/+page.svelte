@@ -21,7 +21,8 @@
     firstName: string;
     lastName: string;
     displayName?: string;
-    email: string;
+    /** Only in the card of someone who may see it: the public card has no email. */
+    email?: string | null;
     photoId?: string;
     positionTitle?: string;
     departmentName?: string;
@@ -56,6 +57,11 @@
       }
     } catch (e) {
       console.error("Error loading organizations:", e);
+    } finally {
+      // `loadOrgChart` is the only other place that clears it, and it does not run with no
+      // organizations (or after an error): the spinner stayed forever and the empty state,
+      // with its "create an organization" button, could never be reached.
+      loading = false;
     }
   }
 
@@ -253,22 +259,23 @@
 
           <!-- Contact Info -->
           <div class="space-y-3">
-            <a
-              href="mailto:{selectedEmployee.email}"
-              class="flex items-center gap-3 p-3 bg-kitsuden-bg rounded-lg hover:bg-white/5 transition-colors"
-            >
-              <Mail class="w-5 h-5 text-kitsuden-accent" />
-              <span class="text-white">{selectedEmployee.email}</span>
-            </a>
+            {#if selectedEmployee.email}
+              <a
+                href="mailto:{selectedEmployee.email}"
+                class="flex items-center gap-3 p-3 bg-kitsuden-bg rounded-lg hover:bg-white/5 transition-colors"
+              >
+                <Mail class="w-5 h-5 text-kitsuden-accent" />
+                <span class="text-white">{selectedEmployee.email}</span>
+              </a>
+            {/if}
           </div>
 
           <!-- Actions -->
           <div class="flex gap-3 mt-6">
-            <a
-              href="/directory/employees/{selectedEmployee.id}"
-              class="flex-1 btn btn-primary text-center"
-            >
-              {t("orgChartPage.viewFullProfile")}
+            <!-- There is no page per employee (`/directory/employees/<id>` was a 404): the
+                 employees table of the kon is where the record is. -->
+            <a href="/g/kon-directory" class="flex-1 btn btn-primary text-center">
+              {t("orgChartPage.openDirectory")}
             </a>
             <button class="btn btn-ghost" onclick={() => (selectedEmployee = null)}>
               {t("orgChartPage.close")}

@@ -47,8 +47,8 @@ repository, `pnpm kon:sync` writes both from the folder and `pnpm kon:sync:check
 they drift.
 
 Kons are not part of the Kitsuden core: they live in a kons repository (the
-official one is `kitsuden-kons`, not public yet) and are installed into a
-project. See also:
+official one is [`kitsuden-kons`](https://github.com/Kitsuden/kitsuden-kons)) and are
+installed into a project. See also:
 
 - [core-and-kons.md](core-and-kons.md) — what is core and what is a kon, and why;
 - [installing.md](installing.md) — `kitsuden kon add|remove|list`, `KITSUDEN_KONS`, Docker;

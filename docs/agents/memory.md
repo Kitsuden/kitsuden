@@ -167,7 +167,9 @@ not by other agents.
 ## Export to Open Knowledge Format v0.2
 
 `brain_export_okf` returns `{ okfVersion: "0.2", files: [{ path, content }] }`
-for the notes you can see. It follows the spec at
+for the notes you can see, or for the ones named in `noteIds` (comma-separated,
+at most 200 per call: over REST they travel in the URL, and a longer one would
+not fit in the HTTP server's header limit). It follows the spec at
 <https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md>
 (as read on 2026-10-28):
 

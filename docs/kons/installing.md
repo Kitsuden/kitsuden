@@ -9,25 +9,33 @@ repository or folder with the same layout (`kons/<kon-id>/` with a `kon.json`) �
 
 ## The usual way
 
-```bash
-npx @kitsuden/cli kon add blog     # or install it once: npm i -g @kitsuden/cli
-```
-
-Run it inside a Kitsuden project. That is the whole procedure: it finds the kon in the official
-repository, copies it into `packages/kons/`, installs it, runs its migrations and declares it.
-Restart the API (or switch the kon on in the panel). The rest of the commands:
+The CLI is not on npm yet, so it runs from your clone of Kitsuden. Build it once, then call
+it as `pnpm kitsuden` from the repository root:
 
 ```bash
-kitsuden kon list --available      # what the source offers, with maturity
-kitsuden kon add wiki comments --enable --trust-source
-kitsuden kon add shop --from ../my-kons          # a folder, or a git URL with --ref <tag>
-kitsuden kon list                  # what is installed, and its state
-kitsuden kon remove blog           # its tables and data stay
+pnpm install --frozen-lockfile
+pnpm --filter @kitsuden/cli build     # once, and again after updating the code
+pnpm kitsuden kon add blog
 ```
 
-From a Kitsuden checkout without npm: `pnpm --filter @kitsuden/cli build`, then
-`pnpm kitsuden kon list`. Kitsuden's API runs on Bun; `pnpm install` no longer fails without it,
-but install Bun (https://bun.sh) before starting the API.
+That is the whole procedure: it finds the kon in the official repository (a `../kitsuden-kons`
+checkout if you have one, else fetched from GitHub, which asks for a yes: see
+[Git sources are unsigned](#git-sources-are-unsigned)), copies it into `packages/kons/`,
+installs it, runs its migrations and declares it. Restart the API (or switch the kon on in the
+panel). The rest of the commands:
+
+```bash
+pnpm kitsuden kon list --available      # what the source offers, with maturity
+pnpm kitsuden kon add wiki comments --enable --trust-source
+pnpm kitsuden kon add shop --from ../my-kons          # a folder, or a git URL with --ref <tag>
+pnpm kitsuden kon list                  # what is installed, and its state
+pnpm kitsuden kon remove blog           # its tables and data stay
+```
+
+`pnpm kitsuden` is `node packages/cli/dist/index.js`; wherever these docs write `kitsuden`,
+that is the command. Once `@kitsuden/cli` is published on npm, the same commands will also run
+as `npx @kitsuden/cli …`; until then that name does not exist on npm, so do not run it.
+Kitsuden's API runs on Bun: install Bun (https://bun.sh) before starting the API.
 
 **When you need more than that.** For signed, versioned installs with a permission prompt and a
 lockfile (`kitsuden kon add blog@^2`, for teams that pin what runs in production), use the
@@ -39,7 +47,7 @@ page is about them.
 1. finds the kon in the **source**: `--from <path|git-url>` (`--ref <tag|commit>`
    for git), else `KITSUDEN_KONS_SOURCE`, else a `../kitsuden-kons` checkout next
    to the project, else the official repository (fetched into
-   `.kitsuden/kons-cache/`, once that repository is public);
+   `.kitsuden/kons-cache/`);
 2. with a **git source**, stops for a yes: see [Git sources are unsigned](#git-sources-are-unsigned);
 3. checks its **SDK version**: the `sdk` of its `kon.json` against this
    Kitsuden's (`GET /api/version` → `sdk.kons` of a running API given with

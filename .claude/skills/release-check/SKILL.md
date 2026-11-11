@@ -13,7 +13,7 @@ fix anything unless the user asks; do not commit, tag or push. Run long suites i
 and read their summary; if a worker fails to start under load, rerun that file alone.
 
 1. **Lint.** `pnpm --filter @kitsuden/admin exec svelte-kit sync`, then `pnpm lint`.
-2. **Format.** `pnpm format:check`. CI reports it without blocking; list the files, do not fail.
+2. **Format.** `pnpm format:check`. CI fails on it (same job as lint); list the files it names.
 3. **Type-check.** `pnpm typecheck:core` (what CI runs; `pnpm typecheck` is the wider one).
 4. **Unit and guard tests.** `pnpm test:unit` (vitest, `tests/unit`).
 5. **Admin tests.** `pnpm test` in `packages/admin`.

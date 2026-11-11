@@ -175,6 +175,18 @@ const Key = z
   .max(300)
   .regex(/^[\w.:/@-]+$/, "letters, digits and . _ : / @ -");
 
+/**
+ * Note ids one OKF export accepts in `noteIds`. They travel in the URL of a GET, and
+ * the HTTP server refuses a request line plus headers over its limit (16 KB by default
+ * in Bun and in Node) with an empty `431`, before the API sees it: a status no operation
+ * can document. The cap was 20,000 characters, which the server could never deliver
+ * (Schemathesis sent it and got the 431). 200 ids are 7,399 characters, which fits with
+ * room for the cookie and the key; for more, export in batches or leave `noteIds` out.
+ */
+export const OKF_MAX_NOTE_IDS = 200;
+/** 36 characters per id and a comma between them. */
+const OKF_NOTE_IDS_MAX_LENGTH = OKF_MAX_NOTE_IDS * 37 - 1;
+
 // ── Operations ──────────────────────────────────────────────────────────────
 
 export const memoryOperations: AnyOperation[] = [
@@ -521,12 +533,12 @@ export const memoryOperations: AnyOperation[] = [
     route: "/export/okf",
     summary: "Export to Open Knowledge Format v0.2",
     description:
-      'The notes you can see (or `noteIds`, comma-separated) as an OKF v0.2 bundle: `files[]` with paths and Markdown (YAML frontmatter: type, title, tags, status, generated, verified, sources; claims as footnotes), plus a root index.md with okf_version "0.2".',
+      'The notes you can see (or `noteIds`, comma-separated, at most 200 per call) as an OKF v0.2 bundle: `files[]` with paths and Markdown (YAML frontmatter: type, title, tags, status, generated, verified, sources; claims as footnotes), plus a root index.md with okf_version "0.2". A longer list is a 422; a URL over the HTTP server\'s header limit never reaches the API and gets an empty 431.',
     input: {
       query: z.object({
         noteIds: z
           .string()
-          .max(20_000)
+          .max(OKF_NOTE_IDS_MAX_LENGTH)
           .regex(/^[0-9a-fA-F-]{36}(,[0-9a-fA-F-]{36})*$/, "comma-separated note ids")
           .optional(),
         limit: z.coerce.number().int().min(1).max(2000).optional(),
@@ -545,7 +557,7 @@ export const memoryOperations: AnyOperation[] = [
     handle: async (e, { user: user }) => {
       const q = e.query as { noteIds?: string; limit?: number };
       return exportOkf(ex(), actor(user), {
-        noteIds: q.noteIds ? q.noteIds.split(",").slice(0, 500) : undefined,
+        noteIds: q.noteIds ? q.noteIds.split(",").slice(0, OKF_MAX_NOTE_IDS) : undefined,
         limit: q.limit,
       });
     },

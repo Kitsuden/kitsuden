@@ -7,28 +7,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Changed
-
-- The admin panel runs on Tailwind CSS 4: the theme lives in `@theme` in `src/style.css` (no
-  `tailwind.config.js`), PostCSS uses `@tailwindcss/postcss`, and components that `@apply` in their
-  `<style>` declare `@reference`. The runtime theme engine still repaints the panel through the
-  `--kitsuden-*` variables.
-- Bun 1.4.4 in the images and CI; Valkey 9.1.3 in the compose files and CI; pgvector 0.8.7,
-  SeaweedFS 4.52, Caddy 2.11, nginx-unprivileged 1.31; hono 4.13.16, drizzle-orm 0.45.4,
-  typescript-eslint 8.72.1; the GitHub Actions to their current majors.
-
-### Fixed
-
-- Code actions failed on Linux and in Docker: the sandbox launched `node` without a `PATH`.
-- Runtime images no longer carry esbuild's Go binaries or the base image's npm.
-- Operations with a path parameter declare their 404 in the OpenAPI and the generated clients.
-
 ## [0.9.0-beta]
 
 First public release. Kitsuden is a JS backend where a model is declared once and agents can use
 it, with permissions, human approval and an audit trail. Everything below is new to the public
 repository; [Upgrading from a pre-release build](#upgrading-from-a-pre-release-build-08) is only
 for installs that ran an earlier, unpublished version.
+
+The `v0.9.0-beta` tag and its GitHub release are pending: until they exist, the links at the end
+of this file point at `main`, and nothing is published to npm, PyPI or a container registry.
 
 ### Added
 
@@ -143,8 +130,37 @@ for installs that ran an earlier, unpublished version.
 - Security scanning on every push and pull request, and before every release: gitleaks,
   OSV-Scanner (fails on HIGH and CRITICAL), Checkov, CodeQL and Trivy on the four images.
   OWASP ZAP and OWASP Dependency-Check run weekly; GitGuardian and Snyk run when their key is
-  set. Released images carry an SBOM, SLSA provenance and a signed attestation. The final image
-  stages run `apk upgrade`. See `docs/security-scanning.md`.
+  set. Released images will carry an SBOM, SLSA provenance and a signed attestation (no image is
+  published yet). The final image stages run `apk upgrade`. See `docs/security-scanning.md`.
+
+### Changed
+
+Since the repository opened, before the tag:
+
+- The admin panel runs on Tailwind CSS 4: the theme lives in `@theme` in `src/style.css` (no
+  `tailwind.config.js`), PostCSS uses `@tailwindcss/postcss`, and components that `@apply` in their
+  `<style>` declare `@reference`. The runtime theme engine still repaints the panel through the
+  `--kitsuden-*` variables.
+- Bun 1.4.4 in the images and CI; Valkey 9.1.3 in the compose files and CI; pgvector 0.8.7,
+  SeaweedFS 4.52, Caddy 2.11, nginx-unprivileged 1.31; hono 4.13.16, drizzle-orm 0.45.4,
+  typescript-eslint 8.72.1; the GitHub Actions to their current majors.
+
+### Fixed
+
+- Code actions failed on Linux and in Docker: the sandbox launched `node` without a `PATH`.
+- Runtime images no longer carry esbuild's Go binaries or the base image's npm.
+- Operations with a path parameter declare their 404 in the OpenAPI and the generated clients.
+- `docker-compose.yml` passes to the API every variable `.env.production.example` documents:
+  `KITSUDEN_ADMIN_MFA`, `ENABLE_CODE_ACTIONS`, `KITSUDEN_SANDBOX_FETCH_ALLOW`,
+  `KITSUDEN_WEBHOOK_ALLOW_INTERNAL`, `KITSUDEN_CUSTOMER_DATA_HOSTS`,
+  `KITSUDEN_EXTERNAL_MCP_ALLOW_INTERNAL` and `PAYMENTS_ALLOWED_PLANS` never reached the container,
+  so setting them in `.env` did nothing. It also passes the social sign-in variables
+  (`GITHUB_*`, `GOOGLE_*`, `DISCORD_*`, `AZURE_AD_*`) and, to the database,
+  `PG_MAX_SLOT_WAL_KEEP_SIZE`.
+- `install.sh` stops at once, with the reason, on a machine without `curl`.
+- `GET /api/brain/memory/export/okf` accepts at most 200 `noteIds` per call. The old cap
+  (20,000 characters) was more than a URL can carry: the HTTP server answered an empty `431`
+  before the API saw the request.
 
 ### Upgrading from a pre-release build (0.8)
 
@@ -201,7 +217,8 @@ readers still accept a 0.8 key when the English one is absent; writes accept Eng
   and the Viggo grimoire moved to the kons repository, and so did kon routes in the authorization
   matrix. A fresh install no longer creates blog and games tables (migration `0061`).
 - The `create-kon` and `kon:create` aliases (use `kitsuden make kon`) and the `create-kitsuden`
-  command inside `@kitsuden/cli` (use `npm create kitsuden`; `kitsuden init` stays).
+  command inside `@kitsuden/cli` (it is the `create-kitsuden` package now, `npm create kitsuden`
+  once that is published; `kitsuden init` stays).
 - `data_sets.game_id` (migration 0073) and `gameId` from the dataset API, schema and SDKs; a
   `gameId` sent by old clients is ignored.
 - `rlsContextMiddleware`, `withRLSQuery`, `withRLSContextOnly`, `withAdminRLS` and
@@ -220,5 +237,8 @@ readers still accept a 0.8 key when the English one is absent; writes accept Eng
 - The app role is created before migrating. It used to be created after, so migrations 0056 and
   0057 skipped their grants and background jobs never ran.
 
-[Unreleased]: https://github.com/Kitsuden/kitsuden/compare/v0.9.0-beta...HEAD
-[0.9.0-beta]: https://github.com/Kitsuden/kitsuden/releases/tag/v0.9.0-beta
+<!-- Tag pending. When v0.9.0-beta exists, these become
+     .../compare/v0.9.0-beta...HEAD and .../releases/tag/v0.9.0-beta. -->
+
+[Unreleased]: https://github.com/Kitsuden/kitsuden/commits/main
+[0.9.0-beta]: https://github.com/Kitsuden/kitsuden/tree/main

@@ -219,7 +219,7 @@ const genCmd = program.command("gen").description("Code generators");
 genCmd
   .command("types")
   .description("Generates TypeScript types from the database schema")
-  .option("-u, --url <url>", "URL base de la API", process.env.KITSUDEN_API_URL)
+  .option("-u, --url <url>", "Base URL of the API", process.env.KITSUDEN_API_URL)
   .option("-o, --out <file>", "Output file", "src/kitsuden.types.ts")
   .option("-e, --exclude <tables>", "Tables to exclude, comma-separated")
   .option("--database-name <name>", "Name of the table map type", "Database")

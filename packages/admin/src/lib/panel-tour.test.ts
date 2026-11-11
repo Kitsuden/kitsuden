@@ -63,8 +63,10 @@ describe("agents service", () => {
     }) as typeof fetch;
 
     const { listAgents, listTraces } = await import("./services/agents");
-    expect(await listAgents()).toEqual([{ id: "a1", name: "Bot" }]);
-    expect(await listTraces({ agentId: "a1" })).toEqual([{ id: "t1" }]);
+    // The rows are normalized on the way in (services/agent-mappers.ts): the API sends
+    // no `status` or `totalTokens`, and the views read both.
+    expect(await listAgents()).toMatchObject([{ id: "a1", name: "Bot", status: "active" }]);
+    expect(await listTraces({ agentId: "a1" })).toMatchObject([{ id: "t1", totalTokens: 0 }]);
 
     expect(urls[0]).toBe(`${BASE}/api/v1/agents`);
     expect(urls[1]).toMatch(

@@ -199,7 +199,8 @@ A green that lies costs more than a red.
 The core (`apps/api`, `@kitsuden/engine`, `@kitsuden/shared` and the
 `packages/core/*` batteries: datasets, media, blocks) is what always ships. Kons
 are not part of it, and nothing in this repository publishes them to npm: they
-come from a kons repository (`kitsuden-kons`, not public yet) or from a signed
+come from a kons repository
+([`kitsuden-kons`](https://github.com/Kitsuden/kitsuden-kons)) or from a signed
 registry, and are installed with `kitsuden kon add`.
 
 - How installing works, `KITSUDEN_KONS`, and kons inside the Docker image:

@@ -8,8 +8,9 @@ Documentation for agent setups: `docs/agents/coding-agents.md`.
 - Connect to Postgres on port **5432**, to a database whose name contains `prod`, or to
   any `kitsuden_*_prod` container: on a machine that runs Kitsuden, that is the live site.
 - Run `docker compose` against the root `docker-compose.yml` (it is the production stack)
-  or `pnpm prod:*` on a machine that already runs Kitsuden: the names are fixed and would
-  clash with, or reuse the volumes of, the live installation.
+  or `pnpm prod:*` on a machine that already runs Kitsuden: with the same `KITSUDEN_INSTANCE`
+  (default `kitsuden`) the names are the same and would clash with, or reuse the volumes of, the
+  live installation. A new install goes through `./install.sh`, which picks a free prefix.
 - Print `.env` files. They can hold production credentials. If you must check a value, print
   key names only and mask URLs.
 - Run the test suite against a database whose name lacks `test`: `clearTestData()` deletes

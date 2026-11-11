@@ -713,7 +713,7 @@ async function updateLastUsed(keyId: string): Promise<void> {
  */
 export function hasScope(agentContext: AgentAuthContext, requiredScope: string): boolean {
   // The single rule (wildcards and `!pattern` denials): @kitsuden/shared,
-  // agent-permission.ts. Ver docs/agents/permissions.md.
+  // agent-permission.ts. See docs/agents/permissions.md.
   return concedeScope(agentContext.scopes || [], requiredScope);
 }
 

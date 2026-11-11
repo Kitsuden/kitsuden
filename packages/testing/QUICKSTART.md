@@ -2,16 +2,28 @@
 
 ## 1. Setup (1 minute)
 
-```bash
-# Install the testing framework's dependencies
-cd packages/testing
-bun add drizzle-orm pg pg-mem
-bun run build
+`@kitsuden/testing` is not on npm yet: use it from a clone of Kitsuden, as a
+workspace package.
 
-# In your kon
-cd packages/kons/kon-blog
-bun add -d @kitsuden/testing
+```bash
+# From the repository root: install, and build the testing package once
+pnpm install --frozen-lockfile
+pnpm --filter @kitsuden/testing build
 ```
+
+In your kon (for example `packages/kons/kon-blog/package.json`), depend on the
+workspace copy and install again:
+
+```json
+{ "devDependencies": { "@kitsuden/testing": "workspace:*", "pg-mem": "^3.0.14" } }
+```
+
+```bash
+pnpm install
+```
+
+Once the package is published, `bun add -d @kitsuden/testing` will do the same
+outside the monorepo.
 
 ## 2. Write a test (3 minutes)
 

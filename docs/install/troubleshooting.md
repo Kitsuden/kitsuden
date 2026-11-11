@@ -129,7 +129,8 @@ no administrator; afterwards it answers `403 System already initialized`.
 ### `POST /api/system/setup` → `403 Invalid or missing setup token`
 
 The one-time token that the API prints in its log when it starts without an
-administrator: `docker compose logs kitsuden_api | grep -A4 "No administrator"`.
+administrator:
+`docker compose -f docker-compose.yml logs kitsuden_api | grep -A4 "No administrator"`.
 A restart generates a new one.
 
 ### Nobody can sign up on the site

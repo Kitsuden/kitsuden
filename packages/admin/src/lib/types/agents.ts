@@ -6,8 +6,20 @@
 // ============== Base Types ==============
 
 export type AgentStatus = "active" | "paused" | "error";
-export type TraceStatus = "running" | "completed" | "error";
-export type StepType = "thinking" | "tool_call" | "tool_result" | "system" | "error";
+/** The API's `agent_trace_status` enum. There is no `completed`: a finished trace is `success`. */
+export type TraceStatus = "pending" | "running" | "success" | "error" | "cancelled";
+/** The API's `agent_trace_step_type` enum, plus the two the timeline also draws. */
+export type StepType =
+  | "llm_call"
+  | "tool_call"
+  | "tool_result"
+  | "thinking"
+  | "retrieval"
+  | "memory_read"
+  | "memory_write"
+  | "user_input"
+  | "system"
+  | "error";
 
 // ============== Agent ==============
 
@@ -16,8 +28,12 @@ export interface Agent {
   name: string;
   description?: string;
   identityId?: string;
-  model: string;
+  /** `custom`, `claude-desktop`…: what the API has instead of a model. */
+  type?: string;
+  /** Not a column: read from the prompt's `Model:` line when the agent has one. */
+  model?: string;
   config?: Record<string, unknown>;
+  /** Both derived from the API's `isActive` (services/agent-mappers.ts). */
   enabled: boolean;
   status: AgentStatus;
   tokenHash?: string;
@@ -69,6 +85,9 @@ export interface AgentTrace {
   agentName?: string;
   sessionId?: string;
   status: TraceStatus;
+  tokensIn?: number;
+  tokensOut?: number;
+  /** `tokensIn + tokensOut`: the API sends them per direction. */
   totalTokens: number;
   totalDurationMs: number;
   metadata?: Record<string, unknown>;
@@ -83,10 +102,17 @@ export interface AgentTrace {
 export interface AgentTraceStep {
   id: string;
   traceId: string;
+  stepOrder?: number;
   stepType: StepType;
-  content: Record<string, unknown>;
-  tokensUsed: number;
-  latencyMs: number;
+  content?: string | null;
+  reasoning?: string | null;
+  toolName?: string | null;
+  toolInput?: unknown;
+  toolOutput?: unknown;
+  durationMs?: number | null;
+  tokensIn?: number | null;
+  tokensOut?: number | null;
+  errorMessage?: string | null;
   createdAt: string;
 }
 

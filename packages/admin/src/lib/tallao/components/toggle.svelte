@@ -71,7 +71,7 @@
     background: rgb(var(--ta-accent) / 0.18);
     border-color: rgb(var(--ta-accent) / 0.7);
   }
-  .ta-toggle--solid[aria-pressed="true"] { color: rgb(var(--ta-on-accent)); background: rgb(var(--ta-accent)); border-color: rgb(var(--ta-accent)); }
+  .ta-toggle--solid[aria-pressed="true"] { color: rgb(var(--ta-on-accent)); background: var(--ta-accent-fill, color-mix(in srgb, rgb(var(--ta-accent)) 88%, black)); border-color: var(--ta-accent-fill, color-mix(in srgb, rgb(var(--ta-accent)) 88%, black)); }
   .ta-toggle:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; }
   .ta-toggle:disabled { opacity: 0.45; cursor: not-allowed; }
 

@@ -176,7 +176,7 @@
           bind:value={email}
           type="email"
           id="email"
-          placeholder={t("setupView.adminKitsudenGg")}
+          placeholder={t("setupView.emailPlaceholder")}
           class="field-input"
           required
         />

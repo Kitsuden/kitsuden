@@ -91,7 +91,7 @@ async function main(): Promise<void> {
 }
 
 // ALWAYS exit: `db` leaves a pool open and the process would not end on its own.
-// Ver tests/unit/startup-scripts-finish.test.ts.
+// See tests/unit/startup-scripts-finish.test.ts.
 main()
   .catch((err) => {
     console.error(`\n  ✗ ${err instanceof Error ? err.message : err}\n`);

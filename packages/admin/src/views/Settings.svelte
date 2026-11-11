@@ -175,6 +175,7 @@
         "agents",
         "mcp",
         "datasources",
+        "system",
       ].includes(tabParam)
     ) {
       activeTab = tabParam;

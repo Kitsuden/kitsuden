@@ -28,14 +28,18 @@ audits (`tests/unit/sec-*`, `rls-*`, `security-*`; `apps/api/src/tests/rls-*`).
 Dependabot opens updates for npm, the actions, the base images and the compose
 images.
 
-Released images carry an SBOM and SLSA provenance, plus a Sigstore-signed
-attestation you can check:
+Nothing is published yet: no image is on GHCR and no package is on npm, so today
+the images are the ones you build from a clone. The release workflows are ready
+for when that changes (`.github/workflows/docker-publish.yml` and `publish.yml`,
+which run on a `v*` tag). Once a release is published, its images will carry an
+SBOM and SLSA provenance, plus a Sigstore-signed attestation you will be able to
+check:
 
 ```bash
 gh attestation verify oci://ghcr.io/kitsuden/kitsuden/api:<version> -R Kitsuden/kitsuden
 ```
 
-npm packages are published with npm provenance.
+and the npm packages will be published with npm provenance.
 
 ## Locally
 

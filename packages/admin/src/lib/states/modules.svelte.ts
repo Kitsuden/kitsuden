@@ -123,7 +123,36 @@ class ModuleStore {
    * If it still fails in the end, `error` stays set and the sidebar offers
    * a button to try again.
    */
-  async fetchModules({ attempts = 3, wait = 500 }: { attempts?: number; wait?: number } = {}) {
+  fetchModules(options: { attempts?: number; wait?: number } = {}): Promise<void> {
+    const request = this.#load(options).finally(() => {
+      if (this.#inFlight === request) this.#inFlight = null;
+    });
+    this.#inFlight = request;
+    return request;
+  }
+
+  /** The newest `fetchModules` call while it has not finished. */
+  #inFlight: Promise<void> | null = null;
+
+  /** True once a list has arrived (even an empty one): "no modules" and "not asked yet" differ. */
+  loaded = $state(false);
+
+  /**
+   * Waits for the module list WITHOUT asking for it again when someone already has.
+   *
+   * A caller that did `if (modules.length === 0) await fetchModules()` started a second
+   * request while the layout's was in flight; that superseded the first, whose promise then
+   * resolved with the list still empty, and the caller read "empty" as an answer. The post
+   * editor took it for "kon-games may be on" and asked for its routes. This joins the
+   * request in flight (or starts the only one), and `loaded` says whether a list arrived.
+   */
+  async whenLoaded(): Promise<void> {
+    if (this.loaded) return;
+    if (!this.#inFlight) void this.fetchModules();
+    while (this.#inFlight) await this.#inFlight;
+  }
+
+  async #load({ attempts = 3, wait = 500 }: { attempts?: number; wait?: number } = {}) {
     const thisRequest = ++this.#request;
     const current = () => thisRequest === this.#request;
 
@@ -145,6 +174,7 @@ class ModuleStore {
             this.modules = data.docs || [];
             this.uninstalled = data.categories?.uninstalled?.modules || [];
             this.error = null;
+            this.loaded = true;
             return;
           }
           transient = res.status >= 500 || res.status === 408 || res.status === 429;

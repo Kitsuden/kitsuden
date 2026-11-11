@@ -12,7 +12,7 @@
    *
    * Here they are chosen with a click (chips) and saved AFTER the game, with the
    * kon-games endpoint that already syncs both relations
-   * (`PATCH /api/games/:id` with `tagIds` and `platformIds`). `guardar(id)` is
+   * (`PATCH /api/games/:id` with `tagIds` and `platformIds`). `save(id)` is
    * called by the form when it has the id: when editing, its own; when creating, the
    * one returned by the creation.
    */

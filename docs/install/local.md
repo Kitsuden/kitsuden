@@ -57,12 +57,13 @@ Container, volume and network names start with the instance (`kitsuden2_db`,
 `kitsuden2_postgres_data`…), so the two never share a container or a database.
 Without it, the names are the usual `kitsuden_*`, and an existing setup keeps its
 data.
-Or by hand and with your own names (what the test did) **(tested)**:
+Or by hand and with your own names (what the test did, **tested** with Valkey 7;
+the compose files now run Valkey 9):
 
 ```bash
 docker run -d --name kitsuden_dev_db -e POSTGRES_USER=kitsuden -e POSTGRES_PASSWORD=<pass> \
   -e POSTGRES_DB=kitsuden_dev -p 127.0.0.1:5432:5432 pgvector/pgvector:pg16
-docker run -d --name kitsuden_dev_state -p 127.0.0.1:6379:6379 valkey/valkey:7-alpine
+docker run -d --name kitsuden_dev_state -p 127.0.0.1:6379:6379 valkey/valkey:9-alpine   # optional
 docker exec kitsuden_dev_db pg_isready -U kitsuden -h 127.0.0.1    # repeat until "accepting connections"
 ```
 

@@ -5,6 +5,8 @@ This project follows the
 
 Be respectful, assume good faith, and keep discussion about the work.
 
-To report unacceptable behaviour, contact the maintainer privately through the
-contact details on their [GitHub profile](https://github.com/vigogami).
-Reports are handled confidentially.
+To report unacceptable behaviour, open a
+[new issue](https://github.com/Kitsuden/kitsuden/issues/new) whose title and text say only
+"Conduct contact requested": no names and no details. A maintainer
+([@vigogami](https://github.com/vigogami)) answers on that issue with a private channel, and
+the report continues there. Reports are handled confidentially.

@@ -132,20 +132,9 @@ import agentMemoryRoutes from "./routes/agent-memory";
 import { agentNotificationsRoutes } from "./routes/agent-notifications";
 import { agentPermissionsRoutes } from "./routes/agent-permissions";
 import agentPlaygroundRoutes from "./routes/agent-playground";
-import { EXTERNAL_MCP_ROUTE, externalMcpRoutes } from "./routes/mcp-servers";
-import { queueRoutes } from "./routes/queue";
-import { tracesRoutes } from "./routes/traces";
-// ── A1: problem+json errors and Idempotency-Key (own block) ──
-
-// ── Feature Flags ──
-
-// ── Core Layer Routes (Tier 2) — Imported through packages/core/ ──
-// NOTE: media-library and data-sets have been migrated to kons
-// Legacy core imports removed — now provided by kons
-
-// ── Engine Routes (Tier 1) — Always-on infrastructure ──
 import agentRoutes from "./routes/agents";
 import { apiKeysRoutes } from "./routes/api-keys";
+import { approvalsRoutes, proposalsRoutes } from "./routes/approvals";
 import { brainRoutes } from "./routes/brain";
 import {
   brainMemoryRoutes,
@@ -158,6 +147,18 @@ import { codegenRoutes } from "./routes/codegen";
 import { settingsRoutes, syncRoutes, dataSetsRoutes as dataSetsLiteRoutes } from "./routes/crud";
 import { explorerRoutes } from "./routes/data-explorer";
 import dataSourcesRoutes from "./routes/data-sources";
+import { EXTERNAL_MCP_ROUTE, externalMcpRoutes } from "./routes/mcp-servers";
+import { queueRoutes } from "./routes/queue";
+import { tracesRoutes } from "./routes/traces";
+// ── A1: problem+json errors and Idempotency-Key (own block) ──
+
+// ── Feature Flags ──
+
+// ── Core Layer Routes (Tier 2) — Imported through packages/core/ ──
+// NOTE: media-library and data-sets have been migrated to kons
+// Legacy core imports removed — now provided by kons
+
+// ── Engine Routes (Tier 1) — Always-on infrastructure ──
 import { docsRoutes } from "./routes/docs";
 import { dynamicDocsRouter } from "./routes/docs-dynamic";
 import { mailRoutes } from "./routes/mail";
@@ -261,7 +262,7 @@ app.use("*", poolExhaustedTo503());
 app.use("*", errorsWithoutDetail(inProduction));
 
 // Bounded request body (10 MB; file uploads carry their own limit).
-// Ver lib/body-limit.ts.
+// See lib/body-limit.ts.
 app.use("/api/*", bodyLimit());
 
 // ═══════════════════════════════════════════════
@@ -444,7 +445,6 @@ import { createHash } from "crypto";
 /** Retirement of `kitsuden_sk_*` keys (announced in the `Sunset` header). */
 const LEGACY_KEYS_END = Date.UTC(2026, 7, 1);
 
-import { approvalsRoutes, proposalsRoutes } from "./routes/approvals";
 import { modelsRoutes, MODELS_ROUTE } from "./routes/models";
 import {
   PROMOTION_KON,

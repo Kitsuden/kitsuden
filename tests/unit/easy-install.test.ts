@@ -196,6 +196,15 @@ describe("install.sh in the repository", () => {
     expect(readFileSync(join(root, "install.sh")).indexOf("\r\n")).toBe(-1);
   });
 
+  it("asks for curl before it builds, not after three minutes of waiting", () => {
+    // The readiness loop is curl. Without it, a working install was reported as failed.
+    const script = read("install.sh");
+    const check = script.indexOf("command -v curl");
+    expect(check).toBeGreaterThan(-1);
+    expect(check).toBeLessThan(script.indexOf("compose build kitsuden_api"));
+    expect(check).toBeLessThan(script.indexOf("create_env()"));
+  });
+
   it.skipIf(!existsSync(join(root, ".git")))(
     "is executable, so ./install.sh works on Linux",
     () => {
