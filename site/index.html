@@ -1354,7 +1354,9 @@
               <a class="btn" href="#start">Use my coding agent instead</a>
             </div>
             <p class="fineprint">
-              Needs Docker. MIT licensed. <a href="#watch">Watch the 30-second video</a>.
+              For people who build with Claude Code, Cursor or Codex and want their agent to touch
+              real data safely. Needs Docker. MIT licensed.
+              <a href="#watch">Watch the 30-second video</a>.
             </p>
           </div>
         </div>
@@ -1622,6 +1624,22 @@ notes__create-note    <span class="c">scope note:write</span>
             You don't follow a hardening checklist. These are on from the first start, and the API
             refuses to run without some of them.
           </p>
+          <div class="clip reveal">
+            <video
+              autoplay
+              loop
+              muted
+              playsinline
+              preload="auto"
+              poster="media/checks.jpg"
+              width="1280"
+              height="720"
+              aria-label="Animation: three requests pass through Kitsuden's six checks — key, scope, policy, row security, approval and audit. A read gets 200, a request outside the key's scopes gets 403, and a delete waits for a person with 202"
+            >
+              <source src="media/checks.mp4" type="video/mp4" />
+            </video>
+            <button class="clip-toggle" type="button" aria-pressed="false">Pause</button>
+          </div>
           <dl class="reveal ledger">
             <div>
               <dt>Agents have their own identity</dt>
@@ -1788,6 +1806,22 @@ notes__create-note    <span class="c">scope note:write</span>
             The installer writes every secret, builds the images on your machine and prints what to
             open. Everything stays on localhost.
           </p>
+          <div class="clip reveal">
+            <video
+              autoplay
+              loop
+              muted
+              playsinline
+              preload="auto"
+              poster="media/install.jpg"
+              width="1280"
+              height="720"
+              aria-label="Animation: the four steps from install to a connected agent — run the installer, create the administrator with the one-time setup token, create an agent with its scopes and key, and connect it over MCP"
+            >
+              <source src="media/install.mp4" type="video/mp4" />
+            </video>
+            <button class="clip-toggle" type="button" aria-pressed="false">Pause</button>
+          </div>
           <div class="reveal start">
             <div class="tabs" role="tablist" aria-label="How do you want to install" id="how">
               <button role="tab" id="h-agent" aria-controls="q-agent" aria-selected="true">
