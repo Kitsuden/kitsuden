@@ -556,7 +556,7 @@ export interface BrainApi {
   /**
    * Export to Open Knowledge Format v0.2
    *
-   * The notes you can see (or `noteIds`, comma-separated) as an OKF v0.2 bundle: `files[]` with paths and Markdown (YAML frontmatter: type, title, tags, status, generated, verified, sources; claims as footnotes), plus a root index.md with okf_version "0.2".
+   * The notes you can see (or `noteIds`, comma-separated, at most 200 per call) as an OKF v0.2 bundle: `files[]` with paths and Markdown (YAML frontmatter: type, title, tags, status, generated, verified, sources; claims as footnotes), plus a root index.md with okf_version "0.2". A longer list is a 422; a URL over the HTTP server's header limit never reaches the API and gets an empty 431.
    *
    * REST: `GET /api/brain/memory/export/okf` · scope `kon:brain:export-okf`
    * idempotent (safe to retry) · MCP tool `brain_export_okf`
