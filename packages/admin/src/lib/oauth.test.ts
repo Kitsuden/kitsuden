@@ -10,11 +10,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import Connections from "$lib/components/connections/OAuthClients.svelte";
 import * as confirmModule from "$lib/confirm.svelte";
 import { setLocale } from "$lib/i18n";
 import { inputScopes } from "$lib/services/oauth";
 
-import Connections from "../routes/oauth/connections/+page.svelte";
 import Consent from "../routes/oauth/consent/+page.svelte";
 
 vi.setConfig({ testTimeout: 60_000 });

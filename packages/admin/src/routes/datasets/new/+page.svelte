@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { Alert, Button } from "$lib/tallao";
-  import { toast } from "svelte-sonner";
+  import Page from "$lib/components/layout/Page.svelte";
+  import { Alert, Card, CardContent, toast } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import type { DatasetDefinition } from "@kitsuden/shared";
-  import { ArrowLeft } from "lucide-svelte";
 
   import SchemaBuilder from "$lib/components/datasets/SchemaBuilder.svelte";
   import { datasetStore } from "$lib/states/datasets.svelte";
@@ -50,30 +49,24 @@
   }
 </script>
 
-<div class="space-y-6 animate-fade-in pb-20">
-  <div class="flex items-center gap-4">
-    <Button
-      variant="ghost"
-      size="icon"
-      onclick={handleCancel}
-      ariaLabel={t("newPage.back")}
-      title={t("newPage.back")}
-    >
-      <ArrowLeft class="w-5 h-5" />
-    </Button>
-    <div>
-      <h1 class="text-2xl font-bold text-kitsuden-text">{t("common.createDataset")}</h1>
-      <p class="text-sm text-kitsuden-text-dim mt-1">
-        {t("newPage.defineTheSchemaAndFields")}
-      </p>
-    </div>
-  </div>
+<Page
+  title={t("common.createDataset")}
+  description={t("newPage.defineTheSchemaAndFields")}
+  crumbs={[{ label: t("common.createDataset") }]}
+>
+  <div class="space-y-6 pb-20">
+    {#if error}
+      <Alert variant="error" onDismiss={() => (error = null)}>{error}</Alert>
+    {/if}
 
-  {#if error}
-    <Alert variant="error" onDismiss={() => (error = null)}>{error}</Alert>
-  {/if}
-
-  <div class="card p-6 border-kitsuden-accent/20">
-    <SchemaBuilder definition={initialDatasetData} onSave={handleSave} onCancel={handleCancel} />
+    <Card>
+      <CardContent>
+        <SchemaBuilder
+          definition={initialDatasetData}
+          onSave={handleSave}
+          onCancel={handleCancel}
+        />
+      </CardContent>
+    </Card>
   </div>
-</div>
+</Page>

@@ -5,7 +5,8 @@
  * Two failures the panel carried after the translation:
  *
  *   1. The top bar said «Admin» and showed a fixed «A», also for an
- *      editor. Now it shows the real name, role and avatar.
+ *      editor. Now the user menu (top bar and sidebar foot) shows the real name,
+ *      role and avatar.
  *   2. `/api/modules` was requested only once: a transient failure at startup
  *      left the menu incomplete until reload. Now it retries with increasing
  *      backoff and, if it keeps failing, the bar offers «Retry».
@@ -22,7 +23,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setLocale } from "$lib/i18n";
 import { moduleStore } from "$lib/states/modules.svelte";
 
-import CurrentUser from "./CurrentUser.svelte";
+import UserMenu from "./UserMenu.svelte";
 
 const SRC = join(import.meta.dirname, "..", "..", "..");
 const read = (...r: string[]) => readFileSync(join(SRC, ...r), "utf8");
@@ -33,33 +34,37 @@ describe("top bar: who is using the panel", () => {
   beforeEach(() => setLocale("en", { reload: false }));
 
   it("an editor sees their name, «Editor» and their initial — not «Admin» or an «A»", () => {
-    render(CurrentUser, { props: { user: { ...base, name: "berta", role: "editor" } } });
+    render(UserMenu, { props: { row: true, user: { ...base, name: "berta", role: "editor" } } });
     expect(screen.getByTestId("user-name").textContent?.trim()).toBe("berta");
     expect(screen.getByTestId("user-role").textContent?.trim()).toBe("Editor");
     expect(screen.getByTestId("user-avatar").textContent?.trim()).toBe("B");
-    expect(screen.getByTestId("user-avatar").getAttribute("aria-label")).toBe("berta (Editor)");
+    // The menu button carries the name and the role for a screen reader.
+    expect(screen.getByTestId("sidebar-user").getAttribute("aria-label")).toBe(
+      "Account: berta (Editor)"
+    );
   });
 
   it("an admin comes out as «Administrator»", () => {
-    render(CurrentUser, { props: { user: { ...base, name: "Ana", role: "admin" } } });
+    render(UserMenu, { props: { row: true, user: { ...base, name: "Ana", role: "admin" } } });
     expect(screen.getByTestId("user-role").textContent?.trim()).toBe("Administrator");
   });
 
   it("in Spanish the role is translated too", () => {
     setLocale("es", { reload: false });
-    render(CurrentUser, { props: { user: { ...base, name: "Ana", role: "admin" } } });
+    render(UserMenu, { props: { row: true, user: { ...base, name: "Ana", role: "admin" } } });
     expect(screen.getByTestId("user-role").textContent?.trim()).toBe("Administrador");
   });
 
   it("with no name, it uses the local part of the email", () => {
-    render(CurrentUser, { props: { user: { ...base, name: "", role: "editor" } } });
+    render(UserMenu, { props: { row: true, user: { ...base, name: "", role: "editor" } } });
     expect(screen.getByTestId("user-name").textContent?.trim()).toBe("ana");
     expect(screen.getByTestId("user-avatar").textContent?.trim()).toBe("A");
   });
 
   it("with an http(s) image it renders the avatar", () => {
-    render(CurrentUser, {
+    render(UserMenu, {
       props: {
+        row: true,
         user: { ...base, name: "Ana", role: "admin", image: "https://cdn.ejemplo.com/a.png" },
       },
     });
@@ -68,18 +73,30 @@ describe("top bar: who is using the panel", () => {
   });
 
   it("an image with another scheme is ignored and the initial remains", () => {
-    render(CurrentUser, {
-      props: { user: { ...base, name: "Ana", role: "admin", image: "javascript:alert(1)" } },
+    render(UserMenu, {
+      props: {
+        row: true,
+        user: { ...base, name: "Ana", role: "admin", image: "javascript:alert(1)" },
+      },
     });
     expect(screen.getByTestId("user-avatar").querySelector("img")).toBeNull();
     expect(screen.getByTestId("user-avatar").textContent?.trim()).toBe("A");
   });
 
-  it("the bar no longer has the fixed «A» and uses the component", () => {
-    const layout = read("lib", "components", "layout", "SidebarLayout.svelte");
-    expect(layout).not.toMatch(/>\s*A\s*<\/div>/);
-    expect(layout).not.toContain('t("sidebarLayout.admin")');
-    expect(layout).toContain("<CurrentUser {user} />");
+  it("the top bar shows only the avatar; the menu still names the user", () => {
+    render(UserMenu, { props: { user: { ...base, name: "Ana", role: "admin" } } });
+    expect(screen.queryByTestId("user-name")).toBeNull();
+    expect(screen.getByTestId("current-user").getAttribute("aria-label")).toBe(
+      "Account: Ana (Administrator)"
+    );
+  });
+
+  it("the frame no longer has the fixed «A» and uses the menu in both places", () => {
+    const frame = read("lib", "components", "layout", "AppFrame.svelte");
+    expect(frame).not.toMatch(/>\s*A\s*<\/div>/);
+    expect(frame).not.toContain('t("sidebarLayout.admin")');
+    expect(frame).toContain("<UserMenu user={me} row collapsed={isCollapsed} />");
+    expect(frame).toContain("<UserMenu user={me} />");
   });
 });
 
@@ -158,7 +175,7 @@ describe("fetchModules retries transient failures", () => {
   });
 
   it("the sidebar shows «Retry» when it gives up", () => {
-    const layout = read("lib", "components", "layout", "SidebarLayout.svelte");
+    const layout = read("lib", "components", "layout", "AppFrame.svelte");
     expect(layout).toMatch(/\{#if isAdmin && moduleStore\.error\}/);
     expect(layout).toMatch(/onclick=\{\(\) => moduleStore\.fetchModules\(\)\}/);
     expect(layout).toContain('t("common.retry")');

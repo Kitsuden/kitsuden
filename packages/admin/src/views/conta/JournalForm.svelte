@@ -2,14 +2,22 @@
   import { t } from "$lib/i18n";
   import { Save, Plus, X, CheckCircle, ArrowLeft } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
+  import {
+    toast,
+    Badge,
+    Button,
+    Input,
+    Label,
+    Textarea,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+  } from "$lib/tallao";
 
   import { api } from "$lib/api";
-  import Badge from "$lib/components/ui/Badge.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Input from "$lib/components/ui/Input.svelte";
-  import Label from "$lib/components/ui/Label.svelte";
-  import Textarea from "$lib/components/ui/Textarea.svelte";
 
   interface Props {
     journalId?: string | null;
@@ -206,21 +214,25 @@
       </div>
 
       <div class="border border-kitsuden-border rounded-lg overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left">
-            <tr>
-              <th class="px-3 py-2 font-medium">{t("journalForm.account")}</th>
-              <th class="px-3 py-2 font-medium">{t("common.description")}</th>
-              <th class="px-3 py-2 font-medium text-right">{t("journalForm.debit")}</th>
-              <th class="px-3 py-2 font-medium text-right">{t("journalForm.credit")}</th>
-              <th class="px-3 py-2 font-medium">{t("common.currency")}</th>
-              <th class="px-3 py-2 font-medium w-10"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-kitsuden-border">
+        <Table class="w-full text-sm">
+          <TableHeader class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left">
+            <TableRow>
+              <TableHead class="px-3 py-2 font-medium">{t("journalForm.account")}</TableHead>
+              <TableHead class="px-3 py-2 font-medium">{t("common.description")}</TableHead>
+              <TableHead class="px-3 py-2 font-medium text-right"
+                >{t("journalForm.debit")}</TableHead
+              >
+              <TableHead class="px-3 py-2 font-medium text-right"
+                >{t("journalForm.credit")}</TableHead
+              >
+              <TableHead class="px-3 py-2 font-medium">{t("common.currency")}</TableHead>
+              <TableHead class="px-3 py-2 font-medium w-10"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody class="divide-y divide-kitsuden-border">
             {#each journal.lines as line, idx}
-              <tr class="hover:bg-kitsuden-border/20">
-                <td class="px-3 py-2">
+              <TableRow class="hover:bg-kitsuden-border/20">
+                <TableCell class="px-3 py-2">
                   <select
                     bind:value={line.accountId}
                     class="w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
@@ -230,43 +242,43 @@
                       <option value={a.id}>{a.code} - {a.name}</option>
                     {/each}
                   </select>
-                </td>
-                <td class="px-3 py-2"
-                  ><Input bind:value={line.description} class="text-sm py-1" /></td
+                </TableCell>
+                <TableCell class="px-3 py-2"
+                  ><Input bind:value={line.description} class="text-sm py-1" /></TableCell
                 >
-                <td class="px-3 py-2"
+                <TableCell class="px-3 py-2"
                   ><Input
                     type="number"
                     step="0.01"
                     bind:value={line.debit}
                     class="text-sm py-1 text-right"
-                  /></td
+                  /></TableCell
                 >
-                <td class="px-3 py-2"
+                <TableCell class="px-3 py-2"
                   ><Input
                     type="number"
                     step="0.01"
                     bind:value={line.credit}
                     class="text-sm py-1 text-right"
-                  /></td
+                  /></TableCell
                 >
-                <td class="px-3 py-2">
+                <TableCell class="px-3 py-2">
                   <select
                     bind:value={line.currency}
                     class="w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
                   >
                     {#each currencies as c}<option value={c.code}>{c.code}</option>{/each}
                   </select>
-                </td>
-                <td class="px-3 py-2">
+                </TableCell>
+                <TableCell class="px-3 py-2">
                   <Button variant="ghost" size="sm" onclick={() => removeLine(idx)}
                     ><X class="w-4 h-4 text-kitsuden-danger" /></Button
                   >
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             {/each}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
 

@@ -25,7 +25,7 @@
   />
 -->
 <script lang="ts">
-  import { toast } from "svelte-sonner";
+  import { toast } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import {
     MessageCircle,

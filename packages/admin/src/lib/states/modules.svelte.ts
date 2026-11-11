@@ -1,4 +1,4 @@
-import { toast } from "svelte-sonner";
+import { toast } from "$lib/tallao";
 import { t } from "$lib/i18n";
 /**
  * Shared Module State (Svelte 5 Runes)

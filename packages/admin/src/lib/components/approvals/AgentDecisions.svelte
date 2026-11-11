@@ -5,11 +5,19 @@
   rejected proposals are.
 -->
 <script lang="ts">
+  import {
+    Button,
+    Skeleton,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+  } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import { RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
-
-  import Button from "$lib/components/ui/Button.svelte";
   import { listAgentDecisions, type AgentDecision } from "$lib/services/agents";
 
   interface Props {
@@ -67,9 +75,7 @@
   </div>
 
   {#if loading}
-    <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <Skeleton lines={3} />
   {:else if error}
     <div
       class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
@@ -81,42 +87,46 @@
   {:else}
     <p class="text-xs text-kitsuden-subtle">{t("agentDecisions.total", { n: total })}</p>
     <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
-      <table class="w-full text-sm">
-        <thead class="bg-kitsuden-card text-xs text-kitsuden-subtle text-left">
-          <tr>
-            <th class="px-3 py-2 font-medium">{t("agentDecisions.colWhen")}</th>
-            {#if !agentId}<th class="px-3 py-2 font-medium">{t("agentDecisions.colAgent")}</th>{/if}
-            <th class="px-3 py-2 font-medium">{t("agentDecisions.colAction")}</th>
-            <th class="px-3 py-2 font-medium">{t("agentDecisions.colReason")}</th>
-            <th class="px-3 py-2 font-medium">{t("agentDecisions.colAlternatives")}</th>
-            <th class="px-3 py-2 font-medium">{t("agentDecisions.colVersion")}</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table class="w-full text-sm">
+        <TableHeader class="bg-kitsuden-card text-xs text-kitsuden-subtle text-left">
+          <TableRow>
+            <TableHead class="px-3 py-2 font-medium">{t("agentDecisions.colWhen")}</TableHead>
+            {#if !agentId}<TableHead class="px-3 py-2 font-medium"
+                >{t("agentDecisions.colAgent")}</TableHead
+              >{/if}
+            <TableHead class="px-3 py-2 font-medium">{t("agentDecisions.colAction")}</TableHead>
+            <TableHead class="px-3 py-2 font-medium">{t("agentDecisions.colReason")}</TableHead>
+            <TableHead class="px-3 py-2 font-medium"
+              >{t("agentDecisions.colAlternatives")}</TableHead
+            >
+            <TableHead class="px-3 py-2 font-medium">{t("agentDecisions.colVersion")}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {#each decisions as d (d.id)}
-            <tr class="border-t border-kitsuden-border align-top" data-testid="decision-row">
-              <td class="px-3 py-2 whitespace-nowrap text-xs text-kitsuden-subtle"
-                >{date(d.createdAt)}</td
+            <TableRow class="border-t border-kitsuden-border align-top" data-testid="decision-row">
+              <TableCell class="px-3 py-2 whitespace-nowrap text-xs text-kitsuden-subtle"
+                >{date(d.createdAt)}</TableCell
               >
               {#if !agentId}
-                <td class="px-3 py-2 whitespace-nowrap">
+                <TableCell class="px-3 py-2 whitespace-nowrap">
                   <a href="/agents/{d.agentId}" class="text-kitsuden-accent hover:underline"
                     >{d.agentName ?? d.agentId}</a
                   >
-                </td>
+                </TableCell>
               {/if}
-              <td class="px-3 py-2 text-kitsuden-text">{d.action}</td>
-              <td class="px-3 py-2 text-kitsuden-text-dim">{d.reason}</td>
-              <td class="px-3 py-2 text-kitsuden-text-dim">
+              <TableCell class="px-3 py-2 text-kitsuden-text">{d.action}</TableCell>
+              <TableCell class="px-3 py-2 text-kitsuden-text-dim">{d.reason}</TableCell>
+              <TableCell class="px-3 py-2 text-kitsuden-text-dim">
                 {#each d.alternatives as a}<div>{a}</div>{/each}
-              </td>
-              <td class="px-3 py-2 text-xs text-kitsuden-subtle whitespace-nowrap">
+              </TableCell>
+              <TableCell class="px-3 py-2 text-xs text-kitsuden-subtle whitespace-nowrap">
                 {d.version != null ? t("agentVersions.version", { n: d.version }) : ""}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           {/each}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   {/if}
 </div>

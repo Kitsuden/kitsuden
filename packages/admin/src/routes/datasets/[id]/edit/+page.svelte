@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { pageTitle } from "$lib/page";
+  import Page from "$lib/components/layout/Page.svelte";
   import { t } from "$lib/i18n";
   import type { DatasetDefinition } from "@kitsuden/shared";
-  import { ArrowLeft, Loader2, AlertCircle } from "lucide-svelte";
+  import { Alert, Button, Card, CardContent, EmptyState, Skeleton } from "$lib/tallao";
   import { onMount } from "svelte";
 
   import SchemaBuilder from "$lib/components/datasets/SchemaBuilder.svelte";
@@ -81,89 +81,53 @@
   }
 </script>
 
-<svelte:head>
-  <title
-    >{pageTitle(
-      dataset ? t("editEditPage.editDataset", { name: dataset.name }) : t("titles.editDataset")
-    )}</title
-  >
-</svelte:head>
+<Page
+  title={dataset
+    ? t("editEditPage.editDataset", { name: dataset.name })
+    : t("editEditPage.editDataset2")}
+  description={t("editEditPage.modifyTheSchemaFieldsAnd")}
+  crumbs={dataset
+    ? [
+        { label: dataset.name, href: `/datasets/${datasetId}/entries` },
+        { label: t("titles.editDataset") },
+      ]
+    : [{ label: t("titles.editDataset") }]}
+>
+  {#snippet actions()}
+    {#if dataset}
+      <Button variant="secondary" href={`/datasets/${datasetId}/entries`}>
+        {t("entriesPage.entries")}
+      </Button>
+    {/if}
+  {/snippet}
 
-<div class="space-y-6 animate-fade-in pb-20">
-  <!-- Header -->
-  <div class="flex items-center gap-4">
-    <button
-      class="btn-icon p-2 hover:bg-kitsuden-surface rounded-lg transition-colors text-kitsuden-subtle"
-      onclick={goBack}
-      aria-label={t("editEditPage.backToDatasets")}
-      title={t("editEditPage.backToDatasets")}
-    >
-      <ArrowLeft class="w-5 h-5" />
-    </button>
-    <div>
-      <h1 class="text-2xl font-bold text-kitsuden-text">
-        {#if loading}
-          {t("common.loading")}
-        {:else if dataset}
-          {t("editEditPage.editDataset", { name: dataset.name })}
-        {:else}
-          {t("editEditPage.editDataset2")}
-        {/if}
-      </h1>
-      <p class="text-sm text-kitsuden-text-dim mt-1">
-        {t("editEditPage.modifyTheSchemaFieldsAnd")}
-      </p>
-    </div>
-  </div>
+  <div class="space-y-6 pb-20">
+    {#if error}
+      <Alert variant="error">{error}</Alert>
+    {/if}
 
-  <!-- Error Message -->
-  {#if error}
-    <div
-      class="p-4 rounded-lg bg-kitsuden-danger/10 border border-kitsuden-danger/20 text-kitsuden-danger text-sm flex items-center gap-3"
-    >
-      <AlertCircle class="w-5 h-5" />
-      {error}
-    </div>
-  {/if}
-
-  <!-- Loading State -->
-  {#if loading}
-    <div class="card p-12 text-center">
-      <Loader2 class="w-8 h-8 text-kitsuden-accent animate-spin mx-auto mb-4" />
-      <p class="text-kitsuden-subtle">{t("editEditPage.loadingDataset")}</p>
-    </div>
-  {:else if !dataset}
-    <div class="card p-12 text-center">
-      <p class="text-kitsuden-text-dim">{t("editEditPage.datasetNotFound")}</p>
-      <button onclick={goBack} class="btn-primary mt-4">
-        {t("editEditPage.backToDatasets")}
-      </button>
-    </div>
-  {:else}
-    <div class="card p-6 border-kitsuden-accent/20">
-      <SchemaBuilder
-        definition={dataset}
-        {allDatasets}
-        onSave={handleSave}
-        onCancel={handleCancel}
+    {#if loading}
+      <div role="status" aria-busy="true">
+        <span class="sr-only">{t("editEditPage.loadingDataset")}</span>
+        <Skeleton lines={6} />
+      </div>
+    {:else if !dataset}
+      <EmptyState
+        title={t("editEditPage.datasetNotFound")}
+        actionLabel={t("editEditPage.backToDatasets")}
+        onAction={goBack}
       />
-    </div>
-  {/if}
-</div>
-
-<style>
-  @reference "../../../../style.css";
-
-  .btn-primary {
-    @apply px-4 py-2 bg-kitsuden-accent text-kitsuden-on-accent rounded-lg font-medium 
-           hover:bg-kitsuden-accent-hover transition-colors;
-  }
-
-  .btn-icon {
-    @apply p-2 rounded-lg transition-colors;
-  }
-
-  .card {
-    @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
-  }
-</style>
+    {:else}
+      <Card>
+        <CardContent>
+          <SchemaBuilder
+            definition={dataset}
+            {allDatasets}
+            onSave={handleSave}
+            onCancel={handleCancel}
+          />
+        </CardContent>
+      </Card>
+    {/if}
+  </div>
+</Page>

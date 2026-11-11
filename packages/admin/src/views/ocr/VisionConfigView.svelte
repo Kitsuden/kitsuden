@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ViewPage from "$lib/components/admin/ViewPage.svelte";
   import { t } from "$lib/i18n";
   /**
    * VisionConfigView — Vision LLM settings (kon-ocr-training).
@@ -124,144 +125,140 @@
   };
 </script>
 
-<div class="vc-page">
-  <header class="vc-head">
-    <div class="vc-title">
-      <Sparkles size={20} />
-      <div>
-        <h1>{t("visionConfigView.visionLlmAiSettings")}</h1>
-        <p>{t("visionConfigView.lastCascadeResource")}</p>
-      </div>
-    </div>
-  </header>
-
-  {#if loading}
-    <div class="vc-loading"><Loader2 size={18} class="spin" /> {t("common.loadingEllipsis")}</div>
-  {:else}
-    <div class="vc-grid">
-      <!-- Credential (KITSUDEN Secrets) -->
-      <section class="vc-card vc-secret">
-        <div class="vc-card-head">
-          <KeyRound size={16} />
-          {t("visionConfigView.providerCredential")}
-        </div>
-        <div class="vc-card-body">
-          {#if cfg?.api_key_present}
-            <div class="vc-badge ok">
-              <CheckCircle2 size={14} />
-              {t("visionConfigView.keyPresentInKitsudenSecrets")}
-            </div>
-          {:else}
-            <div class="vc-badge warn">
-              <XCircle size={14} />
-              {t("visionConfigView.withoutConfiguredKey")}
-            </div>
-          {/if}
-          <p class="vc-note">
-            {t("visionConfigView.theApiKeyIsSaved")}
-            <strong>{t("visionConfigView.kitsudenSecrets")}</strong>
-            {t("visionConfigView.encryptedNotHereAddItAs")} <code>VEKOCR_VISION_LLM_API_KEY</code>
-            {t("visionConfigView.fromTheSection")}
-            <em>{t("visionConfigView.secrets")}</em>{t("visionConfigView.neverLeavesKitsudenNo")}
-          </p>
-          <button
-            class="vc-btn ghost"
-            onclick={testConnection}
-            disabled={testing || !cfg?.api_key_present}
-          >
-            {#if testing}<Loader2 size={14} class="spin" />{:else}<Plug size={14} />{/if}
-            {t("visionConfigView.testConnection")}
-          </button>
-          {#if testResult}
-            <div class="vc-badge {testResult.ok ? 'ok' : 'err'}" style="margin-top:8px">
-              {#if testResult.ok}<CheckCircle2 size={14} />{:else}<XCircle size={14} />{/if}
-              {testResult.text}
-            </div>
-          {/if}
-        </div>
-      </section>
-
-      <!-- Behavior config -->
-      <section class="vc-card">
-        <div class="vc-card-head">{t("visionConfigView.behavior")}</div>
-        <div class="vc-card-body">
-          <label class="vc-switch">
-            <input type="checkbox" bind:checked={form.enabled} />
-            <span>{t("visionConfigView.activateVisionLlm")}</span>
-          </label>
-
-          <div class="vc-field">
-            <span class="vc-label">{t("visionConfigView.provider")}</span>
-            <select bind:value={form.provider}>
-              <option value="anthropic"
-                >{t("visionConfigView.anthropicClaudeSupportsNativePdf")}</option
-              >
-              <option value="openai"
-                >{t("visionConfigView.openaiCompatibleOpenaiOpenrouterLocal")}</option
-              >
-            </select>
+<ViewPage
+  title={t("visionConfigView.visionLlmAiSettings")}
+  description={t("visionConfigView.lastCascadeResource")}
+>
+  <div class="vc-page">
+    {#if loading}
+      <div class="vc-loading"><Loader2 size={18} class="spin" /> {t("common.loadingEllipsis")}</div>
+    {:else}
+      <div class="vc-grid">
+        <!-- Credential (KITSUDEN Secrets) -->
+        <section class="vc-card vc-secret">
+          <div class="vc-card-head">
+            <KeyRound size={16} />
+            {t("visionConfigView.providerCredential")}
           </div>
-
-          <div class="vc-field">
-            <span class="vc-label">{t("common.model")}</span>
-            <input
-              type="text"
-              bind:value={form.model}
-              placeholder={providerDefaults[form.provider] ?? t("visionConfigView.providerDefault")}
-            />
-          </div>
-
-          <div class="vc-field">
-            <span class="vc-label"
-              >{t("visionConfigView.baseUrl")}
-              <em>{t("visionConfigView.optionalGatewaysLocal")}</em></span
+          <div class="vc-card-body">
+            {#if cfg?.api_key_present}
+              <div class="vc-badge ok">
+                <CheckCircle2 size={14} />
+                {t("visionConfigView.keyPresentInKitsudenSecrets")}
+              </div>
+            {:else}
+              <div class="vc-badge warn">
+                <XCircle size={14} />
+                {t("visionConfigView.withoutConfiguredKey")}
+              </div>
+            {/if}
+            <p class="vc-note">
+              {t("visionConfigView.theApiKeyIsSaved")}
+              <strong>{t("visionConfigView.kitsudenSecrets")}</strong>
+              {t("visionConfigView.encryptedNotHereAddItAs")} <code>VEKOCR_VISION_LLM_API_KEY</code>
+              {t("visionConfigView.fromTheSection")}
+              <em>{t("visionConfigView.secrets")}</em>{t("visionConfigView.neverLeavesKitsudenNo")}
+            </p>
+            <button
+              class="vc-btn ghost"
+              onclick={testConnection}
+              disabled={testing || !cfg?.api_key_present}
             >
-            <input
-              type="text"
-              bind:value={form.base_url}
-              placeholder={t("visionConfigView.pEjHttpHostDocker")}
-            />
+              {#if testing}<Loader2 size={14} class="spin" />{:else}<Plug size={14} />{/if}
+              {t("visionConfigView.testConnection")}
+            </button>
+            {#if testResult}
+              <div class="vc-badge {testResult.ok ? 'ok' : 'err'}" style="margin-top:8px">
+                {#if testResult.ok}<CheckCircle2 size={14} />{:else}<XCircle size={14} />{/if}
+                {testResult.text}
+              </div>
+            {/if}
           </div>
+        </section>
 
-          <div class="vc-field">
-            <span class="vc-label">
-              {t("visionConfigView.fidelityThreshold")}
-              <strong
-                >{form.min_confidence_pct === 0
-                  ? t("visionConfigView.gateNormal")
-                  : form.min_confidence_pct + "%"}</strong
+        <!-- Behavior config -->
+        <section class="vc-card">
+          <div class="vc-card-head">{t("visionConfigView.behavior")}</div>
+          <div class="vc-card-body">
+            <label class="vc-switch">
+              <input type="checkbox" bind:checked={form.enabled} />
+              <span>{t("visionConfigView.activateVisionLlm")}</span>
+            </label>
+
+            <div class="vc-field">
+              <span class="vc-label">{t("visionConfigView.provider")}</span>
+              <select bind:value={form.provider}>
+                <option value="anthropic"
+                  >{t("visionConfigView.anthropicClaudeSupportsNativePdf")}</option
+                >
+                <option value="openai"
+                  >{t("visionConfigView.openaiCompatibleOpenaiOpenrouterLocal")}</option
+                >
+              </select>
+            </div>
+
+            <div class="vc-field">
+              <span class="vc-label">{t("common.model")}</span>
+              <input
+                type="text"
+                bind:value={form.model}
+                placeholder={providerDefaults[form.provider] ??
+                  t("visionConfigView.providerDefault")}
+              />
+            </div>
+
+            <div class="vc-field">
+              <span class="vc-label"
+                >{t("visionConfigView.baseUrl")}
+                <em>{t("visionConfigView.optionalGatewaysLocal")}</em></span
               >
-            </span>
-            <input type="range" min="0" max="99" step="1" bind:value={form.min_confidence_pct} />
-            <span class="vc-hint">{t("visionConfigView.ifOcrFallsBelow")}</span>
-          </div>
+              <input
+                type="text"
+                bind:value={form.base_url}
+                placeholder={t("visionConfigView.pEjHttpHostDocker")}
+              />
+            </div>
 
-          <div class="vc-field">
-            <span class="vc-label">{t("visionConfigView.whenStandaloneEngineEnters")}</span>
-            <select bind:value={form.stage}>
-              <option value="after_heavy">{t("visionConfigView.afterHeavyOcrMinimum")}</option>
-              <option value="after_light">{t("visionConfigView.afterLightOcrSkips")}</option>
-            </select>
-          </div>
+            <div class="vc-field">
+              <span class="vc-label">
+                {t("visionConfigView.fidelityThreshold")}
+                <strong
+                  >{form.min_confidence_pct === 0
+                    ? t("visionConfigView.gateNormal")
+                    : form.min_confidence_pct + "%"}</strong
+                >
+              </span>
+              <input type="range" min="0" max="99" step="1" bind:value={form.min_confidence_pct} />
+              <span class="vc-hint">{t("visionConfigView.ifOcrFallsBelow")}</span>
+            </div>
 
-          <div class="vc-field">
-            <span class="vc-label">{t("visionConfigView.maxPagesPerDocument")}</span>
-            <input type="number" min="1" max="20" bind:value={form.max_pages} />
-            <span class="vc-hint">{t("visionConfigView.costControlTheLlm")}</span>
-          </div>
-        </div>
-      </section>
-    </div>
+            <div class="vc-field">
+              <span class="vc-label">{t("visionConfigView.whenStandaloneEngineEnters")}</span>
+              <select bind:value={form.stage}>
+                <option value="after_heavy">{t("visionConfigView.afterHeavyOcrMinimum")}</option>
+                <option value="after_light">{t("visionConfigView.afterLightOcrSkips")}</option>
+              </select>
+            </div>
 
-    <div class="vc-actions">
-      <button class="vc-btn primary" onclick={save} disabled={saving}>
-        {#if saving}<Loader2 size={14} class="spin" />{:else}<Save size={14} />{/if}
-        {t("visionConfigView.save")}
-      </button>
-      {#if msg}<span class="vc-msg" class:err={msg.startsWith("Error")}>{msg}</span>{/if}
-    </div>
-  {/if}
-</div>
+            <div class="vc-field">
+              <span class="vc-label">{t("visionConfigView.maxPagesPerDocument")}</span>
+              <input type="number" min="1" max="20" bind:value={form.max_pages} />
+              <span class="vc-hint">{t("visionConfigView.costControlTheLlm")}</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="vc-actions">
+        <button class="vc-btn primary" onclick={save} disabled={saving}>
+          {#if saving}<Loader2 size={14} class="spin" />{:else}<Save size={14} />{/if}
+          {t("visionConfigView.save")}
+        </button>
+        {#if msg}<span class="vc-msg" class:err={msg.startsWith("Error")}>{msg}</span>{/if}
+      </div>
+    {/if}
+  </div>
+</ViewPage>
 
 <style>
   .vc-page {

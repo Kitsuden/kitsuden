@@ -4,14 +4,23 @@
   The secret is shown only once, with TokenDisplay.
 -->
 <script lang="ts">
+  import {
+    Button,
+    Dialog,
+    Skeleton,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+  } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import { KeyRound, RefreshCw, Ban, Plus } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
+  import { toast } from "$lib/tallao";
 
   import TokenDisplay from "$lib/components/agents/TokenDisplay.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Modal from "$lib/components/ui/Modal.svelte";
   import {
     createAgentKey,
     listAgentKeys,
@@ -140,9 +149,7 @@
   </div>
 
   {#if loading}
-    <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <Skeleton lines={3} />
   {:else if error}
     <div
       class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
@@ -153,21 +160,21 @@
     <p class="text-sm text-kitsuden-subtle">{t("agentKeys.none")}</p>
   {:else}
     <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
-      <table class="w-full text-sm">
-        <thead class="text-xs text-kitsuden-subtle">
-          <tr>
-            <th class="text-left px-3 py-2">{t("agentKeys.key")}</th>
-            <th class="text-left px-3 py-2">{t("agentKeys.status")}</th>
-            <th class="text-left px-3 py-2">{t("agentKeys.created")}</th>
-            <th class="text-left px-3 py-2">{t("agentKeys.lastUsed")}</th>
-            <th class="text-left px-3 py-2">{t("agentKeys.expires")}</th>
-            <th class="px-3 py-2"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-kitsuden-border/70">
+      <Table class="w-full text-sm">
+        <TableHeader class="text-xs text-kitsuden-subtle">
+          <TableRow>
+            <TableHead class="text-left px-3 py-2">{t("agentKeys.key")}</TableHead>
+            <TableHead class="text-left px-3 py-2">{t("agentKeys.status")}</TableHead>
+            <TableHead class="text-left px-3 py-2">{t("agentKeys.created")}</TableHead>
+            <TableHead class="text-left px-3 py-2">{t("agentKeys.lastUsed")}</TableHead>
+            <TableHead class="text-left px-3 py-2">{t("agentKeys.expires")}</TableHead>
+            <TableHead class="px-3 py-2"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody class="divide-y divide-kitsuden-border/70">
           {#each keys as k (k.id)}
-            <tr data-testid="key-row">
-              <td class="px-3 py-2 min-w-0">
+            <TableRow data-testid="key-row">
+              <TableCell class="px-3 py-2 min-w-0">
                 <div class="flex items-center gap-2">
                   <KeyRound size={14} class="text-kitsuden-subtle shrink-0" />
                   <span class="text-kitsuden-text">{k.name || t("agentKeys.unnamed")}</span>
@@ -178,25 +185,26 @@
                     {t("agentKeys.rotatedFromNote")}
                   </div>
                 {/if}
-              </td>
-              <td class="px-3 py-2">
+              </TableCell>
+              <TableCell class="px-3 py-2">
                 <span class="text-[11px] px-1.5 py-0.5 rounded-sm {STATUS[k.status].kind}"
                   >{STATUS[k.status].text()}</span
                 >
-              </td>
-              <td class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap">{date(k.createdAt)}</td
+              </TableCell>
+              <TableCell class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap"
+                >{date(k.createdAt)}</TableCell
               >
-              <td class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap"
-                >{k.lastUsedAt ? date(k.lastUsedAt) : t("agentKeys.never")}</td
+              <TableCell class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap"
+                >{k.lastUsedAt ? date(k.lastUsedAt) : t("agentKeys.never")}</TableCell
               >
-              <td class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap">
+              <TableCell class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap">
                 {k.revokedAt
                   ? date(k.revokedAt)
                   : k.expiresAt
                     ? date(k.expiresAt)
                     : t("agentKeys.noExpiry")}
-              </td>
-              <td class="px-3 py-2">
+              </TableCell>
+              <TableCell class="px-3 py-2">
                 {#if alive(k)}
                   <div class="flex justify-end gap-1">
                     <Button variant="ghost" size="sm" onclick={() => (rotating = k)}>
@@ -212,16 +220,16 @@
                     </Button>
                   </div>
                 {/if}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           {/each}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   {/if}
 </div>
 
-<Modal
+<Dialog
   open={creating}
   title={t("agentKeys.newKey")}
   description={t("agentKeys.newKeyHelp")}
@@ -267,9 +275,9 @@
       <Button type="submit" variant="primary" loading={busy}>{t("agentKeys.create")}</Button>
     </div>
   </form>
-</Modal>
+</Dialog>
 
-<Modal
+<Dialog
   open={!!rotating}
   title={t("agentKeys.rotateTitle")}
   description={t("agentKeys.rotateHelp")}
@@ -297,9 +305,9 @@
       <Button variant="primary" loading={busy} onclick={rotate}>{t("agentKeys.rotate")}</Button>
     </div>
   </div>
-</Modal>
+</Dialog>
 
-<Modal
+<Dialog
   open={!!revoking}
   title={t("agentKeys.revokeTitle")}
   description={t("agentKeys.revokeHelp")}
@@ -310,7 +318,7 @@
     <Button variant="secondary" onclick={() => (revoking = null)}>{t("common.cancel")}</Button>
     <Button variant="danger" loading={busy} onclick={revoke}>{t("agentKeys.revoke")}</Button>
   </div>
-</Modal>
+</Dialog>
 
 {#if secret}
   {#key secret}

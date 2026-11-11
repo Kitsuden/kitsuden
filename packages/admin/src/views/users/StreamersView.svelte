@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ViewPage from "$lib/components/admin/ViewPage.svelte";
   import { confirmDialog } from "$lib/confirm.svelte";
   import { t, localeFormat } from "$lib/i18n";
   import {
@@ -16,7 +17,17 @@
     X,
     Loader2,
   } from "lucide-svelte";
-  import { toast } from "svelte-sonner";
+  import {
+    toast,
+    Dialog,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    Button,
+  } from "$lib/tallao";
 
   import { api } from "$lib/api";
 
@@ -279,398 +290,395 @@
   }
 </script>
 
-<div class="space-y-6 animate-fade-in">
-  <!-- Header -->
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-2">
-        <Tv class="w-6 h-6 text-kitsuden-accent" />
-        {t("common.streamers")}
-      </h1>
-      <p class="text-sm text-kitsuden-subtle mt-0.5">
-        {t("streamersView.managePartneredContentCreators")}
-      </p>
-    </div>
-    <button class="btn-primary inline-flex items-center gap-2" onclick={openAdd}>
+<ViewPage
+  title={t("common.streamers")}
+  description={t("streamersView.managePartneredContentCreators")}
+>
+  {#snippet actions()}
+    <Button onclick={openAdd}>
       <Plus class="w-4 h-4" />
       {t("streamersView.addStreamer")}
-    </button>
-  </div>
+    </Button>
+  {/snippet}
 
-  <!-- Stats -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div class="card p-4 flex items-center gap-4">
-      <div class="w-10 h-10 rounded-lg bg-kitsuden-accent/10 flex items-center justify-center">
-        <Users class="w-5 h-5 text-kitsuden-accent" />
+  <div class="space-y-6">
+    <!-- Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="card p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-kitsuden-accent/10 flex items-center justify-center">
+          <Users class="w-5 h-5 text-kitsuden-accent" />
+        </div>
+        <div>
+          <p class="text-2xl font-bold text-kitsuden-text">{stats.total}</p>
+          <p class="text-xs text-kitsuden-subtle">{t("streamersView.totalStreamers")}</p>
+        </div>
       </div>
-      <div>
-        <p class="text-2xl font-bold text-kitsuden-text">{stats.total}</p>
-        <p class="text-xs text-kitsuden-subtle">{t("streamersView.totalStreamers")}</p>
-      </div>
-    </div>
-    <div class="card p-4 flex items-center gap-4">
-      <div
-        class="w-10 h-10 rounded-lg bg-kitsuden-accent-2/10 flex items-center justify-center animate-pulse"
-      >
-        <Radio class="w-5 h-5 text-kitsuden-accent-2" />
-      </div>
-      <div>
-        <p class="text-2xl font-bold text-kitsuden-text">{stats.live}</p>
-        <p class="text-xs text-kitsuden-subtle">{t("streamersView.liveNow")}</p>
-      </div>
-    </div>
-    <div class="card p-4 flex items-center gap-4">
-      <div class="w-10 h-10 rounded-lg bg-kitsuden-green/10 flex items-center justify-center">
-        <Eye class="w-5 h-5 text-kitsuden-green" />
-      </div>
-      <div>
-        <p class="text-2xl font-bold text-kitsuden-text">{formatNumber(stats.viewers)}</p>
-        <p class="text-xs text-kitsuden-subtle">{t("streamersView.totalViewers")}</p>
-      </div>
-    </div>
-    <div class="card p-4 flex items-center gap-4">
-      <div class="w-10 h-10 rounded-lg bg-kitsuden-amber/10 flex items-center justify-center">
-        <TrendingUp class="w-5 h-5 text-kitsuden-amber" />
-      </div>
-      <div>
-        <p class="text-2xl font-bold text-kitsuden-text">{formatNumber(stats.avgFollowers)}</p>
-        <p class="text-xs text-kitsuden-subtle">{t("streamersView.avgFollowers")}</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Controls -->
-  <div class="card overflow-hidden">
-    <div class="flex flex-col lg:flex-row gap-3 p-4 border-b border-kitsuden-border">
-      <div class="relative flex-1">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-subtle" />
-        <input
-          bind:value={search}
-          placeholder={t("streamersView.searchByNameOrChannel")}
-          class="w-full pl-9 pr-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
-        />
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <select
-          bind:value={platformFilter}
-          class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+      <div class="card p-4 flex items-center gap-4">
+        <div
+          class="w-10 h-10 rounded-lg bg-kitsuden-accent-2/10 flex items-center justify-center animate-pulse"
         >
-          <option value="">{t("streamersView.allPlatforms")}</option>
-          <option value="twitch">{t("streamersView.twitch")}</option>
-          <option value="youtube">{t("streamersView.youtube")}</option>
-          <option value="kick">{t("streamersView.kick")}</option>
-          <option value="other">{t("streamersView.other")}</option>
-        </select>
-        <label
-          for="sortby"
-          class="flex items-center gap-2 px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text cursor-pointer select-none"
-        >
-          <input type="checkbox" bind:checked={liveOnly} class="accent-kitsuden-accent-2" />
-          {t("streamersView.liveOnly")}
-        </label>
-        <select
-          id="sortby"
-          bind:value={sortBy}
-          class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
-        >
-          <option value="followersDesc">{t("streamersView.followers")}</option>
-          <option value="viewersDesc">{t("streamersView.viewers")}</option>
-          <option value="nameAsc">{t("streamersView.nameAZ")}</option>
-          <option value="lastSynced">{t("streamersView.lastSynced")}</option>
-        </select>
+          <Radio class="w-5 h-5 text-kitsuden-accent-2" />
+        </div>
+        <div>
+          <p class="text-2xl font-bold text-kitsuden-text">{stats.live}</p>
+          <p class="text-xs text-kitsuden-subtle">{t("streamersView.liveNow")}</p>
+        </div>
+      </div>
+      <div class="card p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-kitsuden-green/10 flex items-center justify-center">
+          <Eye class="w-5 h-5 text-kitsuden-green" />
+        </div>
+        <div>
+          <p class="text-2xl font-bold text-kitsuden-text">{formatNumber(stats.viewers)}</p>
+          <p class="text-xs text-kitsuden-subtle">{t("streamersView.totalViewers")}</p>
+        </div>
+      </div>
+      <div class="card p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-kitsuden-amber/10 flex items-center justify-center">
+          <TrendingUp class="w-5 h-5 text-kitsuden-amber" />
+        </div>
+        <div>
+          <p class="text-2xl font-bold text-kitsuden-text">{formatNumber(stats.avgFollowers)}</p>
+          <p class="text-xs text-kitsuden-subtle">{t("streamersView.avgFollowers")}</p>
+        </div>
       </div>
     </div>
 
-    <!-- Bulk bar -->
-    {#if selectedCount > 0}
-      <div
-        class="flex items-center justify-between px-4 py-2 bg-kitsuden-surface border-b border-kitsuden-border animate-fade-in"
-      >
-        <span class="text-sm text-kitsuden-text font-medium"
-          >{selectedCount} {t("common.selected")}</span
-        >
-        <button
-          class="btn-ghost text-kitsuden-accent-2 inline-flex items-center gap-1.5 text-sm"
-          onclick={deleteSelected}
-        >
-          <Trash2 class="w-4 h-4" />
-          {t("streamersView.deleteSelected")}
-        </button>
-      </div>
-    {/if}
-
-    <!-- Table -->
-    {#if loading}
-      <div class="flex justify-center py-20">
-        <Loader2 class="w-6 h-6 animate-spin text-kitsuden-accent" />
-      </div>
-    {:else if filteredStreamers.length === 0}
-      <div class="flex flex-col items-center justify-center py-20 text-center">
-        <Tv class="w-12 h-12 text-kitsuden-subtle mb-3" />
-        <p class="text-kitsuden-text-dim font-medium">{t("streamersView.noStreamersFound")}</p>
-        <p class="text-xs text-kitsuden-subtle mt-1">
-          {t("streamersView.tryAdjustingYourFiltersOr")}
-        </p>
-      </div>
-    {:else}
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left">
-          <thead
-            class="text-xs text-kitsuden-subtle uppercase bg-kitsuden-surface border-b border-kitsuden-border"
+    <!-- Controls -->
+    <div class="card overflow-hidden">
+      <div class="flex flex-col lg:flex-row gap-3 p-4 border-b border-kitsuden-border">
+        <div class="relative flex-1">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-subtle" />
+          <input
+            bind:value={search}
+            placeholder={t("streamersView.searchByNameOrChannel")}
+            class="w-full pl-9 pr-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
+          />
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <select
+            bind:value={platformFilter}
+            class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
           >
-            <tr>
-              <th class="px-4 py-3 w-10">
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  onchange={toggleSelectAll}
-                  class="accent-kitsuden-accent"
-                />
-              </th>
-              <th class="px-4 py-3 w-12">{t("streamersView.avatar")}</th>
-              <th class="px-4 py-3">{t("streamersView.displayName")}</th>
-              <th class="px-4 py-3">{t("common.platform")}</th>
-              <th class="px-4 py-3">{t("streamersView.channelId")}</th>
-              <th class="px-4 py-3">{t("common.status")}</th>
-              <th class="px-4 py-3 text-right">{t("streamersView.viewers2")}</th>
-              <th class="px-4 py-3 text-right">{t("streamersView.followers2")}</th>
-              <th class="px-4 py-3">{t("streamersView.lastSynced")}</th>
-              <th class="px-4 py-3 text-right">{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each filteredStreamers as s (s.id)}
-              <tr
-                class="border-b border-kitsuden-border hover:bg-kitsuden-surface/40 transition-colors"
-              >
-                <td class="px-4 py-3">
+            <option value="">{t("streamersView.allPlatforms")}</option>
+            <option value="twitch">{t("streamersView.twitch")}</option>
+            <option value="youtube">{t("streamersView.youtube")}</option>
+            <option value="kick">{t("streamersView.kick")}</option>
+            <option value="other">{t("streamersView.other")}</option>
+          </select>
+          <label
+            for="sortby"
+            class="flex items-center gap-2 px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text cursor-pointer select-none"
+          >
+            <input type="checkbox" bind:checked={liveOnly} class="accent-kitsuden-accent-2" />
+            {t("streamersView.liveOnly")}
+          </label>
+          <select
+            id="sortby"
+            bind:value={sortBy}
+            class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+          >
+            <option value="followersDesc">{t("streamersView.followers")}</option>
+            <option value="viewersDesc">{t("streamersView.viewers")}</option>
+            <option value="nameAsc">{t("streamersView.nameAZ")}</option>
+            <option value="lastSynced">{t("streamersView.lastSynced")}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Bulk bar -->
+      {#if selectedCount > 0}
+        <div
+          class="flex items-center justify-between px-4 py-2 bg-kitsuden-surface border-b border-kitsuden-border animate-fade-in"
+        >
+          <span class="text-sm text-kitsuden-text font-medium"
+            >{selectedCount} {t("common.selected")}</span
+          >
+          <Button variant="danger-ghost" size="sm" onclick={deleteSelected}>
+            <Trash2 class="w-4 h-4" />
+            {t("streamersView.deleteSelected")}
+          </Button>
+        </div>
+      {/if}
+
+      <!-- Table -->
+      {#if loading}
+        <div class="flex justify-center py-20">
+          <Loader2 class="w-6 h-6 animate-spin text-kitsuden-accent" />
+        </div>
+      {:else if filteredStreamers.length === 0}
+        <div class="flex flex-col items-center justify-center py-20 text-center">
+          <Tv class="w-12 h-12 text-kitsuden-subtle mb-3" />
+          <p class="text-kitsuden-text-dim font-medium">{t("streamersView.noStreamersFound")}</p>
+          <p class="text-xs text-kitsuden-subtle mt-1">
+            {t("streamersView.tryAdjustingYourFiltersOr")}
+          </p>
+        </div>
+      {:else}
+        <div class="overflow-x-auto">
+          <Table class="w-full text-sm text-left">
+            <TableHeader
+              class="text-xs text-kitsuden-subtle uppercase bg-kitsuden-surface border-b border-kitsuden-border"
+            >
+              <TableRow>
+                <TableHead class="px-4 py-3 w-10">
                   <input
                     type="checkbox"
-                    checked={selectedIds.has(s.id)}
-                    onchange={() => toggleSelect(s.id)}
+                    checked={allVisibleSelected}
+                    onchange={toggleSelectAll}
                     class="accent-kitsuden-accent"
                   />
-                </td>
-                <td class="px-4 py-3">
-                  {#if s.avatarId}
-                    <img
-                      src={avatarUrl(s.avatarId)}
-                      alt={s.displayName}
-                      class="w-8 h-8 rounded-full object-cover bg-kitsuden-surface"
-                      loading="lazy"
+                </TableHead>
+                <TableHead class="px-4 py-3 w-12">{t("streamersView.avatar")}</TableHead>
+                <TableHead class="px-4 py-3">{t("streamersView.displayName")}</TableHead>
+                <TableHead class="px-4 py-3">{t("common.platform")}</TableHead>
+                <TableHead class="px-4 py-3">{t("streamersView.channelId")}</TableHead>
+                <TableHead class="px-4 py-3">{t("common.status")}</TableHead>
+                <TableHead class="px-4 py-3 text-right">{t("streamersView.viewers2")}</TableHead>
+                <TableHead class="px-4 py-3 text-right">{t("streamersView.followers2")}</TableHead>
+                <TableHead class="px-4 py-3">{t("streamersView.lastSynced")}</TableHead>
+                <TableHead class="px-4 py-3 text-right">{t("common.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {#each filteredStreamers as s (s.id)}
+                <TableRow
+                  class="border-b border-kitsuden-border hover:bg-kitsuden-surface/40 transition-colors"
+                >
+                  <TableCell class="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(s.id)}
+                      onchange={() => toggleSelect(s.id)}
+                      class="accent-kitsuden-accent"
                     />
-                  {:else}
-                    <div
-                      class="w-8 h-8 rounded-full bg-kitsuden-surface flex items-center justify-center text-xs text-kitsuden-subtle font-bold"
+                  </TableCell>
+                  <TableCell class="px-4 py-3">
+                    {#if s.avatarId}
+                      <img
+                        src={avatarUrl(s.avatarId)}
+                        alt={s.displayName}
+                        class="w-8 h-8 rounded-full object-cover bg-kitsuden-surface"
+                        loading="lazy"
+                      />
+                    {:else}
+                      <div
+                        class="w-8 h-8 rounded-full bg-kitsuden-surface flex items-center justify-center text-xs text-kitsuden-subtle font-bold"
+                      >
+                        {s.displayName.charAt(0).toUpperCase()}
+                      </div>
+                    {/if}
+                  </TableCell>
+                  <TableCell class="px-4 py-3">
+                    {#if s.channelUrl}
+                      <a
+                        href={s.channelUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="font-medium text-kitsuden-text hover:text-kitsuden-accent transition-colors"
+                      >
+                        {s.displayName}
+                      </a>
+                    {:else}
+                      <span class="font-medium text-kitsuden-text">{s.displayName}</span>
+                    {/if}
+                    {#if s.currentStreamTitle}
+                      <p class="text-[11px] text-kitsuden-subtle truncate max-w-[200px]">
+                        {s.currentStreamTitle}
+                      </p>
+                    {/if}
+                  </TableCell>
+                  <TableCell class="px-4 py-3">
+                    <span
+                      class="inline-block px-2 py-0.5 text-xs font-medium rounded-full border {platformClasses(
+                        s.platform
+                      )}"
                     >
-                      {s.displayName.charAt(0).toUpperCase()}
-                    </div>
-                  {/if}
-                </td>
-                <td class="px-4 py-3">
-                  {#if s.channelUrl}
-                    <a
-                      href={s.channelUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="font-medium text-kitsuden-text hover:text-kitsuden-accent transition-colors"
-                    >
-                      {s.displayName}
-                    </a>
-                  {:else}
-                    <span class="font-medium text-kitsuden-text">{s.displayName}</span>
-                  {/if}
-                  {#if s.currentStreamTitle}
-                    <p class="text-[11px] text-kitsuden-subtle truncate max-w-[200px]">
-                      {s.currentStreamTitle}
-                    </p>
-                  {/if}
-                </td>
-                <td class="px-4 py-3">
-                  <span
-                    class="inline-block px-2 py-0.5 text-xs font-medium rounded-full border {platformClasses(
-                      s.platform
-                    )}"
+                      {s.platform}
+                    </span>
+                  </TableCell>
+                  <TableCell class="px-4 py-3 text-kitsuden-subtle font-mono text-xs"
+                    >{s.channelId}</TableCell
                   >
-                    {s.platform}
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-kitsuden-subtle font-mono text-xs">{s.channelId}</td>
-                <td class="px-4 py-3">
-                  {#if s.isLive}
-                    <span
-                      class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium bg-kitsuden-accent-2/10 text-kitsuden-accent-2 rounded-full border border-kitsuden-accent-2/20"
-                    >
-                      <span class="w-1.5 h-1.5 rounded-full bg-kitsuden-accent-2 animate-pulse"
-                      ></span>
-                      {t("streamersView.live")}
-                    </span>
-                  {:else}
-                    <span
-                      class="px-2 py-0.5 text-xs font-medium bg-kitsuden-surface text-kitsuden-subtle rounded-full border border-kitsuden-border"
-                    >
-                      {t("streamersView.offline")}
-                    </span>
-                  {/if}
-                </td>
-                <td class="px-4 py-3 text-right text-kitsuden-text"
-                  >{formatNumber(s.viewerCount)}</td
-                >
-                <td class="px-4 py-3 text-right text-kitsuden-text"
-                  >{formatNumber(s.followerCount)}</td
-                >
-                <td class="px-4 py-3 text-kitsuden-subtle text-xs">{timeAgo(s.lastSyncedAt)}</td>
-                <td class="px-4 py-3 text-right">
-                  <div class="flex items-center justify-end gap-1">
-                    <button
-                      class="btn-ghost p-1.5"
-                      onclick={() => openEdit(s)}
-                      title={t("common.edit")}
-                    >
-                      <Pencil class="w-4 h-4" />
-                    </button>
-                    <button
-                      class="btn-ghost p-1.5 text-kitsuden-accent-2"
-                      onclick={() => deleteStreamer(s.id)}
-                      disabled={deletingId === s.id}
-                      title={t("common.delete")}
-                    >
-                      {#if deletingId === s.id}
-                        <Loader2 class="w-4 h-4 animate-spin" />
-                      {:else}
-                        <Trash2 class="w-4 h-4" />
-                      {/if}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
+                  <TableCell class="px-4 py-3">
+                    {#if s.isLive}
+                      <span
+                        class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium bg-kitsuden-accent-2/10 text-kitsuden-accent-2 rounded-full border border-kitsuden-accent-2/20"
+                      >
+                        <span class="w-1.5 h-1.5 rounded-full bg-kitsuden-accent-2 animate-pulse"
+                        ></span>
+                        {t("streamersView.live")}
+                      </span>
+                    {:else}
+                      <span
+                        class="px-2 py-0.5 text-xs font-medium bg-kitsuden-surface text-kitsuden-subtle rounded-full border border-kitsuden-border"
+                      >
+                        {t("streamersView.offline")}
+                      </span>
+                    {/if}
+                  </TableCell>
+                  <TableCell class="px-4 py-3 text-right text-kitsuden-text"
+                    >{formatNumber(s.viewerCount)}</TableCell
+                  >
+                  <TableCell class="px-4 py-3 text-right text-kitsuden-text"
+                    >{formatNumber(s.followerCount)}</TableCell
+                  >
+                  <TableCell class="px-4 py-3 text-kitsuden-subtle text-xs"
+                    >{timeAgo(s.lastSyncedAt)}</TableCell
+                  >
+                  <TableCell class="px-4 py-3 text-right">
+                    <div class="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onclick={() => openEdit(s)}
+                        title={t("common.edit")}
+                      >
+                        <Pencil class="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="danger-ghost"
+                        size="icon"
+                        onclick={() => deleteStreamer(s.id)}
+                        disabled={deletingId === s.id}
+                        title={t("common.delete")}
+                      >
+                        {#if deletingId === s.id}
+                          <Loader2 class="w-4 h-4 animate-spin" />
+                        {:else}
+                          <Trash2 class="w-4 h-4" />
+                        {/if}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              {/each}
+            </TableBody>
+          </Table>
+        </div>
 
-      <!-- Pagination -->
-      <div class="flex items-center justify-between px-4 py-3 border-t border-kitsuden-border">
-        <button
-          class="btn-secondary inline-flex items-center gap-1 text-sm"
-          disabled={page <= 1}
-          onclick={() => page--}
-        >
-          <ChevronLeft class="w-4 h-4" />
-          {t("streamersView.prev")}
-        </button>
-        <span class="text-sm text-kitsuden-subtle"
-          >{t("streamersView.pageOf", { page })} {totalPages}</span
-        >
-        <button
-          class="btn-secondary inline-flex items-center gap-1 text-sm"
-          disabled={page >= totalPages}
-          onclick={() => page++}
-        >
-          {t("common.next")}
-          <ChevronRight class="w-4 h-4" />
-        </button>
-      </div>
-    {/if}
+        <!-- Pagination -->
+        <div class="flex items-center justify-between px-4 py-3 border-t border-kitsuden-border">
+          <Button variant="secondary" size="sm" disabled={page <= 1} onclick={() => page--}>
+            <ChevronLeft class="w-4 h-4" />
+            {t("streamersView.prev")}
+          </Button>
+          <span class="text-sm text-kitsuden-subtle"
+            >{t("streamersView.pageOf", { page })} {totalPages}</span
+          >
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={page >= totalPages}
+            onclick={() => page++}
+          >
+            {t("common.next")}
+            <ChevronRight class="w-4 h-4" />
+          </Button>
+        </div>
+      {/if}
+    </div>
   </div>
-</div>
 
-<!-- Modal -->
-{#if showModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="card w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in">
-      <div class="flex items-center justify-between p-4 border-b border-kitsuden-border">
-        <h3 class="text-lg font-semibold text-kitsuden-text">
-          {editingStreamer ? t("streamersView.editStreamer") : t("streamersView.addStreamer")}
-        </h3>
-        <button class="btn-ghost p-1" onclick={closeModal}>
-          <X class="w-4 h-4" />
-        </button>
-      </div>
-      <div class="p-4 space-y-4">
-        <div>
-          <label for="displayname" class="block text-xs font-medium text-kitsuden-subtle mb-1"
-            >{t("streamersView.displayName2")}</label
-          >
-          <input
-            id="displayname"
-            bind:value={form.displayName}
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
-          />
+  <!-- Modal -->
+  <Dialog
+    open={!!showModal}
+    bare
+    size="lg"
+    ariaLabel={editingStreamer ? t("streamersView.editStreamer") : t("streamersView.addStreamer")}
+    onClose={() => closeModal()}
+  >
+    {#if showModal}
+      <div class="card w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-4 border-b border-kitsuden-border">
+          <h3 class="text-lg font-semibold text-kitsuden-text">
+            {editingStreamer ? t("streamersView.editStreamer") : t("streamersView.addStreamer")}
+          </h3>
+          <Button variant="ghost" size="icon" onclick={closeModal}>
+            <X class="w-4 h-4" />
+          </Button>
         </div>
-        <div>
-          <label for="slug" class="block text-xs font-medium text-kitsuden-subtle mb-1"
-            >{t("streamersView.slug")}</label
-          >
-          <input
-            id="slug"
-            bind:value={form.slug}
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
-          />
-        </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="p-4 space-y-4">
           <div>
-            <label for="platform" class="block text-xs font-medium text-kitsuden-subtle mb-1"
-              >{t("streamersView.platform")}</label
-            >
-            <select
-              id="platform"
-              bind:value={form.platform}
-              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
-            >
-              <option value="twitch">{t("streamersView.twitch")}</option>
-              <option value="youtube">{t("streamersView.youtube")}</option>
-              <option value="kick">{t("streamersView.kick")}</option>
-              <option value="other">{t("streamersView.other")}</option>
-            </select>
-          </div>
-          <div>
-            <label for="channelid" class="block text-xs font-medium text-kitsuden-subtle mb-1"
-              >{t("streamersView.channelId2")}</label
+            <label for="displayname" class="block text-xs font-medium text-kitsuden-subtle mb-1"
+              >{t("streamersView.displayName2")}</label
             >
             <input
-              id="channelid"
-              bind:value={form.channelId}
+              id="displayname"
+              bind:value={form.displayName}
               class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             />
           </div>
+          <div>
+            <label for="slug" class="block text-xs font-medium text-kitsuden-subtle mb-1"
+              >{t("streamersView.slug")}</label
+            >
+            <input
+              id="slug"
+              bind:value={form.slug}
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="platform" class="block text-xs font-medium text-kitsuden-subtle mb-1"
+                >{t("streamersView.platform")}</label
+              >
+              <select
+                id="platform"
+                bind:value={form.platform}
+                class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+              >
+                <option value="twitch">{t("streamersView.twitch")}</option>
+                <option value="youtube">{t("streamersView.youtube")}</option>
+                <option value="kick">{t("streamersView.kick")}</option>
+                <option value="other">{t("streamersView.other")}</option>
+              </select>
+            </div>
+            <div>
+              <label for="channelid" class="block text-xs font-medium text-kitsuden-subtle mb-1"
+                >{t("streamersView.channelId2")}</label
+              >
+              <input
+                id="channelid"
+                bind:value={form.channelId}
+                class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+              />
+            </div>
+          </div>
+          <div>
+            <label for="channelurl" class="block text-xs font-medium text-kitsuden-subtle mb-1"
+              >{t("streamersView.channelUrl")}</label
+            >
+            <input
+              id="channelurl"
+              bind:value={form.channelUrl}
+              placeholder="https://twitch.tv/..."
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
+            />
+          </div>
+          <div>
+            <label for="bio" class="block text-xs font-medium text-kitsuden-subtle mb-1"
+              >{t("streamersView.bio")}</label
+            >
+            <textarea
+              id="bio"
+              bind:value={form.bio}
+              rows={3}
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent resize-none"
+            ></textarea>
+          </div>
         </div>
-        <div>
-          <label for="channelurl" class="block text-xs font-medium text-kitsuden-subtle mb-1"
-            >{t("streamersView.channelUrl")}</label
-          >
-          <input
-            id="channelurl"
-            bind:value={form.channelUrl}
-            placeholder="https://twitch.tv/..."
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
-          />
-        </div>
-        <div>
-          <label for="bio" class="block text-xs font-medium text-kitsuden-subtle mb-1"
-            >{t("streamersView.bio")}</label
-          >
-          <textarea
-            id="bio"
-            bind:value={form.bio}
-            rows={3}
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent resize-none"
-          ></textarea>
+        <div class="flex justify-end gap-2 p-4 border-t border-kitsuden-border">
+          <Button variant="secondary" onclick={closeModal}>{t("common.cancel")}</Button>
+          <Button onclick={saveStreamer} disabled={saving}>
+            {#if saving}
+              <Loader2 class="w-4 h-4 animate-spin" />
+            {/if}
+            {t("streamersView.save")}
+          </Button>
         </div>
       </div>
-      <div class="flex justify-end gap-2 p-4 border-t border-kitsuden-border">
-        <button class="btn-secondary" onclick={closeModal}>{t("common.cancel")}</button>
-        <button
-          class="btn-primary inline-flex items-center gap-2"
-          onclick={saveStreamer}
-          disabled={saving}
-        >
-          {#if saving}
-            <Loader2 class="w-4 h-4 animate-spin" />
-          {/if}
-          {t("streamersView.save")}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
+    {/if}
+  </Dialog>
+</ViewPage>

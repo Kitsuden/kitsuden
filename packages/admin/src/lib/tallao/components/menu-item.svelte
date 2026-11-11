@@ -3,6 +3,9 @@
   An option of a DropdownMenu. Choosing it (click, Enter or Space) calls
   `onSelect` and closes the menu; with `closeOnSelect={false}` it stays open.
   A disabled option is announced and skipped while navigating, but not hidden.
+  With `checked` (true or false) it is a choice that can be on or off: `menuitemcheckbox`,
+  or `menuitemradio` with `checkType="radio"` (one of several), with `aria-checked` and a
+  check mark, so the state is not carried by colour.
 -->
 <script lang="ts">
   import { useMenu } from "../internal/menu";
@@ -13,6 +16,9 @@
     disabled?: boolean;
     variant?: "default" | "danger";
     closeOnSelect?: boolean;
+    /** On or off: makes the option a `menuitemcheckbox` (or a radio, see `checkType`). */
+    checked?: boolean;
+    checkType?: "checkbox" | "radio";
     class?: string;
     children: import("svelte").Snippet;
   }
@@ -22,6 +28,8 @@
     disabled = false,
     variant = "default",
     closeOnSelect = true,
+    checked,
+    checkType = "checkbox",
     class: className = "",
     children,
   }: Props = $props();
@@ -37,12 +45,16 @@
 
 <button
   type="button"
-  role="menuitem"
+  role={checked === undefined ? "menuitem" : checkType === "radio" ? "menuitemradio" : "menuitemcheckbox"}
+  aria-checked={checked}
   tabindex="-1"
   aria-disabled={disabled ? "true" : undefined}
   class={cn("ta-menu-item", `ta-menu-item--${variant}`, className)}
   onclick={choose}
 >
+  {#if checked !== undefined}
+    <svg class="ta-menu-item-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{#if checked}<path d="M5 12.5l4.5 4.5L19 7.5" />{/if}</svg>
+  {/if}
   {@render children()}
 </button>
 
@@ -69,6 +81,8 @@
   .ta-menu-item:focus {
     background: rgb(var(--ta-elevated));
   }
+
+  .ta-menu-item-check { flex-shrink: 0; color: color-mix(in srgb, rgb(var(--ta-accent)) 65%, rgb(var(--ta-text))); }
 
   .ta-menu-item--danger {
     color: rgb(var(--ta-danger));

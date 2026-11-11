@@ -23,7 +23,7 @@
   import { Image, Loader2, Plus, Search } from "lucide-svelte";
 
   import { api } from "$lib/api";
-  import Modal from "$lib/components/ui/Modal.svelte";
+  import { Dialog, Button } from "$lib/tallao";
   import { uploadMedia } from "$lib/media/upload";
   import { mediaUrl } from "$lib/states/media.svelte";
 
@@ -162,7 +162,7 @@
   }
 </script>
 
-<Modal {open} {title} {onClose}>
+<Dialog {open} {title} {onClose}>
   <div class="p-4">
     <div class="mb-3 flex items-center gap-2">
       <div class="relative flex-1">
@@ -286,8 +286,8 @@
           {selectedIds.length}
           {selectedIds.length === 1 ? t("mediaPicker.chosenImage") : t("mediaPicker.chosenImages")}
         </span>
-        <button class="btn-primary btn-sm" onclick={onClose}>{t("mediaPicker.ready")}</button>
+        <Button size="sm" onclick={onClose}>{t("mediaPicker.ready")}</Button>
       </div>
     {/if}
   </div>
-</Modal>
+</Dialog>

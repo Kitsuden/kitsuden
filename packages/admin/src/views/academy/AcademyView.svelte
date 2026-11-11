@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ViewPage from "$lib/components/admin/ViewPage.svelte";
   import { confirmDialog } from "$lib/confirm.svelte";
   import { t as tr, localeFormat } from "$lib/i18n";
   import {
@@ -26,7 +27,17 @@
     Layers,
   } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
+  import {
+    toast,
+    Dialog,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    Button,
+  } from "$lib/tallao";
 
   import { api } from "$lib/api";
 
@@ -417,733 +428,771 @@
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- HEADER & STATS                                                        -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<div class="space-y-6 animate-fade-in">
-  <div class="flex items-center justify-between">
-    <div>
-      <h2 class="text-xl font-bold text-kitsuden-text flex items-center gap-2">
-        <GraduationCap class="w-6 h-6 text-kitsuden-accent" />
-        {tr("academyView.academyLms")}
-      </h2>
-      <p class="text-sm text-kitsuden-subtle mt-0.5">
-        {tr("academyView.courseManagementAssignmentsAnalytics")}
-      </p>
-    </div>
-    <a href="/g/kon-academy-lms/grid-courses" class="btn-primary inline-flex items-center gap-2">
+<ViewPage
+  title={tr("academyView.academyLms")}
+  description={tr("academyView.courseManagementAssignmentsAnalytics")}
+>
+  {#snippet actions()}
+    <Button href="/g/kon-academy-lms/grid-courses">
       <Plus class="w-4 h-4" />
       {tr("academyView.newCourse")}
-    </a>
-  </div>
+    </Button>
+  {/snippet}
 
-  {#if alerts.length > 0}
-    <div class="space-y-2">
-      {#each alerts as a}
-        {@const Icon = alertIcon(a.type)}
-        <div class="flex items-center gap-2 px-3 py-2 rounded-lg {alertColor(a.type)} text-sm">
-          <Icon class="w-4 h-4 shrink-0" />
-          <span>{a.message}</span>
+  <div class="space-y-6">
+    {#if alerts.length > 0}
+      <div class="space-y-2">
+        {#each alerts as a}
+          {@const Icon = alertIcon(a.type)}
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg {alertColor(a.type)} text-sm">
+            <Icon class="w-4 h-4 shrink-0" />
+            <span>{a.message}</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-kitsuden-accent/15 flex items-center justify-center">
+          <BookOpen class="w-5 h-5 text-kitsuden-accent" />
         </div>
-      {/each}
-    </div>
-  {/if}
-
-  <!-- Stats Row -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div class="card p-4 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-lg bg-kitsuden-accent/15 flex items-center justify-center">
-        <BookOpen class="w-5 h-5 text-kitsuden-accent" />
+        <div>
+          <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
+            {tr("academyView.totalCourses")}
+          </p>
+          <p class="text-2xl font-bold text-kitsuden-text">{metrics?.totalCourses ?? 0}</p>
+        </div>
       </div>
-      <div>
-        <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-          {tr("academyView.totalCourses")}
-        </p>
-        <p class="text-2xl font-bold text-kitsuden-text">{metrics?.totalCourses ?? 0}</p>
+      <div class="card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-kitsuden-purple/15 flex items-center justify-center">
+          <Users class="w-5 h-5 text-kitsuden-purple" />
+        </div>
+        <div>
+          <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
+            {tr("academyView.totalAssignments")}
+          </p>
+          <p class="text-2xl font-bold text-kitsuden-text">{metrics?.totalAssignments ?? 0}</p>
+        </div>
       </div>
-    </div>
-    <div class="card p-4 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-lg bg-kitsuden-purple/15 flex items-center justify-center">
-        <Users class="w-5 h-5 text-kitsuden-purple" />
-      </div>
-      <div>
-        <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-          {tr("academyView.totalAssignments")}
-        </p>
-        <p class="text-2xl font-bold text-kitsuden-text">{metrics?.totalAssignments ?? 0}</p>
-      </div>
-    </div>
-    <div class="card p-4 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-lg bg-kitsuden-green/15 flex items-center justify-center">
-        <TrendingUp class="w-5 h-5 text-kitsuden-green" />
-      </div>
-      <div class="flex-1">
-        <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-          {tr("academyView.completionRate")}
-        </p>
-        <div class="flex items-center gap-2 mt-1">
-          <p class="text-2xl font-bold text-kitsuden-text">{fmtPct(metrics?.completionRate)}</p>
-          <div class="flex-1 h-1.5 bg-kitsuden-bg rounded-full overflow-hidden">
-            <div
-              class="h-full bg-kitsuden-green rounded-full"
-              style="width: {metrics?.completionRate ?? 0}%"
-            ></div>
+      <div class="card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-kitsuden-green/15 flex items-center justify-center">
+          <TrendingUp class="w-5 h-5 text-kitsuden-green" />
+        </div>
+        <div class="flex-1">
+          <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
+            {tr("academyView.completionRate")}
+          </p>
+          <div class="flex items-center gap-2 mt-1">
+            <p class="text-2xl font-bold text-kitsuden-text">{fmtPct(metrics?.completionRate)}</p>
+            <div class="flex-1 h-1.5 bg-kitsuden-bg rounded-full overflow-hidden">
+              <div
+                class="h-full bg-kitsuden-green rounded-full"
+                style="width: {metrics?.completionRate ?? 0}%"
+              ></div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <div class="card p-4 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-lg bg-kitsuden-amber/15 flex items-center justify-center">
-        <Star class="w-5 h-5 text-kitsuden-amber" />
+      <div class="card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-kitsuden-amber/15 flex items-center justify-center">
+          <Star class="w-5 h-5 text-kitsuden-amber" />
+        </div>
+        <div>
+          <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
+            {tr("academyView.avgSatisfaction")}
+          </p>
+          <p class="text-2xl font-bold text-kitsuden-text">
+            {metrics?.totalSurveys
+              ? ((metrics.totalFeedbacks ?? 0) / (metrics.totalSurveys || 1)).toFixed(1)
+              : "—"}<span class="text-sm text-kitsuden-subtle font-normal"> /5</span>
+          </p>
+        </div>
       </div>
-      <div>
-        <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-          {tr("academyView.avgSatisfaction")}
-        </p>
-        <p class="text-2xl font-bold text-kitsuden-text">
-          {metrics?.totalSurveys
-            ? ((metrics.totalFeedbacks ?? 0) / (metrics.totalSurveys || 1)).toFixed(1)
-            : "—"}<span class="text-sm text-kitsuden-subtle font-normal"> /5</span>
-        </p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="border-b border-kitsuden-border">
+      <div class="flex items-center gap-1">
+        {#each tabs as t}
+          <button
+            class="px-4 py-2 text-sm font-medium flex items-center gap-1.5 transition-colors border-b-2 {activeTab ===
+            t.key
+              ? 'text-kitsuden-accent border-kitsuden-accent'
+              : 'text-kitsuden-subtle border-transparent hover:text-kitsuden-text hover:border-kitsuden-border'}"
+            onclick={() => {
+              activeTab = t.key;
+              selectedIds = new Set();
+              currentPage = 1;
+            }}
+          >
+            <t.icon class="w-4 h-4" />
+            {t.label}
+          </button>
+        {/each}
       </div>
     </div>
-  </div>
 
-  <!-- Tabs -->
-  <div class="border-b border-kitsuden-border">
-    <div class="flex items-center gap-1">
-      {#each tabs as t}
-        <button
-          class="px-4 py-2 text-sm font-medium flex items-center gap-1.5 transition-colors border-b-2 {activeTab ===
-          t.key
-            ? 'text-kitsuden-accent border-kitsuden-accent'
-            : 'text-kitsuden-subtle border-transparent hover:text-kitsuden-text hover:border-kitsuden-border'}"
-          onclick={() => {
-            activeTab = t.key;
-            selectedIds = new Set();
-            currentPage = 1;
-          }}
-        >
-          <t.icon class="w-4 h-4" />
-          {t.label}
-        </button>
-      {/each}
-    </div>
-  </div>
-
-  {#if loading}
-    <div class="flex justify-center py-20">
-      <div
-        class="w-6 h-6 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-      ></div>
-    </div>
-  {:else}
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <!-- COURSES TAB                                                       -->
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    {#if activeTab === "courses"}
-      <div class="space-y-3">
-        <!-- Toolbar -->
-        <div class="flex items-center gap-3 flex-wrap">
-          <div class="relative flex-1 min-w-[200px] max-w-sm">
-            <Search
-              class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-text-dim"
-            />
-            <input
-              type="text"
-              placeholder={tr("academyView.searchCourses")}
-              class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent/50"
-              bind:value={searchQuery}
-              oninput={() => (currentPage = 1)}
-            />
+    {#if loading}
+      <div class="flex justify-center py-20">
+        <div
+          class="w-6 h-6 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
+        ></div>
+      </div>
+    {:else}
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <!-- COURSES TAB                                                       -->
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      {#if activeTab === "courses"}
+        <div class="space-y-3">
+          <!-- Toolbar -->
+          <div class="flex items-center gap-3 flex-wrap">
+            <div class="relative flex-1 min-w-[200px] max-w-sm">
+              <Search
+                class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-text-dim"
+              />
+              <input
+                type="text"
+                placeholder={tr("academyView.searchCourses")}
+                class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent/50"
+                bind:value={searchQuery}
+                oninput={() => (currentPage = 1)}
+              />
+            </div>
+            {#if selectedIds.size > 0}
+              <div class="flex items-center gap-2 ml-auto">
+                <span class="text-xs text-kitsuden-subtle"
+                  >{selectedIds.size} {tr("common.selected")}</span
+                >
+                <Button variant="secondary" size="sm" onclick={() => openAssignModal()}>
+                  <Users class="w-3.5 h-3.5" />
+                  {tr("academyView.assign")}
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onclick={() => promptDelete(Array.from(selectedIds))}
+                >
+                  <Trash2 class="w-3.5 h-3.5" />
+                  {tr("common.delete")}
+                </Button>
+              </div>
+            {/if}
           </div>
-          {#if selectedIds.size > 0}
-            <div class="flex items-center gap-2 ml-auto">
-              <span class="text-xs text-kitsuden-subtle"
-                >{selectedIds.size} {tr("common.selected")}</span
-              >
-              <button
-                class="btn-secondary text-xs inline-flex items-center gap-1"
-                onclick={() => openAssignModal()}
-              >
-                <Users class="w-3.5 h-3.5" />
-                {tr("academyView.assign")}
-              </button>
-              <button
-                class="btn-danger text-xs inline-flex items-center gap-1"
-                onclick={() => promptDelete(Array.from(selectedIds))}
-              >
-                <Trash2 class="w-3.5 h-3.5" />
-                {tr("common.delete")}
-              </button>
+
+          <!-- Table -->
+          {#if filteredCourses.length === 0}
+            <div class="card p-16 text-center">
+              <BookOpen class="w-10 h-10 text-kitsuden-text-dim mx-auto mb-3" />
+              <p class="text-kitsuden-text-dim">{tr("academyView.noCoursesFound")}</p>
+            </div>
+          {:else}
+            <div class="card overflow-hidden">
+              <div class="overflow-x-auto">
+                <Table class="w-full text-left text-sm">
+                  <TableHeader class="bg-kitsuden-bg sticky top-0 z-10">
+                    <TableRow class="border-b border-kitsuden-border">
+                      <TableHead class="px-4 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
+                          checked={allSelected}
+                          indeterminate={someSelected}
+                          onchange={toggleSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead
+                        class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
+                        onclick={() => toggleSort("title")}
+                        >{tr("common.title")}
+                        {#if sortKey === "title"}<span class="text-kitsuden-accent"
+                            >{sortDir === "asc" ? "▲" : "▼"}</span
+                          >{/if}</TableHead
+                      >
+                      <TableHead
+                        class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
+                        onclick={() => toggleSort("assignments")}
+                        >{tr("academyView.assignments")}
+                        {#if sortKey === "assignments"}<span class="text-kitsuden-accent"
+                            >{sortDir === "asc" ? "▲" : "▼"}</span
+                          >{/if}</TableHead
+                      >
+                      <TableHead
+                        class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
+                        onclick={() => toggleSort("completedItems")}
+                        >{tr("academyView.completed")}
+                        {#if sortKey === "completedItems"}<span class="text-kitsuden-accent"
+                            >{sortDir === "asc" ? "▲" : "▼"}</span
+                          >{/if}</TableHead
+                      >
+                      <TableHead
+                        class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
+                        onclick={() => toggleSort("averageProgress")}
+                        >{tr("academyView.avgProgress")}
+                        {#if sortKey === "averageProgress"}<span class="text-kitsuden-accent"
+                            >{sortDir === "asc" ? "▲" : "▼"}</span
+                          >{/if}</TableHead
+                      >
+                      <TableHead
+                        class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
+                        onclick={() => toggleSort("finishRate")}
+                        >{tr("academyView.completion")}
+                        {#if sortKey === "finishRate"}<span class="text-kitsuden-accent"
+                            >{sortDir === "asc" ? "▲" : "▼"}</span
+                          >{/if}</TableHead
+                      >
+                      <TableHead
+                        class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
+                        onclick={() => toggleSort("totalSurveys")}
+                        >{tr("academyView.surveys")}
+                        {#if sortKey === "totalSurveys"}<span class="text-kitsuden-accent"
+                            >{sortDir === "asc" ? "▲" : "▼"}</span
+                          >{/if}</TableHead
+                      >
+                      <TableHead
+                        class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
+                        onclick={() => toggleSort("averageSatisfaction")}
+                        >{tr("academyView.satisfaction")}
+                        {#if sortKey === "averageSatisfaction"}<span class="text-kitsuden-accent"
+                            >{sortDir === "asc" ? "▲" : "▼"}</span
+                          >{/if}</TableHead
+                      >
+                      <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                        >{tr("common.actions")}</TableHead
+                      >
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {#each pagedCourses as r}
+                      <TableRow
+                        class="border-b border-kitsuden-border hover:bg-kitsuden-bg/50 transition-colors group"
+                      >
+                        <TableCell class="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
+                            checked={selectedIds.has(r.course.id)}
+                            onchange={() => toggleSelect(r.course.id)}
+                          />
+                        </TableCell>
+                        <TableCell class="px-4 py-3">
+                          <div class="flex items-center gap-2">
+                            <span class="font-medium text-kitsuden-text">{r.course.title}</span>
+                            <span
+                              class="px-1.5 py-0.5 rounded text-xs font-medium {courseTypeColors[
+                                r.course.type
+                              ] || 'bg-kitsuden-subtle/15 text-kitsuden-text-dim'}"
+                              >{courseTypeLabels[r.course.type] || r.course.type}</span
+                            >
+                          </div>
+                        </TableCell>
+                        <TableCell class="px-4 py-3 text-kitsuden-text"
+                          >{r.metrics.assignments}</TableCell
+                        >
+                        <TableCell class="px-4 py-3 text-kitsuden-text"
+                          >{r.metrics.completedItems}</TableCell
+                        >
+                        <TableCell class="px-4 py-3">
+                          <div class="flex items-center gap-2">
+                            <div class="w-16 h-1.5 bg-kitsuden-bg rounded-full overflow-hidden">
+                              <div
+                                class="h-full bg-kitsuden-accent rounded-full"
+                                style="width: {r.metrics.averageProgress}%"
+                              ></div>
+                            </div>
+                            <span class="text-xs text-kitsuden-subtle"
+                              >{fmtPct(r.metrics.averageProgress)}</span
+                            >
+                          </div>
+                        </TableCell>
+                        <TableCell class="px-4 py-3 text-kitsuden-text"
+                          >{fmtPct(r.metrics.finishRate)}</TableCell
+                        >
+                        <TableCell class="px-4 py-3 text-kitsuden-text"
+                          >{r.metrics.totalSurveys}</TableCell
+                        >
+                        <TableCell class="px-4 py-3 text-kitsuden-amber text-xs"
+                          >{fmtStar(r.metrics.averageSatisfaction)}</TableCell
+                        >
+                        <TableCell class="px-4 py-3">
+                          <div
+                            class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <button
+                              class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent"
+                              title={tr("academyView.viewStats")}
+                              onclick={() => openDrawer(r)}><Eye class="w-3.5 h-3.5" /></button
+                            >
+                            <a
+                              href="/academy/courses/{r.course.id}/edit"
+                              class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
+                              title={tr("common.edit")}><Edit2 class="w-3.5 h-3.5" /></a
+                            >
+                            <button
+                              class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent-2"
+                              title={tr("common.delete")}
+                              onclick={() => promptDelete([r.course.id])}
+                              ><Trash2 class="w-3.5 h-3.5" /></button
+                            >
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    {/each}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <!-- Pagination -->
+              {#if totalPages > 1}
+                <div
+                  class="p-3 border-t border-kitsuden-border bg-kitsuden-card flex items-center justify-between"
+                >
+                  <span class="text-xs text-kitsuden-subtle"
+                    >{filteredCourses.length}
+                    {tr("academyView.totalPageOf", { currentPage })}
+                    {totalPages}</span
+                  >
+                  <div class="flex items-center gap-2">
+                    <button
+                      class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
+                      disabled={currentPage === 1}
+                      onclick={() => (currentPage = 1)}><ChevronFirst class="w-3.5 h-3.5" /></button
+                    >
+                    <button
+                      class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
+                      disabled={currentPage === 1}
+                      onclick={() => currentPage--}><ChevronLeft class="w-3.5 h-3.5" /></button
+                    >
+                    <span class="text-xs text-kitsuden-subtle px-2"
+                      >{currentPage} / {totalPages}</span
+                    >
+                    <button
+                      class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
+                      disabled={currentPage === totalPages}
+                      onclick={() => currentPage++}><ChevronRight class="w-3.5 h-3.5" /></button
+                    >
+                    <button
+                      class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
+                      disabled={currentPage === totalPages}
+                      onclick={() => (currentPage = totalPages)}
+                      ><ChevronLast class="w-3.5 h-3.5" /></button
+                    >
+                  </div>
+                </div>
+              {/if}
             </div>
           {/if}
         </div>
 
-        <!-- Table -->
-        {#if filteredCourses.length === 0}
-          <div class="card p-16 text-center">
-            <BookOpen class="w-10 h-10 text-kitsuden-text-dim mx-auto mb-3" />
-            <p class="text-kitsuden-text-dim">{tr("academyView.noCoursesFound")}</p>
-          </div>
-        {:else}
-          <div class="card overflow-hidden">
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-sm">
-                <thead class="bg-kitsuden-bg sticky top-0 z-10">
-                  <tr class="border-b border-kitsuden-border">
-                    <th class="px-4 py-3 w-10">
-                      <input
-                        type="checkbox"
-                        class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
-                        checked={allSelected}
-                        indeterminate={someSelected}
-                        onchange={toggleSelectAll}
-                      />
-                    </th>
-                    <th
-                      class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
-                      onclick={() => toggleSort("title")}
-                      >{tr("common.title")}
-                      {#if sortKey === "title"}<span class="text-kitsuden-accent"
-                          >{sortDir === "asc" ? "▲" : "▼"}</span
-                        >{/if}</th
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- LEARNING PATHS TAB                                                -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+      {:else if activeTab === "paths"}
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <Table class="w-full text-left text-sm">
+              <TableHeader class="bg-kitsuden-bg">
+                <TableRow class="border-b border-kitsuden-border">
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("common.name")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("common.category")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("academyView.courses")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("academyView.sequentialApproval")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("common.actions")}</TableHead
+                  >
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {#each learningPaths as lp}
+                  <TableRow
+                    class="border-b border-kitsuden-border hover:bg-kitsuden-bg/50 transition-colors"
+                  >
+                    <TableCell class="px-4 py-3">
+                      <div class="font-medium text-kitsuden-text">{lp.name}</div>
+                      {#if lp.description}<div class="text-xs text-kitsuden-subtle">
+                          {lp.description}
+                        </div>{/if}
+                    </TableCell>
+                    <TableCell class="px-4 py-3 text-kitsuden-subtle"
+                      >{lp.category || "—"}</TableCell
                     >
-                    <th
-                      class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
-                      onclick={() => toggleSort("assignments")}
-                      >{tr("academyView.assignments")}
-                      {#if sortKey === "assignments"}<span class="text-kitsuden-accent"
-                          >{sortDir === "asc" ? "▲" : "▼"}</span
-                        >{/if}</th
-                    >
-                    <th
-                      class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
-                      onclick={() => toggleSort("completedItems")}
-                      >{tr("academyView.completed")}
-                      {#if sortKey === "completedItems"}<span class="text-kitsuden-accent"
-                          >{sortDir === "asc" ? "▲" : "▼"}</span
-                        >{/if}</th
-                    >
-                    <th
-                      class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
-                      onclick={() => toggleSort("averageProgress")}
-                      >{tr("academyView.avgProgress")}
-                      {#if sortKey === "averageProgress"}<span class="text-kitsuden-accent"
-                          >{sortDir === "asc" ? "▲" : "▼"}</span
-                        >{/if}</th
-                    >
-                    <th
-                      class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
-                      onclick={() => toggleSort("finishRate")}
-                      >{tr("academyView.completion")}
-                      {#if sortKey === "finishRate"}<span class="text-kitsuden-accent"
-                          >{sortDir === "asc" ? "▲" : "▼"}</span
-                        >{/if}</th
-                    >
-                    <th
-                      class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
-                      onclick={() => toggleSort("totalSurveys")}
-                      >{tr("academyView.surveys")}
-                      {#if sortKey === "totalSurveys"}<span class="text-kitsuden-accent"
-                          >{sortDir === "asc" ? "▲" : "▼"}</span
-                        >{/if}</th
-                    >
-                    <th
-                      class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none"
-                      onclick={() => toggleSort("averageSatisfaction")}
-                      >{tr("academyView.satisfaction")}
-                      {#if sortKey === "averageSatisfaction"}<span class="text-kitsuden-accent"
-                          >{sortDir === "asc" ? "▲" : "▼"}</span
-                        >{/if}</th
-                    >
-                    <th class="px-4 py-3 font-medium text-kitsuden-subtle"
-                      >{tr("common.actions")}</th
-                    >
-                  </tr>
-                </thead>
-                <tbody>
-                  {#each pagedCourses as r}
-                    <tr
-                      class="border-b border-kitsuden-border hover:bg-kitsuden-bg/50 transition-colors group"
-                    >
-                      <td class="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
-                          checked={selectedIds.has(r.course.id)}
-                          onchange={() => toggleSelect(r.course.id)}
-                        />
-                      </td>
-                      <td class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                          <span class="font-medium text-kitsuden-text">{r.course.title}</span>
-                          <span
-                            class="px-1.5 py-0.5 rounded text-xs font-medium {courseTypeColors[
-                              r.course.type
-                            ] || 'bg-kitsuden-subtle/15 text-kitsuden-text-dim'}"
-                            >{courseTypeLabels[r.course.type] || r.course.type}</span
-                          >
-                        </div>
-                      </td>
-                      <td class="px-4 py-3 text-kitsuden-text">{r.metrics.assignments}</td>
-                      <td class="px-4 py-3 text-kitsuden-text">{r.metrics.completedItems}</td>
-                      <td class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                          <div class="w-16 h-1.5 bg-kitsuden-bg rounded-full overflow-hidden">
-                            <div
-                              class="h-full bg-kitsuden-accent rounded-full"
-                              style="width: {r.metrics.averageProgress}%"
-                            ></div>
-                          </div>
-                          <span class="text-xs text-kitsuden-subtle"
-                            >{fmtPct(r.metrics.averageProgress)}</span
-                          >
-                        </div>
-                      </td>
-                      <td class="px-4 py-3 text-kitsuden-text">{fmtPct(r.metrics.finishRate)}</td>
-                      <td class="px-4 py-3 text-kitsuden-text">{r.metrics.totalSurveys}</td>
-                      <td class="px-4 py-3 text-kitsuden-amber text-xs"
-                        >{fmtStar(r.metrics.averageSatisfaction)}</td
+                    <TableCell class="px-4 py-3 text-kitsuden-text">{lp.totalCourses}</TableCell>
+                    <TableCell class="px-4 py-3">
+                      <span
+                        class="px-2 py-0.5 rounded text-xs font-medium {lp.sequential
+                          ? 'bg-kitsuden-green/15 text-kitsuden-green'
+                          : 'bg-kitsuden-text-dim/15 text-kitsuden-subtle'}"
+                        >{lp.sequential ? tr("common.yes") : tr("common.no")}</span
                       >
-                      <td class="px-4 py-3">
-                        <div
-                          class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    </TableCell>
+                    <TableCell class="px-4 py-3">
+                      <div class="flex items-center gap-1">
+                        <a
+                          href="/academy/learning-paths/{lp.id}/edit"
+                          class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
+                          ><Edit2 class="w-3.5 h-3.5" /></a
                         >
-                          <button
-                            class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent"
-                            title={tr("academyView.viewStats")}
-                            onclick={() => openDrawer(r)}><Eye class="w-3.5 h-3.5" /></button
-                          >
-                          <a
-                            href="/academy/courses/{r.course.id}/edit"
-                            class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
-                            title={tr("common.edit")}><Edit2 class="w-3.5 h-3.5" /></a
-                          >
-                          <button
-                            class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent-2"
-                            title={tr("common.delete")}
-                            onclick={() => promptDelete([r.course.id])}
-                            ><Trash2 class="w-3.5 h-3.5" /></button
-                          >
-                        </div>
-                      </td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
+                        <button
+                          class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent-2"
+                          onclick={() => deletePath(lp.id)}><Trash2 class="w-3.5 h-3.5" /></button
+                        >
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                {:else}
+                  <TableRow
+                    ><TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-text-dim"
+                      ><Route class="w-8 h-8 mx-auto mb-2" />{tr(
+                        "academyView.noLearningPathsFound"
+                      )}</TableCell
+                    ></TableRow
+                  >
+                {/each}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- GROUPS TAB                                                        -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+      {:else if activeTab === "groups"}
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <Table class="w-full text-left text-sm">
+              <TableHeader class="bg-kitsuden-bg">
+                <TableRow class="border-b border-kitsuden-border">
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("common.name")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("academyView.members")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("academyView.supervisor")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("common.actions")}</TableHead
+                  >
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {#each groups as g}
+                  <TableRow
+                    class="border-b border-kitsuden-border hover:bg-kitsuden-bg/50 transition-colors"
+                  >
+                    <TableCell class="px-4 py-3">
+                      <div class="font-medium text-kitsuden-text">{g.name}</div>
+                      {#if g.description}<div class="text-xs text-kitsuden-subtle">
+                          {g.description}
+                        </div>{/if}
+                    </TableCell>
+                    <TableCell class="px-4 py-3 text-kitsuden-text">{g.members}</TableCell>
+                    <TableCell class="px-4 py-3 text-kitsuden-subtle"
+                      >{g.supervisorPrincipal || "—"}</TableCell
+                    >
+                    <TableCell class="px-4 py-3">
+                      <div class="flex items-center gap-1">
+                        <a
+                          href="/academy/groups/{g.id}/edit"
+                          class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
+                          ><Edit2 class="w-3.5 h-3.5" /></a
+                        >
+                        <button
+                          class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent-2"
+                          onclick={() => deleteGroup(g.id)}><Trash2 class="w-3.5 h-3.5" /></button
+                        >
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                {:else}
+                  <TableRow
+                    ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-text-dim"
+                      ><Users class="w-8 h-8 mx-auto mb-2" />{tr(
+                        "academyView.noGroupsFound"
+                      )}</TableCell
+                    ></TableRow
+                  >
+                {/each}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ASSIGNMENTS TAB                                                   -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+      {:else if activeTab === "assignments"}
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <Table class="w-full text-left text-sm">
+              <TableHeader class="bg-kitsuden-bg">
+                <TableRow class="border-b border-kitsuden-border">
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("academyView.courseId")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("common.userId")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("academyView.groupId")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("academyView.method")}</TableHead
+                  >
+                  <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
+                    >{tr("common.date")}</TableHead
+                  >
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {#each assignments as a}
+                  <TableRow
+                    class="border-b border-kitsuden-border hover:bg-kitsuden-bg/50 transition-colors"
+                  >
+                    <TableCell class="px-4 py-3 font-mono text-xs text-kitsuden-text"
+                      >{a.courseId}</TableCell
+                    >
+                    <TableCell class="px-4 py-3 font-mono text-xs text-kitsuden-subtle"
+                      >{a.userId || "—"}</TableCell
+                    >
+                    <TableCell class="px-4 py-3 font-mono text-xs text-kitsuden-subtle"
+                      >{a.groupId || "—"}</TableCell
+                    >
+                    <TableCell class="px-4 py-3 text-kitsuden-text">{a.method || "—"}</TableCell>
+                    <TableCell class="px-4 py-3 text-kitsuden-subtle"
+                      >{a.date
+                        ? new Date(a.date).toLocaleDateString(localeFormat())
+                        : "—"}</TableCell
+                    >
+                  </TableRow>
+                {:else}
+                  <TableRow
+                    ><TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-text-dim"
+                      ><Layers class="w-8 h-8 mx-auto mb-2" />{tr(
+                        "academyView.noAssignmentsFound"
+                      )}</TableCell
+                    ></TableRow
+                  >
+                {/each}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      {/if}
+    {/if}
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- COURSE DETAIL DRAWER                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <Dialog
+    open={!!drawerOpen}
+    bare
+    size="xl"
+    ariaLabel={drawerCourse?.course.title || tr("academyView.course")}
+    placement="right"
+    onClose={() => closeDrawer()}
+  >
+    {#if drawerOpen}
+      <div
+        class="relative w-full max-w-xl bg-kitsuden-card border-l border-kitsuden-border h-full flex flex-col shadow-2xl"
+      >
+        <!-- Header -->
+        <div
+          class="flex items-center justify-between px-6 py-4 border-b border-kitsuden-border shrink-0"
+        >
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              {#if drawerCourse}
+                <span
+                  class="px-1.5 py-0.5 rounded text-xs font-medium {courseTypeColors[
+                    drawerCourse.course.type
+                  ] || ''}"
+                  >{courseTypeLabels[drawerCourse.course.type] || drawerCourse.course.type}</span
+                >
+              {/if}
+            </div>
+            <h2 class="text-lg font-bold text-kitsuden-text truncate">
+              {drawerCourse?.course.title || tr("academyView.course")}
+            </h2>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <Button
+              variant="secondary"
+              size="sm"
+              onclick={() => drawerCourse && openAssignModal([drawerCourse.course.id])}
+            >
+              <Users class="w-3.5 h-3.5" />
+              {tr("academyView.assign")}
+            </Button>
+            <button
+              class="p-2 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
+              onclick={closeDrawer}><X class="w-5 h-5" /></button
+            >
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+          {#if drawerLoading}
+            <div class="flex items-center justify-center h-40">
+              <div
+                class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
+              ></div>
+            </div>
+          {:else if !drawerStats}
+            <div class="text-center text-kitsuden-subtle py-12">
+              {tr("academyView.noStatsAvailable")}
+            </div>
+          {:else}
+            {@const s = drawerStats}
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {#each [{ label: tr("academyView.assigned"), value: s.totalAssigned, icon: Users, color: "text-kitsuden-accent" }, { label: tr("academyView.completed2"), value: s.completedItems, icon: CheckCircle, color: "text-kitsuden-green" }, { label: tr("academyView.inProgress"), value: s.inProgress, icon: TrendingUp, color: "text-kitsuden-amber" }, { label: tr("academyView.notStarted"), value: s.notStarted, icon: AlertCircle, color: "text-kitsuden-accent-2" }, { label: tr("academyView.completionRate2"), value: fmtPct(s.finishRate), icon: BarChart3, color: "text-kitsuden-green" }, { label: tr("academyView.avgProgress2"), value: fmtPct(s.averageProgress), icon: TrendingUp, color: "text-kitsuden-accent" }, { label: tr("academyView.quizPassers"), value: s.passedQuiz, icon: CheckCircle, color: "text-kitsuden-green" }, { label: tr("academyView.avgQuizScore"), value: s.averageQuizScore?.toFixed(1) ?? "—", icon: Star, color: "text-kitsuden-amber" }, { label: tr("academyView.surveys2"), value: s.totalSurveys, icon: Layers, color: "text-kitsuden-accent" }, { label: tr("academyView.satisfaction2"), value: fmtStar(s.averageSatisfaction), icon: Star, color: "text-kitsuden-amber" }, { label: tr("academyView.instructorRating"), value: s.averageExhibitor?.toFixed(1) ?? "—", icon: UserCircle, color: "text-kitsuden-purple" }] as stat}
+                <div
+                  class="bg-kitsuden-bg border border-kitsuden-border rounded-lg p-3 flex items-center gap-3"
+                >
+                  <div
+                    class="w-8 h-8 rounded-lg bg-kitsuden-card flex items-center justify-center shrink-0"
+                  >
+                    <stat.icon class="w-4 h-4 {stat.color}" />
+                  </div>
+                  <div>
+                    <p class="text-xs text-kitsuden-subtle">{stat.label}</p>
+                    <p class="text-sm font-semibold text-kitsuden-text">{stat.value}</p>
+                  </div>
+                </div>
+              {/each}
             </div>
 
-            <!-- Pagination -->
-            {#if totalPages > 1}
-              <div
-                class="p-3 border-t border-kitsuden-border bg-kitsuden-card flex items-center justify-between"
-              >
-                <span class="text-xs text-kitsuden-subtle"
-                  >{filteredCourses.length}
-                  {tr("academyView.totalPageOf", { currentPage })}
-                  {totalPages}</span
-                >
-                <div class="flex items-center gap-2">
-                  <button
-                    class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
-                    disabled={currentPage === 1}
-                    onclick={() => (currentPage = 1)}><ChevronFirst class="w-3.5 h-3.5" /></button
-                  >
-                  <button
-                    class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
-                    disabled={currentPage === 1}
-                    onclick={() => currentPage--}><ChevronLeft class="w-3.5 h-3.5" /></button
-                  >
-                  <span class="text-xs text-kitsuden-subtle px-2">{currentPage} / {totalPages}</span
-                  >
-                  <button
-                    class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
-                    disabled={currentPage === totalPages}
-                    onclick={() => currentPage++}><ChevronRight class="w-3.5 h-3.5" /></button
-                  >
-                  <button
-                    class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
-                    disabled={currentPage === totalPages}
-                    onclick={() => (currentPage = totalPages)}
-                    ><ChevronLast class="w-3.5 h-3.5" /></button
-                  >
-                </div>
+            <!-- Mini Bar Chart -->
+            <div class="bg-kitsuden-bg border border-kitsuden-border rounded-lg p-4">
+              <h3 class="text-sm font-semibold text-kitsuden-text mb-3">
+                {tr("academyView.studentDistribution")}
+              </h3>
+              <div class="space-y-2">
+                {#each [{ label: tr("academyView.completed2"), value: s.completedItems, color: "bg-kitsuden-green" }, { label: tr("academyView.inProgress"), value: s.inProgress, color: "bg-kitsuden-amber" }, { label: tr("academyView.notStarted"), value: s.notStarted, color: "bg-kitsuden-accent-2" }] as bar}
+                  {@const max = Math.max(s.totalAssigned || 1, 1)}
+                  <div class="flex items-center gap-3">
+                    <span class="w-20 text-xs text-kitsuden-subtle text-right">{bar.label}</span>
+                    <div class="flex-1 h-3 bg-kitsuden-card rounded-full overflow-hidden">
+                      <div
+                        class="h-full {bar.color} rounded-full"
+                        style="width: {Math.min(100, ((bar.value || 0) / max) * 100)}%"
+                      ></div>
+                    </div>
+                    <span class="w-8 text-xs text-kitsuden-text text-right">{bar.value}</span>
+                  </div>
+                {/each}
               </div>
-            {/if}
-          </div>
-        {/if}
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!-- LEARNING PATHS TAB                                                -->
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-    {:else if activeTab === "paths"}
-      <div class="card overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-kitsuden-bg">
-              <tr class="border-b border-kitsuden-border">
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle">{tr("common.name")}</th>
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle">{tr("common.category")}</th>
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle"
-                  >{tr("academyView.courses")}</th
-                >
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle"
-                  >{tr("academyView.sequentialApproval")}</th
-                >
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle">{tr("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each learningPaths as lp}
-                <tr
-                  class="border-b border-kitsuden-border hover:bg-kitsuden-bg/50 transition-colors"
-                >
-                  <td class="px-4 py-3">
-                    <div class="font-medium text-kitsuden-text">{lp.name}</div>
-                    {#if lp.description}<div class="text-xs text-kitsuden-subtle">
-                        {lp.description}
-                      </div>{/if}
-                  </td>
-                  <td class="px-4 py-3 text-kitsuden-subtle">{lp.category || "—"}</td>
-                  <td class="px-4 py-3 text-kitsuden-text">{lp.totalCourses}</td>
-                  <td class="px-4 py-3">
-                    <span
-                      class="px-2 py-0.5 rounded text-xs font-medium {lp.sequential
-                        ? 'bg-kitsuden-green/15 text-kitsuden-green'
-                        : 'bg-kitsuden-text-dim/15 text-kitsuden-subtle'}"
-                      >{lp.sequential ? tr("common.yes") : tr("common.no")}</span
-                    >
-                  </td>
-                  <td class="px-4 py-3">
-                    <div class="flex items-center gap-1">
-                      <a
-                        href="/academy/learning-paths/{lp.id}/edit"
-                        class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
-                        ><Edit2 class="w-3.5 h-3.5" /></a
-                      >
-                      <button
-                        class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent-2"
-                        onclick={() => deletePath(lp.id)}><Trash2 class="w-3.5 h-3.5" /></button
-                      >
-                    </div>
-                  </td>
-                </tr>
-              {:else}
-                <tr
-                  ><td colspan="5" class="px-4 py-12 text-center text-kitsuden-text-dim"
-                    ><Route class="w-8 h-8 mx-auto mb-2" />{tr(
-                      "academyView.noLearningPathsFound"
-                    )}</td
-                  ></tr
-                >
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!-- GROUPS TAB                                                        -->
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-    {:else if activeTab === "groups"}
-      <div class="card overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-kitsuden-bg">
-              <tr class="border-b border-kitsuden-border">
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle">{tr("common.name")}</th>
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle"
-                  >{tr("academyView.members")}</th
-                >
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle"
-                  >{tr("academyView.supervisor")}</th
-                >
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle">{tr("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each groups as g}
-                <tr
-                  class="border-b border-kitsuden-border hover:bg-kitsuden-bg/50 transition-colors"
-                >
-                  <td class="px-4 py-3">
-                    <div class="font-medium text-kitsuden-text">{g.name}</div>
-                    {#if g.description}<div class="text-xs text-kitsuden-subtle">
-                        {g.description}
-                      </div>{/if}
-                  </td>
-                  <td class="px-4 py-3 text-kitsuden-text">{g.members}</td>
-                  <td class="px-4 py-3 text-kitsuden-subtle">{g.supervisorPrincipal || "—"}</td>
-                  <td class="px-4 py-3">
-                    <div class="flex items-center gap-1">
-                      <a
-                        href="/academy/groups/{g.id}/edit"
-                        class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
-                        ><Edit2 class="w-3.5 h-3.5" /></a
-                      >
-                      <button
-                        class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent-2"
-                        onclick={() => deleteGroup(g.id)}><Trash2 class="w-3.5 h-3.5" /></button
-                      >
-                    </div>
-                  </td>
-                </tr>
-              {:else}
-                <tr
-                  ><td colspan="4" class="px-4 py-12 text-center text-kitsuden-text-dim"
-                    ><Users class="w-8 h-8 mx-auto mb-2" />{tr("academyView.noGroupsFound")}</td
-                  ></tr
-                >
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!-- ASSIGNMENTS TAB                                                   -->
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-    {:else if activeTab === "assignments"}
-      <div class="card overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-kitsuden-bg">
-              <tr class="border-b border-kitsuden-border">
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle"
-                  >{tr("academyView.courseId")}</th
-                >
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle">{tr("common.userId")}</th>
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle"
-                  >{tr("academyView.groupId")}</th
-                >
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle"
-                  >{tr("academyView.method")}</th
-                >
-                <th class="px-4 py-3 font-medium text-kitsuden-subtle">{tr("common.date")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each assignments as a}
-                <tr
-                  class="border-b border-kitsuden-border hover:bg-kitsuden-bg/50 transition-colors"
-                >
-                  <td class="px-4 py-3 font-mono text-xs text-kitsuden-text">{a.courseId}</td>
-                  <td class="px-4 py-3 font-mono text-xs text-kitsuden-subtle">{a.userId || "—"}</td
-                  >
-                  <td class="px-4 py-3 font-mono text-xs text-kitsuden-subtle"
-                    >{a.groupId || "—"}</td
-                  >
-                  <td class="px-4 py-3 text-kitsuden-text">{a.method || "—"}</td>
-                  <td class="px-4 py-3 text-kitsuden-subtle"
-                    >{a.date ? new Date(a.date).toLocaleDateString(localeFormat()) : "—"}</td
-                  >
-                </tr>
-              {:else}
-                <tr
-                  ><td colspan="5" class="px-4 py-12 text-center text-kitsuden-text-dim"
-                    ><Layers class="w-8 h-8 mx-auto mb-2" />{tr(
-                      "academyView.noAssignmentsFound"
-                    )}</td
-                  ></tr
-                >
-              {/each}
-            </tbody>
-          </table>
+            </div>
+          {/if}
         </div>
       </div>
     {/if}
-  {/if}
-</div>
+  </Dialog>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- COURSE DETAIL DRAWER                                                  -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-{#if drawerOpen}
-  <div class="fixed inset-0 z-40 flex justify-end">
-    <div class="absolute inset-0 bg-black/40 backdrop-blur-xs" onclick={closeDrawer}></div>
-    <div
-      class="relative w-full max-w-xl bg-kitsuden-card border-l border-kitsuden-border h-full flex flex-col shadow-2xl"
-    >
-      <!-- Header -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- DELETE CONFIRMATION MODAL                                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <Dialog
+    open={!!showDeleteModal}
+    bare
+    size="sm"
+    ariaLabel={tr("academyView.deleteCourseS")}
+    onClose={() => (showDeleteModal = false)}
+  >
+    {#if showDeleteModal}
       <div
-        class="flex items-center justify-between px-6 py-4 border-b border-kitsuden-border shrink-0"
+        class="relative bg-kitsuden-card border border-kitsuden-border rounded-xl p-6 w-full max-w-sm shadow-2xl"
       >
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            {#if drawerCourse}
-              <span
-                class="px-1.5 py-0.5 rounded text-xs font-medium {courseTypeColors[
-                  drawerCourse.course.type
-                ] || ''}"
-                >{courseTypeLabels[drawerCourse.course.type] || drawerCourse.course.type}</span
-              >
-            {/if}
-          </div>
-          <h2 class="text-lg font-bold text-kitsuden-text truncate">
-            {drawerCourse?.course.title || tr("academyView.course")}
-          </h2>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <button
-            class="btn-secondary text-xs inline-flex items-center gap-1"
-            onclick={() => drawerCourse && openAssignModal([drawerCourse.course.id])}
+        <h3 class="text-lg font-bold text-kitsuden-text mb-2">{tr("academyView.deleteCourseS")}</h3>
+        <p class="text-sm text-kitsuden-subtle mb-4">
+          {tr("academyView.thisWillPermanentlyDeleteCourse", {
+            deleteTargetIdsCount: deleteTargetIds.length,
+          })}
+        </p>
+        <div class="flex items-center justify-end gap-2">
+          <Button variant="secondary" onclick={() => (showDeleteModal = false)}
+            >{tr("common.cancel")}</Button
           >
-            <Users class="w-3.5 h-3.5" />
+          <button class="btn-danger" onclick={confirmDelete}
+            ><Trash2 class="w-4 h-4" /> {tr("common.delete")}</button
+          >
+        </div>
+      </div>
+    {/if}
+  </Dialog>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ASSIGN MODAL                                                        -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <Dialog
+    open={!!showAssignModal}
+    bare
+    ariaLabel={tr("academyView.assignCourseS", { assignCursoIdsCount: assignCourseIds.length })}
+    onClose={() => (showAssignModal = false)}
+  >
+    {#if showAssignModal}
+      <div
+        class="relative bg-kitsuden-card border border-kitsuden-border rounded-xl p-6 w-full max-w-md shadow-2xl"
+      >
+        <h3 class="text-lg font-bold text-kitsuden-text mb-1">
+          {tr("academyView.assignCourseS", { assignCursoIdsCount: assignCourseIds.length })}
+        </h3>
+        <p class="text-xs text-kitsuden-subtle mb-4">{tr("academyView.enterCommaSeparatedIds")}</p>
+        <div class="space-y-3">
+          <div>
+            <label for="assignuserids" class="block text-xs text-kitsuden-subtle mb-1"
+              >{tr("academyView.userIds")}</label
+            >
+            <input
+              id="assignuserids"
+              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
+              placeholder={tr("academyView.user1User2")}
+              bind:value={assignUserIds}
+            />
+          </div>
+          <div>
+            <label for="assigngroupids" class="block text-xs text-kitsuden-subtle mb-1"
+              >{tr("academyView.groupIds")}</label
+            >
+            <input
+              id="assigngroupids"
+              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
+              placeholder={tr("academyView.group1Group2")}
+              bind:value={assignGroupIds}
+            />
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 mt-4">
+          <button class="btn-secondary" onclick={() => (showAssignModal = false)}
+            >{tr("common.cancel")}</button
+          >
+          <button
+            class="btn-primary inline-flex items-center gap-2"
+            onclick={submitAssign}
+            disabled={assignLoading}
+          >
+            {#if assignLoading}<Loader2 class="w-4 h-4 animate-spin" />{/if}
+            <Users class="w-4 h-4" />
             {tr("academyView.assign")}
           </button>
-          <button
-            class="p-2 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
-            onclick={closeDrawer}><X class="w-5 h-5" /></button
-          >
         </div>
       </div>
-
-      <!-- Body -->
-      <div class="flex-1 overflow-y-auto p-6 space-y-6">
-        {#if drawerLoading}
-          <div class="flex items-center justify-center h-40">
-            <div
-              class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-            ></div>
-          </div>
-        {:else if !drawerStats}
-          <div class="text-center text-kitsuden-subtle py-12">
-            {tr("academyView.noStatsAvailable")}
-          </div>
-        {:else}
-          {@const s = drawerStats}
-          <!-- Stats Grid -->
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {#each [{ label: tr("academyView.assigned"), value: s.totalAssigned, icon: Users, color: "text-kitsuden-accent" }, { label: tr("academyView.completed2"), value: s.completedItems, icon: CheckCircle, color: "text-kitsuden-green" }, { label: tr("academyView.inProgress"), value: s.inProgress, icon: TrendingUp, color: "text-kitsuden-amber" }, { label: tr("academyView.notStarted"), value: s.notStarted, icon: AlertCircle, color: "text-kitsuden-accent-2" }, { label: tr("academyView.completionRate2"), value: fmtPct(s.finishRate), icon: BarChart3, color: "text-kitsuden-green" }, { label: tr("academyView.avgProgress2"), value: fmtPct(s.averageProgress), icon: TrendingUp, color: "text-kitsuden-accent" }, { label: tr("academyView.quizPassers"), value: s.passedQuiz, icon: CheckCircle, color: "text-kitsuden-green" }, { label: tr("academyView.avgQuizScore"), value: s.averageQuizScore?.toFixed(1) ?? "—", icon: Star, color: "text-kitsuden-amber" }, { label: tr("academyView.surveys2"), value: s.totalSurveys, icon: Layers, color: "text-kitsuden-accent" }, { label: tr("academyView.satisfaction2"), value: fmtStar(s.averageSatisfaction), icon: Star, color: "text-kitsuden-amber" }, { label: tr("academyView.instructorRating"), value: s.averageExhibitor?.toFixed(1) ?? "—", icon: UserCircle, color: "text-kitsuden-purple" }] as stat}
-              <div
-                class="bg-kitsuden-bg border border-kitsuden-border rounded-lg p-3 flex items-center gap-3"
-              >
-                <div
-                  class="w-8 h-8 rounded-lg bg-kitsuden-card flex items-center justify-center shrink-0"
-                >
-                  <stat.icon class="w-4 h-4 {stat.color}" />
-                </div>
-                <div>
-                  <p class="text-xs text-kitsuden-subtle">{stat.label}</p>
-                  <p class="text-sm font-semibold text-kitsuden-text">{stat.value}</p>
-                </div>
-              </div>
-            {/each}
-          </div>
-
-          <!-- Mini Bar Chart -->
-          <div class="bg-kitsuden-bg border border-kitsuden-border rounded-lg p-4">
-            <h3 class="text-sm font-semibold text-kitsuden-text mb-3">
-              {tr("academyView.studentDistribution")}
-            </h3>
-            <div class="space-y-2">
-              {#each [{ label: tr("academyView.completed2"), value: s.completedItems, color: "bg-kitsuden-green" }, { label: tr("academyView.inProgress"), value: s.inProgress, color: "bg-kitsuden-amber" }, { label: tr("academyView.notStarted"), value: s.notStarted, color: "bg-kitsuden-accent-2" }] as bar}
-                {@const max = Math.max(s.totalAssigned || 1, 1)}
-                <div class="flex items-center gap-3">
-                  <span class="w-20 text-xs text-kitsuden-subtle text-right">{bar.label}</span>
-                  <div class="flex-1 h-3 bg-kitsuden-card rounded-full overflow-hidden">
-                    <div
-                      class="h-full {bar.color} rounded-full"
-                      style="width: {Math.min(100, ((bar.value || 0) / max) * 100)}%"
-                    ></div>
-                  </div>
-                  <span class="w-8 text-xs text-kitsuden-text text-right">{bar.value}</span>
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/if}
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- DELETE CONFIRMATION MODAL                                           -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-{#if showDeleteModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center">
-    <div
-      class="absolute inset-0 bg-black/50 backdrop-blur-xs"
-      onclick={() => (showDeleteModal = false)}
-    ></div>
-    <div
-      class="relative bg-kitsuden-card border border-kitsuden-border rounded-xl p-6 w-full max-w-sm shadow-2xl"
-    >
-      <h3 class="text-lg font-bold text-kitsuden-text mb-2">{tr("academyView.deleteCourseS")}</h3>
-      <p class="text-sm text-kitsuden-subtle mb-4">
-        {tr("academyView.thisWillPermanentlyDeleteCourse", {
-          deleteTargetIdsCount: deleteTargetIds.length,
-        })}
-      </p>
-      <div class="flex items-center justify-end gap-2">
-        <button class="btn-secondary" onclick={() => (showDeleteModal = false)}
-          >{tr("common.cancel")}</button
-        >
-        <button class="btn-danger" onclick={confirmDelete}
-          ><Trash2 class="w-4 h-4" /> {tr("common.delete")}</button
-        >
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- ASSIGN MODAL                                                        -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-{#if showAssignModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center">
-    <div
-      class="absolute inset-0 bg-black/50 backdrop-blur-xs"
-      onclick={() => (showAssignModal = false)}
-    ></div>
-    <div
-      class="relative bg-kitsuden-card border border-kitsuden-border rounded-xl p-6 w-full max-w-md shadow-2xl"
-    >
-      <h3 class="text-lg font-bold text-kitsuden-text mb-1">
-        {tr("academyView.assignCourseS", { assignCursoIdsCount: assignCourseIds.length })}
-      </h3>
-      <p class="text-xs text-kitsuden-subtle mb-4">{tr("academyView.enterCommaSeparatedIds")}</p>
-      <div class="space-y-3">
-        <div>
-          <label for="assignuserids" class="block text-xs text-kitsuden-subtle mb-1"
-            >{tr("academyView.userIds")}</label
-          >
-          <input
-            id="assignuserids"
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
-            placeholder={tr("academyView.user1User2")}
-            bind:value={assignUserIds}
-          />
-        </div>
-        <div>
-          <label for="assigngroupids" class="block text-xs text-kitsuden-subtle mb-1"
-            >{tr("academyView.groupIds")}</label
-          >
-          <input
-            id="assigngroupids"
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
-            placeholder={tr("academyView.group1Group2")}
-            bind:value={assignGroupIds}
-          />
-        </div>
-      </div>
-      <div class="flex items-center justify-end gap-2 mt-4">
-        <button class="btn-secondary" onclick={() => (showAssignModal = false)}
-          >{tr("common.cancel")}</button
-        >
-        <button
-          class="btn-primary inline-flex items-center gap-2"
-          onclick={submitAssign}
-          disabled={assignLoading}
-        >
-          {#if assignLoading}<Loader2 class="w-4 h-4 animate-spin" />{/if}
-          <Users class="w-4 h-4" />
-          {tr("academyView.assign")}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
+    {/if}
+  </Dialog>
+</ViewPage>
 
 <style>
   @reference "../../style.css";

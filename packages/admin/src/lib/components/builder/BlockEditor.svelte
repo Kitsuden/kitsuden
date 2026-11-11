@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Switch } from "$lib/tallao";
+  import { Switch, Button } from "$lib/tallao";
   import { t } from "$lib/i18n";
   /**
    * BlockEditor.svelte — Edit form for a single block's data
@@ -259,7 +259,7 @@
           <p class="text-xs text-kitsuden-subtle font-mono">{block.type}</p>
         </div>
       </div>
-      <button onclick={onClose} class="btn-icon p-1"><X class="w-4 h-4" /></button>
+      <Button onclick={onClose} variant="ghost" size="icon"><X class="w-4 h-4" /></Button>
     </div>
   </div>
 
@@ -322,15 +322,17 @@
               legitimate, and removing it would have broken already saved blocks.
             -->
             {#if field.type === "image"}
-              <button
+              <Button
                 type="button"
-                class="btn-ghost btn-sm shrink-0 gap-1.5"
+                variant="ghost"
+                size="sm"
+                class="shrink-0"
                 onclick={() => (fieldChoosing = field.key)}
                 title={t("blockEditor.chooseFromLibraryOr")}
               >
                 <ImageIcon class="h-4 w-4" />
                 {t("blockEditor.library")}
-              </button>
+              </Button>
             {/if}
           </div>
           {#if field.type === "image" && block.data[field.key]}
@@ -472,46 +474,51 @@
                   </div>
                   <div class="flex shrink-0 flex-col gap-1">
                     <!-- The order IS the content in a carousel. -->
-                    <button
+                    <Button
                       type="button"
-                      class="btn-ghost px-1.5 py-0.5 text-xs disabled:opacity-30"
+                      variant="ghost"
+                      size="sm"
                       disabled={i === 0}
                       onclick={() => moveImage(field.key, i, -1)}
                       title={t("blockEditor.upload")}
                     >
                       ↑
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      class="btn-ghost px-1.5 py-0.5 text-xs disabled:opacity-30"
+                      variant="ghost"
+                      size="sm"
                       disabled={i === images.length - 1}
                       onclick={() => moveImage(field.key, i, 1)}
                       title={t("blockEditor.lower")}
                     >
                       ↓
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      class="btn-ghost px-1.5 py-0.5 text-xs text-kitsuden-accent-2"
+                      variant="danger-ghost"
+                      size="sm"
                       onclick={() => removeImage(field.key, i)}
                       title={t("blockEditor.remove")}
                     >
                       <Trash2 class="h-3 w-3" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               {/each}
             </div>
           {/if}
 
-          <button
+          <Button
             type="button"
-            class="btn-ghost btn-sm mt-2 w-full gap-1.5 text-xs"
+            variant="ghost"
+            size="sm"
+            class="mt-2 w-full"
             onclick={() => (galleryChoosing = field.key)}
           >
             <ImageIcon class="h-3.5 w-3.5" />
             {images.length === 0 ? t("blockEditor.chooseOrUploadImages") : t("blockEditor.addMore")}
-          </button>
+          </Button>
         {/if}
 
         <!-- JSON -->
@@ -541,13 +548,11 @@
 
   <!-- Footer -->
   <div class="p-4 border-t border-kitsuden-border shrink-0 flex items-center justify-between">
-    <button
-      onclick={onDelete}
-      class="btn-ghost btn-sm text-kitsuden-accent-2 hover:bg-kitsuden-accent-2/10"
-      ><Trash2 class="w-3.5 h-3.5" /> {t("blockEditor.remove")}</button
+    <Button onclick={onDelete} variant="danger-ghost" size="sm"
+      ><Trash2 class="w-3.5 h-3.5" /> {t("blockEditor.remove")}</Button
     >
-    <button onclick={onClose} class="btn-primary btn-sm"
-      ><Check class="w-3.5 h-3.5" /> {t("blockEditor.done")}</button
+    <Button onclick={onClose} size="sm"
+      ><Check class="w-3.5 h-3.5" /> {t("blockEditor.done")}</Button
     >
   </div>
 </div>

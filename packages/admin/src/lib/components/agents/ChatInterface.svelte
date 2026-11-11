@@ -3,11 +3,10 @@
   Interactive chat panel for testing agents
 -->
 <script lang="ts">
+  import { Button } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import { Send, Bot, User, Loader2, Wrench, Sparkles } from "lucide-svelte";
   import { tick } from "svelte";
-
-  import Button from "$lib/components/ui/Button.svelte";
   import { cn } from "$lib/utils";
 
   interface Message {

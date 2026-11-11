@@ -95,9 +95,19 @@ function internalLinks(): Link[] {
      * least common way of writing a link in this code.
      */
     /href:\s*[`"'](\/[^`"'{}]*)[`"']/g,
+    /**
+     * The sidebar and the moved routes are data (`$lib/nav.ts`): `path: "/datasets"`,
+     * `to: "/activity"`. A menu entry that leads nowhere is the worst broken link.
+     */
+    /\b(?:path|to):\s*"(\/[^"{}]*)"/g,
   ];
 
   for (const file of listFiles(base, ".svelte", ".ts")) {
+    // The vendored kit's header comments carry usage examples (`href: "/users/ana"`):
+    // they are documentation of tallao, not links of the panel.
+    if (file.split(/[\\/]/).join("/").includes("/lib/tallao/")) continue;
+    // A test names made-up paths ("/a", "/x") as fixtures.
+    if (file.endsWith(".test.ts")) continue;
     const source = readFileSync(file, "utf-8");
     const relativeValue = file
       .slice(ROOT.length + 1)
@@ -199,9 +209,8 @@ describe("internal panel links", () => {
       broken,
       `These panel links lead to a 404:\n\n${broken.join("\n")}\n\n` +
         `The panel routes are in packages/admin/src/routes. The kon ` +
-        `screens all live under /g/<konKey>[/<viewId>]; there are no separate ` +
-        `creation pages (you create with a modal), so a link to something/new ` +
-        `does not exist by design.`
+        `screens live under /g/<konKey>[/<viewId>[/<recordId>]]; a record page is ` +
+        `/…/<id> and its creation page /…/new (dataset entries, kon tables, models).`
     ).toEqual([]);
   });
 });

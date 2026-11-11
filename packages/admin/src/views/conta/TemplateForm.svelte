@@ -2,13 +2,9 @@
   import { t } from "$lib/i18n";
   import { ArrowLeft, Save, Play } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
+  import { toast, Button, Input, Label, Textarea } from "$lib/tallao";
 
   import { api } from "$lib/api";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Input from "$lib/components/ui/Input.svelte";
-  import Label from "$lib/components/ui/Label.svelte";
-  import Textarea from "$lib/components/ui/Textarea.svelte";
 
   interface Props {
     templateId?: string | null;

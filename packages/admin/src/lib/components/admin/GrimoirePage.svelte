@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t as tr } from "$lib/i18n";
+  import { t as tr, localeFormat } from "$lib/i18n";
   import CustomViewHost from "./CustomViewHost.svelte";
   /**
    * GrimoirePage.svelte — Hybrid Rendering Edition
@@ -15,9 +15,17 @@
    * 3. If admin.views declared → render tabs (DataExplorer + custom views)
    * 4. Fallback to auto-generated DataExplorer config
    */
-  import type { Component } from "svelte";
+  import { untrack, type Component } from "svelte";
 
-  import DataExplorer from "$lib/components/admin/DataExplorer.svelte";
+  import CalendarView from "$lib/components/admin/CalendarView.svelte";
+  import KanbanBoard from "$lib/components/admin/KanbanBoard.svelte";
+  import Page from "$lib/components/layout/Page.svelte";
+  import ListView from "$lib/components/list/ListView.svelte";
+  import QuickAddDialog from "$lib/components/list/QuickAddDialog.svelte";
+  import RecordPage from "$lib/components/list/RecordPage.svelte";
+  import { konViewActions } from "$lib/list/kon-actions";
+  import { explorerSource, type RecordSource } from "$lib/list/source";
+  import { Button, EmptyState, Skeleton, Tabs, type TabItem } from "$lib/tallao";
   import { moduleStore } from "$lib/states/modules.svelte";
   import {
     getGrimoireConfig,
@@ -28,9 +36,25 @@
     type GrimoireAdminConfig,
     type AdminViewConfig,
   } from "$lib/grimoire-loader";
-  import type { AdminConfig } from "$lib/types/admin";
+  import type {
+    AdminConfig,
+    CalendarView as CalendarViewConfig,
+    GridView,
+    KanbanView,
+  } from "$lib/types/admin";
 
-  const { grimoireId, initialViewId }: { grimoireId: string; initialViewId?: string } = $props();
+  import { goto } from "$app/navigation";
+
+  const {
+    grimoireId,
+    initialViewId,
+    recordId,
+  }: {
+    grimoireId: string;
+    initialViewId?: string;
+    /** `/g/<kon>/<view>/<record>`: one record of the view's table (or "new"). */
+    recordId?: string;
+  } = $props();
 
   // Legacy mode state
   let LegacyView: Component | null = $state(null);
@@ -114,9 +138,19 @@
     LegacyView = null;
     grimoireConfig = null;
     customViews = {};
-    activeViewId = initialViewId || "";
+    activeViewId = untrack(() => initialViewId) || "";
 
     void loadKon(kon);
+  });
+
+  // Another view of the same kon (a tab, a link): switch without loading the kon again.
+  $effect(() => {
+    const requested = initialViewId;
+    untrack(() => {
+      if (loading) return;
+      const next = requested || grimoireConfig?.defaultView || grimoireConfig?.views[0]?.id || "";
+      if (next && next !== activeViewId) activeViewId = next;
+    });
   });
 
   async function loadKon(grimoireId: string) {
@@ -245,188 +279,225 @@
   function getViewLabel(view: AdminViewConfig): string {
     return view.title || view.id;
   }
+
+  // ── The generic experience: a view over a table, on the list template ────────────
+
+  /** The explorer config of the active view, or the fallback one for a kon with no views. */
+  let fallbackConfig = $state<AdminConfig | null>(null);
+  const explorerConfig = $derived<AdminConfig | undefined>(
+    grimoireConfig && grimoireConfig.views.length > 0
+      ? getActiveExplorerConfig()
+      : (fallbackConfig ?? undefined)
+  );
+  const explorerView = $derived(
+    (explorerConfig?.views.find((v) => v.id === activeViewId) ?? explorerConfig?.views[0]) as
+      GridView | KanbanView | CalendarViewConfig | undefined
+  );
+  const isCustomActive = $derived(isActiveViewCustom());
+  const isGrid = $derived(
+    !!explorerView && explorerView.type === "grid" && !activeElementView && !isCustomActive
+  );
+
+  let source = $state<RecordSource | null>(null);
+  let sourceError = $state<string | null>(null);
+  let total = $state<number | null>(null);
+  let quickAdd = $state(false);
+  let reloadKey = $state(0);
+
+  // A kon with tables but no declared views: one grid per table, from the explorer.
+  $effect(() => {
+    const kon = grimoireId;
+    fallbackConfig = null;
+    if (loading || LegacyView || !grimoireConfig) return;
+    if (grimoireConfig.views.length > 0 || grimoireConfig.tables.length === 0) return;
+    generateDefaultConfig(kon)
+      .then((config) => (fallbackConfig = config))
+      .catch(() => (fallbackConfig = null));
+  });
+
+  $effect(() => {
+    const view = explorerView;
+    const config = explorerConfig;
+    const kon = grimoireId;
+    source = null;
+    sourceError = null;
+    total = null;
+    if (!isGrid || !view || !config || !("table" in view)) return;
+    const table = view.table;
+    const tableLabel =
+      grimoireConfig?.tables.find((tb) => tb.name === table)?.label ?? view.title ?? table;
+    const endpoint = config.apiEndpoint;
+    let cancelled = false;
+    explorerSource({
+      konId: kon,
+      viewId: view.id,
+      table,
+      label: view.title || tableLabel,
+      singular: tableLabel.replace(/s$/, "") || tr("dataExplorer.record"),
+      apiEndpoint: endpoint,
+      fixedFilter: (view as GridView & { defaultFilter?: Record<string, unknown> }).defaultFilter,
+      ...konViewActions(view as GridView, endpoint, table),
+    })
+      .then((s) => {
+        if (!cancelled) source = s;
+      })
+      .catch((e) => {
+        if (!cancelled) sourceError = (e as Error)?.message ?? String(e);
+      });
+    return () => {
+      cancelled = true;
+    };
+  });
+
+  const viewTabs = $derived<TabItem[]>(
+    (grimoireConfig?.views ?? []).map((view) => ({
+      id: view.id,
+      label: getViewLabel(view),
+      controls: "kon-view-panel",
+      tabId: `kon-view-tab-${view.id}`,
+    }))
+  );
+  const konName = $derived(grimoireConfig?.name ?? grimoireId.replace(/^kon-/, ""));
+  const viewBase = $derived(`/g/${grimoireId}/${activeViewId || explorerView?.id || "default"}`);
+  const manyViews = $derived((grimoireConfig?.views.length ?? 0) > 1);
+  const activeViewLabel = $derived.by(() => {
+    const view = grimoireConfig?.views.find((v) => v.id === activeViewId);
+    return view ? getViewLabel(view) : (explorerView?.title ?? "");
+  });
+
+  function selectView(viewId: string) {
+    // Each view has its own address; the list state of one view does not follow to another.
+    void goto(`/g/${grimoireId}/${viewId}`);
+  }
 </script>
 
 <!--
-  A disabled kon is stated, not hidden.
-
-  Before, its explorer was rendered anyway: header, «0 records» and an «Add»
-  button that opened a form complaining about a table that does not exist —
-  because the kon is not installed and its migrations have not run. The user
-  read «table builder_definitions is missing» when what was missing was enabling
-  the kon.
+  Every state of a kon's page sits under the same PageHeader (`<Page>`): a disabled kon, a
+  load failure, a kon that stores nothing, a custom view (a Svelte view bundled here or a
+  Web Component the kon ships), and the generic experience (list template + record pages).
+  A full-page view bundled in the panel (Media, Blog…) draws its own `<Page>`.
 -->
 {#if !loading && !activatedKon}
-  <div class="card p-12 text-center">
-    <h2 class="mb-2 text-lg font-semibold">{grimoireConfig?.name ?? grimoireId}</h2>
-    <p class="mx-auto mb-6 max-w-md text-sm text-kitsuden-subtle">
-      {tr("grimoirePage.thisKonIsNotActivated")}
-    </p>
-    <a href="/kons" class="btn-primary inline-flex items-center gap-2"
-      >{tr("grimoirePage.irAKons")}</a
-    >
-  </div>
+  <!--
+    A disabled kon is stated, not hidden: its explorer used to render anyway, with an
+    "Add" button that complained about a missing table when what was missing was the kon.
+  -->
+  <Page title={konName}>
+    <EmptyState
+      title={tr("grimoirePage.thisKonIsNotActivated")}
+      actionLabel={tr("grimoirePage.irAKons")}
+      actionHref="/kons"
+    />
+  </Page>
 {:else if loading}
-  <div class="flex items-center justify-center h-96">
-    <div class="flex flex-col items-center gap-4">
-      <div
-        class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-      ></div>
-      <p class="text-kitsuden-subtle text-sm">{tr("grimoirePage.loading", { grimoireId })}</p>
+  <Page title={konName}>
+    <div role="status" aria-busy="true">
+      <span class="sr-only">{tr("grimoirePage.loading", { grimoireId })}</span>
+      <Skeleton lines={6} />
     </div>
-  </div>
+  </Page>
 {:else if error && !grimoireConfig && !LegacyView}
-  <div class="flex items-center justify-center h-96">
-    <div class="text-center">
-      <div class="text-4xl mb-4">⚠️</div>
-      <h3 class="text-lg font-semibold text-kitsuden-text mb-2">
-        {tr("grimoirePage.failedToLoad")}
-      </h3>
-      <p class="text-sm text-kitsuden-subtle">{error}</p>
-    </div>
-  </div>
+  <Page title={konName}>
+    <EmptyState variant="error" title={tr("grimoirePage.failedToLoad")} description={error} />
+  </Page>
 {:else if LegacyView}
-  <!-- LEGACY MODE: Full custom monolith view -->
+  <!-- A full-page view bundled in the panel: it draws its own header. -->
   <LegacyView />
-{:else if grimoireConfig && grimoireConfig.views.length > 0}
-  <!-- HYBRID MODE: Tabs with DataExplorer + Custom views -->
-  <div class="space-y-4">
-    <!-- View Tabs -->
-    {#if grimoireConfig.views.length > 1}
-      <div class="border-b border-kitsuden-border">
-        <div class="flex gap-1">
-          {#each grimoireConfig.views as view}
-            {@const isActive = activeViewId === view.id}
-            {@const isCustomReady = view.type === "custom" ? view.id in customViews : true}
-            <button
-              onclick={() => (activeViewId = view.id)}
-              class="group px-4 py-2.5 text-sm font-medium border-b-2 transition-all duration-200 inline-flex items-center gap-2"
-              class:border-kitsuden-accent={isActive}
-              class:text-kitsuden-accent={isActive}
-              class:border-transparent={!isActive}
-              class:text-kitsuden-text-dim={!isActive}
-              class:hover:text-kitsuden-text={!isActive}
-              disabled={view.type === "custom" && !isCustomReady}
-              title={view.type === "custom" && !isCustomReady
-                ? tr("grimoirePage.customViewNotYetImplemented")
-                : undefined}
-            >
-              {#if view.type === "custom"}
-                <span class="w-2 h-2 rounded-full bg-kitsuden-accent-2"></span>
-              {:else if view.type === "kanban"}
-                <span class="w-2 h-2 rounded-full bg-kitsuden-purple"></span>
-              {:else if view.type === "calendar"}
-                <span class="w-2 h-2 rounded-full bg-kitsuden-amber"></span>
-              {:else}
-                <span class="w-2 h-2 rounded-full bg-kitsuden-accent"></span>
-              {/if}
-              {getViewLabel(view)}
-            </button>
-          {/each}
-        </div>
-      </div>
-    {/if}
+{:else if recordId && source && isGrid}
+  <RecordPage
+    {source}
+    id={recordId}
+    listHref={viewBase}
+    hrefFor={(id) => `${viewBase}/${id}`}
+    crumbs={[{ label: activeViewLabel || source.label, href: viewBase }]}
+  />
+{:else if explorerView || (grimoireConfig && grimoireConfig.views.length > 0)}
+  <Page title={konName} crumbs={manyViews && activeViewLabel ? [{ label: activeViewLabel }] : []}>
+    {#snippet meta()}
+      {#if isGrid && total !== null}
+        {total === 1
+          ? tr("list.countOne")
+          : tr("list.count", { n: total.toLocaleString(localeFormat()) })}
+      {/if}
+    {/snippet}
+    {#snippet actions()}
+      {#if isGrid && source && source.formFields.length > 0}
+        <Button variant="secondary" onclick={() => (quickAdd = true)}>
+          {tr("list.quickAdd")}
+        </Button>
+        <Button href={`${viewBase}/new`}>{tr("list.newOne", { name: source.singular })}</Button>
+      {/if}
+    {/snippet}
+    {#snippet tabs()}
+      {#if manyViews}
+        <Tabs
+          items={viewTabs}
+          bind:value={() => activeViewId, selectView}
+          panels={false}
+          ariaLabel={konName}
+        />
+      {/if}
+    {/snippet}
 
-    <!-- View Content -->
-    <div class="animate-fade-in">
+    <div
+      id="kon-view-panel"
+      role={manyViews ? "tabpanel" : undefined}
+      aria-labelledby={manyViews ? `kon-view-tab-${activeViewId}` : undefined}
+    >
       {#if activeElementView}
+        <!-- A Web Component the kon ships: mounted under the same header. -->
         <CustomViewHost descriptor={activeElementView} viewId={activeViewId} />
-      {:else if isActiveViewCustom()}
+      {:else if isCustomActive}
         {@const CustomComponent = getActiveCustomView()}
         {#if CustomComponent}
           <!--
-            ── WHY `viewId` IS PASSED ───────────────────────────────────────
-
-            The same component can be registered for SEVERAL views of the
-            kon. Games does it: «All Games» and «Collections» both point to
-            `GamesView.svelte`, which has its own tabs inside and always opened
-            on the games one.
-
-            Result: you pressed «Collections» and the games list came up. Nothing
-            failed — it showed what it should not, which is the same problem as
-            «Scheduled» with the drafts inside.
-
-            Without the prop, the component has no way of knowing which one was pressed.
-            Views that do not declare it simply ignore it.
+            `viewId` is passed because one component can serve several views of a kon
+            (Games: "All Games" and "Collections"); without it it cannot know which.
           -->
           <CustomComponent viewId={activeViewId} />
         {:else}
-          <div class="card p-12 text-center">
-            <p class="text-kitsuden-subtle">
-              {tr("grimoirePage.customViewIsNotYet", { activeViewId })}
-            </p>
-          </div>
+          <EmptyState title={tr("grimoirePage.customViewIsNotYet", { activeViewId })} />
         {/if}
-      {:else}
-        {@const explorerConfig = getActiveExplorerConfig()}
-        {#if explorerConfig}
-          <DataExplorer
-            {grimoireId}
-            config={explorerConfig}
-            viewId={activeViewId || "default"}
-            allTables={grimoireConfig.tables.map((t) => ({ name: t.name, label: t.label }))}
+      {:else if explorerView?.type === "kanban"}
+        <KanbanBoard view={explorerView} apiEndpoint={explorerConfig?.apiEndpoint} />
+      {:else if explorerView?.type === "calendar"}
+        <CalendarView view={explorerView} apiEndpoint={explorerConfig?.apiEndpoint} />
+      {:else if sourceError}
+        <EmptyState variant="error" description={sourceError} />
+      {:else if source}
+        {#key source.id}
+          <ListView
+            {source}
+            bind:total
+            {reloadKey}
+            hrefFor={(row) => `${viewBase}/${source!.rowId(row)}`}
+            newHref={source.formFields.length > 0 ? `${viewBase}/new` : undefined}
           />
-        {:else}
-          <div class="card p-12 text-center">
-            <p class="text-kitsuden-subtle">
-              {tr("grimoirePage.noExplorerConfigurationForView", { activeViewId })}
-            </p>
-          </div>
-        {/if}
+        {/key}
+        <QuickAddDialog bind:open={quickAdd} {source} onCreated={() => (reloadKey += 1)} />
+      {:else if explorerView}
+        <Skeleton lines={6} />
+      {:else}
+        <EmptyState title={tr("grimoirePage.noExplorerConfigurationForView", { activeViewId })} />
       {/if}
     </div>
-  </div>
+  </Page>
 {:else if grimoireConfig && grimoireConfig.tables.length === 0}
   <!--
-    The kon exists and is loaded, but exposes no data: neither its own tables nor
-    a custom view: some only contribute behavior to other kons and
-    store nothing of their own.
-
-    Before, it fell back to the automatic explorer, which requested a table named after the
-    kon and answered «Collection not found» with 0 columns — an error that
-    suggested something was broken when there was nothing to fix.
+    The kon exists and is loaded, but exposes no data: neither tables nor a view. Some only
+    contribute behaviour to other kons. It used to fall back to the explorer, which asked
+    for a table named after the kon and answered "Collection not found".
   -->
-  <div class="card p-12 text-center">
-    <h2 class="mb-2 text-lg font-semibold">{grimoireConfig.name}</h2>
-    <p class="mx-auto max-w-md text-sm text-kitsuden-subtle">
-      {tr("grimoirePage.thisKonStoresNoData")}
-    </p>
-  </div>
+  <Page title={konName}>
+    <EmptyState title={tr("grimoirePage.thisKonStoresNoData")} />
+  </Page>
+{:else if grimoireConfig}
+  <Page title={konName}><Skeleton lines={6} /></Page>
 {:else}
-  <!-- FALLBACK: Auto-generated DataExplorer -->
-  {#await generateDefaultConfig(grimoireId) then fallbackConfig}
-    <DataExplorer
-      {grimoireId}
-      config={fallbackConfig}
-      viewId="default"
-      allTables={grimoireConfig?.tables.map((t) => ({ name: t.name, label: t.label }))}
+  <Page title={konName}>
+    <EmptyState
+      title={tr("grimoirePage.noConfiguration")}
+      description={tr("grimoirePage.thisGrimoireHasNoAdmin")}
     />
-  {:catch}
-    <div class="flex items-center justify-center h-96">
-      <div class="text-center">
-        <div class="text-4xl mb-4">📭</div>
-        <h3 class="text-lg font-semibold text-kitsuden-text mb-2">
-          {tr("grimoirePage.noConfiguration")}
-        </h3>
-        <p class="text-sm text-kitsuden-subtle">{tr("grimoirePage.thisGrimoireHasNoAdmin")}</p>
-      </div>
-    </div>
-  {/await}
+  </Page>
 {/if}
-
-<style>
-  .animate-fade-in {
-    animation: fadeIn 0.2s ease-out;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-</style>

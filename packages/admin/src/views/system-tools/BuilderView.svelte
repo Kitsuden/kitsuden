@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/admin/PageCrumbs.svelte";
   import { confirmDialog } from "$lib/confirm.svelte";
   /**
    * Editor for a Page Builder page (create and edit).
@@ -16,7 +17,7 @@
   import { t } from "$lib/i18n";
   import { Save, ArrowLeft, Eye, Trash2 } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
+  import { toast, Button } from "$lib/tallao";
 
   import { api } from "$lib/api";
   import PageBuilder from "$lib/components/builder/PageBuilder.svelte";
@@ -150,18 +151,22 @@
   }
 </script>
 
-<div class="h-[calc(100vh-4rem)] flex flex-col">
+<PageCrumbs crumbs={[{ label: pageTitle.trim() || t("builderView.title") }]} />
+
+<div class="h-[calc(100dvh-6.5rem)] flex flex-col">
+  <h1 class="sr-only">{t("builderView.title")}</h1>
   <div
-    class="flex items-center justify-between px-6 py-4 border-b border-kitsuden-border bg-kitsuden-card"
+    class="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-kitsuden-border bg-kitsuden-card"
   >
     <div class="flex items-center gap-4">
-      <button
+      <Button
         onclick={() => goto(LISTING)}
-        class="btn-ghost p-2"
+        variant="ghost"
+        size="icon"
         aria-label={t("builderView.comeBack")}
       >
         <ArrowLeft class="w-5 h-5" />
-      </button>
+      </Button>
       <div>
         <input
           bind:value={pageTitle}
@@ -181,28 +186,30 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-2">
       {#if pageId}
-        <button
+        <Button
           onclick={handleDelete}
           disabled={deleting}
-          class="btn-ghost btn-sm gap-1.5 text-kitsuden-accent-2"
+          variant="danger-ghost"
+          size="sm"
           data-testid="delete-page"
         >
           <Trash2 class="w-4 h-4" />
           {t("common.delete")}
-        </button>
+        </Button>
       {/if}
-      <button
+      <Button
         onclick={handlePreview}
         disabled={!SITE || !pageId || !pageSlug}
         title={!SITE ? t("builderView.previewWithoutSite") : undefined}
-        class="btn-ghost btn-sm gap-1.5"
+        variant="ghost"
+        size="sm"
       >
         <Eye class="w-4 h-4" />
         {t("common.preview")}
-      </button>
-      <button onclick={handleSave} disabled={saving || loading} class="btn-primary btn-sm gap-1.5">
+      </Button>
+      <Button onclick={handleSave} disabled={saving || loading} size="sm">
         {#if saving}
           <span
             class="w-4 h-4 border-2 border-kitsuden-bg border-t-transparent rounded-full animate-spin"
@@ -211,7 +218,7 @@
         {:else}
           <Save class="w-4 h-4" /> {t("builderView.savePage")}
         {/if}
-      </button>
+      </Button>
     </div>
   </div>
 

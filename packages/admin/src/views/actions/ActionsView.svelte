@@ -1,28 +1,27 @@
 <script lang="ts">
-  import StateMessage from "$lib/components/feedback/StateMessage.svelte";
-  import { toast } from "svelte-sonner";
+  import Page from "$lib/components/layout/Page.svelte";
+  import ListView from "$lib/components/list/ListView.svelte";
   import { t } from "$lib/i18n";
+  import { memorySource, type Row } from "$lib/list/source";
+  import {
+    Badge,
+    Button,
+    Dialog,
+    Field,
+    Input,
+    MenuItem,
+    Select,
+    Textarea,
+    toast,
+  } from "$lib/tallao";
   /**
-   * ActionsView.svelte — Unified UI for Workers + Webhooks
+   * ActionsView.svelte — Unified UI for Workers + Webhooks, on the list template
    *
    * Uses the new unified /api/actions API.
    * Falls back to legacy APIs if the new API is not available.
    */
-  import {
-    Zap,
-    Webhook,
-    Plus,
-    Play,
-    Pause,
-    RotateCcw,
-    X,
-    Loader2,
-    Activity,
-    Code,
-    Globe,
-    Terminal,
-  } from "lucide-svelte";
-  import { onMount } from "svelte";
+  import { Code, Webhook } from "lucide-svelte";
+  import { onMount, untrack } from "svelte";
 
   const API = import.meta.env.VITE_API_URL ?? "";
 
@@ -66,7 +65,6 @@
 
   let actions = $state<Action[]>([]);
   let loading = $state(true);
-  let activeTab = $state<"all" | "code" | "webhook_out">("all");
   let showCreateModal = $state(false);
   let createType = $state<"code" | "webhook_out">("code");
   let useNewApi = $state(true); // Will fall back to legacy if new API fails
@@ -88,10 +86,6 @@
   // Computed
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const filteredActions = $derived(
-    activeTab === "all" ? actions : actions.filter((a) => a.type === activeTab)
-  );
-
   const stats = $derived({
     total: actions.length,
     code: actions.filter((a) => a.type === "code").length,
@@ -106,6 +100,18 @@
 
   onMount(async () => {
     await loadActions();
+  });
+
+  // The list template reads `actions`: tell it when they changed.
+  $effect(() => {
+    void actions;
+    if (!loading) {
+      // `untrack`: the counter is written here; reading it back must not re-run the effect.
+      untrack(() => {
+        loaded = true;
+        reloadKey += 1;
+      });
+    }
   });
 
   /** Neither the actions API nor the legacy one answered: shown instead of "no actions". */
@@ -340,7 +346,7 @@
 
       await loadActions();
     } catch (err) {
-      console.error("Failed to toggle action:", err);
+      toast.error(t("actionsView.toggleFailed"), { description: (err as Error)?.message });
     }
   }
 
@@ -361,7 +367,7 @@
 
       await loadActions();
     } catch (err) {
-      console.error("Failed to run action:", err);
+      toast.error(t("actionsView.runFailed"), { description: (err as Error)?.message });
     }
   }
 
@@ -370,492 +376,240 @@
       return t("actionsView.cron", { cronExpression: action.triggerConfig.cronExpression });
     }
     if (action.trigger === "event" && action.triggerConfig?.eventName) {
-      return `On ${action.triggerConfig.eventName}`;
+      return t("actionsView.onEvent", { event: action.triggerConfig.eventName });
     }
     return action.trigger;
   }
 
-  function getTriggerBadgeClass(action: Action): string {
-    switch (action.trigger) {
-      case "cron":
-        return "badge-cyan";
-      case "event":
-        return "badge-amber";
-      case "http":
-        return "badge-purple";
-      case "manual":
-        return "badge-muted";
-      default:
-        return "badge-muted";
-    }
-  }
+  // ── The list ───────────────────────────────────────────────────────────────────────
 
-  function getTypeIcon(type: ActionType) {
-    switch (type) {
-      case "code":
-        return Terminal;
-      case "webhook_out":
-        return Globe;
-      case "webhook_in":
-        return Webhook;
-      case "agent":
-        return Zap;
-      default:
-        return Zap;
-    }
-  }
+  let loaded = $state(false);
+  let reloadKey = $state(0);
+  let total = $state<number | null>(null);
 
-  function getTypeColor(type: ActionType): string {
-    switch (type) {
-      case "code":
-        return "text-kitsuden-amber bg-kitsuden-amber/10";
-      case "webhook_out":
-        return "text-kitsuden-purple bg-kitsuden-purple/10";
-      case "webhook_in":
-        return "text-kitsuden-accent bg-kitsuden-accent/10";
-      case "agent":
-        return "text-kitsuden-accent-2 bg-kitsuden-accent-2/10";
-      default:
-        return "text-kitsuden-subtle bg-kitsuden-subtle/10";
-    }
-  }
+  const TYPE_LABEL: Record<ActionType, () => string> = {
+    code: () => t("actionsView.worker"),
+    webhook_out: () => t("actionsView.webhook"),
+    webhook_in: () => t("actionsView.webhookIn"),
+    agent: () => t("actionsView.agentAction"),
+  };
+  const STATUS_LABEL: Record<ActionStatus, () => string> = {
+    active: () => t("actionsView.active"),
+    paused: () => t("actionsView.paused"),
+    error: () => t("common.error"),
+  };
+
+  const byId = $derived(new Map(actions.map((a) => [a.id, a])));
+
+  const source = $derived(
+    memorySource({
+      id: "actions",
+      label: t("common.actions"),
+      singular: t("actionsView.action"),
+      titleField: "name",
+      fields: [
+        { key: "name", label: t("common.name"), kind: "text", sortable: true },
+        {
+          key: "type",
+          label: t("actionsView.type"),
+          kind: "select",
+          sortable: true,
+          options: (["code", "webhook_out", "webhook_in", "agent"] as ActionType[]).map((v) => ({
+            value: v,
+            label: TYPE_LABEL[v](),
+          })),
+        },
+        { key: "triggerLabel", label: t("actionsView.trigger"), kind: "text", filterable: false },
+        {
+          key: "status",
+          label: t("common.status"),
+          kind: "select",
+          sortable: true,
+          options: (["active", "paused", "error"] as ActionStatus[]).map((v) => ({
+            value: v,
+            label: STATUS_LABEL[v](),
+          })),
+        },
+        { key: "executionCount", label: t("actionsView.runs"), kind: "number", sortable: true },
+        { key: "errorCount", label: t("actionsView.errors"), kind: "number", sortable: true },
+        {
+          key: "lastExecutedAt",
+          label: t("actionsView.lastRun"),
+          kind: "datetime",
+          sortable: true,
+        },
+        { key: "description", label: t("common.description"), kind: "text", hidden: true },
+      ],
+      rows: () =>
+        actions.map((a) => ({
+          id: a.id,
+          name: a.name,
+          type: a.type,
+          status: a.status,
+          triggerLabel: getTriggerLabel(a),
+          executionCount: a.executionCount ?? 0,
+          errorCount: a.errorCount ?? 0,
+          lastExecutedAt: a.lastExecutedAt ?? null,
+          description: a.description ?? a.config?.url ?? "",
+        })),
+      remove: async (id) => {
+        const res = await fetch(`${API}/api/actions/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        actions = actions.filter((a) => a.id !== id);
+      },
+    })
+  );
+
+  const actionOf = (row: Row) => byId.get(String(row.id));
 </script>
 
-<div class="space-y-6 animate-fade-in">
-  <!-- Header -->
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
-        <div
-          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
-        >
-          <Zap class="w-5 h-5 text-kitsuden-accent" />
-        </div>
-        {t("common.actions")}
-      </h1>
-      <p class="text-sm text-kitsuden-subtle mt-1">
-        {t("actionsView.automationsWebhooksAndScheduledTasks")}
-        {#if !useNewApi}
-          <span class="text-kitsuden-amber">{t("actionsView.legacyMode")}</span>
-        {/if}
-      </p>
-    </div>
-    <div class="flex items-center gap-2">
-      <button
-        onclick={() => openCreateModal("code")}
-        class="group inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-amber/5 hover:border-kitsuden-amber/20 hover:text-kitsuden-amber transition-all duration-200"
-      >
-        <Code class="w-4 h-4 group-hover:scale-110 transition-transform" />
-        {t("actionsView.newWorker")}
-      </button>
-      <button
-        onclick={() => openCreateModal("webhook_out")}
-        class="group inline-flex items-center gap-2 px-5 py-2.5 bg-kitsuden-accent text-kitsuden-on-accent rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
-      >
-        <Webhook class="w-4 h-4 group-hover:rotate-12 transition-transform" />
-        {t("actionsView.newWebhook")}
-      </button>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-    <div class="card p-4">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-kitsuden-accent/10 flex items-center justify-center">
-          <Zap class="w-5 h-5 text-kitsuden-accent" />
-        </div>
-        <div>
-          <p class="text-2xl font-bold text-kitsuden-text">{stats.total}</p>
-          <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-            {t("actionsView.totalActions")}
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="card p-4">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-kitsuden-green/10 flex items-center justify-center">
-          <Activity class="w-5 h-5 text-kitsuden-green" />
-        </div>
-        <div>
-          <p class="text-2xl font-bold text-kitsuden-text">{stats.active}</p>
-          <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-            {t("actionsView.active")}
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="card p-4">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-kitsuden-amber/10 flex items-center justify-center">
-          <Terminal class="w-5 h-5 text-kitsuden-amber" />
-        </div>
-        <div>
-          <p class="text-2xl font-bold text-kitsuden-text">{stats.code}</p>
-          <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-            {t("actionsView.workers")}
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="card p-4">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-kitsuden-purple/10 flex items-center justify-center">
-          <Globe class="w-5 h-5 text-kitsuden-purple" />
-        </div>
-        <div>
-          <p class="text-2xl font-bold text-kitsuden-text">{stats.webhooks}</p>
-          <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-            {t("actionsView.webhooks")}
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tabs -->
-  <div class="border-b border-kitsuden-border">
-    <div class="flex gap-1">
-      {#each [{ id: "all", label: t("actionsView.allActions"), icon: Zap }, { id: "code", label: t("actionsView.workers2"), icon: Terminal }, { id: "webhook_out", label: t("actionsView.webhooks2"), icon: Globe }] as tab}
-        <button
-          onclick={() => (activeTab = tab.id as any)}
-          class="group px-4 py-2.5 text-sm font-medium border-b-2 transition-all duration-200 inline-flex items-center gap-2"
-          class:border-kitsuden-accent={activeTab === tab.id}
-          class:text-kitsuden-accent={activeTab === tab.id}
-          class:border-transparent={activeTab !== tab.id}
-          class:text-kitsuden-text-dim={activeTab !== tab.id}
-          class:hover:text-kitsuden-text={activeTab !== tab.id}
-        >
-          <tab.icon class="w-4 h-4 group-hover:scale-110 transition-transform" />
-          {tab.label}
-        </button>
-      {/each}
-    </div>
-  </div>
-
-  <!-- Actions List -->
-  <div class="card overflow-hidden">
-    {#if loading}
-      <div class="flex justify-center py-20">
-        <div
-          class="w-6 h-6 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-        ></div>
-      </div>
-    {:else if loadError}
-      <StateMessage
-        kind="error"
-        title={t("actionsView.loadFailed")}
-        description={loadError}
-        onRetry={loadActions}
-        class="border-0 rounded-none"
-      />
-    {:else if filteredActions.length === 0}
-      <div class="p-16 text-center">
-        <Zap class="w-16 h-16 mx-auto text-kitsuden-accent/30 mb-4" />
-        <h2 class="text-lg font-medium text-kitsuden-text mb-2">
-          {t("actionsView.noActionsConfigured")}
-        </h2>
-        <p class="text-sm text-kitsuden-subtle mb-4">
-          {t("actionsView.createYourFirstAutomationTo")}
-        </p>
-        <div class="flex justify-center gap-3">
-          <button
-            onclick={() => openCreateModal("code")}
-            class="group inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-amber/5 hover:border-kitsuden-amber/20 hover:text-kitsuden-amber transition-all duration-200"
-          >
-            <Code class="w-4 h-4 group-hover:scale-110 transition-transform" />
-            {t("actionsView.newWorker")}
-          </button>
-          <button
-            onclick={() => openCreateModal("webhook_out")}
-            class="group inline-flex items-center gap-2 px-5 py-2.5 bg-kitsuden-accent text-kitsuden-on-accent rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
-          >
-            <Webhook class="w-4 h-4 group-hover:rotate-12 transition-transform" />
-            {t("actionsView.newWebhook")}
-          </button>
-        </div>
-      </div>
-    {:else}
-      <table class="w-full">
-        <thead class="bg-kitsuden-surface/50 border-b border-kitsuden-border">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-kitsuden-subtle uppercase"
-              >{t("actionsView.type")}</th
-            >
-            <th class="px-4 py-3 text-left text-xs font-medium text-kitsuden-subtle uppercase"
-              >{t("common.name")}</th
-            >
-            <th class="px-4 py-3 text-left text-xs font-medium text-kitsuden-subtle uppercase"
-              >{t("actionsView.trigger")}</th
-            >
-            <th class="px-4 py-3 text-left text-xs font-medium text-kitsuden-subtle uppercase"
-              >{t("common.status")}</th
-            >
-            <th class="px-4 py-3 text-right text-xs font-medium text-kitsuden-subtle uppercase"
-              >{t("common.actions")}</th
-            >
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-kitsuden-border">
-          {#each filteredActions as action}
-            {@const Icon = getTypeIcon(action.type)}
-            <tr class="hover:bg-kitsuden-surface/30 group">
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="w-8 h-8 rounded-lg flex items-center justify-center {getTypeColor(
-                      action.type
-                    )}"
-                  >
-                    <Icon class="w-4 h-4" />
-                  </div>
-                  <span class="text-sm text-kitsuden-text capitalize"
-                    >{action.type.replace("_", " ")}</span
-                  >
-                </div>
-              </td>
-              <td class="px-4 py-3">
-                <div class="font-medium text-kitsuden-text">{action.name}</div>
-                {#if action.description}
-                  <div class="text-xs text-kitsuden-subtle">{action.description}</div>
-                {/if}
-                {#if action.config?.url}
-                  <div class="text-xs text-kitsuden-subtle font-mono truncate max-w-[200px]">
-                    {action.config.url}
-                  </div>
-                {/if}
-              </td>
-              <td class="px-4 py-3">
-                <span
-                  class="inline-flex px-2 py-1 text-xs rounded-full border {getTriggerBadgeClass(
-                    action
-                  )}"
-                >
-                  {getTriggerLabel(action)}
-                </span>
-              </td>
-              <td class="px-4 py-3">
-                <span
-                  class="inline-flex px-2 py-1 text-xs rounded-full border {action.status ===
-                  'active'
-                    ? 'border-kitsuden-green/30 bg-kitsuden-green/10 text-kitsuden-green'
-                    : 'border-kitsuden-subtle/30 bg-kitsuden-subtle/10 text-kitsuden-subtle'}"
-                >
-                  {action.status === "active" ? t("actionsView.active") : t("actionsView.paused")}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-right">
-                <div
-                  class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  {#if action.type === "code"}
-                    <button
-                      class="group/btn p-2 rounded-xl text-kitsuden-text-dim hover:text-kitsuden-accent hover:bg-kitsuden-accent/10 transition-all duration-200 hover:scale-110"
-                      title={t("actionsView.runNow")}
-                      onclick={() => runAction(action)}
-                    >
-                      <RotateCcw
-                        class="w-4 h-4 group-hover/btn:rotate-180 transition-transform duration-500"
-                      />
-                    </button>
-                  {/if}
-                  <button
-                    class="group/btn p-2 rounded-xl transition-all duration-200 hover:scale-110 {action.status !==
-                    'active'
-                      ? 'text-kitsuden-green hover:bg-kitsuden-green/10'
-                      : 'text-kitsuden-amber hover:bg-kitsuden-amber/10'}"
-                    title={action.status === "active"
-                      ? t("actionsView.pause")
-                      : t("actionsView.resume")}
-                    onclick={() => toggleAction(action)}
-                  >
-                    {#if action.status === "active"}
-                      <Pause class="w-4 h-4 group-hover/btn:scale-90 transition-transform" />
-                    {:else}
-                      <Play class="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
-                    {/if}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
+<Page
+  title={t("common.actions")}
+  description={t("actionsView.automationsWebhooksAndScheduledTasks")}
+>
+  {#snippet meta()}
+    {#if loaded && !loadError}
+      {t("actionsView.summary", {
+        total: stats.total,
+        active: stats.active,
+        paused: stats.paused,
+        workers: stats.code,
+        webhooks: stats.webhooks,
+      })}
+      {#if !useNewApi}<Badge variant="warning" size="sm">{t("actionsView.legacyMode")}</Badge>{/if}
     {/if}
-  </div>
-</div>
+  {/snippet}
+  {#snippet actions()}
+    <Button variant="secondary" onclick={() => openCreateModal("code")}>
+      <Code size={16} aria-hidden="true" />
+      {t("actionsView.newWorker")}
+    </Button>
+    <Button onclick={() => openCreateModal("webhook_out")}>
+      <Webhook size={16} aria-hidden="true" />
+      {t("actionsView.newWebhook")}
+    </Button>
+  {/snippet}
 
-<!-- Create Modal -->
-{#if showCreateModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center">
-    <div
-      class="absolute inset-0 bg-black/60 backdrop-blur-xs"
-      onclick={() => (showCreateModal = false)}
-    ></div>
-
-    <div
-      class="relative bg-kitsuden-card border border-kitsuden-border rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-    >
-      <div class="flex items-center justify-between p-6 border-b border-kitsuden-border">
-        <h3 class="text-lg font-semibold text-kitsuden-text">
-          {t("actionsView.newItem")}
-          {createType === "code" ? t("actionsView.worker") : t("actionsView.webhook")}
-        </h3>
-        <button
-          onclick={() => (showCreateModal = false)}
-          class="group p-2 rounded-xl text-kitsuden-text-dim hover:text-kitsuden-text hover:bg-kitsuden-bg transition-all duration-200 hover:rotate-90"
-        >
-          <X class="w-5 h-5 transition-transform" />
-        </button>
-      </div>
-
-      <form onsubmit={saveAction} class="p-6 space-y-4">
-        <div>
-          <label for="formname" class="block text-xs text-kitsuden-subtle mb-1"
-            >{t("actionsView.name")}</label
-          >
-          <input
-            id="formname"
-            bind:value={formName}
-            type="text"
-            placeholder={createType === "code"
-              ? t("actionsView.exDailyEmailDigest")
-              : t("actionsView.exNotifySlack")}
-            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-            required
-          />
-        </div>
-
-        <div>
-          <label for="formdescription" class="block text-xs text-kitsuden-subtle mb-1"
-            >{t("common.description")}</label
-          >
-          <input
-            id="formdescription"
-            bind:value={formDescription}
-            type="text"
-            placeholder={t("actionsView.whatThisActionDoes")}
-            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-          />
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="formtrigger" class="block text-xs text-kitsuden-subtle mb-1"
-              >{t("actionsView.trigger")}</label
-            >
-            <select
-              id="formtrigger"
-              bind:value={formTrigger}
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-            >
-              {#if createType === "code"}
-                <option value="cron">{t("actionsView.cronSchedule")}</option>
-                <option value="event">{t("actionsView.systemEvent")}</option>
-              {:else}
-                <option value="event">{t("actionsView.inEvent")}</option>
-              {/if}
-              <option value="manual">{t("actionsView.manualOnly")}</option>
-            </select>
-          </div>
-
-          {#if formTrigger === "cron"}
-            <div>
-              <label for="formcronexpression" class="block text-xs text-kitsuden-subtle mb-1"
-                >{t("actionsView.cronExpression")}</label
-              >
-              <input
-                id="formcronexpression"
-                bind:value={formCronExpression}
-                type="text"
-                placeholder="0 * * * *"
-                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
-              />
-            </div>
-          {:else if formTrigger === "event"}
-            <div>
-              <label for="formeventname" class="block text-xs text-kitsuden-subtle mb-1"
-                >{t("actionsView.eventName")}</label
-              >
-              <select
-                id="formeventname"
-                bind:value={formEventName}
-                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-              >
-                <option value="entry.created">{t("actionsView.entryCreated")}</option>
-                <option value="entry.updated">{t("actionsView.entryUpdated")}</option>
-                <option value="entry.deleted">{t("actionsView.entryDeleted")}</option>
-                <option value="post.published">{t("actionsView.postPublished")}</option>
-              </select>
-            </div>
-          {/if}
-        </div>
-
-        {#if createType === "code"}
-          <div>
-            <label for="formcode" class="block text-xs text-kitsuden-subtle mb-1"
-              >{t("actionsView.code")}</label
-            >
-            <textarea
-              id="formcode"
-              bind:value={formCode}
-              rows="6"
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
-            ></textarea>
-          </div>
-        {:else}
-          <div>
-            <label for="formurl" class="block text-xs text-kitsuden-subtle mb-1"
-              >{t("actionsView.targetUrl")}</label
-            >
-            <input
-              id="formurl"
-              bind:value={formUrl}
-              type="url"
-              placeholder="https://hooks.slack.com/services/..."
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-              required
-            />
-          </div>
-
-          <div>
-            <label for="formheaders" class="block text-xs text-kitsuden-subtle mb-1"
-              >{t("actionsView.headersJson")}</label
-            >
-            <textarea
-              id="formheaders"
-              bind:value={formHeaders}
-              rows="3"
-              placeholder={'{"Authorization": "Bearer token"}'}
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
-            ></textarea>
-          </div>
+  <ListView
+    {source}
+    bind:total
+    {reloadKey}
+    pending={!loaded}
+    {loadError}
+    onRetry={loadActions}
+    canDelete={useNewApi}
+    onNew={() => openCreateModal("code")}
+    emptyTitle={t("actionsView.noActionsConfigured")}
+    emptyDescription={t("actionsView.createYourFirstAutomationTo")}
+  >
+    {#snippet rowMenu(row)}
+      {@const action = actionOf(row)}
+      {#if action}
+        {#if action.type === "code"}
+          <MenuItem onSelect={() => runAction(action)}>{t("actionsView.runNow")}</MenuItem>
         {/if}
+        <MenuItem onSelect={() => toggleAction(action)}>
+          {action.status === "active" ? t("actionsView.pause") : t("actionsView.resume")}
+        </MenuItem>
+      {/if}
+    {/snippet}
+  </ListView>
+</Page>
 
-        <div class="flex justify-end gap-3 pt-4 border-t border-kitsuden-border">
-          <button
-            type="button"
-            onclick={() => (showCreateModal = false)}
-            class="px-5 py-2.5 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-bg transition-all duration-200"
-          >
-            {t("common.cancel")}
-          </button>
-          <button
-            type="submit"
-            disabled={saving || !formName || (createType === "webhook_out" && !formUrl)}
-            class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-kitsuden-accent text-kitsuden-on-accent shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
-          >
-            {#if saving}
-              <Loader2 class="w-4 h-4 animate-spin" />
-              {t("actionsView.creating")}
-            {:else}
-              <Plus class="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-              {t("common.create")}
-            {/if}
-          </button>
-        </div>
-      </form>
+<Dialog
+  bind:open={showCreateModal}
+  title={createType === "code" ? t("actionsView.newWorker") : t("actionsView.newWebhook")}
+  size="lg"
+>
+  <form id="action-form" onsubmit={saveAction} class="kitsuden-action-form">
+    <Field label={t("actionsView.name")} required>
+      <Input
+        bind:value={formName}
+        required
+        placeholder={createType === "code"
+          ? t("actionsView.exDailyEmailDigest")
+          : t("actionsView.exNotifySlack")}
+      />
+    </Field>
+    <Field label={t("common.description")}>
+      <Input bind:value={formDescription} placeholder={t("actionsView.whatThisActionDoes")} />
+    </Field>
+    <div class="kitsuden-action-row">
+      <Field label={t("actionsView.trigger")}>
+        <Select
+          bind:value={formTrigger}
+          options={[
+            ...(createType === "code"
+              ? [
+                  { value: "cron", label: t("actionsView.cronSchedule") },
+                  { value: "event", label: t("actionsView.systemEvent") },
+                ]
+              : [{ value: "event", label: t("actionsView.inEvent") }]),
+            { value: "manual", label: t("actionsView.manualOnly") },
+          ]}
+        />
+      </Field>
+      {#if formTrigger === "cron"}
+        <Field label={t("actionsView.cronExpression")}>
+          <Input bind:value={formCronExpression} placeholder="0 * * * *" class="font-mono" />
+        </Field>
+      {:else if formTrigger === "event"}
+        <Field label={t("actionsView.eventName")}>
+          <Select
+            bind:value={formEventName}
+            options={[
+              { value: "entry.created", label: t("actionsView.entryCreated") },
+              { value: "entry.updated", label: t("actionsView.entryUpdated") },
+              { value: "entry.deleted", label: t("actionsView.entryDeleted") },
+              { value: "post.published", label: t("actionsView.postPublished") },
+            ]}
+          />
+        </Field>
+      {/if}
     </div>
-  </div>
-{/if}
+    {#if createType === "code"}
+      <Field label={t("actionsView.code")}>
+        <Textarea bind:value={formCode} rows={8} class="font-mono" />
+      </Field>
+    {:else}
+      <Field label={t("actionsView.targetUrl")} required>
+        <Input
+          bind:value={formUrl}
+          type="url"
+          required
+          placeholder="https://hooks.slack.com/services/..."
+        />
+      </Field>
+      <Field label={t("actionsView.headersJson")}>
+        <Textarea bind:value={formHeaders} rows={3} class="font-mono" />
+      </Field>
+    {/if}
+  </form>
+  {#snippet footer()}
+    <Button variant="ghost" onclick={closeCreateModal}>{t("common.cancel")}</Button>
+    <Button
+      type="submit"
+      form="action-form"
+      loading={saving}
+      disabled={saving || !formName || (createType === "webhook_out" && !formUrl)}
+    >
+      {saving ? t("actionsView.creating") : t("common.create")}
+    </Button>
+  {/snippet}
+</Dialog>
+
+<style>
+  .kitsuden-action-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .kitsuden-action-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1rem;
+  }
+</style>

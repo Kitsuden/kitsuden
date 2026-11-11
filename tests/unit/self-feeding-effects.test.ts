@@ -2,107 +2,101 @@
  * An `$effect` cannot depend on what it causes itself
  * ============================================================================
  *
- * ── THE FAILURE ────────────────────────────────────────────────────────────
+ * ── THE FAILURE ──────────────────────────────────────────────────────────────
  *
- * In `components/DataExplorer.svelte` it was written like this:
+ * In Svelte 5, everything that is READ inside an effect becomes a dependency of it,
+ * including what is read inside the functions it calls. A load that reads the list it has
+ * just assigned (`total = rows.length`), or an effect that bumps a counter it also reads
+ * (`reloadKey += 1`), re-runs itself: loading triggers loading.
  *
- *     $effect(() => {
- *       if (!initialData && apiEndpoint) loadData();
- *     });
+ * It was first found in the old data explorer (it only showed once the list had a real
+ * row), and again while the lists moved to the list template: the Actions page froze the
+ * tab because its effect did `reloadKey += 1` in the open.
  *
- * In Svelte 5, everything that is READ inside an effect becomes a dependency of
- * it — including what is read inside the functions it calls. And `loadData`
- * did this:
+ * ── THE RULE ─────────────────────────────────────────────────────────────────
  *
- *     rows = response.docs || response;
- *     pagination.total = response.totalDocs || rows.length;   // ← READS `rows`
- *     pagination.totalPages = Math.ceil(pagination.total / …); // ← READS `total`
- *
- * That is: the effect ended up depending on `rows` and `pagination.total`,
- * which are exactly what the load writes. Loading triggered loading.
- *
- * ── WHY IT WAS NOT VISIBLE ─────────────────────────────────────────────────
- *
- * While the list was EMPTY nothing happened: the same values were rewritten.
- * It appeared as soon as there was a real post to return. It is the kind
- * of failure that waits for data to exist before showing up — and then it does so
- * on the main screen.
- *
- * ── THE RULE ───────────────────────────────────────────────────────────────
- *
- * If an effect calls a function that writes state, the dependencies are
- * WRITTEN by hand and the call goes inside `untrack`. In Svelte 5, «react to
- * this» is declared, not deduced.
- *
- * It was already applied three times in this panel —blog editor, view selector,
- * games tabs— before finding it here.
+ * If an effect calls a function that writes state, the dependencies are WRITTEN by hand
+ * and the call goes inside `untrack`. A counter is bumped inside `untrack` too.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "..", "..");
-const COMPONENTS = join(ROOT, "packages", "admin", "src", "lib", "components");
+const SRC = join(ROOT, "packages", "admin", "src");
+const LIST_VIEW = join(SRC, "lib", "components", "list", "ListView.svelte");
 
-/** The two explorers: the one for kon views and the one for own views. */
-const EXPLORERS = [
-  ["own views", join(COMPONENTS, "DataExplorer.svelte")],
-  ["kon views", join(COMPONENTS, "admin", "DataExplorer.svelte")],
-] as const;
-
-describe("the explorers do not reload themselves", () => {
-  for (const [name, route] of EXPLORERS) {
-    it(`${name}: the load is isolated inside the effect`, () => {
-      const source = readFileSync(route, "utf-8");
-
-      /**
-       * Looks for the `$effect`s that call `loadData` and requires the
-       * call to be wrapped in `untrack`. A bare call ties the effect
-       * to everything the load touches.
-       */
-      const effects = [...source.matchAll(/\$effect\(\(\) => \{([\s\S]*?)\n {2}\}\);/g)].map(
-        (m) => m[1]
-      );
-
-      const withLoad = effects.filter((body) => /\bloadData\(\)/.test(body));
-
-      expect(
-        withLoad.length,
-        `no \`$effect\` that loads data was found in ${name}`
-      ).toBeGreaterThan(0);
-
-      for (const body of withLoad) {
-        expect(
-          body.includes("untrack("),
-          `There is an \`$effect\` that calls \`loadData()\` without \`untrack\` in ` +
-            `${name}. Everything the load reads becomes a dependency of the ` +
-            `effect, including what it writes itself: loading triggers loading. ` +
-            `It does not fail while the table is empty, because the same ` +
-            `values are rewritten — it shows up as soon as there is data.`
-        ).toBe(true);
-      }
-    });
+function svelteFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, e.name);
+    // The vendored kit has its own tests.
+    if (e.isDirectory()) {
+      if (e.name !== "tallao" && e.name !== "node_modules") out.push(...svelteFiles(path));
+    } else if (e.name.endsWith(".svelte")) out.push(path);
   }
+  return out;
+}
 
-  it("the load does not read the state it has just written", () => {
-    /**
-     * The other side of the same failure: even if the effect is isolated, reading
-     * `rows.length` right after assigning `rows` is fragile and ties
-     * the function back to its own output as soon as someone calls it from an effect.
-     * Work on a local variable.
-     */
-    for (const [name, route] of EXPLORERS) {
-      const source = readFileSync(route, "utf-8");
+const effectsOf = (source: string): string[] =>
+  [...source.matchAll(/\$effect\(\(\) => \{([\s\S]*?)\n {2}\}\);/g)].map((m) => m[1]!);
 
+describe("the list template does not reload itself", () => {
+  const source = readFileSync(LIST_VIEW, "utf-8");
+
+  it("the load is isolated inside the effect", () => {
+    const withLoad = effectsOf(source).filter((body) => /\bload\(\)/.test(body));
+    expect(withLoad.length, "no `$effect` that loads the list was found").toBeGreaterThan(0);
+    for (const body of withLoad) {
       expect(
-        /(pagination\.total|totalCount) = [^;]*(rows|data)\.length/.test(source),
-        `In ${name}, the total is computed by reading the list that was just ` +
-          `assigned. Use a local variable with the response: reading what you ` +
-          `just wrote ties the function back to its own output as soon as ` +
-          `someone calls it from an effect.`
-      ).toBe(false);
+        body.includes("untrack("),
+        "There is an `$effect` that calls `load()` without `untrack`: everything the load " +
+          "reads becomes a dependency of the effect, including what it writes itself."
+      ).toBe(true);
     }
+  });
+
+  it("the load does not read the list it has just assigned", () => {
+    const load = source.slice(source.indexOf("async function load()"));
+    const body = load.slice(0, load.indexOf("\n  }\n") + 4);
+    expect(body).toContain("rows = result.rows;");
+    // After the assignment, the function works on `result` / local values, not on `rows`.
+    const after = body.slice(body.indexOf("rows = result.rows;") + "rows = result.rows;".length);
+    expect(
+      /\brows\.(map|length|filter)\b/.test(after),
+      "The load reads `rows` right after assigning it. Use the response (a local value): " +
+        "reading what you just wrote ties the function to its own output."
+    ).toBe(false);
+  });
+});
+
+describe("no effect bumps a counter it also reads", () => {
+  it("`x += 1` / `x++` inside an `$effect` goes inside `untrack`", () => {
+    const offenders: string[] = [];
+    for (const file of svelteFiles(SRC)) {
+      const source = readFileSync(file, "utf-8");
+      for (const body of effectsOf(source)) {
+        // Only the effect's own statements: a bump inside a callback it defines
+        // (`.then(() => n += 1)`, `onclick`) runs later, outside the tracking.
+        const direct = body
+          .split("\n")
+          .filter((line) => /^\s{4,6}\w+(\.\w+)* (\+= 1|-= 1);|^\s{4,6}\w+(\+\+|--);/.test(line));
+        // Only reactive counters matter: a plain `let n = 0` is not tracked.
+        const reactive = direct.filter((line) => {
+          const name = line.trim().split(/[^\w]/)[0]!;
+          return source.includes(`let ${name} = $state`);
+        });
+        if (reactive.length > 0 && !body.includes("untrack(")) {
+          offenders.push(`${file.slice(SRC.length + 1)}: ${reactive[0]!.trim()}`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      "These effects write a counter they read, so they re-run themselves for ever " +
+        "(the page freezes). Wrap the write in `untrack(() => { … })`."
+    ).toEqual([]);
   });
 });

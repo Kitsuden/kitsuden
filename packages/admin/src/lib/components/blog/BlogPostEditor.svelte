@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/admin/PageCrumbs.svelte";
   import { confirmDialog } from "$lib/confirm.svelte";
   import { t as tr, localeFormat } from "$lib/i18n";
   /**
@@ -56,9 +57,6 @@
   import SplitPane from "$lib/components/SplitPane.svelte";
   import MediaPicker from "$lib/components/media/MediaPicker.svelte";
   import { uploadMedia } from "$lib/media/upload";
-  import Input from "$lib/components/ui/Input.svelte";
-  import Modal from "$lib/components/ui/Modal.svelte";
-  import Textarea from "$lib/components/ui/Textarea.svelte";
   import {
     Alert,
     Badge,
@@ -69,6 +67,9 @@
     Toggle,
     ToggleGroup,
     type TabItem,
+    Input,
+    Dialog,
+    Textarea,
   } from "$lib/tallao";
   import AutoSaveIndicator from "$lib/components/admin/AutoSaveIndicator.svelte";
   import { autosaveStore } from "$lib/states/autosave.svelte";
@@ -999,15 +1000,21 @@
   }
 </script>
 
-<div class="h-[calc(100vh-4rem)] flex flex-col bg-kitsuden-bg">
+<PageCrumbs
+  crumbs={[
+    { label: title.trim() || (postId ? tr("blogPostEditor.editPost") : tr("common.newPost")) },
+  ]}
+/>
+
+<div class="h-[calc(100dvh-6.5rem)] flex flex-col bg-kitsuden-bg">
   <!-- Header -->
   <header
-    class="flex items-center justify-between px-6 py-4 border-b border-kitsuden-border bg-kitsuden-card shrink-0"
+    class="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-kitsuden-border bg-kitsuden-card shrink-0"
   >
     <div class="flex items-center gap-4">
-      <a href="/g/kon-blog" class="btn-icon hover:bg-kitsuden-border/50 transition-colors">
+      <Button href="/g/kon-blog" variant="ghost" size="icon" class="hover:bg-kitsuden-border/50">
         <ArrowLeft class="w-5 h-5" />
-      </a>
+      </Button>
       <div>
         <h1 class="text-xl font-bold text-kitsuden-text flex items-center gap-3">
           <div
@@ -1036,7 +1043,7 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <!--
         State of the LOCAL DRAFT, not of the post. The distinction matters: «Saved»
         here means «there is a copy in this browser», not «it is published». That is
@@ -2167,7 +2174,7 @@
 />
 
 <!-- Tag Selector Modal -->
-<Modal
+<Dialog
   open={showTagModal}
   title={tr("blogPostEditor.manageTags")}
   onClose={() => (showTagModal = false)}
@@ -2204,7 +2211,7 @@
       </div>
     </div>
   </div>
-</Modal>
+</Dialog>
 
 <!-- Promote From Dataset Modal -->
 <PromoteFromDataset
@@ -2213,7 +2220,7 @@
   onSelect={handleDatasetSelect}
 />
 
-<Modal
+<Dialog
   open={showCategoryModal}
   title={tr("blogPostEditor.newCategory")}
   onClose={() => (showCategoryModal = false)}
@@ -2264,7 +2271,7 @@
       </Button>
     </div>
   </div>
-</Modal>
+</Dialog>
 
 <style>
   /* Custom scrollbar for the editor */

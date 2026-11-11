@@ -130,6 +130,9 @@ describe("visible text outside the dictionary (heuristic)", () => {
   it("no .svelte leaves text with letters without passing through t()", () => {
     const loose: string[] = [];
     for (const f of sources(/\.svelte$/)) {
+      // The vendored kit is not the panel's text: tallao has its own labels (`setLabels`),
+      // and its files are not edited here (`pnpm sync:tallao` overwrites them).
+      if (f.split(/[\\/]/).join("/").includes("/lib/tallao/")) continue;
       const src = readFileSync(f, "utf8");
       const ast = parse(src, { modern: true }) as unknown as { fragment: unknown };
       const annotate = (text: string, node: { start: number }) => {

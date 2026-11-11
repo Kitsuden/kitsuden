@@ -3,11 +3,19 @@
   «dead letter» with its last error, to retry or discard.
 -->
 <script lang="ts">
+  import {
+    Button,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+  } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import { RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
 
-  import Button from "$lib/components/ui/Button.svelte";
   import { discardJob, queueStatus, retryJob, type QueueState } from "$lib/services/system";
 
   let status = $state<QueueState | null>(null);
@@ -99,24 +107,24 @@
 
     {#if Object.keys(status.byQueue).length > 0}
       <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
-        <table class="w-full text-xs">
-          <thead class="text-kitsuden-subtle">
-            <tr>
-              <th class="text-left px-3 py-2">{t("systemQueue.colQueue")}</th>
-              {#each STATUSES as e}<th class="text-right px-3 py-2">{statusLabel[e]()}</th>{/each}
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-kitsuden-border/70">
+        <Table density="compact">
+          <TableHeader>
+            <TableRow>
+              <TableHead class="text-left">{t("systemQueue.colQueue")}</TableHead>
+              {#each STATUSES as e}<TableHead class="text-right">{statusLabel[e]()}</TableHead
+                >{/each}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {#each Object.entries(status.byQueue) as [queue, account] (queue)}
-              <tr>
-                <td class="px-3 py-1.5 font-mono text-kitsuden-text">{queue}</td>
-                {#each STATUSES as e}<td class="px-3 py-1.5 text-right text-kitsuden-text-dim"
-                    >{account[e] ?? 0}</td
+              <TableRow>
+                <TableCell class="font-mono">{queue}</TableCell>
+                {#each STATUSES as e}<TableCell class="text-right">{account[e] ?? 0}</TableCell
                   >{/each}
-              </tr>
+              </TableRow>
             {/each}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     {/if}
 
@@ -125,33 +133,28 @@
       <p class="text-sm text-kitsuden-subtle">{t("systemQueue.noDead")}</p>
     {:else}
       <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
-        <table class="w-full text-xs">
-          <thead class="text-kitsuden-subtle">
-            <tr>
-              <th class="text-left px-3 py-2">{t("systemQueue.colQueue")}</th>
-              <th class="text-left px-3 py-2">{t("systemQueue.colJob")}</th>
-              <th class="text-right px-3 py-2">{t("systemQueue.colAttempts")}</th>
-              <th class="text-left px-3 py-2">{t("systemQueue.colError")}</th>
-              <th class="text-left px-3 py-2">{t("systemQueue.colFinished")}</th>
-              <th class="px-3 py-2"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-kitsuden-border/70">
+        <Table density="compact">
+          <TableHeader>
+            <TableRow>
+              <TableHead class="text-left">{t("systemQueue.colQueue")}</TableHead>
+              <TableHead class="text-left">{t("systemQueue.colJob")}</TableHead>
+              <TableHead class="text-right">{t("systemQueue.colAttempts")}</TableHead>
+              <TableHead class="text-left">{t("systemQueue.colError")}</TableHead>
+              <TableHead class="text-left">{t("systemQueue.colFinished")}</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {#each status.dead as j (j.id)}
-              <tr data-testid="dead-job">
-                <td class="px-3 py-1.5 font-mono text-kitsuden-text">{j.queue}</td>
-                <td class="px-3 py-1.5 font-mono text-kitsuden-text">{j.name}</td>
-                <td class="px-3 py-1.5 text-right text-kitsuden-text-dim"
-                  >{j.attempts}/{j.max_attempts}</td
+              <TableRow data-testid="dead-job">
+                <TableCell class="font-mono">{j.queue}</TableCell>
+                <TableCell class="font-mono">{j.name}</TableCell>
+                <TableCell class="text-right">{j.attempts}/{j.max_attempts}</TableCell>
+                <TableCell class="max-w-md truncate" title={j.last_error ?? ""}
+                  >{j.last_error ?? "—"}</TableCell
                 >
-                <td
-                  class="px-3 py-1.5 text-kitsuden-danger max-w-md truncate"
-                  title={j.last_error ?? ""}>{j.last_error ?? "—"}</td
-                >
-                <td class="px-3 py-1.5 whitespace-nowrap text-kitsuden-text-dim"
-                  >{date(j.finished_at)}</td
-                >
-                <td class="px-3 py-1.5 whitespace-nowrap text-right">
+                <TableCell class="whitespace-nowrap">{date(j.finished_at)}</TableCell>
+                <TableCell class="whitespace-nowrap text-right">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -164,11 +167,11 @@
                     disabled={busy === j.id}
                     onclick={() => action(j.id, discardJob)}>{t("systemQueue.discard")}</Button
                   >
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             {/each}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     {/if}
   {/if}

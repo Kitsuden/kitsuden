@@ -6,25 +6,18 @@
 -->
 <script lang="ts">
   import { t } from "$lib/i18n";
-  import {
-    Inbox,
-    Settings2,
-    ScrollText,
-    ShieldCheck,
-    GitBranch,
-    Ban,
-    CalendarClock,
-  } from "lucide-svelte";
+  import { Inbox, Settings2, ScrollText, GitBranch, Ban, CalendarClock } from "lucide-svelte";
 
   import AgentDecisions from "$lib/components/approvals/AgentDecisions.svelte";
   import ApprovalAudit from "$lib/components/approvals/ApprovalAudit.svelte";
   import ApprovalSettings from "$lib/components/approvals/ApprovalSettings.svelte";
   import CodePromotion from "$lib/components/approvals/CodePromotion.svelte";
+  import Page from "$lib/components/layout/Page.svelte";
   import LedgerReviews from "$lib/components/approvals/LedgerReviews.svelte";
   import ProposalInbox from "$lib/components/approvals/ProposalInbox.svelte";
   import { approvals } from "$lib/states/approvals.svelte";
   import { queryChoice, setQuery } from "$lib/page";
-  import { Tabs, type TabItem } from "$lib/tallao";
+  import { Badge, Tabs, type TabItem } from "$lib/tallao";
 
   import { page } from "$app/stores";
 
@@ -62,6 +55,8 @@
       id,
       label: TAGS[id](),
       count: id === "inbox" && approvals.pendingItems > 0 ? approvals.pendingItems : undefined,
+      controls: "approvals-panel",
+      tabId: `approvals-tab-${id}`,
     }))
   );
   const TAGS: Record<Tab, () => string> = {
@@ -74,55 +69,43 @@
   };
 </script>
 
-<div class="h-full flex flex-col">
-  <div class="flex flex-wrap items-center gap-4 px-6 py-4 border-b border-kitsuden-border">
-    <div class="flex items-center gap-3 min-w-0">
-      <div class="p-2 bg-kitsuden-accent/10 rounded-lg">
-        <ShieldCheck size={20} class="text-kitsuden-accent" />
-      </div>
-      <div class="min-w-0">
-        <h1 class="text-xl font-semibold text-kitsuden-text">{t("approvals.title")}</h1>
-        <p class="text-xs text-kitsuden-subtle">{t("approvals.subtitle")}</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="flex-1 overflow-y-auto px-6 pb-6 pt-4">
+<Page title={t("shell.approvals")} description={t("approvals.subtitle")}>
+  {#snippet meta()}
+    {#if approvals.pendingItems > 0}
+      {t("sidebarLayout.approvalsPending", { n: approvals.pendingItems })}
+    {/if}
+  {/snippet}
+  {#snippet tabs()}
     <Tabs
       items={TAB_ITEMS}
       bind:value={() => active, selectTab}
-      variant="pills"
-      wrap
+      panels={false}
       ariaLabel={t("approvals.title")}
     >
-      {#snippet tab(item, selected)}
+      {#snippet tab(item)}
         {@const Icon = ICONS[item.id as Tab]}
-        <Icon size={14} />
+        <Icon size={14} aria-hidden="true" />
         {item.label}
         {#if item.count !== undefined}
-          <!-- On the selected pill (an accent fill) the amber chip was 1.3:1. -->
-          <span
-            class="text-xs px-1.5 py-0.5 rounded-full {selected
-              ? 'bg-kitsuden-on-accent/20 text-kitsuden-on-accent'
-              : 'bg-kitsuden-amber/20 text-kitsuden-amber'}">{item.count}</span
-          >
+          <Badge variant="warning" size="sm">{item.count}</Badge>
         {/if}
       {/snippet}
-      <div class="pt-2">
-        {#if active === "inbox"}
-          <ProposalInbox {selectedId} onSelect={selectProposal} />
-        {:else if active === "discarded"}
-          <div class="max-w-6xl"><AgentDecisions /></div>
-        {:else if active === "reviews"}
-          <LedgerReviews />
-        {:else if active === "promotion"}
-          <CodePromotion {initialVersion} />
-        {:else if active === "settings"}
-          <div class="max-w-5xl"><ApprovalSettings /></div>
-        {:else}
-          <ApprovalAudit />
-        {/if}
-      </div>
     </Tabs>
+  {/snippet}
+
+  <div id="approvals-panel" role="tabpanel" aria-labelledby="approvals-tab-{active}">
+    {#if active === "inbox"}
+      <ProposalInbox {selectedId} onSelect={selectProposal} />
+    {:else if active === "discarded"}
+      <AgentDecisions />
+    {:else if active === "reviews"}
+      <LedgerReviews />
+    {:else if active === "promotion"}
+      <CodePromotion {initialVersion} />
+    {:else if active === "settings"}
+      <ApprovalSettings />
+    {:else}
+      <ApprovalAudit />
+    {/if}
   </div>
-</div>
+</Page>

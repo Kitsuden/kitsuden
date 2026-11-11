@@ -5,14 +5,29 @@
  *   ✅ Whitelist-based table access (security)
  *   ✅ Server-side pagination (limit/offset)
  *   ✅ Server-side sorting (any column, asc/desc)
- *   ✅ Server-side filtering (field, operator, value)
+ *   ✅ Server-side filtering (several fields at once) and search across columns
+ *      (the query syntax is in lib/explorer-query.ts)
  *   ✅ Inline edit via PATCH (single cell updates)
  *   ✅ Column metadata (types, editability)
  *   ✅ Smart Views (saved filter presets)
  */
 
 import { messageOf } from "@kitsuden/engine";
-import { count, eq, sql, asc, desc, ilike, gt, lt, gte, lte } from "drizzle-orm";
+import {
+  and,
+  count,
+  eq,
+  sql,
+  asc,
+  desc,
+  getTableColumns,
+  gt,
+  lt,
+  gte,
+  lte,
+  or,
+  type SQL,
+} from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "../db";
@@ -30,6 +45,15 @@ import {
   withoutSecretColumns,
   tableIsExplorable,
 } from "../lib/explorable-tables";
+import {
+  ExplorerQueryError,
+  isTextualPgType,
+  likePattern,
+  parseExplorerQuery,
+  searchableColumns,
+  type ExplorerCondition,
+  type ExplorerQuery,
+} from "../lib/explorer-query";
 import { requireAuth } from "../middleware/auth";
 import {
   introspectTable,
@@ -60,20 +84,26 @@ explorerRoutes.use("/*", async (c, next) => {
   });
 });
 
-/**
- * `?filter_op=` operators.
- *
- * The list is declared once and used to REJECT anything not in it.
- * Both paths in this file —the typed one and the dynamic-SQL one— treated an unknown
- * operator as "no filter": whoever asked for `filter_op=starts_with`
- * received the whole table believing it had been filtered. Silently returning too much
- * is worse than returning an error.
- *
- * The dynamic path only understands the first two; it says so in its own
- * check.
- */
-const FILTER_OPS = ["contains", "equals", "gt", "lt", "gte", "lte"] as const;
-const DYNAMIC_FILTER_OPS = ["contains", "equals"] as const;
+type BadRequest = { json: (body: unknown, status: 400) => Response };
+
+function badQuery(c: BadRequest, error: ExplorerQueryError): Response {
+  return c.json(
+    { error: error.message, ...(error.supported ? { supported: error.supported } : {}) },
+    400
+  );
+}
+
+/** Reads the list query; a 400 response for what `parseExplorerQuery` refuses. */
+function readListQuery(
+  c: BadRequest & { req: { queries(): Record<string, string[]> } }
+): ExplorerQuery | Response {
+  try {
+    return parseExplorerQuery(c.req.queries());
+  } catch (error) {
+    if (error instanceof ExplorerQueryError) return badQuery(c, error);
+    throw error;
+  }
+}
 
 // ═══════════════════════════════════════════════
 // DYNAMIC TABLE RESOLUTION (fallback for tables not in static registry)
@@ -593,52 +623,22 @@ explorerRoutes.get("/:collection", async (c) => {
   const sortField = c.req.query("sort") || null;
   const sortDir = c.req.query("dir") === "asc" ? "asc" : "desc";
 
-  // Filters: ?filter_field=email&filter_op=contains&filter_value=@gmail.com
-  const filterField = c.req.query("filter_field");
-  const filterOp = c.req.query("filter_op") || "contains";
-  const filterValue = c.req.query("filter_value");
+  // Filters and search: the syntax is in lib/explorer-query.ts.
+  const listQuery = readListQuery(c);
+  if (listQuery instanceof Response) return listQuery;
 
   try {
     /**
-     * The filter is built ONCE and both queries use it.
-     *
-     * Before, the same six-operator `switch` was written twice, once
-     * per query. It worked, but it is the exact way to end up with the total
-     * and the page disagreeing: it is enough to add an operator in one place and
-     * forget it in the other for the counter to say 400 and the table to show
-     * 12, without anything failing.
+     * The filter is built ONCE and both queries use it: written twice (once for the page,
+     * once for the count) is the exact way to end up with a counter that says 400 over a
+     * table that shows 12.
      */
-    const filter = (() => {
-      if (!filterField || !filterValue) return undefined;
-      const col = meta.table[filterField];
-      if (!col) return undefined;
-
-      switch (filterOp) {
-        case "contains":
-          return ilike(col, `%${filterValue}%`);
-        case "equals":
-          return eq(col, filterValue);
-        case "gt":
-          return gt(col, filterValue);
-        case "lt":
-          return lt(col, filterValue);
-        case "gte":
-          return gte(col, filterValue);
-        case "lte":
-          return lte(col, filterValue);
-        default:
-          // An unknown operator CANNOT fall into "no filter": whoever asked for
-          // `filter_op=starts_with` would receive the whole table believing it
-          // is filtered.
-          return null;
-      }
-    })();
-
-    if (filter === null) {
-      return c.json(
-        { error: `Unsupported filter operator: "${filterOp}"`, supported: FILTER_OPS },
-        400
-      );
+    let filter: SQL | undefined;
+    try {
+      filter = typedWhere(meta, listQuery);
+    } catch (error) {
+      if (error instanceof ExplorerQueryError) return badQuery(c, error);
+      throw error;
     }
 
     let query = db.select().from(meta.table).where(filter).$dynamic();
@@ -871,40 +871,25 @@ async function handleDynamicQuery(c: any, tableName: string, meta: TableMeta) {
   const offset = (page - 1) * limit;
   const sortField = c.req.query("sort") || meta.pk;
   const sortDir = c.req.query("dir") === "asc" ? "ASC" : "DESC";
-  const filterField = c.req.query("filter_field");
-  const filterOp = c.req.query("filter_op") || "contains";
-  const filterValue = c.req.query("filter_value");
+  const listQuery = readListQuery(c);
+  if (listQuery instanceof Response) return listQuery;
 
   try {
     const safeSort = sortField.replace(/[^a-zA-Z0-9_]/g, "");
-    let countSql;
-    let dataSql;
+    const table = sql.raw(`"${tableName}"`);
 
-    if (filterField && filterValue) {
-      const safeField = filterField.replace(/[^a-zA-Z0-9_]/g, "");
-      if (filterOp === "contains") {
-        countSql = sql`SELECT count(*) as total FROM ${sql.raw(`"${tableName}"`)} WHERE "${sql.raw(safeField)}"::text ILIKE '%' || ${filterValue} || '%'`;
-        dataSql = sql`SELECT * FROM ${sql.raw(`"${tableName}"`)} WHERE "${sql.raw(safeField)}"::text ILIKE '%' || ${filterValue} || '%' ORDER BY "${sql.raw(safeSort)}" ${sql.raw(sortDir)} LIMIT ${sql.raw(String(limit))} OFFSET ${sql.raw(String(offset))}`;
-      } else if (filterOp === "equals") {
-        countSql = sql`SELECT count(*) as total FROM ${sql.raw(`"${tableName}"`)} WHERE "${sql.raw(safeField)}"::text = ${filterValue}`;
-        dataSql = sql`SELECT * FROM ${sql.raw(`"${tableName}"`)} WHERE "${sql.raw(safeField)}"::text = ${filterValue} ORDER BY "${sql.raw(safeSort)}" ${sql.raw(sortDir)} LIMIT ${sql.raw(String(limit))} OFFSET ${sql.raw(String(offset))}`;
-      } else {
-        // Before, this branch returned the table UNFILTERED. Whoever asked for an
-        // operator that this path does not implement —`gt`, for example, which does
-        // exist in the other one— got all the rows assuming they
-        // were filtered.
-        return c.json(
-          {
-            error: `Unsupported filter operator for this table: "${filterOp}"`,
-            supported: DYNAMIC_FILTER_OPS,
-          },
-          400
-        );
-      }
-    } else {
-      countSql = sql`SELECT count(*) as total FROM ${sql.raw(`"${tableName}"`)}`;
-      dataSql = sql`SELECT * FROM ${sql.raw(`"${tableName}"`)} ORDER BY "${sql.raw(safeSort)}" ${sql.raw(sortDir)} LIMIT ${sql.raw(String(limit))} OFFSET ${sql.raw(String(offset))}`;
+    let where: SQL | undefined;
+    try {
+      where = await dynamicWhere(tableName, listQuery);
+    } catch (error) {
+      if (error instanceof ExplorerQueryError) return badQuery(c, error);
+      throw error;
     }
+    const whereSql = where ? sql` WHERE ${where}` : sql``;
+
+    // The same WHERE in both queries, so the total and the page cannot disagree.
+    const countSql = sql`SELECT count(*) as total FROM ${table}${whereSql}`;
+    const dataSql = sql`SELECT * FROM ${table}${whereSql} ORDER BY "${sql.raw(safeSort)}" ${sql.raw(sortDir)} LIMIT ${sql.raw(String(limit))} OFFSET ${sql.raw(String(offset))}`;
 
     const countResult = await db.execute(countSql);
     const total = Number((countResult.rows[0] as any)?.total ?? 0);
@@ -1091,6 +1076,104 @@ explorerRoutes.delete("/:collection/views/:viewId", async (c) => {
 // ═══════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════
+
+// ── The WHERE of a list ─────────────────────────────────────────────────────
+
+function compare(left: SQL, op: ExplorerCondition["op"], value: string): SQL {
+  switch (op) {
+    case "contains":
+      return sql`${left}::text ILIKE ${likePattern(value)}`;
+    case "equals":
+      return sql`${left}::text = ${value}`;
+    case "gt":
+      return sql`${left} > ${value}`;
+    case "lt":
+      return sql`${left} < ${value}`;
+    case "gte":
+      return sql`${left} >= ${value}`;
+    case "lte":
+      return sql`${left} <= ${value}`;
+  }
+}
+
+/** Every part must hold (AND); nothing when there are no parts. */
+function joinWhere(parts: SQL[]): SQL | undefined {
+  if (parts.length === 0) return undefined;
+  return parts.length === 1 ? parts[0] : and(...parts);
+}
+
+/** For a table of the static registry: Drizzle columns, by their property name. */
+function typedWhere(meta: TableMeta, query: ExplorerQuery): SQL | undefined {
+  const parts: SQL[] = [];
+  for (const cond of query.conditions) {
+    const col = meta.table[cond.field];
+    if (!col) {
+      // The older triple on a column this table lacks was skipped; that stays.
+      if (cond.legacy) continue;
+      throw new ExplorerQueryError(`Unknown column: "${cond.field}"`);
+    }
+    switch (cond.op) {
+      // The typed comparisons keep Drizzle's own operators (and its value mapping).
+      case "equals":
+        parts.push(eq(col, cond.value));
+        break;
+      case "gt":
+        parts.push(gt(col, cond.value));
+        break;
+      case "lt":
+        parts.push(lt(col, cond.value));
+        break;
+      case "gte":
+        parts.push(gte(col, cond.value));
+        break;
+      case "lte":
+        parts.push(lte(col, cond.value));
+        break;
+      default:
+        parts.push(compare(sql`${col}`, cond.op, cond.value));
+    }
+  }
+
+  if (query.search) {
+    const columns = getTableColumns(meta.table) as Record<string, { dataType?: string }>;
+    const textual = Object.entries(columns)
+      .filter(([, column]) => column.dataType === "string")
+      .map(([name]) => name);
+    const fields = searchableColumns(textual, query.searchFields);
+    const pattern = likePattern(query.search);
+    const matches = fields.map((name) => sql`${meta.table[name]}::text ILIKE ${pattern}`);
+    // No textual column: a search matches nothing (never "everything").
+    parts.push(matches.length > 0 ? or(...matches)! : sql`false`);
+  }
+  return joinWhere(parts);
+}
+
+/** For a table found by introspection: column names checked against the real ones. */
+async function dynamicWhere(tableName: string, query: ExplorerQuery): Promise<SQL | undefined> {
+  if (query.conditions.length === 0 && !query.search) return undefined;
+  const introspected = await introspectTable(tableName);
+  const names = new Set((introspected?.columns ?? []).map((col) => col.name));
+  const ident = (name: string) => sql.raw(`"${name.replace(/[^a-zA-Z0-9_]/g, "")}"`);
+
+  const parts: SQL[] = [];
+  for (const cond of query.conditions) {
+    if (!cond.legacy && !names.has(cond.field)) {
+      throw new ExplorerQueryError(`Unknown column: "${cond.field}"`);
+    }
+    parts.push(compare(sql`${ident(cond.field)}`, cond.op, cond.value));
+  }
+
+  if (query.search) {
+    const textual = (introspected?.columns ?? [])
+      .filter((col) => isTextualPgType(col.type))
+      .map((col) => col.name);
+    const fields = searchableColumns(textual, query.searchFields);
+    const pattern = likePattern(query.search);
+    const matches = fields.map((name) => sql`${ident(name)}::text ILIKE ${pattern}`);
+    parts.push(matches.length > 0 ? or(...matches)! : sql`false`);
+  }
+  return joinWhere(parts);
+}
 
 /**
  * Safely format a JS value for use as a PostgreSQL literal in raw SQL.

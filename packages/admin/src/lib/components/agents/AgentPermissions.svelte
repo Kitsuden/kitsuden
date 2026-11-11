@@ -10,14 +10,22 @@
   list (broad ∪ fine − denied). The rule: docs/agents/permissions.md.
 -->
 <script lang="ts">
+  import {
+    Button,
+    Card,
+    Skeleton,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+  } from "$lib/tallao";
   import UnsavedGuard from "$lib/components/feedback/UnsavedGuard.svelte";
   import { t } from "$lib/i18n";
   import { Check, Ban, ShieldCheck, RotateCcw, Save } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-
-  import Button from "$lib/components/ui/Button.svelte";
-  import Card from "$lib/components/ui/Card.svelte";
+  import { toast } from "$lib/tallao";
   import { getAccessCatalog, getAgentAccess, setAgentScopes } from "$lib/services/agents";
   import type { AccessCatalog, AgentAccess, AccessState } from "$lib/types/agents";
 
@@ -221,9 +229,7 @@
 
 <div class="space-y-6" data-testid="agent-permissions">
   {#if loading}
-    <div class="flex items-center justify-center h-32">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <Skeleton lines={3} />
   {:else if error}
     <div
       class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
@@ -421,23 +427,24 @@
           <p class="text-sm text-kitsuden-subtle">{t("agentAccess.noDatasets")}</p>
         {:else}
           <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
-            <table class="w-full text-sm">
-              <thead class="text-xs text-kitsuden-subtle">
-                <tr>
-                  <th class="text-left px-3 py-2">{t("agentAccess.dataset")}</th>
-                  {#each ACTIONS as a (a)}<th class="text-left px-3 py-2">{ACTION_NAME[a]()}</th
+            <Table class="w-full text-sm">
+              <TableHeader class="text-xs text-kitsuden-subtle">
+                <TableRow>
+                  <TableHead class="text-left px-3 py-2">{t("agentAccess.dataset")}</TableHead>
+                  {#each ACTIONS as a (a)}<TableHead class="text-left px-3 py-2"
+                      >{ACTION_NAME[a]()}</TableHead
                     >{/each}
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-kitsuden-border/70">
+                </TableRow>
+              </TableHeader>
+              <TableBody class="divide-y divide-kitsuden-border/70">
                 {#each catalog.datasets as d (d.slug)}
-                  <tr data-testid="ds-{d.slug}">
-                    <td class="px-3 py-2 min-w-0">
+                  <TableRow data-testid="ds-{d.slug}">
+                    <TableCell class="px-3 py-2 min-w-0">
                       <div class="text-kitsuden-text">{d.name}</div>
                       <code class="text-[11px] text-kitsuden-subtle">{d.slug}</code>
-                    </td>
+                    </TableCell>
                     {#each ACTIONS as a (a)}
-                      <td class="px-3 py-2">
+                      <TableCell class="px-3 py-2">
                         <select
                           class="px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
                           aria-label={t("agentAccess.permissionFor", {
@@ -454,12 +461,12 @@
                           <option value="allow">{t("agentAccess.choiceAllow")}</option>
                           <option value="deny">{t("agentAccess.choiceDeny")}</option>
                         </select>
-                      </td>
+                      </TableCell>
                     {/each}
-                  </tr>
+                  </TableRow>
                 {/each}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         {/if}
       </section>
@@ -573,31 +580,33 @@
 
       {#if access.datasets.length}
         <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
-          <table class="w-full text-sm">
-            <thead class="text-xs text-kitsuden-subtle">
-              <tr>
-                <th class="text-left px-3 py-2">{t("agentAccess.dataset")}</th>
-                {#each ACTIONS as a (a)}<th class="text-left px-3 py-2">{ACTION_NAME[a]()}</th
+          <Table class="w-full text-sm">
+            <TableHeader class="text-xs text-kitsuden-subtle">
+              <TableRow>
+                <TableHead class="text-left px-3 py-2">{t("agentAccess.dataset")}</TableHead>
+                {#each ACTIONS as a (a)}<TableHead class="text-left px-3 py-2"
+                    >{ACTION_NAME[a]()}</TableHead
                   >{/each}
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-kitsuden-border/70">
+              </TableRow>
+            </TableHeader>
+            <TableBody class="divide-y divide-kitsuden-border/70">
               {#each access.datasets as d (d.slug)}
-                <tr>
-                  <td class="px-3 py-2"><code class="text-xs text-kitsuden-text">{d.slug}</code></td
+                <TableRow>
+                  <TableCell class="px-3 py-2"
+                    ><code class="text-xs text-kitsuden-text">{d.slug}</code></TableCell
                   >
                   {#each ACTIONS as a (a)}
-                    <td class="px-3 py-2">
+                    <TableCell class="px-3 py-2">
                       <span
                         class="text-xs px-1.5 py-0.5 rounded-sm {STATUS[d[a].state].kind}"
                         title={d[a].by ?? ""}>{STATUS[d[a].state].text()}</span
                       >
-                    </td>
+                    </TableCell>
                   {/each}
-                </tr>
+                </TableRow>
               {/each}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       {/if}
     </section>

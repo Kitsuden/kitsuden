@@ -4,11 +4,9 @@
   The token is shown only once (one-way)
 -->
 <script lang="ts">
+  import { Button, Dialog } from "$lib/tallao";
   import { t as tr } from "$lib/i18n";
   import { Copy, Check, Eye, EyeOff, AlertTriangle } from "lucide-svelte";
-
-  import Button from "$lib/components/ui/Button.svelte";
-  import Modal from "$lib/components/ui/Modal.svelte";
   import { cn } from "$lib/utils";
 
   interface Props {
@@ -42,7 +40,7 @@
 </script>
 
 {#if token && !dismissed}
-  <Modal
+  <Dialog
     open={true}
     title={tr("tokenDisplay.generatedAgentToken")}
     description={tr("tokenDisplay.thisTokenWillOnlyBeShown")}
@@ -113,7 +111,7 @@ Authorization: Bearer {showToken ? displayToken : maskToken(displayToken)}</pre>
         >
       </div>
     {/snippet}
-  </Modal>
+  </Dialog>
 {/if}
 
 <!-- Compact display (when token is already saved) -->

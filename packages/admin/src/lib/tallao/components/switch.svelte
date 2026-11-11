@@ -85,6 +85,17 @@
     transition: background-color 0.15s, border-color 0.15s;
   }
 
+  /* The track is 16–20px tall: its hit area is 24px (WCAG 2.5.8) without changing the drawing. */
+  .ta-switch-track::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1.5rem;
+    transform: translateY(-50%);
+  }
+
   .ta-switch--md .ta-switch-track { width: 2.25rem; height: 1.25rem; }
   .ta-switch--sm .ta-switch-track { width: 1.75rem; height: 1rem; }
 
@@ -106,7 +117,7 @@
     background: white;
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
     transform: translateY(-50%);
-    transition: transform 0.15s;
+    transition: transform var(--ta-duration-base, 180ms) var(--ta-ease-spring, ease-out);
   }
 
   .ta-switch--md .ta-switch-thumb { width: 0.875rem; height: 0.875rem; }

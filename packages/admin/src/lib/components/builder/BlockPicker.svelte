@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "$lib/tallao";
   import { t } from "$lib/i18n";
   /**
    * BlockPicker.svelte — Grid of available blocks to add
@@ -59,7 +60,7 @@
   <!-- Header -->
   <div class="p-4 border-b border-kitsuden-border flex items-center justify-between">
     <h3 class="text-sm font-semibold text-kitsuden-text">{t("blockPicker.addBlock")}</h3>
-    <button onclick={onClose} class="btn-icon p-1"><X class="w-4 h-4" /></button>
+    <Button onclick={onClose} variant="ghost" size="icon"><X class="w-4 h-4" /></Button>
   </div>
 
   <!-- Block Categories -->

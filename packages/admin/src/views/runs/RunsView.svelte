@@ -1,4 +1,15 @@
 <script lang="ts">
+  import {
+    Dialog,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    Button,
+  } from "$lib/tallao";
+  import ViewPage from "$lib/components/admin/ViewPage.svelte";
   import { t, localeFormat } from "$lib/i18n";
   /**
    * Run Inspector — execution observability
@@ -108,239 +119,240 @@
   };
 </script>
 
-<div class="p-6 space-y-6">
-  <header class="flex items-baseline justify-between flex-wrap gap-3">
-    <div>
-      <h1 class="text-xl font-semibold">{t("runsView.runInspector")}</h1>
-      <p class="text-sm text-kitsuden-text-dim">{t("runsView.actionExecutionsWorkersAnd")}</p>
-    </div>
-
-    <div class="flex items-center gap-2">
-      <label class="flex items-center gap-2 text-sm text-kitsuden-text-dim">
-        <input type="checkbox" bind:checked={autoRefresh} />
-        {t("runsView.auto5s")}
-      </label>
-      <select bind:value={windowFilter} class="input text-sm" aria-label={t("runsView.timeWindow")}>
-        <option value="1h">{t("runsView.lastHour")}</option>
-        <option value="24h">{t("runsView.n24Hours")}</option>
-        <option value="7d">{t("runsView.n7Days")}</option>
-        <option value="30d">{t("runsView.n30Days")}</option>
-      </select>
-      <select
-        bind:value={statusFilter}
-        class="input text-sm"
-        aria-label={t("runsView.filterByStatus")}
-      >
-        <option value="">{t("runsView.all")}</option>
-        <option value="success">{t("runsView.success")}</option>
-        <option value="failed">{t("runsView.failedItems")}</option>
-        <option value="running">{t("runsView.inProgress")}</option>
-        <option value="pending">{t("runsView.pendingItems")}</option>
-      </select>
-    </div>
-  </header>
-
-  {#if error}
-    <div class="card p-4 border-kitsuden-danger/40 text-kitsuden-danger text-sm">{error}</div>
-  {/if}
-
-  {#if stats}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <div class="card p-4">
-        <div class="text-xs uppercase tracking-wide text-kitsuden-text-dim">
-          {t("runsView.executions")}
-        </div>
-        <div class="text-2xl font-semibold mt-1">{stats.total}</div>
-      </div>
-      <div class="card p-4">
-        <div class="text-xs uppercase tracking-wide text-kitsuden-text-dim">
-          {t("runsView.successRate")}
-        </div>
-        <div
-          class="text-2xl font-semibold mt-1"
-          class:text-kitsuden-danger={stats.successRate < 95}
-          class:text-kitsuden-green={stats.successRate >= 99}
-        >
-          {stats.successRate}%
-        </div>
-      </div>
-      <div class="card p-4">
-        <div class="text-xs uppercase tracking-wide text-kitsuden-text-dim">
-          {t("runsView.latencyP95")}
-        </div>
-        <div class="text-2xl font-semibold mt-1">{ms(stats.duration.p95)}</div>
-        <div class="text-xs text-kitsuden-text-dim mt-0.5">p50 {ms(stats.duration.p50)}</div>
-      </div>
-      <div class="card p-4">
-        <div class="text-xs uppercase tracking-wide text-kitsuden-text-dim">
-          {t("runsView.failedItems")}
-        </div>
-        <div class="text-2xl font-semibold mt-1">{stats.byStatus.failed ?? 0}</div>
-      </div>
-    </div>
-
-    {#if stats.topFailing.length > 0}
-      <div class="card p-4">
-        <h2 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-2">
-          {t("runsView.actionsWithMostFailures")}
-        </h2>
-        <div class="space-y-1">
-          {#each stats.topFailing as f (f.actionId)}
-            <div class="flex justify-between text-sm">
-              <span>{f.actionName ?? f.actionId}</span>
-              <span class="text-kitsuden-danger font-medium">{f.failures}</span>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
-  {/if}
-
-  <div class="card overflow-hidden">
-    {#if loading}
-      <div class="p-8 text-center text-kitsuden-text-dim">{t("common.loadingEllipsis")}</div>
-    {:else if runs.length === 0}
-      <div class="p-8 text-center text-kitsuden-text-dim">
-        {t("runsView.withoutRunsInThisWindow")}
-      </div>
-    {:else}
-      <table class="w-full text-sm">
-        <thead class="text-left text-xs uppercase tracking-wide text-kitsuden-text-dim">
-          <tr class="border-b border-kitsuden-border">
-            <th class="px-4 py-2.5">{t("common.status")}</th>
-            <th class="px-4 py-2.5">{t("runsView.action")}</th>
-            <th class="px-4 py-2.5">{t("runsView.trigger")}</th>
-            <th class="px-4 py-2.5 text-right">{t("runsView.duration")}</th>
-            <th class="px-4 py-2.5 text-right">{t("runsView.memory")}</th>
-            <th class="px-4 py-2.5 text-right">{t("runsView.when")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each runs as run (run.id)}
-            <tr
-              class="border-b border-kitsuden-border/50 hover:bg-kitsuden-surface/60 cursor-pointer"
-              onclick={() => openDetail(run.id)}
-            >
-              <td class="px-4 py-2.5">
-                <span
-                  class="px-2 py-0.5 rounded text-xs font-medium {STATUS_STYLE[run.status] ??
-                    'bg-kitsuden-surface'}"
-                >
-                  {run.status}
-                </span>
-              </td>
-              <td class="px-4 py-2.5 font-medium">{run.actionName ?? "—"}</td>
-              <td class="px-4 py-2.5 text-kitsuden-text-dim">
-                {run.triggerEvent ?? run.triggerType ?? "—"}
-              </td>
-              <td class="px-4 py-2.5 text-right tabular-nums">{ms(run.durationMs)}</td>
-              <td class="px-4 py-2.5 text-right tabular-nums text-kitsuden-text-dim">
-                {mb(run.memoryUsedBytes)}
-              </td>
-              <td class="px-4 py-2.5 text-right text-kitsuden-text-dim">{ago(run.createdAt)}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    {/if}
-  </div>
-</div>
-
-{#if selected}
-  <!-- Detail: payload, result and full logs -->
-  <div
-    class="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50"
-    role="presentation"
-    onclick={() => (selected = null)}
-    onkeydown={(e) => e.key === "Escape" && (selected = null)}
-  >
-    <!-- tabindex + stopPropagation on keydown: the dialog must be able to receive
-         focus and must not close when typing inside it. -->
-    <div
-      class="card max-w-3xl w-full max-h-[85vh] overflow-y-auto p-6 space-y-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("runsView.executionDetail")}
-      tabindex="-1"
-      onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.stopPropagation()}
+<ViewPage title={t("runsView.runInspector")} description={t("runsView.actionExecutionsWorkersAnd")}>
+  {#snippet actions()}
+    <label class="flex items-center gap-2 text-sm text-kitsuden-text-dim">
+      <input type="checkbox" bind:checked={autoRefresh} />
+      {t("runsView.auto5s")}
+    </label>
+    <select bind:value={windowFilter} class="input text-sm" aria-label={t("runsView.timeWindow")}>
+      <option value="1h">{t("runsView.lastHour")}</option>
+      <option value="24h">{t("runsView.n24Hours")}</option>
+      <option value="7d">{t("runsView.n7Days")}</option>
+      <option value="30d">{t("runsView.n30Days")}</option>
+    </select>
+    <select
+      bind:value={statusFilter}
+      class="input text-sm"
+      aria-label={t("runsView.filterByStatus")}
     >
-      <header class="flex items-start justify-between gap-4">
-        <div>
-          <h2 class="text-lg font-semibold">{selected.action?.name ?? t("runsView.execution")}</h2>
-          <p class="text-xs text-kitsuden-text-dim font-mono">{selected.id}</p>
-        </div>
-        <button class="btn-ghost text-sm" onclick={() => (selected = null)}
-          >{t("runsView.close")}</button
-        >
-      </header>
+      <option value="">{t("runsView.all")}</option>
+      <option value="success">{t("runsView.success")}</option>
+      <option value="failed">{t("runsView.failedItems")}</option>
+      <option value="running">{t("runsView.inProgress")}</option>
+      <option value="pending">{t("runsView.pendingItems")}</option>
+    </select>
+  {/snippet}
 
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-        <div>
-          <div class="text-xs text-kitsuden-text-dim">{t("common.status")}</div>
-          <div class="font-medium">{selected.status}</div>
+  <div class="space-y-6">
+    {#if error}
+      <div class="card p-4 border-kitsuden-danger/40 text-kitsuden-danger text-sm">{error}</div>
+    {/if}
+
+    {#if stats}
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="card p-4">
+          <div class="text-xs uppercase tracking-wide text-kitsuden-text-dim">
+            {t("runsView.executions")}
+          </div>
+          <div class="text-2xl font-semibold mt-1">{stats.total}</div>
         </div>
-        <div>
-          <div class="text-xs text-kitsuden-text-dim">{t("runsView.duration")}</div>
-          <div class="font-medium">{ms(selected.durationMs)}</div>
+        <div class="card p-4">
+          <div class="text-xs uppercase tracking-wide text-kitsuden-text-dim">
+            {t("runsView.successRate")}
+          </div>
+          <div
+            class="text-2xl font-semibold mt-1"
+            class:text-kitsuden-danger={stats.successRate < 95}
+            class:text-kitsuden-green={stats.successRate >= 99}
+          >
+            {stats.successRate}%
+          </div>
         </div>
-        <div>
-          <div class="text-xs text-kitsuden-text-dim">{t("runsView.memory")}</div>
-          <div class="font-medium">{mb(selected.memoryUsedBytes)}</div>
+        <div class="card p-4">
+          <div class="text-xs uppercase tracking-wide text-kitsuden-text-dim">
+            {t("runsView.latencyP95")}
+          </div>
+          <div class="text-2xl font-semibold mt-1">{ms(stats.duration.p95)}</div>
+          <div class="text-xs text-kitsuden-text-dim mt-0.5">p50 {ms(stats.duration.p50)}</div>
         </div>
-        <div>
-          <div class="text-xs text-kitsuden-text-dim">{t("runsView.trigger")}</div>
-          <div class="font-medium">{selected.triggerEvent ?? selected.triggerType ?? "—"}</div>
+        <div class="card p-4">
+          <div class="text-xs uppercase tracking-wide text-kitsuden-text-dim">
+            {t("runsView.failedItems")}
+          </div>
+          <div class="text-2xl font-semibold mt-1">{stats.byStatus.failed ?? 0}</div>
         </div>
       </div>
 
-      {#if selected.errorMessage}
-        <section>
-          <h3 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-1">
-            {t("common.error")}
-          </h3>
-          <pre
-            class="bg-kitsuden-danger/10 text-kitsuden-danger p-3 rounded-sm text-xs overflow-x-auto whitespace-pre-wrap">{selected.errorMessage}</pre>
-        </section>
+      {#if stats.topFailing.length > 0}
+        <div class="card p-4">
+          <h2 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-2">
+            {t("runsView.actionsWithMostFailures")}
+          </h2>
+          <div class="space-y-1">
+            {#each stats.topFailing as f (f.actionId)}
+              <div class="flex justify-between text-sm">
+                <span>{f.actionName ?? f.actionId}</span>
+                <span class="text-kitsuden-danger font-medium">{f.failures}</span>
+              </div>
+            {/each}
+          </div>
+        </div>
       {/if}
+    {/if}
 
-      {#if selected.triggerPayload}
-        <section>
-          <h3 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-1">
-            {t("runsView.payload")}
-          </h3>
-          <pre class="bg-kitsuden-bg p-3 rounded-sm text-xs overflow-x-auto">{JSON.stringify(
-              selected.triggerPayload,
-              null,
-              2
-            )}</pre>
-        </section>
-      {/if}
-
-      {#if selected.result}
-        <section>
-          <h3 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-1">
-            {t("runsView.result")}
-          </h3>
-          <pre class="bg-kitsuden-bg p-3 rounded-sm text-xs overflow-x-auto">{JSON.stringify(
-              selected.result,
-              null,
-              2
-            )}</pre>
-        </section>
-      {/if}
-
-      {#if selected.logLines?.length}
-        <section>
-          <h3 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-1">
-            {t("runsView.logs", { logLinesCount: selected.logLines.length })}
-          </h3>
-          <pre
-            class="bg-kitsuden-bg p-3 rounded-sm text-xs overflow-x-auto max-h-64 overflow-y-auto">{selected.logLines.join(
-              "\n"
-            )}</pre>
-        </section>
+    <div class="card overflow-hidden">
+      {#if loading}
+        <div class="p-8 text-center text-kitsuden-text-dim">{t("common.loadingEllipsis")}</div>
+      {:else if runs.length === 0}
+        <div class="p-8 text-center text-kitsuden-text-dim">
+          {t("runsView.withoutRunsInThisWindow")}
+        </div>
+      {:else}
+        <Table class="w-full text-sm">
+          <TableHeader class="text-left text-xs uppercase tracking-wide text-kitsuden-text-dim">
+            <TableRow class="border-b border-kitsuden-border">
+              <TableHead class="px-4 py-2.5">{t("common.status")}</TableHead>
+              <TableHead class="px-4 py-2.5">{t("runsView.action")}</TableHead>
+              <TableHead class="px-4 py-2.5">{t("runsView.trigger")}</TableHead>
+              <TableHead class="px-4 py-2.5 text-right">{t("runsView.duration")}</TableHead>
+              <TableHead class="px-4 py-2.5 text-right">{t("runsView.memory")}</TableHead>
+              <TableHead class="px-4 py-2.5 text-right">{t("runsView.when")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {#each runs as run (run.id)}
+              <TableRow
+                class="border-b border-kitsuden-border/50 hover:bg-kitsuden-surface/60 cursor-pointer"
+                onclick={() => openDetail(run.id)}
+              >
+                <TableCell class="px-4 py-2.5">
+                  <span
+                    class="px-2 py-0.5 rounded text-xs font-medium {STATUS_STYLE[run.status] ??
+                      'bg-kitsuden-surface'}"
+                  >
+                    {run.status}
+                  </span>
+                </TableCell>
+                <TableCell class="px-4 py-2.5 font-medium">{run.actionName ?? "—"}</TableCell>
+                <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">
+                  {run.triggerEvent ?? run.triggerType ?? "—"}
+                </TableCell>
+                <TableCell class="px-4 py-2.5 text-right tabular-nums"
+                  >{ms(run.durationMs)}</TableCell
+                >
+                <TableCell class="px-4 py-2.5 text-right tabular-nums text-kitsuden-text-dim">
+                  {mb(run.memoryUsedBytes)}
+                </TableCell>
+                <TableCell class="px-4 py-2.5 text-right text-kitsuden-text-dim"
+                  >{ago(run.createdAt)}</TableCell
+                >
+              </TableRow>
+            {/each}
+          </TableBody>
+        </Table>
       {/if}
     </div>
   </div>
-{/if}
+
+  <Dialog
+    open={!!selected}
+    bare
+    size="2xl"
+    ariaLabel={t("runsView.executionDetail")}
+    onClose={() => (selected = null)}
+  >
+    {#if selected}
+      <!-- tabindex + stopPropagation on keydown: the dialog must be able to receive
+         focus and must not close when typing inside it. -->
+      <div
+        class="card max-w-3xl w-full max-h-[85vh] overflow-y-auto p-6 space-y-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("runsView.executionDetail")}
+        tabindex="-1"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+      >
+        <header class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold">
+              {selected.action?.name ?? t("runsView.execution")}
+            </h2>
+            <p class="text-xs text-kitsuden-text-dim font-mono">{selected.id}</p>
+          </div>
+          <Button variant="ghost" size="sm" onclick={() => (selected = null)}
+            >{t("runsView.close")}</Button
+          >
+        </header>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div>
+            <div class="text-xs text-kitsuden-text-dim">{t("common.status")}</div>
+            <div class="font-medium">{selected.status}</div>
+          </div>
+          <div>
+            <div class="text-xs text-kitsuden-text-dim">{t("runsView.duration")}</div>
+            <div class="font-medium">{ms(selected.durationMs)}</div>
+          </div>
+          <div>
+            <div class="text-xs text-kitsuden-text-dim">{t("runsView.memory")}</div>
+            <div class="font-medium">{mb(selected.memoryUsedBytes)}</div>
+          </div>
+          <div>
+            <div class="text-xs text-kitsuden-text-dim">{t("runsView.trigger")}</div>
+            <div class="font-medium">{selected.triggerEvent ?? selected.triggerType ?? "—"}</div>
+          </div>
+        </div>
+
+        {#if selected.errorMessage}
+          <section>
+            <h3 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-1">
+              {t("common.error")}
+            </h3>
+            <pre
+              class="bg-kitsuden-danger/10 text-kitsuden-danger p-3 rounded-sm text-xs overflow-x-auto whitespace-pre-wrap">{selected.errorMessage}</pre>
+          </section>
+        {/if}
+
+        {#if selected.triggerPayload}
+          <section>
+            <h3 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-1">
+              {t("runsView.payload")}
+            </h3>
+            <pre class="bg-kitsuden-bg p-3 rounded-sm text-xs overflow-x-auto">{JSON.stringify(
+                selected.triggerPayload,
+                null,
+                2
+              )}</pre>
+          </section>
+        {/if}
+
+        {#if selected.result}
+          <section>
+            <h3 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-1">
+              {t("runsView.result")}
+            </h3>
+            <pre class="bg-kitsuden-bg p-3 rounded-sm text-xs overflow-x-auto">{JSON.stringify(
+                selected.result,
+                null,
+                2
+              )}</pre>
+          </section>
+        {/if}
+
+        {#if selected.logLines?.length}
+          <section>
+            <h3 class="text-xs uppercase tracking-wide text-kitsuden-text-dim mb-1">
+              {t("runsView.logs", { logLinesCount: selected.logLines.length })}
+            </h3>
+            <pre
+              class="bg-kitsuden-bg p-3 rounded-sm text-xs overflow-x-auto max-h-64 overflow-y-auto">{selected.logLines.join(
+                "\n"
+              )}</pre>
+          </section>
+        {/if}
+      </div>
+    {/if}
+  </Dialog>
+</ViewPage>

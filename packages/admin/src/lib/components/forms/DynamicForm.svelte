@@ -23,7 +23,7 @@
     Calculator,
     CircleSlash,
   } from "lucide-svelte";
-  import { toast } from "svelte-sonner";
+  import { toast } from "$lib/tallao";
 
   import MediaPicker from "$lib/components/media/MediaPicker.svelte";
   import { t } from "$lib/i18n";
@@ -53,6 +53,14 @@
     submitLabel?: string;
     onSubmit?: (data: Record<string, any>) => void;
     onCancel?: () => void;
+    /** The `<form>`'s id, for a SaveBar outside it (`<SaveBar form={formId}>`). */
+    formId?: string;
+    /** `false`: no Cancel / Save row of its own (a record page draws a SaveBar instead). */
+    actions?: boolean;
+    /** Told whenever the form starts or stops differing from what it was loaded with. */
+    onDirtyChange?: (dirty: boolean) => void;
+    /** Errors the API reported, by field key; shown under the field like the form's own. */
+    errors?: Record<string, string>;
   }
 
   const {
@@ -61,6 +69,10 @@
     submitLabel = t("dynamicForm.saveEntry"),
     onSubmit,
     onCancel,
+    formId,
+    actions = true,
+    onDirtyChange,
+    errors,
   }: Props = $props();
 
   const uid = $props.id();
@@ -78,9 +90,23 @@
    */
   let choosing = $state<{ path: string; set: (v: unknown) => void } | null>(null);
 
-  // Initialize on mount
+  /** The loaded values as text: what "dirty" is measured against. */
+  let pristine = $state("");
+
+  // Initialize on mount, and again when another record (or a saved one) is loaded.
   $effect(() => {
-    formData = initialValues(fields as FormField[], initialData);
+    const start = initialValues(fields as FormField[], initialData);
+    formData = start;
+    pristine = JSON.stringify(start);
+    fieldErrors = {};
+  });
+
+  const dirty = $derived(pristine !== "" && JSON.stringify(formData) !== pristine);
+  $effect(() => onDirtyChange?.(dirty));
+
+  // What the API refused, field by field.
+  $effect(() => {
+    if (errors && Object.keys(errors).length > 0) fieldErrors = { ...errors };
   });
 
   // ─── Computed ───────────────────────────────────────
@@ -514,6 +540,7 @@
 {/snippet}
 
 <form
+  id={formId}
   onsubmit={(e) => {
     e.preventDefault();
     handleSubmit();
@@ -526,26 +553,34 @@
   {/each}
 
   <!-- ── Actions ── -->
-  <div class="flex items-center justify-between pt-4 border-t border-kitsuden-border">
-    <div>
-      {#if errorCount > 0}
-        <p class="text-xs text-kitsuden-danger" role="status">
-          {t("dynamicForm.fieldSNeedAttention", { count: errorCount })}
-        </p>
-      {/if}
-    </div>
-    <div class="flex items-center gap-3">
-      <Button variant="ghost" onclick={onCancel}>{t("common.cancel")}</Button>
-      <Button type="submit" disabled={submitting}>
-        {#if submitting}
-          <Loader2 class="w-4 h-4 animate-spin" />
-        {:else}
-          <Save class="w-4 h-4" />
+  {#if !actions}
+    {#if errorCount > 0}
+      <p class="text-xs text-kitsuden-danger" role="status">
+        {t("dynamicForm.fieldSNeedAttention", { count: errorCount })}
+      </p>
+    {/if}
+  {:else}
+    <div class="flex items-center justify-between pt-4 border-t border-kitsuden-border">
+      <div>
+        {#if errorCount > 0}
+          <p class="text-xs text-kitsuden-danger" role="status">
+            {t("dynamicForm.fieldSNeedAttention", { count: errorCount })}
+          </p>
         {/if}
-        {submitLabel}
-      </Button>
+      </div>
+      <div class="flex items-center gap-3">
+        <Button variant="ghost" onclick={onCancel}>{t("common.cancel")}</Button>
+        <Button type="submit" disabled={submitting}>
+          {#if submitting}
+            <Loader2 class="w-4 h-4 animate-spin" />
+          {:else}
+            <Save class="w-4 h-4" />
+          {/if}
+          {submitLabel}
+        </Button>
+      </div>
     </div>
-  </div>
+  {/if}
 </form>
 
 <MediaPicker

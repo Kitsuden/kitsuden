@@ -88,6 +88,43 @@ export async function regenerateToken(agentId: string): Promise<{ token: string 
   });
 }
 
+// ============== Usage (the agent audit: GET /api/admin/agents/:id/stats and /logs) ==============
+
+export interface AgentStats {
+  period: string;
+  totalCalls: number;
+  successfulCalls: number;
+  failedCalls: number;
+  successRate: string;
+  actionsByType: Record<string, { success: number; failed: number }>;
+}
+
+export interface AgentLogEntry {
+  id: string;
+  action: string;
+  resource: string | null;
+  success: boolean;
+  durationMs: number | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+/** Calls of the agent over the last `days` (7 by default), by action. */
+export async function getAgentStats(agentId: string, days = 7): Promise<AgentStats> {
+  const r = await fetchJson<{ data: AgentStats }>(
+    `${ROOT}/api/admin/agents/${agentId}/stats?days=${days}`
+  );
+  return r.data;
+}
+
+/** The agent's latest audit entries, newest first. */
+export async function listAgentLogs(agentId: string, limit = 10): Promise<AgentLogEntry[]> {
+  const r = await fetchJson<{ data?: AgentLogEntry[] }>(
+    `${ROOT}/api/admin/agents/${agentId}/logs?limit=${limit}`
+  );
+  return r.data ?? [];
+}
+
 // ============== Traces ==============
 
 interface ListTracesOptions {

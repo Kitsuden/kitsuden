@@ -4,6 +4,7 @@
   Difference: Thought, Tool Call, Tool Response
 -->
 <script lang="ts">
+  import { Badge } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import {
     Brain,
@@ -13,8 +14,6 @@
     ChevronRight,
     ChevronDown,
   } from "lucide-svelte";
-
-  import Badge from "$lib/components/ui/Badge.svelte";
   import { cn } from "$lib/utils";
 
   interface Step {

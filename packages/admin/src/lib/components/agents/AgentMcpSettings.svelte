@@ -4,12 +4,11 @@
   API: GET/PUT /api/v1/agents/:id/mcp-settings (lib/mcp-settings.ts).
 -->
 <script lang="ts">
+  import { Button, Skeleton } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import { Save } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-
-  import Button from "$lib/components/ui/Button.svelte";
+  import { toast } from "$lib/tallao";
   import { getAgentMcpSettings, setAgentMcpSettings } from "$lib/services/agents";
   import type { AgentMcpSettings, UntrustedWrap } from "$lib/types/agents";
 
@@ -76,9 +75,7 @@
   </div>
 
   {#if loading}
-    <div class="flex items-center justify-center h-16">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <Skeleton lines={3} />
   {:else if error}
     <div
       class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"

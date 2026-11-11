@@ -1,93 +1,104 @@
 <!--
-  Models (defineModel): the list of models of the mounted
-  kons (GET /api/models) and, for the chosen one, its generated view.
-  `?model=<kon>/<name>` opens one.
+  Models (defineModel): the models the mounted kons expose (GET /api/models), on the list
+  template. Each one opens its own list at /models/<kon>/<name>; the older
+  `?model=<kon>/<name>` address still lands there.
 -->
 <script lang="ts">
-  import type { ModelDescriptor } from "@kitsuden/shared";
-  import { Database } from "lucide-svelte";
-
-  import ModelView from "$lib/components/models/ModelView.svelte";
-  import { api } from "$lib/api";
+  import Page from "$lib/components/layout/Page.svelte";
+  import ListView from "$lib/components/list/ListView.svelte";
   import { t } from "$lib/i18n";
+  import { memorySource, type Row } from "$lib/list/source";
+  import { listModels, modelPath, type MountedModel } from "$lib/services/models";
 
+  import { goto } from "$app/navigation";
   import { page } from "$app/stores";
 
-  interface MountedModel {
-    kon: string;
-    mountPath: string;
-    base: string;
-    descriptor: ModelDescriptor;
-  }
-
   let models = $state<MountedModel[]>([]);
-  let loading = $state(true);
-  let error = $state<string | null>(null);
-  let chosenItem = $state<string | null>($page.url.searchParams.get("model"));
+  let total = $state<number | null>(null);
 
-  const key = (m: MountedModel) => `${m.kon}/${m.descriptor.name}`;
-  const active = $derived(models.find((m) => key(m) === chosenItem) ?? models[0] ?? null);
-
-  $effect(() => {
-    void (async () => {
-      try {
-        const r = await api.get<{ data: MountedModel[] }>("/api/models");
-        models = r.data;
-      } catch (e) {
-        error = (e as Error).message || t("models.errorLoading");
-      } finally {
-        loading = false;
-      }
-    })();
+  const asRow = (m: MountedModel): Row => ({
+    id: `${m.kon}/${m.descriptor.name}`,
+    name: m.descriptor.tag || m.descriptor.plural,
+    kon: m.kon,
+    table: m.descriptor.table,
+    description: m.descriptor.description,
+    fields: m.descriptor.fields.length,
+    read: m.descriptor.access.read,
+    write: m.descriptor.access.write,
   });
+
+  const options = (values: string[]) =>
+    [...new Set(values)].sort().map((value) => ({ value, label: value }));
+  const konOptions = $derived(options(models.map((m) => m.kon)));
+  const accessOptions = $derived(
+    options(models.flatMap((m) => [m.descriptor.access.read, m.descriptor.access.write]))
+  );
+
+  const source = $derived(
+    memorySource({
+      id: "models",
+      label: t("shell.models"),
+      singular: t("models.model"),
+      titleField: "name",
+      fields: [
+        { key: "name", label: t("common.name"), kind: "text", sortable: true },
+        { key: "kon", label: t("models.kon"), kind: "select", sortable: true, options: konOptions },
+        { key: "description", label: t("common.description"), kind: "text" },
+        { key: "table", label: t("models.table"), kind: "id", sortable: true },
+        { key: "fields", label: t("common.fields"), kind: "number", sortable: true },
+        { key: "read", label: t("models.readColumn"), kind: "select", options: accessOptions },
+        { key: "write", label: t("models.writeColumn"), kind: "select", options: accessOptions },
+      ],
+      rows: () => models.map(asRow),
+    })
+  );
+
+  let loaded = $state(false);
+  let error = $state<string | null>(null);
+  async function load(fresh = false) {
+    error = null;
+    try {
+      models = await listModels({ fresh });
+    } catch (e) {
+      error = (e as Error)?.message || t("models.errorLoading");
+    } finally {
+      loaded = true;
+    }
+  }
+  $effect(() => {
+    void load();
+  });
+
+  // `?model=<kon>/<name>` was how a model was opened before each had its own address.
+  $effect(() => {
+    const legacy = $page.url.searchParams.get("model");
+    if (!legacy || !legacy.includes("/")) return;
+    const [kon, name] = legacy.split("/");
+    void goto(`/models/${encodeURIComponent(kon!)}/${encodeURIComponent(name!)}`, {
+      replaceState: true,
+    });
+  });
+
+  const hrefFor = (row: Row) => {
+    const model = models.find((m) => `${m.kon}/${m.descriptor.name}` === row.id);
+    return model ? modelPath(model) : undefined;
+  };
 </script>
 
-<div class="h-full flex flex-col">
-  <div class="flex items-center gap-3 px-6 py-4 border-b border-kitsuden-border">
-    <div class="p-2 bg-kitsuden-accent/10 rounded-lg">
-      <Database size={20} class="text-kitsuden-accent" />
-    </div>
-    <div class="min-w-0">
-      <h1 class="text-lg font-semibold text-kitsuden-text">{t("models.title")}</h1>
-      <p class="text-xs text-kitsuden-subtle">{t("models.subtitle")}</p>
-    </div>
-  </div>
+<Page title={t("shell.models")} description={t("models.subtitle")}>
+  {#snippet meta()}
+    {#if total !== null}{t("models.count", { n: total })}{/if}
+  {/snippet}
 
-  <div class="flex-1 overflow-auto p-6">
-    {#if loading}
-      <p class="text-sm text-kitsuden-subtle">{t("models.loading")}</p>
-    {:else if error}
-      <div
-        class="rounded-lg border border-kitsuden-danger/40 bg-kitsuden-danger/10 p-3 text-sm text-kitsuden-danger"
-        role="alert"
-      >
-        {t("models.errorLoading")}: {error}
-      </div>
-    {:else if models.length === 0}
-      <div class="card p-12 text-center text-sm text-kitsuden-subtle">{t("models.empty")}</div>
-    {:else}
-      <div class="flex flex-col gap-6 md:flex-row">
-        <nav class="md:w-56 shrink-0 space-y-1" aria-label={t("models.pick")}>
-          {#each models as m (key(m))}
-            <button
-              class="w-full rounded-lg px-3 py-2 text-left text-sm {active && key(active) === key(m)
-                ? 'bg-kitsuden-accent/10 text-kitsuden-accent'
-                : 'text-kitsuden-text hover:bg-kitsuden-border/60'}"
-              onclick={() => (chosenItem = key(m))}
-            >
-              <span class="block font-medium">{m.descriptor.tag}</span>
-              <span class="block text-[11px] text-kitsuden-subtle">{m.kon}</span>
-            </button>
-          {/each}
-        </nav>
-        <div class="min-w-0 flex-1">
-          {#if active}
-            {#key key(active)}
-              <ModelView descriptor={active.descriptor} base={active.base} />
-            {/key}
-          {/if}
-        </div>
-      </div>
-    {/if}
-  </div>
-</div>
+  <ListView
+    {source}
+    bind:total
+    {hrefFor}
+    canDelete={false}
+    pending={!loaded}
+    loadError={error}
+    onRetry={() => load(true)}
+    emptyTitle={t("models.noModels")}
+    emptyDescription={t("models.empty")}
+  />
+</Page>

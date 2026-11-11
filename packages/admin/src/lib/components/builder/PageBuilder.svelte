@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import {
     LayoutGrid,
@@ -17,7 +18,7 @@
     AlertTriangle,
     Minus,
   } from "lucide-svelte";
-  import { slide } from "svelte/transition";
+  import { rise } from "$lib/tallao/motion";
 
   import { createBlock, getBlockDef, type PageBlock, type BlockType } from "../../../types/blocks";
 
@@ -198,9 +199,10 @@
         >
         <span class="badge-cyan text-xs">{blocks.length} {t("pageBuilder.blocks")}</span>
       </div>
-      <button
+      <Button
         onclick={() => (panelMode = panelMode === "picker" ? null : "picker")}
-        class="btn-ghost btn-sm"><Plus class="w-3.5 h-3.5" /> {t("pageBuilder.addBlock")}</button
+        variant="ghost"
+        size="sm"><Plus class="w-3.5 h-3.5" /> {t("pageBuilder.addBlock")}</Button
       >
     </div>
 
@@ -209,8 +211,8 @@
         <LayoutGrid class="w-14 h-14 mb-5 text-kitsuden-subtle" />
         <p class="text-sm font-medium mb-1">{t("pageBuilder.noBlocksYet")}</p>
         <p class="text-xs mb-6">{t("pageBuilder.clickAddBlockOrDrag")}</p>
-        <button onclick={() => (panelMode = "picker")} class="btn-primary btn-sm"
-          ><Plus class="w-3.5 h-3.5" /> {t("pageBuilder.addYourFirstBlock")}</button
+        <Button onclick={() => (panelMode = "picker")} size="sm"
+          ><Plus class="w-3.5 h-3.5" /> {t("pageBuilder.addYourFirstBlock")}</Button
         >
       </div>
     {:else}
@@ -267,39 +269,43 @@
               <div
                 class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
               >
-                <button
+                <Button
                   onclick={(e) => {
                     e.stopPropagation();
                     moveBlock(idx, -1);
                   }}
                   disabled={idx === 0}
-                  class="btn-icon p-1 disabled:opacity-20"
-                  title={t("pageBuilder.moveUp")}><ChevronUp class="w-3.5 h-3.5" /></button
+                  variant="ghost"
+                  size="icon"
+                  title={t("pageBuilder.moveUp")}><ChevronUp class="w-3.5 h-3.5" /></Button
                 >
-                <button
+                <Button
                   onclick={(e) => {
                     e.stopPropagation();
                     moveBlock(idx, 1);
                   }}
                   disabled={idx === blocks.length - 1}
-                  class="btn-icon p-1 disabled:opacity-20"
-                  title={t("pageBuilder.moveDown")}><ChevronDown class="w-3.5 h-3.5" /></button
+                  variant="ghost"
+                  size="icon"
+                  title={t("pageBuilder.moveDown")}><ChevronDown class="w-3.5 h-3.5" /></Button
                 >
-                <button
+                <Button
                   onclick={(e) => {
                     e.stopPropagation();
                     duplicateBlock(idx);
                   }}
-                  class="btn-icon p-1"
-                  title={t("pageBuilder.duplicate")}><Copy class="w-3.5 h-3.5" /></button
+                  variant="ghost"
+                  size="icon"
+                  title={t("pageBuilder.duplicate")}><Copy class="w-3.5 h-3.5" /></Button
                 >
-                <button
+                <Button
                   onclick={(e) => {
                     e.stopPropagation();
                     removeBlock(idx);
                   }}
-                  class="btn-icon p-1 hover:text-kitsuden-accent-2!"
-                  title={t("common.delete")}><Trash2 class="w-3.5 h-3.5" /></button
+                  variant="danger-ghost"
+                  size="icon"
+                  title={t("common.delete")}><Trash2 class="w-3.5 h-3.5" /></Button
                 >
               </div>
             </div>
@@ -347,7 +353,7 @@
 
   {#if panelMode}
     <div
-      transition:slide={{ duration: 200, axis: "x" }}
+      transition:rise
       class="w-80 shrink-0 border-l border-kitsuden-border bg-kitsuden-card overflow-hidden"
     >
       {#if panelMode === "picker"}

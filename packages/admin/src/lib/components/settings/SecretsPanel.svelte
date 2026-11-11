@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   /**
    * KITSUDEN Secrets Manager — Admin panel (KITSUDEN architecture §7)
@@ -357,44 +358,44 @@
     </div>
   {:else}
     <div class="rounded-xl border border-kitsuden-border overflow-hidden">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="bg-kitsuden-card text-kitsuden-subtle text-xs uppercase tracking-wide">
-            <th class="text-left px-4 py-3 font-medium">{t("secretsPanel.key")}</th>
-            <th class="text-left px-4 py-3 font-medium">{t("secretsPanel.value")}</th>
-            <th class="text-left px-4 py-3 font-medium">{t("secretsPanel.category")}</th>
-            <th class="text-left px-4 py-3 font-medium">{t("secretsPanel.auto")}</th>
-            <th class="text-left px-4 py-3 font-medium">{t("secretsPanel.rotated")}</th>
-            <th class="text-left px-4 py-3 font-medium">{t("secretsPanel.injected")}</th>
-            <th class="text-right px-4 py-3 font-medium">{t("common.actions")}</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table density="compact">
+        <TableHeader>
+          <TableRow>
+            <TableHead class="text-left">{t("secretsPanel.key")}</TableHead>
+            <TableHead class="text-left">{t("secretsPanel.value")}</TableHead>
+            <TableHead class="text-left">{t("secretsPanel.category")}</TableHead>
+            <TableHead class="text-left">{t("secretsPanel.auto")}</TableHead>
+            <TableHead class="text-left">{t("secretsPanel.rotated")}</TableHead>
+            <TableHead class="text-left">{t("secretsPanel.injected")}</TableHead>
+            <TableHead class="text-right">{t("common.actions")}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {#each secrets as s (s.id)}
-            <tr class="border-t border-kitsuden-border hover:bg-kitsuden-card/50 transition-colors">
-              <td class="px-4 py-3">
+            <TableRow>
+              <TableCell>
                 <div class="font-mono text-kitsuden-text">{s.key}</div>
                 {#if s.description}
                   <div class="text-xs text-kitsuden-subtle mt-0.5">{s.description}</div>
                 {/if}
-              </td>
-              <td class="px-4 py-3 font-mono text-kitsuden-subtle">{s.hint}</td>
-              <td class="px-4 py-3">
+              </TableCell>
+              <TableCell class="font-mono">{s.hint}</TableCell>
+              <TableCell>
                 <span
                   class="px-2 py-0.5 rounded-full text-xs bg-kitsuden-purple/10 text-kitsuden-purple border border-kitsuden-purple/20"
                   >{s.category}</span
                 >
-              </td>
-              <td class="px-4 py-3">
+              </TableCell>
+              <TableCell>
                 {#if s.autoInject}
                   <CheckCircle2 class="w-4 h-4 text-kitsuden-green" />
                 {:else}
                   <span class="text-kitsuden-subtle text-xs">{t("secretsPanel.manual")}</span>
                 {/if}
-              </td>
-              <td class="px-4 py-3 text-xs text-kitsuden-subtle">{fmtDate(s.lastRotatedAt)}</td>
-              <td class="px-4 py-3 text-xs text-kitsuden-subtle">{fmtDate(s.lastInjectedAt)}</td>
-              <td class="px-4 py-3">
+              </TableCell>
+              <TableCell>{fmtDate(s.lastRotatedAt)}</TableCell>
+              <TableCell>{fmtDate(s.lastInjectedAt)}</TableCell>
+              <TableCell>
                 <div class="flex items-center justify-end gap-1">
                   <button
                     class="p-1.5 rounded-lg text-kitsuden-accent hover:bg-kitsuden-accent/10 transition-colors disabled:opacity-40"
@@ -428,11 +429,11 @@
                     </button>
                   {/if}
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           {/each}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
     <p class="text-xs text-kitsuden-subtle">
       {t("secretsPanel.valuesAreNeverShown")} <code>KITSUDEN_SECRETS_KEY</code>

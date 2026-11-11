@@ -1,18 +1,34 @@
 <!--
-  Approval inbox: the agents' proposals, the detail with
-  the diff and the decision (approve and run / reject, with a comment the
-  agent will see). Only the human team gets here (the API requires it).
+  Approval inbox: the agents' proposals on the left, the open one on the right as a tallao
+  ApprovalCard (who asks, what would happen, the field changes as a DiffView, the decision).
+  Only the human team gets here (the API requires it).
+
+  Keyboard (shown as hints over the list; off while typing or with a dialog in front):
+    j / k   next / previous proposal        a   approve and run        r   reject
+  After a decision the inbox moves on to the next proposal that waits. Pending proposals can
+  be checked and approved together ("Approve selected"); each one still runs on its own and
+  the result says how many ran and how many failed.
+
+  What the card cannot hold stays inside it as its content: the per-field ledger (accept or
+  reject each field, type another value, read the evidence), held uploads, the request, the
+  comment the agent will see and the later review.
 -->
 <script lang="ts">
-  import { nextPendingAfter } from "$lib/approvals-next";
-  import StateMessage from "$lib/components/feedback/StateMessage.svelte";
-  import { fieldDiffRedacted, readableFieldDiff } from "$lib/approvals-diff";
-  import { t, localeFormat } from "$lib/i18n";
-  import { Check, X, RefreshCw } from "lucide-svelte";
+  import { RefreshCw } from "lucide-svelte";
   import { onMount, untrack } from "svelte";
-  import { toast } from "svelte-sonner";
 
-  import Button from "$lib/components/ui/Button.svelte";
+  import {
+    approvalCardProps,
+    bulkApprovable,
+    bulkSummary,
+    inboxKeyAction,
+    type CardProposal,
+  } from "$lib/agents/inbox";
+  import { fieldDiffRedacted, readableFieldDiff } from "$lib/approvals-diff";
+  import { nextPendingAfter } from "$lib/approvals-next";
+  import { confirmDialog } from "$lib/confirm.svelte";
+  import { t, localeFormat } from "$lib/i18n";
+  import { isTypingTarget } from "$lib/palette";
   import {
     approveProposal,
     getProposal,
@@ -23,6 +39,30 @@
     type DecisionExtra,
   } from "$lib/services/approvals";
   import { approvals } from "$lib/states/approvals.svelte";
+  import {
+    Alert,
+    ApprovalCard,
+    Badge,
+    Button,
+    Checkbox,
+    DescriptionList,
+    EmptyState,
+    Field,
+    Input,
+    Kbd,
+    Select,
+    SelectionBar,
+    Skeleton,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+    Textarea,
+    toast,
+    type DescriptionItem,
+  } from "$lib/tallao";
   import type {
     FieldEvidence,
     Proposal,
@@ -74,8 +114,27 @@
     "rejected",
     "expired",
   ];
+  const STATUS_LABEL: Record<ProposalStatus, () => string> = {
+    pending: () => t("approvals.status_pending"),
+    executing: () => t("approvals.status_executing"),
+    executed: () => t("approvals.status_executed"),
+    failed: () => t("approvals.status_failed"),
+    rejected: () => t("approvals.status_rejected"),
+    expired: () => t("approvals.status_expired"),
+  };
+  const STATUS_VARIANT: Record<
+    ProposalStatus,
+    "warning" | "info" | "success" | "error" | "default"
+  > = {
+    pending: "warning",
+    executing: "info",
+    executed: "success",
+    failed: "error",
+    rejected: "default",
+    expired: "default",
+  };
 
-  let filter = $state<ProposalStatus | "">("pending");
+  let filter = $state<string>("pending");
   let list = $state<Proposal[]>([]);
   let total = $state(0);
   let loading = $state(true);
@@ -91,6 +150,9 @@
   let reviewAt = $state("");
   let reviewNote = $state("");
   let scheduling = $state(false);
+  /** Proposals checked for a bulk approval. */
+  let checked = $state<string[]>([]);
+  let bulkBusy = $state(false);
 
   function resetLedger(p: ProposalDetail | null) {
     const choice: Record<string, { accept: boolean; value: string }> = {};
@@ -199,9 +261,12 @@
     try {
       loading = true;
       error = null;
-      const r = await listProposals({ status: filter, limit: 100 });
+      const r = await listProposals({ status: filter as ProposalStatus | "", limit: 100 });
       list = r.proposals;
       total = r.total;
+      // A check on a proposal that left the list (decided, filtered out) is dropped.
+      const ids = new Set(bulkApprovable(list, checked).map((p) => p.id));
+      checked = checked.filter((id) => ids.has(id));
     } catch (e) {
       error = e instanceof Error ? e.message : t("approvals.errorLoading");
     } finally {
@@ -223,7 +288,7 @@
   }
 
   async function decide(action: "approve" | "reject") {
-    if (!selection) return;
+    if (!selection || deciding) return;
     // Where to go afterwards, from the list as the reviewer sees it now (it reloads below).
     const decidedId = selection.id;
     const next = nextPendingAfter(list, decidedId);
@@ -261,91 +326,208 @@
     }
   }
 
+  // ── Bulk approval ────────────────────────────────────────────────────────────────
+  const checkable = $derived(list.filter((p) => p.status === "pending"));
+
+  function toggle(id: string, on: boolean) {
+    checked = on ? [...new Set([...checked, id])] : checked.filter((c) => c !== id);
+  }
+
+  async function approveChecked() {
+    const targets = bulkApprovable(list, checked);
+    if (targets.length === 0 || bulkBusy) return;
+    const ok = await confirmDialog({
+      title: t("inbox.bulkTitle", { n: targets.length }),
+      description: t("inbox.bulkDescription"),
+      confirmLabel: t("inbox.bulkConfirm"),
+      variant: "primary",
+    });
+    if (!ok) return;
+    bulkBusy = true;
+    // One after another: each approval runs its request, and the order is the list's.
+    const results: Array<"executed" | "failed" | "error"> = [];
+    for (const p of targets) {
+      try {
+        const r = await approveProposal(p.id, undefined, {});
+        results.push(r.proposal.status === "executed" ? "executed" : "failed");
+      } catch {
+        results.push("error");
+      }
+    }
+    bulkBusy = false;
+    const { executed, failed } = bulkSummary(results);
+    if (executed > 0) toast.success(t("inbox.bulkDone", { n: executed }));
+    if (failed > 0) toast.error(t("inbox.bulkFailed", { n: failed }));
+    checked = [];
+    await Promise.all([load(), approvals.refresh()]);
+    if (selection) await open(selection.id);
+  }
+
+  // ── Keyboard ─────────────────────────────────────────────────────────────────────
+  const waiting = $derived(selection?.status === "pending" && !deciding && !loadingDetail);
+
+  function onKeydown(event: KeyboardEvent) {
+    if (event.defaultPrevented) return;
+    const action = inboxKeyAction(event, {
+      ids: list.map((p) => p.id),
+      currentId: selection?.id ?? null,
+      canApprove: !!waiting && selection?.canDecide === true,
+      canReject: !!waiting,
+      blocked: isTypingTarget(event.target) || !!document.querySelector("dialog[open]"),
+    });
+    if (!action) return;
+    event.preventDefault();
+    if (action.type === "move") {
+      choose(action.id);
+      document
+        .querySelector(`[data-proposal-id="${CSS.escape(action.id)}"]`)
+        ?.scrollIntoView({ block: "nearest" });
+    } else void decide(action.type);
+  }
+
+  onMount(() => {
+    window.addEventListener("keydown", onKeydown);
+    return () => window.removeEventListener("keydown", onKeydown);
+  });
+
   const date = (v: string | null) => (v ? new Date(v).toLocaleString(localeFormat()) : "—");
   const json = (v: unknown) => (v === undefined ? "" : JSON.stringify(v, null, 2));
 
-  const KIND: Record<ProposalStatus, string> = {
-    pending: "bg-kitsuden-amber/15 text-kitsuden-amber",
-    executing: "bg-kitsuden-info/15 text-kitsuden-info",
-    executed: "bg-kitsuden-green/15 text-kitsuden-green",
-    failed: "bg-kitsuden-danger/15 text-kitsuden-danger",
-    rejected: "bg-kitsuden-muted/40 text-kitsuden-text",
-    expired: "bg-kitsuden-muted/40 text-kitsuden-subtle",
-  };
+  const reasonLabel = (reason: string) =>
+    reason === "propose_only"
+      ? t("approvals.reason_propose_only")
+      : t("approvals.reason_sensitive");
+  const channelLabel = (channel: string) =>
+    channel === "mcp" ? t("approvals.channelMcp") : t("approvals.channelRest");
+
+  function aboutItems(s: ProposalDetail): DescriptionItem[] {
+    return [
+      {
+        label: t("approvals.sponsor"),
+        value: s.sponsorName ?? s.sponsorUserId ?? t("approvals.noSponsor"),
+      },
+      { label: t("approvals.reason"), value: reasonLabel(s.reason) },
+      { label: t("approvals.channel"), value: channelLabel(s.channel) },
+      {
+        label: t("approvals.operation"),
+        value: s.operation ?? s.tool ?? t("approvals.legacyRoute"),
+        mono: true,
+      },
+      { label: t("inbox.request"), value: `${s.method} ${s.path}`, mono: true },
+      { label: t("approvals.colCreated"), value: date(s.createdAt) },
+      { label: t("approvals.colExpires"), value: date(s.expiresAt) },
+      ...(s.idempotencyKey
+        ? [{ label: t("approvals.idempotencyKey"), value: s.idempotencyKey, mono: true }]
+        : []),
+      {
+        label: t("approvals.scopes"),
+        value: s.scopes.length > 0 ? s.scopes.join("  ") : null,
+        mono: true,
+      },
+    ];
+  }
 </script>
 
-<div class="flex flex-col lg:flex-row gap-4 min-h-0" data-testid="approvals-inbox">
+<div class="inbox" data-testid="approvals-inbox">
   <!-- List -->
-  <section class="lg:w-[46%] min-w-0 space-y-3">
-    <div class="flex flex-wrap items-center gap-2">
-      <label for="status-filter" class="text-xs text-kitsuden-subtle"
-        >{t("approvals.filterStatus")}</label
-      >
-      <select
-        id="status-filter"
-        bind:value={filter}
-        onchange={load}
-        class="px-2 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
-        data-testid="status-filter"
-      >
-        <option value="">{t("approvals.all")}</option>
-        {#each STATUSES as e}
-          <option value={e}>{t(`approvals.status_${e}`)}</option>
-        {/each}
-      </select>
-      <div class="flex-1"></div>
-      <span class="text-xs text-kitsuden-subtle">{t("approvals.totalCount", { n: total })}</span>
+  <section class="inbox-list">
+    <div class="inbox-toolbar">
+      <Field label={t("approvals.filterStatus")} class="inbox-filter">
+        <Select
+          bind:value={filter}
+          onchange={load}
+          size="sm"
+          width="auto"
+          data-testid="status-filter"
+          options={[
+            { value: "", label: t("approvals.all") },
+            ...STATUSES.map((value) => ({ value, label: STATUS_LABEL[value]() })),
+          ]}
+        />
+      </Field>
+      <span class="inbox-count">{t("approvals.totalCount", { n: total })}</span>
       <Button variant="ghost" size="sm" onclick={load}>
-        <RefreshCw size={14} class="mr-1" />{t("approvals.refresh")}
+        <RefreshCw size={14} aria-hidden="true" />{t("approvals.refresh")}
       </Button>
     </div>
 
-    {#if loading}
-      <div class="flex items-center justify-center h-24">
-        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
+    <p class="inbox-keys" data-testid="inbox-keys">
+      <span><Kbd keys={["j"]} size="sm" /> <Kbd keys={["k"]} size="sm" /> {t("inbox.keyMove")}</span
+      >
+      <span><Kbd keys={["a"]} size="sm" /> {t("inbox.keyApprove")}</span>
+      <span><Kbd keys={["r"]} size="sm" /> {t("inbox.keyReject")}</span>
+    </p>
+
+    {#if checked.length > 0}
+      <SelectionBar
+        total={checkable.length}
+        selected={checked.length}
+        onToggleAll={(on) => (checked = on ? checkable.map((p) => p.id) : [])}
+        ariaLabel={t("list.bulkActions")}
+      >
+        {#snippet actions()}
+          <Button
+            size="sm"
+            loading={bulkBusy}
+            disabled={bulkBusy}
+            onclick={approveChecked}
+            data-testid="bulk-approve"
+          >
+            {t("inbox.approveSelected")}
+          </Button>
+        {/snippet}
+      </SelectionBar>
+    {/if}
+
+    {#if loading && list.length === 0}
+      <div role="status" aria-busy="true">
+        <span class="sr-only">{t("common.loading")}</span>
+        <Skeleton lines={5} />
       </div>
     {:else if error}
-      <StateMessage
-        kind="error"
-        compact
+      <EmptyState
+        variant="error"
+        size="sm"
         title={t("approvals.errorLoading")}
         description={error}
         onRetry={load}
       />
     {:else if list.length === 0}
-      <StateMessage compact title={t("approvals.empty")} />
+      <EmptyState size="sm" title={t("approvals.empty")} description={t("inbox.emptyHint")} />
     {:else}
-      <ul class="border border-kitsuden-border rounded-lg divide-y divide-kitsuden-border/70">
+      <ul class="inbox-rows">
         {#each list as p (p.id)}
-          <li>
+          <li class="inbox-row" class:inbox-row--current={selection?.id === p.id}>
+            <span class="inbox-check">
+              {#if p.status === "pending"}
+                <Checkbox
+                  checked={checked.includes(p.id)}
+                  onchange={(e: Event) =>
+                    toggle(p.id, (e.currentTarget as HTMLInputElement).checked)}
+                  ariaLabel={t("inbox.selectOne", { name: `${p.method} ${p.tool ?? p.path}` })}
+                />
+              {/if}
+            </span>
             <button
-              class="w-full text-left px-3 py-2.5 hover:bg-kitsuden-border/40 transition-colors {selection?.id ===
-              p.id
-                ? 'bg-kitsuden-border/60'
-                : ''}"
+              type="button"
+              class="inbox-open"
               onclick={() => choose(p.id)}
               aria-current={selection?.id === p.id ? "true" : undefined}
               data-testid="proposal-row"
               data-proposal-id={p.id}
             >
-              <div class="flex items-center gap-2 min-w-0">
-                <span class="text-[11px] px-1.5 py-0.5 rounded-sm shrink-0 {KIND[p.status]}"
-                  >{t(`approvals.status_${p.status}`)}</span
+              <span class="inbox-row-top">
+                <Badge variant={STATUS_VARIANT[p.status]} size="sm"
+                  >{STATUS_LABEL[p.status]()}</Badge
                 >
-                <code class="text-xs text-kitsuden-text truncate min-w-0"
-                  >{p.method} {p.tool ?? p.path}</code
-                >
-              </div>
-              <div class="mt-1 flex flex-wrap gap-x-3 text-[11px] text-kitsuden-subtle">
+                <code class="inbox-target">{p.method} {p.tool ?? p.path}</code>
+              </span>
+              <span class="inbox-row-meta">
                 <span>{p.agentName ?? t("approvals.agentDeleted")}</span>
-                <span
-                  >{p.channel === "mcp"
-                    ? t("approvals.channelMcp")
-                    : t("approvals.channelRest")}</span
-                >
-                <span>{t(`approvals.reason_${p.reason}`)}</span>
+                <span>{channelLabel(p.channel)}</span>
+                <span>{reasonLabel(p.reason)}</span>
                 <span>{date(p.createdAt)}</span>
-              </div>
+              </span>
             </button>
           </li>
         {/each}
@@ -354,244 +536,188 @@
   </section>
 
   <!-- Detail -->
-  <section class="flex-1 min-w-0" data-testid="proposal-detail">
-    {#if loadingDetail}
-      <div class="flex items-center justify-center h-24">
-        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
+  <section class="inbox-detail" data-testid="proposal-detail">
+    {#if loadingDetail && !selection}
+      <div role="status" aria-busy="true">
+        <span class="sr-only">{t("common.loading")}</span>
+        <Skeleton lines={8} />
       </div>
     {:else if !selection}
-      <p class="text-sm text-kitsuden-subtle p-4">{t("approvals.selectHint")}</p>
+      <EmptyState size="sm" icon={false} title={t("approvals.selectHint")} />
     {:else}
       {@const s = selection}
       {@const diff = readableFieldDiff(s)}
-      <div class="border border-kitsuden-border rounded-lg p-4 space-y-4">
-        <div class="flex flex-wrap items-center gap-2">
-          <span
-            class="text-[11px] px-1.5 py-0.5 rounded-sm {KIND[s.status]}"
-            data-testid="detail-status">{t(`approvals.status_${s.status}`)}</span
-          >
-          <code class="text-sm text-kitsuden-text break-all">{s.method} {s.tool ?? s.path}</code>
-        </div>
+      {@const card = approvalCardProps(s as unknown as CardProposal, t, date, { ledger: !!diff })}
+      {@const pending = s.status === "pending"}
+      {#key s.id}
+        <ApprovalCard
+          title={card.title}
+          requester={card.requester}
+          status={card.status}
+          outcome={card.outcome}
+          changes={card.changes}
+          tool={card.tool}
+          args={card.args}
+          risk={card.risk}
+          riskLevel={card.riskLevel}
+          level={2}
+          requestLabel={t("inbox.requested")}
+          approveLabel={t("approvals.approve")}
+          rejectLabel={t("approvals.reject")}
+          onApprove={pending && s.canDecide ? () => decide("approve") : undefined}
+          onReject={pending ? () => decide("reject") : undefined}
+          data-testid="proposal-card"
+        >
+          <p class="inbox-status">
+            <Badge variant={STATUS_VARIANT[s.status]} data-testid="detail-status"
+              >{STATUS_LABEL[s.status]()}</Badge
+            >
+          </p>
 
-        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
-          <div>
-            <dt class="text-kitsuden-subtle">{t("approvals.colAgent")}</dt>
-            <dd class="text-kitsuden-text">{s.agentName ?? t("approvals.agentDeleted")}</dd>
-          </div>
           <div data-testid="detail-sponsor">
-            <dt class="text-kitsuden-subtle">{t("approvals.sponsor")}</dt>
-            <dd class="text-kitsuden-text">
-              {s.sponsorName ?? s.sponsorUserId ?? t("approvals.noSponsor")}
-            </dd>
+            <DescriptionList
+              items={aboutItems(s)}
+              columns={2}
+              layout="stacked"
+              ariaLabel={t("inbox.about")}
+            />
           </div>
-          <div>
-            <dt class="text-kitsuden-subtle">{t("approvals.reason")}</dt>
-            <dd class="text-kitsuden-text">{t(`approvals.reason_${s.reason}`)}</dd>
-          </div>
-          <div>
-            <dt class="text-kitsuden-subtle">{t("approvals.channel")}</dt>
-            <dd class="text-kitsuden-text">
-              {s.channel === "mcp" ? t("approvals.channelMcp") : t("approvals.channelRest")}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-kitsuden-subtle">{t("approvals.operation")}</dt>
-            <dd class="text-kitsuden-text break-all">
-              {s.operation ?? s.tool ?? t("approvals.legacyRoute")}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-kitsuden-subtle">{t("approvals.colCreated")}</dt>
-            <dd class="text-kitsuden-text">{date(s.createdAt)}</dd>
-          </div>
-          <div>
-            <dt class="text-kitsuden-subtle">{t("approvals.colExpires")}</dt>
-            <dd class="text-kitsuden-text">{date(s.expiresAt)}</dd>
-          </div>
-          {#if s.idempotencyKey}
-            <div class="sm:col-span-2">
-              <dt class="text-kitsuden-subtle">{t("approvals.idempotencyKey")}</dt>
-              <dd class="text-kitsuden-text break-all"><code>{s.idempotencyKey}</code></dd>
+
+          <!-- Held uploads -->
+          {#if (s.files?.length ?? 0) > 0}
+            <div data-testid="proposal-files">
+              <h3 class="inbox-h">{t("approvals.files")}</h3>
+              <ul class="inbox-files">
+                {#each s.files ?? [] as f (f.id)}
+                  <li>
+                    <div class="inbox-thumb">
+                      {#if thumbnails[f.id] && thumbnails[f.id] !== "error"}
+                        <img
+                          src={thumbnails[f.id]}
+                          alt={t("approvals.thumbnailAlt", { name: f.filename })}
+                          data-testid="proposal-thumbnail"
+                        />
+                      {:else if thumbnails[f.id] === "error"}
+                        <span class="inbox-danger">{t("approvals.fileLoadError")}</span>
+                      {/if}
+                    </div>
+                    <p class="inbox-file-name" title={f.filename}>{f.filename}</p>
+                    <p class="inbox-dim">{f.mimeType} · {size(f.size)}</p>
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {:else if s.contentType?.startsWith("multipart/")}
+            <p class="inbox-dim" data-testid="proposal-files-removed">
+              {t("approvals.filesRemoved")}
+            </p>
+          {/if}
+
+          {#if s.injectionCheck && /inject|unsafe|malicious|jailbreak/i.test(s.injectionCheck.label) && s.injectionCheck.score >= 0.5}
+            <div data-testid="proposal-injection">
+              <Alert variant="warning">
+                {t("approvals.injectionWarning", {
+                  label: s.injectionCheck.label,
+                  score: s.injectionCheck.score.toFixed(2),
+                })}
+              </Alert>
             </div>
           {/if}
-          <div class="sm:col-span-2">
-            <dt class="text-kitsuden-subtle">{t("approvals.scopes")}</dt>
-            <dd class="flex flex-wrap gap-1 mt-1">
-              {#each s.scopes as sc}
-                <code
-                  class="text-[11px] px-1.5 py-0.5 rounded-sm bg-kitsuden-border text-kitsuden-text"
-                  >{sc}</code
-                >
-              {:else}
-                <span class="text-kitsuden-subtle">—</span>
-              {/each}
-            </dd>
-          </div>
-        </dl>
 
-        <!-- Diff -->
-        {#if (s.files?.length ?? 0) > 0}
-          <div data-testid="proposal-files">
-            <h4 class="text-xs font-semibold text-kitsuden-text-dim mb-1.5">
-              {t("approvals.files")}
-            </h4>
-            <ul class="flex flex-wrap gap-2">
-              {#each s.files ?? [] as f (f.id)}
-                <li class="w-32 text-[11px] text-kitsuden-text-dim">
-                  <div
-                    class="w-32 h-32 rounded-sm border border-kitsuden-border bg-kitsuden-bg flex items-center justify-center overflow-hidden"
-                  >
-                    {#if thumbnails[f.id] && thumbnails[f.id] !== "error"}
-                      <img
-                        src={thumbnails[f.id]}
-                        alt={t("approvals.thumbnailAlt", { name: f.filename })}
-                        class="max-w-full max-h-full object-contain"
-                        data-testid="proposal-thumbnail"
-                      />
-                    {:else if thumbnails[f.id] === "error"}
-                      <span class="px-2 text-center text-kitsuden-danger"
-                        >{t("approvals.fileLoadError")}</span
-                      >
-                    {/if}
-                  </div>
-                  <p class="mt-1 truncate" title={f.filename}>{f.filename}</p>
-                  <p class="text-kitsuden-subtle">{f.mimeType} · {size(f.size)}</p>
-                </li>
-              {/each}
-            </ul>
-          </div>
-        {:else if s.contentType?.startsWith("multipart/")}
-          <p class="text-xs text-kitsuden-subtle" data-testid="proposal-files-removed">
-            {t("approvals.filesRemoved")}
-          </p>
-        {/if}
+          {#if fieldDiffRedacted(s)}
+            <p class="inbox-dim" data-testid="proposal-fields-redacted">
+              {t("approvals.fieldsRedacted")}
+            </p>
+          {/if}
 
-        {#if s.injectionCheck && /inject|unsafe|malicious|jailbreak/i.test(s.injectionCheck.label) && s.injectionCheck.score >= 0.5}
-          <p
-            class="text-xs px-3 py-2 rounded-sm bg-kitsuden-amber/10 border border-kitsuden-amber/20 text-kitsuden-amber"
-            data-testid="proposal-injection"
-          >
-            {t("approvals.injectionWarning", {
-              label: s.injectionCheck.label,
-              score: s.injectionCheck.score.toFixed(2),
-            })}
-          </p>
-        {/if}
-
-        {#if fieldDiffRedacted(s)}
-          <p class="text-xs text-kitsuden-subtle" data-testid="proposal-fields-redacted">
-            {t("approvals.fieldsRedacted")}
-          </p>
-        {/if}
-        {#if diff}
-          {@const choosing = s.status === "pending" && s.canDecide}
-          <div data-testid="proposal-fields">
-            <h4 class="text-xs font-semibold text-kitsuden-text-dim mb-1.5">
-              {t("approvals.fieldsTitle")}
-            </h4>
-            {#if diff.currentUnavailable !== undefined}
-              <p class="text-xs text-kitsuden-amber mb-1.5">
-                {t("approvals.diffUnavailable", { v: String(diff.currentUnavailable) })}
-              </p>
-            {/if}
-            {#if diff.fields.length === 0}
-              <p class="text-xs text-kitsuden-subtle">{t("approvals.noChanges")}</p>
-            {:else}
-              {#if choosing}
-                <p class="text-[11px] text-kitsuden-subtle mb-1.5">{t("approvals.fieldsHint")}</p>
+          <!-- The ledger: one row per field, accepted or not, with its evidence. -->
+          {#if diff}
+            {@const choosing = pending && s.canDecide}
+            <div data-testid="proposal-fields">
+              <h3 class="inbox-h">{t("approvals.fieldsTitle")}</h3>
+              {#if diff.currentUnavailable !== undefined}
+                <p class="inbox-warning">
+                  {t("approvals.diffUnavailable", { v: String(diff.currentUnavailable) })}
+                </p>
               {/if}
-              <div class="overflow-x-auto border border-kitsuden-border rounded-sm">
-                <table class="w-full text-xs">
-                  <thead class="text-kitsuden-subtle">
-                    <tr>
-                      <th class="text-left px-2 py-1"
-                        >{choosing ? t("approvals.fieldAccept") : t("approvals.fieldDecision")}</th
-                      >
-                      <th class="text-left px-2 py-1">{t("approvals.field")}</th>
-                      <th class="text-left px-2 py-1">{t("approvals.before")}</th>
-                      <th class="text-left px-2 py-1">{t("approvals.after")}</th>
-                      <th class="text-left px-2 py-1">{t("approvals.evidence")}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-kitsuden-border/70">
+              {#if diff.fields.length === 0}
+                <p class="inbox-dim">{t("approvals.noChanges")}</p>
+              {:else}
+                {#if choosing}<p class="inbox-dim">{t("approvals.fieldsHint")}</p>{/if}
+                <Table density="compact">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>
+                        {choosing ? t("approvals.fieldAccept") : t("approvals.fieldDecision")}
+                      </TableHead>
+                      <TableHead>{t("approvals.field")}</TableHead>
+                      <TableHead>{t("approvals.before")}</TableHead>
+                      <TableHead>{t("approvals.after")}</TableHead>
+                      <TableHead>{t("approvals.evidence")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {#each diff.fields as f (f.field)}
                       {@const decided = decisionOf(s, f.field)}
-                      <tr data-testid="field-row" data-field={f.field}>
-                        <td class="px-2 py-1 align-top">
-                          {#if choosing && fieldChoice[f.field]}
-                            <input
-                              type="checkbox"
-                              bind:checked={fieldChoice[f.field]!.accept}
-                              aria-label={t("approvals.fieldAcceptAria", { field: f.field })}
-                              data-testid="field-accept"
-                            />
-                          {:else if decided}
-                            <span
-                              class="text-[11px] px-1.5 py-0.5 rounded {decided.decision ===
-                              'accept'
-                                ? 'bg-kitsuden-green/15 text-kitsuden-green'
-                                : 'bg-kitsuden-muted/40 text-kitsuden-text'}"
-                            >
-                              {decided.decision === "accept"
-                                ? decided.edited
-                                  ? t("approvals.fieldEdited")
-                                  : t("approvals.fieldAccepted")
-                                : t("approvals.fieldRejected")}
-                            </span>
-                          {:else}
-                            <span class="text-kitsuden-subtle">—</span>
-                          {/if}
-                        </td>
-                        <td class="px-2 py-1 text-kitsuden-text align-top">
+                      <TableRow>
+                        <TableCell>
+                          <span data-testid="field-row" data-field={f.field}>
+                            {#if choosing && fieldChoice[f.field]}
+                              <Checkbox
+                                bind:checked={fieldChoice[f.field]!.accept}
+                                ariaLabel={t("approvals.fieldAcceptAria", { field: f.field })}
+                                data-testid="field-accept"
+                              />
+                            {:else if decided}
+                              <Badge
+                                variant={decided.decision === "accept" ? "success" : "default"}
+                                size="sm"
+                              >
+                                {decided.decision === "accept"
+                                  ? decided.edited
+                                    ? t("approvals.fieldEdited")
+                                    : t("approvals.fieldAccepted")
+                                  : t("approvals.fieldRejected")}
+                              </Badge>
+                            {:else}
+                              <span class="inbox-dim">—</span>
+                            {/if}
+                          </span>
+                        </TableCell>
+                        <TableCell>
                           <code>{f.field}</code>
                           {#if f.change === "remove"}
-                            <span class="ml-1 text-xs text-kitsuden-danger"
-                              >{t("approvals.fieldRemoved")}</span
-                            >
+                            <Badge variant="error" size="sm">{t("approvals.fieldRemoved")}</Badge>
                           {:else if f.change === "add"}
-                            <span class="ml-1 text-xs text-kitsuden-green"
-                              >{t("approvals.fieldAdded")}</span
-                            >
+                            <Badge variant="success" size="sm">{t("approvals.fieldAdded")}</Badge>
                           {/if}
-                        </td>
-                        <td class="px-2 py-1 align-top"
-                          ><pre class="whitespace-pre-wrap break-all text-kitsuden-danger">{json(
-                              f.before
-                            )}</pre></td
-                        >
-                        <td class="px-2 py-1 align-top">
-                          <pre class="whitespace-pre-wrap break-all text-kitsuden-green">{json(
-                              f.after
-                            )}</pre>
+                        </TableCell>
+                        <TableCell><pre class="inbox-value">{json(f.before)}</pre></TableCell>
+                        <TableCell>
+                          <pre class="inbox-value">{json(f.after)}</pre>
                           {#if choosing && fieldChoice[f.field]?.accept}
-                            <input
-                              type="text"
+                            <Input
                               bind:value={fieldChoice[f.field]!.value}
                               placeholder={t("approvals.fieldNewValue")}
                               aria-label={t("approvals.fieldNewValueAria", { field: f.field })}
-                              class="mt-1 w-full px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
                               data-testid="field-value"
                             />
                           {/if}
-                        </td>
-                        <td class="px-2 py-1 align-top text-kitsuden-text-dim">
+                        </TableCell>
+                        <TableCell>
                           {#each evidenceOf(s, f.field) as e}
-                            <div class="mb-1" data-testid="field-evidence">
+                            <div class="inbox-evidence" data-testid="field-evidence">
                               {#if isUrl(e.source)}
                                 <a
                                   href={e.source}
                                   target="_blank"
-                                  rel="noopener noreferrer nofollow"
-                                  class="text-kitsuden-accent hover:underline break-all"
-                                  >{e.source}</a
+                                  rel="noopener noreferrer nofollow">{e.source}</a
                                 >
                               {:else}
-                                <code class="break-all">{e.source}</code>
+                                <code>{e.source}</code>
                               {/if}
-                              {#if e.quote}
-                                <p class="italic text-kitsuden-text">“{e.quote}”</p>
-                              {/if}
-                              <p class="text-xs text-kitsuden-subtle">
+                              {#if e.quote}<p class="inbox-quote">“{e.quote}”</p>{/if}
+                              <p class="inbox-dim">
                                 {#if e.confidence !== null}{t("approvals.evidenceConfidence", {
                                     n: String(Math.round(e.confidence * 100)),
                                   })}{/if}
@@ -602,299 +728,386 @@
                               </p>
                             </div>
                           {:else}
-                            <span class="text-kitsuden-subtle">{t("approvals.noEvidence")}</span>
+                            <span class="inbox-dim">{t("approvals.noEvidence")}</span>
                           {/each}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     {/each}
-                  </tbody>
-                </table>
-              </div>
-            {/if}
-          </div>
-        {/if}
+                  </TableBody>
+                </Table>
+              {/if}
+            </div>
+          {/if}
 
-        <div data-testid="proposal-diff">
-          <h4 class="text-xs font-semibold text-kitsuden-text-dim mb-1.5">{t("approvals.diff")}</h4>
-          {#if !s.diff}
-            <p class="text-xs text-kitsuden-subtle">{t("approvals.noDiff")}</p>
-          {:else}
-            {#if s.diff.currentUnavailable !== undefined}
-              <p class="text-xs text-kitsuden-amber mb-1.5">
-                {t("approvals.diffUnavailable", { v: String(s.diff.currentUnavailable) })}
-              </p>
-            {/if}
-            {#if s.diff.changes}
-              {#if s.diff.changes.length === 0}
-                <p class="text-xs text-kitsuden-subtle">{t("approvals.noChanges")}</p>
-              {:else}
-                <div class="overflow-x-auto border border-kitsuden-border rounded-sm">
-                  <table class="w-full text-xs">
-                    <thead class="text-kitsuden-subtle">
-                      <tr>
-                        <th class="text-left px-2 py-1">{t("approvals.field")}</th>
-                        <th class="text-left px-2 py-1">{t("approvals.before")}</th>
-                        <th class="text-left px-2 py-1">{t("approvals.after")}</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-kitsuden-border/70">
-                      {#each s.diff.changes as change}
-                        <tr>
-                          <td class="px-2 py-1 text-kitsuden-text align-top"
-                            ><code>{change.field}</code></td
-                          >
-                          <td class="px-2 py-1 align-top"
-                            ><pre class="whitespace-pre-wrap break-all text-kitsuden-danger">{json(
-                                change.before
-                              )}</pre></td
-                          >
-                          <td class="px-2 py-1 align-top"
-                            ><pre class="whitespace-pre-wrap break-all text-kitsuden-green">{json(
-                                change.after
-                              )}</pre></td
-                          >
-                        </tr>
-                      {/each}
-                    </tbody>
-                  </table>
+          <!-- What the card's own DiffView could not say. -->
+          <div data-testid="proposal-diff">
+            {#if !s.diff}
+              <p class="inbox-dim">{t("approvals.noDiff")}</p>
+            {:else}
+              {#if s.diff.currentUnavailable !== undefined}
+                <p class="inbox-warning">
+                  {t("approvals.diffUnavailable", { v: String(s.diff.currentUnavailable) })}
+                </p>
+              {/if}
+              {#if s.diff.changes && s.diff.changes.length === 0}
+                <p class="inbox-dim">{t("approvals.noChanges")}</p>
+              {:else if s.diff.kind === "promotion"}
+                <div class="inbox-promotion" data-testid="proposal-promotion">
+                  <p>
+                    {t("approvals.promotionSummary", {
+                      action: s.diff.target?.slug ?? "—",
+                      version: String(s.diff.versionNumber ?? "?"),
+                      passed: String(s.diff.tests?.passed ?? 0),
+                      total: String(s.diff.tests?.total ?? 0),
+                      scan: s.diff.scan?.passed ? t("promotion.scanOk") : t("promotion.scanFail"),
+                    })}
+                  </p>
+                  <ul>
+                    {#each s.diff.decision?.reasons ?? [] as m}<li>
+                        {t(`promotion.reason_${m}`)}
+                      </li>{/each}
+                  </ul>
+                  <a href="/approvals?tab=promotion&version={s.diff.versionId}"
+                    >{t("approvals.openPromotion")}</a
+                  >
                 </div>
               {/if}
-            {:else if s.diff.kind === "delete" && s.diff.current != null}
-              <p class="text-xs text-kitsuden-text-dim mb-1">{t("approvals.current")}</p>
-              <pre
-                class="text-xs bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all text-kitsuden-danger">{json(
-                  s.diff.current
-                )}</pre>
-            {:else if s.diff.kind === "promotion"}
-              <div class="text-xs text-kitsuden-text space-y-1" data-testid="proposal-promotion">
-                <p>
-                  {t("approvals.promotionSummary", {
-                    action: s.diff.target?.slug ?? "—",
-                    version: String(s.diff.versionNumber ?? "?"),
-                    passed: String(s.diff.tests?.passed ?? 0),
-                    total: String(s.diff.tests?.total ?? 0),
-                    scan: s.diff.scan?.passed ? t("promotion.scanOk") : t("promotion.scanFail"),
-                  })}
-                </p>
-                <ul class="list-disc ml-4 text-kitsuden-text-dim">
-                  {#each s.diff.decision?.reasons ?? [] as m}<li>
-                      {t(`promotion.reason_${m}`)}
-                    </li>{/each}
-                </ul>
-                <a
-                  href="/approvals?tab=promotion&version={s.diff.versionId}"
-                  class="text-kitsuden-accent hover:underline">{t("approvals.openPromotion")}</a
-                >
-              </div>
-            {:else if s.diff.kind === "tool"}
-              <p class="text-xs text-kitsuden-text-dim mb-1">{t("approvals.arguments")}</p>
-              <pre
-                class="text-xs bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all">{json(
-                  s.diff.arguments
-                )}</pre>
-            {:else}
-              <p class="text-xs text-kitsuden-text-dim mb-1">{t("approvals.proposed")}</p>
-              <pre
-                class="text-xs bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all text-kitsuden-green">{json(
-                  s.diff.proposed
-                )}</pre>
             {/if}
-          {/if}
-        </div>
+          </div>
 
-        <details>
-          <summary class="text-xs text-kitsuden-text-dim cursor-pointer"
-            >{t("approvals.body")}</summary
-          >
-          <pre
-            class="mt-1.5 text-xs bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all">{json(
-              s.body
-            ) || "—"}</pre>
-        </details>
+          <details class="inbox-body">
+            <summary>{t("approvals.body")}</summary>
+            <pre class="inbox-pre">{json(s.body) || "—"}</pre>
+          </details>
 
-        <!-- Decision -->
-        {#if s.status === "pending"}
-          {#if s.canDecide}
-            <div class="space-y-2 border-t border-kitsuden-border pt-3">
-              <label for="comment-input" class="block text-xs text-kitsuden-text-dim"
-                >{t("approvals.comment")}</label
-              >
-              <textarea
-                id="comment-input"
-                bind:value={comment}
-                rows={2}
-                placeholder={t("approvals.commentPlaceholder")}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text resize-none"
-              ></textarea>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label for="review-at" class="block text-xs text-kitsuden-text-dim"
-                    >{t("approvals.reviewAt")}</label
-                  >
-                  <input
-                    id="review-at"
-                    type="datetime-local"
-                    bind:value={reviewAt}
-                    class="w-full px-2 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
-                    data-testid="review-at"
-                  />
-                </div>
-                <div>
-                  <label for="review-note" class="block text-xs text-kitsuden-text-dim"
-                    >{t("approvals.reviewNote")}</label
-                  >
-                  <input
-                    id="review-note"
-                    type="text"
-                    bind:value={reviewNote}
-                    placeholder={t("approvals.reviewNotePlaceholder")}
-                    class="w-full px-2 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
-                  />
-                </div>
-              </div>
-              <div class="flex justify-end gap-2">
-                <Button
-                  variant="secondary"
-                  loading={deciding === "reject"}
-                  disabled={!!deciding}
-                  onclick={() => decide("reject")}
-                >
-                  <X size={14} class="mr-1" />{t("approvals.reject")}
-                </Button>
-                <Button
-                  variant="primary"
-                  loading={deciding === "approve"}
-                  disabled={!!deciding}
-                  onclick={() => decide("approve")}
-                >
-                  <Check size={14} class="mr-1" />{t("approvals.approve")}
-                </Button>
-              </div>
-            </div>
-          {:else}
-            <!-- They cannot approve it (they could not do it themselves), but rejecting executes nothing. -->
-            <div class="space-y-2 border-t border-kitsuden-border pt-3">
-              <p class="text-xs text-kitsuden-amber" data-testid="cannot-decide">
+          <!-- The decision's inputs (the buttons are the card's). -->
+          {#if pending}
+            {#if !s.canDecide}
+              <!-- They cannot approve it (they could not do it themselves), but rejecting executes nothing. -->
+              <p class="inbox-warning" data-testid="cannot-decide">
                 {t("approvals.cannotDecide", {
                   reason: s.cannotDecideReason ? t(`approvals.why_${s.cannotDecideReason}`) : "",
                 })}
               </p>
-              <label for="comment-input" class="block text-xs text-kitsuden-text-dim"
-                >{t("approvals.comment")}</label
-              >
-              <textarea
-                id="comment-input"
-                bind:value={comment}
-                rows={2}
-                placeholder={t("approvals.commentPlaceholder")}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text resize-none"
-              ></textarea>
-              <div class="flex justify-end">
-                <Button
-                  variant="secondary"
-                  loading={deciding === "reject"}
-                  disabled={!!deciding}
-                  onclick={() => decide("reject")}
-                >
-                  <X size={14} class="mr-1" />{t("approvals.reject")}
-                </Button>
-              </div>
-            </div>
-          {/if}
-        {:else}
-          <div
-            class="border-t border-kitsuden-border pt-3 space-y-2 text-xs"
-            data-testid="proposal-decision"
-          >
-            {#if s.decidedBy}
-              <p class="text-kitsuden-text-dim">
-                {t("approvals.decidedBy", {
-                  name: s.decidedByName ?? s.decidedBy,
-                  date: date(s.decidedAt),
-                })}
-              </p>
             {/if}
-            {#if s.comment}
-              <p class="text-kitsuden-text">
-                {t("approvals.commentShown", { comment: s.comment })}
-              </p>
-            {/if}
-            {#if s.result}
-              <div>
-                <p class="text-kitsuden-text-dim mb-1">
-                  {t("approvals.result")}
-                  {#if s.result.status !== null}
-                    <code class="ml-1 text-kitsuden-text" data-testid="result-status"
-                      >{s.result.status}</code
-                    >
-                  {/if}
-                </p>
-                {#if s.result.error}
-                  <p class="text-kitsuden-danger mb-1">
-                    {t("approvals.resultError", { error: s.result.error })}
-                  </p>
-                {/if}
-                <pre
-                  class="bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-56 overflow-auto whitespace-pre-wrap break-all">{json(
-                    s.result.body
-                  ) || "—"}</pre>
-              </div>
-            {/if}
-            {#if s.status === "executed" || s.status === "failed" || s.status === "rejected"}
-              <div
-                class="border-t border-kitsuden-border pt-2 space-y-2"
-                data-testid="proposal-reviews"
-              >
-                <h4 class="text-xs font-semibold text-kitsuden-text-dim">
-                  {t("approvals.reviewsTitle")}
-                </h4>
-                {#each s.reviews ?? [] as r (r.id)}
-                  <p class="text-kitsuden-text">
-                    {t(`approvals.reviewStatus_${r.status}`)} · {date(r.dueAt)}{#if r.note}
-                      · {r.note}{/if}
-                  </p>
-                {:else}
-                  <p class="text-kitsuden-subtle">{t("approvals.noReviews")}</p>
-                {/each}
-                <div class="flex flex-wrap items-end gap-2">
-                  <div>
-                    <label for="later-at" class="block text-kitsuden-text-dim"
-                      >{t("approvals.reviewAt")}</label
-                    >
-                    <input
-                      id="later-at"
-                      type="datetime-local"
-                      bind:value={reviewAt}
-                      class="px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
-                    />
-                  </div>
-                  <div class="flex-1 min-w-40">
-                    <label for="later-note" class="block text-kitsuden-text-dim"
-                      >{t("approvals.reviewNote")}</label
-                    >
-                    <input
-                      id="later-note"
-                      type="text"
+            <div class="inbox-decision">
+              <Field label={t("approvals.comment")}>
+                <Textarea
+                  bind:value={comment}
+                  rows={2}
+                  placeholder={t("approvals.commentPlaceholder")}
+                />
+              </Field>
+              {#if s.canDecide}
+                <div class="inbox-pair">
+                  <Field label={t("approvals.reviewAt")}>
+                    <Input type="datetime-local" bind:value={reviewAt} data-testid="review-at" />
+                  </Field>
+                  <Field label={t("approvals.reviewNote")}>
+                    <Input
                       bind:value={reviewNote}
                       placeholder={t("approvals.reviewNotePlaceholder")}
-                      class="w-full px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
                     />
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    loading={scheduling}
-                    disabled={!reviewAt || scheduling}
-                    onclick={scheduleLater}
-                  >
-                    {t("approvals.scheduleReview")}
-                  </Button>
+                  </Field>
                 </div>
-              </div>
-            {/if}
-          </div>
-        {/if}
-      </div>
+              {/if}
+            </div>
+          {:else}
+            <div class="inbox-decided" data-testid="proposal-decision">
+              {#if s.decidedBy}
+                <p class="inbox-dim">
+                  {t("approvals.decidedBy", {
+                    name: s.decidedByName ?? s.decidedBy,
+                    date: date(s.decidedAt),
+                  })}
+                </p>
+              {/if}
+              {#if s.comment}
+                <p>{t("approvals.commentShown", { comment: s.comment })}</p>
+              {/if}
+              {#if s.result}
+                <div>
+                  <p class="inbox-dim">
+                    {t("approvals.result")}
+                    {#if s.result.status !== null}
+                      <code data-testid="result-status">{s.result.status}</code>
+                    {/if}
+                  </p>
+                  {#if s.result.error}
+                    <p class="inbox-danger">
+                      {t("approvals.resultError", { error: s.result.error })}
+                    </p>
+                  {/if}
+                  <pre class="inbox-pre">{json(s.result.body) || "—"}</pre>
+                </div>
+              {/if}
+              {#if s.status === "executed" || s.status === "failed" || s.status === "rejected"}
+                <div class="inbox-reviews" data-testid="proposal-reviews">
+                  <h3 class="inbox-h">{t("approvals.reviewsTitle")}</h3>
+                  {#each s.reviews ?? [] as r (r.id)}
+                    <p>
+                      {t(`approvals.reviewStatus_${r.status}`)} · {date(r.dueAt)}{#if r.note}
+                        · {r.note}{/if}
+                    </p>
+                  {:else}
+                    <p class="inbox-dim">{t("approvals.noReviews")}</p>
+                  {/each}
+                  <div class="inbox-pair inbox-pair--end">
+                    <Field label={t("approvals.reviewAt")}>
+                      <Input type="datetime-local" bind:value={reviewAt} />
+                    </Field>
+                    <Field label={t("approvals.reviewNote")}>
+                      <Input
+                        bind:value={reviewNote}
+                        placeholder={t("approvals.reviewNotePlaceholder")}
+                      />
+                    </Field>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={scheduling}
+                      disabled={!reviewAt || scheduling}
+                      onclick={scheduleLater}
+                    >
+                      {t("approvals.scheduleReview")}
+                    </Button>
+                  </div>
+                </div>
+              {/if}
+            </div>
+          {/if}
+        </ApprovalCard>
+      {/key}
     {/if}
   </section>
 </div>
+
+<style>
+  .inbox {
+    display: grid;
+    grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+    min-width: 0;
+  }
+  .inbox-list,
+  .inbox-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+  .inbox-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.5rem;
+  }
+  .inbox-count {
+    margin-left: auto;
+    padding-bottom: 0.375rem;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .inbox-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .inbox-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid rgb(var(--ta-border));
+    border-radius: var(--ta-radius);
+    overflow: hidden;
+  }
+  .inbox-row {
+    display: flex;
+    align-items: stretch;
+    border-top: 1px solid rgb(var(--ta-border) / 0.7);
+  }
+  .inbox-row:first-child {
+    border-top: none;
+  }
+  .inbox-row--current {
+    background: rgb(var(--ta-accent) / 0.1);
+  }
+  .inbox-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 2.25rem;
+  }
+  .inbox-open {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    padding: 0.625rem 0.75rem 0.625rem 0;
+    color: inherit;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .inbox-open:hover {
+    background: rgb(var(--ta-elevated) / 0.4);
+  }
+  .inbox-open:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: -2px;
+  }
+  .inbox-row-top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .inbox-target {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .inbox-row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.75rem;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .inbox-status {
+    margin: 0;
+  }
+  .inbox-h {
+    margin: 0 0 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgb(var(--ta-text-dim));
+  }
+  .inbox-dim {
+    margin: 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .inbox-warning {
+    margin: 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-warning));
+  }
+  .inbox-danger {
+    margin: 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-danger));
+  }
+  .inbox-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.75rem;
+  }
+  .inbox-files li {
+    width: 8rem;
+  }
+  .inbox-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 8rem;
+    height: 8rem;
+    overflow: hidden;
+    background: rgb(var(--ta-bg));
+    border: 1px solid rgb(var(--ta-border));
+    border-radius: var(--ta-radius-sm);
+  }
+  .inbox-thumb img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .inbox-file-name {
+    margin: 0.25rem 0 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .inbox-value,
+  .inbox-pre {
+    margin: 0;
+    font-family: var(--ta-font-mono);
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .inbox-pre {
+    max-height: 14rem;
+    margin-top: 0.375rem;
+    padding: 0.5rem;
+    overflow: auto;
+    background: rgb(var(--ta-bg));
+    border: 1px solid rgb(var(--ta-border));
+    border-radius: var(--ta-radius-sm);
+  }
+  .inbox-evidence {
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    word-break: break-all;
+  }
+  .inbox-evidence a,
+  .inbox-promotion a {
+    color: rgb(var(--ta-accent));
+  }
+  .inbox-quote {
+    margin: 0;
+    font-style: italic;
+  }
+  .inbox-promotion {
+    font-size: 0.8125rem;
+  }
+  .inbox-promotion ul {
+    margin: 0.25rem 0;
+    padding-left: 1rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .inbox-body summary {
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+    cursor: pointer;
+  }
+  .inbox-decision,
+  .inbox-decided,
+  .inbox-reviews {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    font-size: 0.8125rem;
+    border-top: 1px solid rgb(var(--ta-border));
+  }
+  .inbox-decided p,
+  .inbox-reviews p {
+    margin: 0;
+  }
+  .inbox-pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 0.5rem;
+  }
+  .inbox-pair--end {
+    align-items: end;
+  }
+  @media (max-width: 900px) {
+    .inbox {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

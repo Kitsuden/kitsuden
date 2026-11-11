@@ -4,12 +4,11 @@
   The API is GET /api/approvals/reviews; see docs/agents/ledger.md.
 -->
 <script lang="ts">
+  import { Button, Skeleton } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import { RefreshCw, CalendarClock } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-
-  import Button from "$lib/components/ui/Button.svelte";
+  import { toast } from "$lib/tallao";
   import { closeReview, listReviews } from "$lib/services/approvals";
   import type { LedgerReview } from "$lib/types/approvals";
 
@@ -76,9 +75,7 @@
   </div>
 
   {#if loading}
-    <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <Skeleton lines={3} />
   {:else if error}
     <div
       class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"

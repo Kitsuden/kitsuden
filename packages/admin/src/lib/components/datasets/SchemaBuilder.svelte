@@ -438,7 +438,7 @@
   <div class="flex-1 flex flex-col min-w-0">
     <!-- Dataset header -->
     <div class="card p-4 mb-4">
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="name" class="label mb-1.5 block">{tr("schemaBuilder.datasetName")}</label>
           <input
@@ -483,7 +483,7 @@
     </div>
 
     <!-- ═══ Tab Navigation ═══ -->
-    <div class="flex items-center gap-1 mb-3">
+    <div class="flex flex-wrap items-center gap-1 mb-3">
       {#each tabs as tab}
         <button
           onclick={() => (activeTab = tab.id)}
@@ -892,13 +892,13 @@
     {/if}
 
     <!-- Bottom action bar -->
-    <div class="mt-4 flex items-center justify-between">
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
       {#if validationErrors.length > 0}
         <p class="text-xs text-kitsuden-accent-2">{validationErrors[0]}</p>
       {:else}
         <div></div>
       {/if}
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
         <button onclick={onCancel} class="btn-ghost">{tr("common.cancel")}</button>
         <button onclick={save} disabled={!canSave} class="btn-primary">
           <Save class="w-4 h-4" />

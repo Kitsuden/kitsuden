@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { toast } from "svelte-sonner";
+  import { toast } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import { Castle, Check, Plus } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -136,24 +136,7 @@
   }
 </script>
 
-<div class="space-y-6 animate-fade-in">
-  <!-- Header -->
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
-        <div
-          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-purple/20 to-kitsuden-accent/20 border border-kitsuden-purple/20 flex items-center justify-center"
-        >
-          <Castle class="w-5 h-5 text-kitsuden-purple" />
-        </div>
-        {t("grimoiresView.grimoires")}
-      </h1>
-      <p class="text-sm text-kitsuden-subtle mt-1">
-        {t("grimoiresView.manageBusinessEcosystemsThatGroup")}
-      </p>
-    </div>
-  </div>
-
+<div class="space-y-6">
   <!-- Loading State -->
   {#if loading}
     <div class="card p-12 text-center">

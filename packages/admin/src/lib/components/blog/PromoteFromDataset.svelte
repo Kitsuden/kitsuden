@@ -26,7 +26,7 @@
   import { onDestroy } from "svelte";
 
   import { api } from "$lib/api";
-  import Modal from "$lib/components/ui/Modal.svelte";
+  import { Dialog, Button } from "$lib/tallao";
 
   // ─── Types ──────────────────────────────────────────
   interface Dataset {
@@ -522,7 +522,7 @@
   }
 </script>
 
-<Modal
+<Dialog
   open={isOpen}
   title={step === "datasets"
     ? tr("promoteFromDataset.createPostFromDataset")
@@ -535,9 +535,9 @@
     <!-- Navigation -->
     <div class="flex items-center gap-2 px-4 py-3 border-b border-kitsuden-border">
       {#if step !== "datasets"}
-        <button onclick={goBack} class="btn-ghost btn-sm" disabled={loading}>
+        <Button onclick={goBack} variant="ghost" size="sm" disabled={loading}>
           {tr("promoteFromDataset.back")}
-        </button>
+        </Button>
       {/if}
 
       <div class="flex items-center gap-2 text-sm text-kitsuden-subtle">
@@ -736,23 +736,25 @@
           <div
             class="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-kitsuden-border"
           >
-            <button
+            <Button
               onclick={() => goToPage(currentPage - 1)}
               disabled={!hasPrevPage || loading}
-              class="btn-ghost btn-sm disabled:opacity-50"
+              variant="ghost"
+              size="sm"
             >
               {tr("promoteFromDataset.previous")}
-            </button>
+            </Button>
             <span class="text-sm text-kitsuden-subtle px-3">
               {tr("promoteFromDataset.pageOf", { currentPage, totalPages })}
             </span>
-            <button
+            <Button
               onclick={() => goToPage(currentPage + 1)}
               disabled={!hasNextPage || loading}
-              class="btn-ghost btn-sm disabled:opacity-50"
+              variant="ghost"
+              size="sm"
             >
               {tr("common.next")}
-            </button>
+            </Button>
           </div>
         {/if}
       {:else if step === "preview" && selectedEntry}
@@ -842,11 +844,11 @@
 
     <!-- Footer Actions -->
     <div class="flex justify-end gap-2 p-4 border-t border-kitsuden-border">
-      <button onclick={handleClose} class="btn-ghost" disabled={loading}>
+      <Button onclick={handleClose} variant="ghost" disabled={loading}>
         {tr("common.cancel")}
-      </button>
+      </Button>
       {#if step === "preview"}
-        <button onclick={handleConfirm} class="btn-primary gap-1.5" disabled={loading}>
+        <Button onclick={handleConfirm} disabled={loading}>
           {#if loading}
             <Loader2 class="w-4 h-4 animate-spin" />
             {tr("promoteFromDataset.processing")}
@@ -854,8 +856,8 @@
             <Check class="w-4 h-4" />
             {tr("promoteFromDataset.createPost")}
           {/if}
-        </button>
+        </Button>
       {/if}
     </div>
   </div>
-</Modal>
+</Dialog>

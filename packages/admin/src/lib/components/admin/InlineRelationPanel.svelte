@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import { Plus, RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -231,32 +232,32 @@
           </div>
         {:else}
           <div class="overflow-x-auto">
-            <table class="w-full text-xs">
-              <thead>
-                <tr class="border-b border-kitsuden-border bg-kitsuden-bg/50">
+            <Table class="w-full text-xs">
+              <TableHeader>
+                <TableRow class="border-b border-kitsuden-border bg-kitsuden-bg/50">
                   {#each cols as col}
-                    <th
+                    <TableHead
                       class="px-3 py-2 text-left text-kitsuden-subtle font-medium uppercase tracking-wider"
                     >
                       {humanize(col)}
-                    </th>
+                    </TableHead>
                   {/each}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {#each data as record}
-                  <tr
+                  <TableRow
                     class="border-b border-kitsuden-border/50 hover:bg-kitsuden-accent/2 transition-colors"
                   >
                     {#each cols as col}
-                      <td class="px-3 py-2 text-kitsuden-text-dim">
+                      <TableCell class="px-3 py-2 text-kitsuden-text-dim">
                         {formatCell(record[col])}
-                      </td>
+                      </TableCell>
                     {/each}
-                  </tr>
+                  </TableRow>
                 {/each}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         {/if}
       </div>

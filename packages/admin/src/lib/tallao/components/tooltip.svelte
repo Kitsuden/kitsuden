@@ -93,6 +93,15 @@
 </div>
 
 <style>
+  .ta-tooltip { animation: ta-tooltip-enter var(--ta-duration-fast, 120ms) ease-out; }
+  @keyframes ta-tooltip-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ta-tooltip { animation: none; }
+  }
+
   .ta-tooltip {
     position: fixed;
     inset: auto;

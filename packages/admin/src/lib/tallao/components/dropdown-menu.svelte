@@ -24,6 +24,7 @@
   import { pushLayer } from "../internal/layers";
   import { focusItem, menuKeyboard, provideMenu } from "../internal/menu";
   import { anchor, type Placement } from "../internal/position";
+  import { scaleIn } from "../motion";
 
   import type { TriggerProps } from "./popover.svelte";
 
@@ -122,6 +123,7 @@
     popover="manual"
     class={cn("ta-menu", className)}
     onkeydown={(e) => keyboard(e, menuEl)}
+    out:scaleIn={{ duration: "fast", from: 0.98 }}
   >
     {@render children?.()}
   </div>
@@ -145,11 +147,11 @@
     border-radius: var(--ta-radius);
     box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.45);
     font: inherit;
-    animation: ta-menu-enter 0.1s ease-out;
+    animation: ta-menu-enter var(--ta-duration-fast, 120ms) var(--ta-ease-out, ease-out);
   }
 
   @keyframes ta-menu-enter {
-    from { opacity: 0; transform: translateY(-2px); }
+    from { opacity: 0; transform: translateY(-2px) scale(0.98); }
     to { opacity: 1; transform: none; }
   }
 

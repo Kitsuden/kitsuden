@@ -3,7 +3,6 @@
   import "../style.css";
   import "../assets/main.css";
   import { onMount } from "svelte";
-  import { Toaster } from "svelte-sonner";
 
   import {
     checkSession,
@@ -16,9 +15,10 @@
     mustEnrolTwoFactor,
   } from "$lib/auth.svelte";
   import ConfirmHost from "$lib/components/feedback/ConfirmHost.svelte";
-  import SidebarLayout from "$lib/components/layout/SidebarLayout.svelte";
-  import { es, setLabels } from "$lib/tallao";
-  import { loadTheme, currentTheme } from "$lib/theme.svelte";
+  import AppFrame from "$lib/components/layout/AppFrame.svelte";
+  import ShellSkeleton from "$lib/components/layout/ShellSkeleton.svelte";
+  import { es, setLabels, Toaster } from "$lib/tallao";
+  import { loadTheme } from "$lib/theme.svelte";
   import LoginView from "$views/auth/LoginView.svelte";
   import SetupView from "$views/auth/SetupView.svelte";
   import TwoFactorRequiredView from "$views/auth/TwoFactorRequiredView.svelte";
@@ -38,25 +38,17 @@
   const mustEnrol = $derived(mustEnrolTwoFactor());
   let loading = $state(true);
 
+  /**
+   * Boot: the three questions (is the system set up, who is signed in, which theme and
+   * sign-in options) leave together, and the frame is drawn with skeletons meanwhile. They
+   * used to run one after another behind a full-screen spinner.
+   */
   onMount(async () => {
-    await loadTheme();
-    await checkInit();
-
-    // Only check session if the system is already initialized
-    if (isInitialized()) {
-      // The sign-in options tell whether admins must have a second factor.
-      await Promise.all([checkSession(), loadSocialProviders()]);
-    }
-
+    await Promise.all([loadTheme(), checkInit(), checkSession(), loadSocialProviders()]);
     loading = false;
   });
 </script>
 
-<!--
-  Container for notices. A hundred toast() calls spread across the
-  panel rendered nothing because nobody mounted <Toaster />: saving, deleting or
-  failing gave no signal.
--->
 <svelte:head>
   <title>Kitsuden</title>
 </svelte:head>
@@ -64,34 +56,19 @@
 <!-- The one confirmation dialog every screen asks through ($lib/confirm.svelte.ts). -->
 <ConfirmHost />
 
-<Toaster theme={currentTheme() === "latte" ? "light" : "dark"} richColors position="bottom-right" />
+<!-- The one place notices appear: every screen calls tallao's `toast()`. -->
+<Toaster position="top-center" label={t("shell.notifications")} />
 
-{#if loading}
-  <div class="min-h-screen flex items-center justify-center bg-kitsuden-bg">
-    <div class="flex flex-col items-center gap-4">
-      <div
-        class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-      ></div>
-      <p class="text-kitsuden-subtle text-sm">{t("common.loading")}</p>
-    </div>
-  </div>
+{#if loading || (!checked && initialized)}
+  <ShellSkeleton />
 {:else if !initialized}
   <SetupView />
 {:else if loggedIn && mustEnrol}
   <TwoFactorRequiredView />
 {:else if loggedIn}
-  <SidebarLayout>
+  <AppFrame>
     {@render children()}
-  </SidebarLayout>
-{:else if checked}
-  <LoginView />
+  </AppFrame>
 {:else}
-  <div class="min-h-screen flex items-center justify-center bg-kitsuden-bg">
-    <div class="flex flex-col items-center gap-4">
-      <div
-        class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-      ></div>
-      <p class="text-kitsuden-subtle text-sm">{t("common.loading")}</p>
-    </div>
-  </div>
+  <LoginView />
 {/if}

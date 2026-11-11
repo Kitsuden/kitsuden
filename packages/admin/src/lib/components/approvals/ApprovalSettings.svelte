@@ -6,15 +6,24 @@
   routes. Only an admin changes anything; an editor sees it read-only.
 -->
 <script lang="ts">
+  import {
+    Button,
+    Skeleton,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+  } from "$lib/tallao";
   import { Switch } from "$lib/tallao";
   import { confirmDialog } from "$lib/confirm.svelte";
   import { t, localeFormat } from "$lib/i18n";
   import { Plus, Save, Trash2 } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
+  import { toast } from "$lib/tallao";
 
   import { isAdmin } from "$lib/auth.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
   import {
     getApprovalSettings,
     saveApprovalSettings,
@@ -116,9 +125,7 @@
 
 <div class="space-y-6" data-testid="approvals-settings">
   {#if loading}
-    <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <Skeleton lines={3} />
   {:else if error}
     <div
       class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
@@ -233,14 +240,14 @@
         <p class="text-xs text-kitsuden-subtle">{t("approvals.noAgents")}</p>
       {:else}
         <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <tbody class="divide-y divide-kitsuden-border/70">
+          <Table class="w-full text-sm">
+            <TableBody class="divide-y divide-kitsuden-border/70">
               {#each a.agents as ag (ag.id)}
-                <tr data-testid="agent-mode-row">
-                  <td class="py-1.5 pr-3 text-kitsuden-text min-w-0">
+                <TableRow data-testid="agent-mode-row">
+                  <TableCell class="py-1.5 pr-3 text-kitsuden-text min-w-0">
                     <a href="/agents/{ag.id}?tab=approval" class="hover:underline">{ag.name}</a>
-                  </td>
-                  <td class="py-1.5 w-48">
+                  </TableCell>
+                  <TableCell class="py-1.5 w-48">
                     <select
                       value={ag.mode}
                       disabled={!editable}
@@ -257,11 +264,11 @@
                         <option value={m}>{t(`approvals.mode_${m}`)}</option>
                       {/each}
                     </select>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               {/each}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       {/if}
     </section>
@@ -284,18 +291,18 @@
       <div
         class="overflow-x-auto max-h-96 overflow-y-auto border border-kitsuden-border rounded-sm"
       >
-        <table class="w-full text-xs">
-          <thead class="text-kitsuden-subtle sticky top-0 bg-kitsuden-card">
-            <tr>
-              <th class="text-left px-2 py-1.5">{t("approvals.colOperation")}</th>
-              <th class="text-left px-2 py-1.5">{t("approvals.colDefault")}</th>
-              <th class="text-left px-2 py-1.5">{t("approvals.colSetting")}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-kitsuden-border/70">
+        <Table class="w-full text-xs">
+          <TableHeader class="text-kitsuden-subtle sticky top-0 bg-kitsuden-card">
+            <TableRow>
+              <TableHead class="text-left px-2 py-1.5">{t("approvals.colOperation")}</TableHead>
+              <TableHead class="text-left px-2 py-1.5">{t("approvals.colDefault")}</TableHead>
+              <TableHead class="text-left px-2 py-1.5">{t("approvals.colSetting")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody class="divide-y divide-kitsuden-border/70">
             {#each filteredOperations as o (o.key)}
-              <tr data-testid="operation-row" data-key={o.key}>
-                <td class="px-2 py-1.5 min-w-0">
+              <TableRow data-testid="operation-row" data-key={o.key}>
+                <TableCell class="px-2 py-1.5 min-w-0">
                   <code class="text-kitsuden-text break-all">{o.method} {o.path}</code>
                   <div class="text-kitsuden-subtle break-all">{o.key}</div>
                   {#if o.readOnly && o.method !== "GET"}
@@ -304,15 +311,15 @@
                       data-testid="read-only-post">{t("approvals.readOnlyPost")}</span
                     >
                   {/if}
-                </td>
-                <td
+                </TableCell>
+                <TableCell
                   class="px-2 py-1.5 whitespace-nowrap {o.default
                     ? 'text-kitsuden-amber'
                     : 'text-kitsuden-text-dim'}"
                 >
                   {o.default ? t("approvals.sensitive") : t("approvals.notSensitive")}
-                </td>
-                <td class="px-2 py-1.5 w-44">
+                </TableCell>
+                <TableCell class="px-2 py-1.5 w-44">
                   <select
                     value={valueFor(o.override)}
                     disabled={!editable || saving}
@@ -332,11 +339,11 @@
                     <option value="true">{t("approvals.sensitive")}</option>
                     <option value="false">{t("approvals.notSensitive")}</option>
                   </select>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             {/each}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </section>
 
@@ -347,22 +354,24 @@
         <p class="text-xs text-kitsuden-subtle">{t("approvals.toolsHelp")}</p>
       </div>
       <div class="overflow-x-auto border border-kitsuden-border rounded-sm">
-        <table class="w-full text-xs">
-          <tbody class="divide-y divide-kitsuden-border/70">
+        <Table class="w-full text-xs">
+          <TableBody class="divide-y divide-kitsuden-border/70">
             {#each a.mcpTools as h (h.key)}
-              <tr>
-                <td class="px-2 py-1.5"><code class="text-kitsuden-text">{h.name}</code></td>
-                <td class="px-2 py-1.5 text-kitsuden-subtle"
-                  >{h.write ? t("approvals.writes") : t("approvals.reads")}</td
+              <TableRow>
+                <TableCell class="px-2 py-1.5"
+                  ><code class="text-kitsuden-text">{h.name}</code></TableCell
                 >
-                <td
+                <TableCell class="px-2 py-1.5 text-kitsuden-subtle"
+                  >{h.write ? t("approvals.writes") : t("approvals.reads")}</TableCell
+                >
+                <TableCell
                   class="px-2 py-1.5 whitespace-nowrap {h.default
                     ? 'text-kitsuden-amber'
                     : 'text-kitsuden-text-dim'}"
                 >
                   {h.default ? t("approvals.sensitive") : t("approvals.notSensitive")}
-                </td>
-                <td class="px-2 py-1.5 w-44">
+                </TableCell>
+                <TableCell class="px-2 py-1.5 w-44">
                   <select
                     value={valueFor(h.override)}
                     disabled={!editable || saving}
@@ -382,11 +391,11 @@
                     <option value="true">{t("approvals.sensitive")}</option>
                     <option value="false">{t("approvals.notSensitive")}</option>
                   </select>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             {/each}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </section>
 

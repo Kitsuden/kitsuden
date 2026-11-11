@@ -10,7 +10,8 @@
  * tallao (a Svelte 5 UI kit, MIT, https://github.com/tallao-ui/tallao) is used the shadcn
  * way: components are COPIED into the project, not installed, so the admin owns its copy.
  * `packages/admin/tallao.json` lists the components the admin uses
- * (`{ "components": ["button", "dialog", …] }`). This script copies them, everything they
+ * (`{ "components": ["button", "dialog", …], "modules": ["motion"] }`; a module is one of
+ * tallao's other entry points, imported as `$lib/tallao/<module>`). This script copies them, everything they
  * import from tallao (sibling components such as `./popover.svelte`, the `internal/` helpers,
  * `i18n.ts`, `utils.ts`…) until nothing new appears, and writes `index.ts` files that export
  * only what was copied. The copy lives in `packages/admin/src/lib/tallao/` and is committed,
@@ -45,7 +46,7 @@ if (!existsSync(join(source, "components", "index.ts"))) {
 }
 if (!existsSync(listFile)) fail(`missing ${listFile}`);
 
-const { components } = JSON.parse(readFileSync(listFile, "utf8"));
+const { components, modules = [] } = JSON.parse(readFileSync(listFile, "utf8"));
 if (!Array.isArray(components) || components.length === 0) {
   fail(`${listFile} must have a non-empty "components" array`);
 }
@@ -87,7 +88,13 @@ const withoutComments = (text) =>
 // always go: the admin's root layout calls `setLabels`.
 const files = new Set();
 const packages = new Set();
-const pending = [...components.map((c) => `components/${c}.svelte`), "utils.ts", "i18n.ts"];
+const pending = [
+  ...components.map((c) => `components/${c}.svelte`),
+  // tallao's other entry points (`"motion"` → `motion/index.ts`), with what they import.
+  ...modules.map((m) => `${m}/index.ts`),
+  "utils.ts",
+  "i18n.ts",
+];
 while (pending.length) {
   const file = pending.pop();
   if (files.has(file)) continue;

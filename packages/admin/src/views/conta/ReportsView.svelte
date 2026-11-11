@@ -1,15 +1,23 @@
 <script lang="ts">
   import { t } from "$lib/i18n";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
+  import {
+    toast,
+    Button,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    Input,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+  } from "$lib/tallao";
 
   import { api } from "$lib/api";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Card from "$lib/components/ui/Card.svelte";
-  import CardContent from "$lib/components/ui/CardContent.svelte";
-  import CardHeader from "$lib/components/ui/CardHeader.svelte";
-  import CardTitle from "$lib/components/ui/CardTitle.svelte";
-  import Input from "$lib/components/ui/Input.svelte";
 
   let activeTab = $state<"trial" | "balance" | "pl">("trial");
   let loading = $state(false);
@@ -119,34 +127,43 @@
     </div>
   {:else if activeTab === "trial"}
     <div class="border border-kitsuden-border rounded-lg overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left">
-          <tr
-            ><th class="px-4 py-3 font-medium">{t("reportsView.code")}</th><th
-              class="px-4 py-3 font-medium">{t("reportsView.account")}</th
-            ><th class="px-4 py-3 font-medium text-right">{t("reportsView.debit")}</th><th
-              class="px-4 py-3 font-medium text-right">{t("reportsView.credit")}</th
-            ><th class="px-4 py-3 font-medium text-right">{t("reportsView.balance")}</th></tr
+      <Table class="w-full text-sm">
+        <TableHeader class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left">
+          <TableRow
+            ><TableHead class="px-4 py-3 font-medium">{t("reportsView.code")}</TableHead><TableHead
+              class="px-4 py-3 font-medium">{t("reportsView.account")}</TableHead
+            ><TableHead class="px-4 py-3 font-medium text-right">{t("reportsView.debit")}</TableHead
+            ><TableHead class="px-4 py-3 font-medium text-right"
+              >{t("reportsView.credit")}</TableHead
+            ><TableHead class="px-4 py-3 font-medium text-right"
+              >{t("reportsView.balance")}</TableHead
+            ></TableRow
           >
-        </thead>
-        <tbody class="divide-y divide-kitsuden-border">
+        </TableHeader>
+        <TableBody class="divide-y divide-kitsuden-border">
           {#each trialData as row}
-            <tr class="hover:bg-kitsuden-border/30">
-              <td class="px-4 py-2 font-mono">{row.account.code}</td>
-              <td class="px-4 py-2">{row.account.name}</td>
-              <td class="px-4 py-2 text-right font-mono">{Number(row.totalDebit).toFixed(2)}</td>
-              <td class="px-4 py-2 text-right font-mono">{Number(row.totalCredit).toFixed(2)}</td>
-              <td class="px-4 py-2 text-right font-mono">{Number(row.balance).toFixed(2)}</td>
-            </tr>
+            <TableRow class="hover:bg-kitsuden-border/30">
+              <TableCell class="px-4 py-2 font-mono">{row.account.code}</TableCell>
+              <TableCell class="px-4 py-2">{row.account.name}</TableCell>
+              <TableCell class="px-4 py-2 text-right font-mono"
+                >{Number(row.totalDebit).toFixed(2)}</TableCell
+              >
+              <TableCell class="px-4 py-2 text-right font-mono"
+                >{Number(row.totalCredit).toFixed(2)}</TableCell
+              >
+              <TableCell class="px-4 py-2 text-right font-mono"
+                >{Number(row.balance).toFixed(2)}</TableCell
+              >
+            </TableRow>
           {:else}
-            <tr
-              ><td colspan="5" class="px-4 py-12 text-center text-kitsuden-subtle"
-                >{t("reportsView.noData")}</td
-              ></tr
+            <TableRow
+              ><TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-subtle"
+                >{t("reportsView.noData")}</TableCell
+              ></TableRow
             >
           {/each}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   {:else if activeTab === "balance" && balanceData}
     <div class="grid gap-4 md:grid-cols-3">
@@ -171,32 +188,32 @@
       >
     </div>
     <div class="border border-kitsuden-border rounded-lg overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left"
-          ><tr
-            ><th class="px-4 py-3">{t("reportsView.account")}</th><th class="px-4 py-3 text-right"
-              >{t("reportsView.balance")}</th
-            ></tr
-          ></thead
+      <Table class="w-full text-sm">
+        <TableHeader class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left"
+          ><TableRow
+            ><TableHead class="px-4 py-3">{t("reportsView.account")}</TableHead><TableHead
+              class="px-4 py-3 text-right">{t("reportsView.balance")}</TableHead
+            ></TableRow
+          ></TableHeader
         >
-        <tbody class="divide-y divide-kitsuden-border">
-          {#each balanceData.assets as a}<tr
-              ><td class="px-4 py-2">{a.account.name}</td><td class="px-4 py-2 text-right font-mono"
-                >{Number(a.balance).toFixed(2)}</td
-              ></tr
+        <TableBody class="divide-y divide-kitsuden-border">
+          {#each balanceData.assets as a}<TableRow
+              ><TableCell class="px-4 py-2">{a.account.name}</TableCell><TableCell
+                class="px-4 py-2 text-right font-mono">{Number(a.balance).toFixed(2)}</TableCell
+              ></TableRow
             >{/each}
-          {#each balanceData.liabilities as a}<tr
-              ><td class="px-4 py-2">{a.account.name}</td><td class="px-4 py-2 text-right font-mono"
-                >{Number(a.balance).toFixed(2)}</td
-              ></tr
+          {#each balanceData.liabilities as a}<TableRow
+              ><TableCell class="px-4 py-2">{a.account.name}</TableCell><TableCell
+                class="px-4 py-2 text-right font-mono">{Number(a.balance).toFixed(2)}</TableCell
+              ></TableRow
             >{/each}
-          {#each balanceData.equity as a}<tr
-              ><td class="px-4 py-2">{a.account.name}</td><td class="px-4 py-2 text-right font-mono"
-                >{Number(a.balance).toFixed(2)}</td
-              ></tr
+          {#each balanceData.equity as a}<TableRow
+              ><TableCell class="px-4 py-2">{a.account.name}</TableCell><TableCell
+                class="px-4 py-2 text-right font-mono">{Number(a.balance).toFixed(2)}</TableCell
+              ></TableRow
             >{/each}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   {:else if activeTab === "pl" && plData}
     <div class="grid gap-4 md:grid-cols-3">
@@ -224,27 +241,27 @@
       >
     </div>
     <div class="border border-kitsuden-border rounded-lg overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left"
-          ><tr
-            ><th class="px-4 py-3">{t("reportsView.account")}</th><th class="px-4 py-3 text-right"
-              >{t("reportsView.balance")}</th
-            ></tr
-          ></thead
+      <Table class="w-full text-sm">
+        <TableHeader class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left"
+          ><TableRow
+            ><TableHead class="px-4 py-3">{t("reportsView.account")}</TableHead><TableHead
+              class="px-4 py-3 text-right">{t("reportsView.balance")}</TableHead
+            ></TableRow
+          ></TableHeader
         >
-        <tbody class="divide-y divide-kitsuden-border">
-          {#each plData.revenue as a}<tr
-              ><td class="px-4 py-2">{a.account.name}</td><td class="px-4 py-2 text-right font-mono"
-                >{Number(a.balance).toFixed(2)}</td
-              ></tr
+        <TableBody class="divide-y divide-kitsuden-border">
+          {#each plData.revenue as a}<TableRow
+              ><TableCell class="px-4 py-2">{a.account.name}</TableCell><TableCell
+                class="px-4 py-2 text-right font-mono">{Number(a.balance).toFixed(2)}</TableCell
+              ></TableRow
             >{/each}
-          {#each plData.expenses as a}<tr
-              ><td class="px-4 py-2">{a.account.name}</td><td class="px-4 py-2 text-right font-mono"
-                >{Number(a.balance).toFixed(2)}</td
-              ></tr
+          {#each plData.expenses as a}<TableRow
+              ><TableCell class="px-4 py-2">{a.account.name}</TableCell><TableCell
+                class="px-4 py-2 text-right font-mono">{Number(a.balance).toFixed(2)}</TableCell
+              ></TableRow
             >{/each}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   {/if}
 </div>

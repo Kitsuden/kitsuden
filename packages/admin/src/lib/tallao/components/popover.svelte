@@ -23,6 +23,7 @@
   import { restoreFocus, getActiveElement, tabbables } from "../internal/focus";
   import { pushLayer } from "../internal/layers";
   import { anchor, type Placement } from "../internal/position";
+  import { scaleIn } from "../motion";
 
   interface Props {
     open?: boolean;
@@ -107,6 +108,7 @@
     aria-labelledby={title ? `${id}-title` : undefined}
     aria-label={title ? undefined : ariaLabel}
     class={cn("ta-popover", className)}
+    out:scaleIn={{ duration: "fast", from: 0.98 }}
   >
     {#if title}<p class="ta-popover-title" id={`${id}-title`}>{title}</p>{/if}
     {@render children?.()}
@@ -130,7 +132,7 @@
     box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.45);
     font: inherit;
     outline: none;
-    animation: ta-popover-enter 0.12s ease-out;
+    animation: ta-popover-enter var(--ta-duration-fast, 120ms) var(--ta-ease-out, ease-out);
   }
 
   .ta-popover-title {
@@ -140,7 +142,7 @@
   }
 
   @keyframes ta-popover-enter {
-    from { opacity: 0; transform: translateY(-2px); }
+    from { opacity: 0; transform: translateY(-2px) scale(0.98); }
     to { opacity: 1; transform: none; }
   }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { disableKonPrompt } from "$lib/kon-disable";
   import { confirmDialog } from "$lib/confirm.svelte";
-  import { toast } from "svelte-sonner";
+  import { Button, Dialog, Field, Input, toast } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import KonIcon from "$lib/components/KonIcon.svelte";
   import {
@@ -151,23 +151,7 @@
   }
 </script>
 
-<div class="space-y-6 animate-fade-in">
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
-        <div
-          class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-amber/20 to-kitsuden-accent-2/20 border border-kitsuden-amber/20 flex items-center justify-center"
-        >
-          <Puzzle class="w-5 h-5 text-kitsuden-amber" />
-        </div>
-        {t("kons.kons")}
-      </h1>
-      <p class="text-sm text-kitsuden-subtle mt-1">
-        {t("kons.manageSystemKonsUninstallTo")}
-      </p>
-    </div>
-  </div>
-
+<div class="space-y-6">
   {#if moduleStore.loading}
     <div class="card p-12 text-center">
       <div
@@ -320,148 +304,127 @@
   {/if}
 </div>
 
-<!-- Uninstall Confirmation Modal -->
-{#if showUninstallModal && selectedModule}
-  <div class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-    <div class="card p-6 max-w-md w-full animate-fade-in">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-10 h-10 rounded-xl bg-kitsuden-amber/10 flex items-center justify-center">
-          <Archive class="w-5 h-5 text-kitsuden-amber" />
-        </div>
-        <div>
-          <h3 class="font-semibold text-kitsuden-text">
-            {t("kons.uninstall", { name: selectedModule.name })}
-          </h3>
-          <p class="text-xs text-kitsuden-subtle">{t("kons.thisActionCanBeReversed")}</p>
-        </div>
-      </div>
+<!-- Uninstall: the kon goes, its data stays. -->
+<Dialog
+  open={showUninstallModal && selectedModule !== null}
+  title={selectedModule ? t("kons.uninstall", { name: selectedModule.name }) : ""}
+  description={t("kons.thisActionCanBeReversed")}
+  size="md"
+  onClose={() => {
+    showUninstallModal = false;
+    selectedModule = null;
+  }}
+>
+  {#if selectedModule}
+    <div class="bg-kitsuden-surface/50 rounded-lg p-4 mb-4">
+      <p class="text-sm text-kitsuden-text-dim mb-2">
+        {t("kons.thisWillRemoveTheKon")}
+        <strong class="text-kitsuden-accent">{t("kons.preserveAllYourData")}</strong>
+        {t("kons.forFutureRecovery")}
+      </p>
 
-      <div class="bg-kitsuden-surface/50 rounded-lg p-4 mb-4">
-        <p class="text-sm text-kitsuden-text-dim mb-2">
-          {t("kons.thisWillRemoveTheKon")}
-          <strong class="text-kitsuden-accent">{t("kons.preserveAllYourData")}</strong>
-          {t("kons.forFutureRecovery")}
-        </p>
-
-        {#if "tables" in selectedModule && selectedModule.tables}
-          <div class="mt-3 pt-3 border-t border-kitsuden-border/50">
-            <p class="text-xs text-kitsuden-subtle mb-1">{t("kons.tablesThatWillBePreserved")}</p>
-            <div class="flex flex-wrap gap-1">
-              {#each selectedModule.tables.slice(0, 5) as table}
-                <span
-                  class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim font-mono"
-                  >{table}</span
-                >
-              {/each}
-              {#if selectedModule.tables.length > 5}
-                <span
-                  class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
-                  >{t("common.more", { v: selectedModule.tables.length - 5 })}</span
-                >
-              {/if}
-            </div>
+      {#if "tables" in selectedModule && selectedModule.tables}
+        <div class="mt-3 pt-3 border-t border-kitsuden-border/50">
+          <p class="text-xs text-kitsuden-subtle mb-1">{t("kons.tablesThatWillBePreserved")}</p>
+          <div class="flex flex-wrap gap-1">
+            {#each selectedModule.tables.slice(0, 5) as table}
+              <span
+                class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim font-mono"
+                >{table}</span
+              >
+            {/each}
+            {#if selectedModule.tables.length > 5}
+              <span
+                class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
+                >{t("common.more", { v: selectedModule.tables.length - 5 })}</span
+              >
+            {/if}
           </div>
-        {/if}
-      </div>
-
-      <div class="flex gap-2">
-        <button
-          class="flex-1 text-sm font-medium px-4 py-2 rounded-lg transition-colors bg-kitsuden-surface text-kitsuden-text hover:bg-kitsuden-border"
-          onclick={() => {
-            showUninstallModal = false;
-            selectedModule = null;
-          }}
-        >
-          {t("common.cancel")}
-        </button>
-        <button
-          class="flex-1 text-sm font-medium px-4 py-2 rounded-lg transition-colors bg-kitsuden-amber/10 text-kitsuden-amber hover:bg-kitsuden-amber/20 border border-kitsuden-amber/20"
-          onclick={confirmUninstall}
-        >
-          {t("kons.uninstallPreserveData2")}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Delete Confirmation Modal -->
-{#if showDeleteModal && selectedModule}
-  <div class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-    <div class="card p-6 max-w-md w-full animate-fade-in border-kitsuden-accent-2/30">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-10 h-10 rounded-xl bg-kitsuden-accent-2/10 flex items-center justify-center">
-          <AlertTriangle class="w-5 h-5 text-kitsuden-accent-2" />
         </div>
-        <div>
-          <h3 class="font-semibold text-kitsuden-text">{t("kons.deleteKonDataPermanently")}</h3>
-          <p class="text-xs text-kitsuden-accent-2">{t("kons.thisActionCannotBeUndone")}</p>
-        </div>
-      </div>
-
-      <div class="bg-kitsuden-accent-2/5 rounded-lg p-4 mb-4 border border-kitsuden-accent-2/20">
-        <p class="text-sm text-kitsuden-text-dim mb-2">
-          {t("kons.youAreAboutTo")}
-          <strong class="text-kitsuden-accent-2">{t("kons.permanentlyDelete")}</strong>
-          {t("kons.allDataFor")}
-        </p>
-        <p class="font-semibold text-kitsuden-text">{selectedModule.name}</p>
-
-        {#if "dataSummary" in selectedModule && selectedModule.dataSummary}
-          <div class="mt-3 pt-3 border-t border-kitsuden-accent-2/20">
-            <p class="text-xs text-kitsuden-accent-2 mb-1 flex items-center gap-1">
-              <Trash2 class="w-3 h-3" />
-              {t("kons.thisWillDelete")}
-            </p>
-            <ul class="text-xs text-kitsuden-text-dim space-y-1">
-              {#each selectedModule.dataSummary.tables.slice(0, 4) as table}
-                <li>{t("kons.tableRows", { name: table.name, v: formatNumber(table.rows) })}</li>
-              {/each}
-              {#if selectedModule.dataSummary.tables.length > 4}
-                <li>{t("kons.moreTables", { v: selectedModule.dataSummary.tables.length - 4 })}</li>
-              {/if}
-            </ul>
-          </div>
-        {/if}
-      </div>
-
-      <div class="mb-4">
-        <label for="deleteconfirmtext" class="text-xs text-kitsuden-subtle mb-1 block">
-          {t("kons.type")}<strong>{selectedModule.key.replace(/^grimoire-/, "")}</strong>{t(
-            "kons.toConfirm"
-          )}
-        </label>
-        <input
-          id="deleteconfirmtext"
-          type="text"
-          bind:value={deleteConfirmText}
-          class="w-full px-3 py-2 rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text text-sm focus:outline-hidden focus:border-kitsuden-accent-2"
-          placeholder={selectedModule.key.replace(/^grimoire-/, "")}
-        />
-      </div>
-
-      <div class="flex gap-2">
-        <button
-          class="flex-1 text-sm font-medium px-4 py-2 rounded-lg transition-colors bg-kitsuden-surface text-kitsuden-text hover:bg-kitsuden-border"
-          onclick={() => {
-            showDeleteModal = false;
-            selectedModule = null;
-            deleteConfirmText = "";
-          }}
-        >
-          {t("common.cancel")}
-        </button>
-        <button
-          class="flex-1 text-sm font-medium px-4 py-2 rounded-lg transition-colors bg-kitsuden-accent-2/10 text-kitsuden-accent-2 hover:bg-kitsuden-accent-2/20 border border-kitsuden-accent-2/20 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={deleteConfirmText !== selectedModule.key.replace(/^grimoire-/, "")}
-          onclick={confirmDelete}
-        >
-          {t("kons.deleteForever")}
-        </button>
-      </div>
+      {/if}
     </div>
-  </div>
-{/if}
+  {/if}
+  {#snippet footer()}
+    <Button
+      variant="ghost"
+      onclick={() => {
+        showUninstallModal = false;
+        selectedModule = null;
+      }}
+    >
+      {t("common.cancel")}
+    </Button>
+    <Button onclick={confirmUninstall}>{t("kons.uninstallPreserveData2")}</Button>
+  {/snippet}
+</Dialog>
+
+<!-- Delete for good: asks for the kon's name before it can be pressed. -->
+<Dialog
+  open={showDeleteModal && selectedModule !== null}
+  title={t("kons.deleteKonDataPermanently")}
+  description={t("kons.thisActionCannotBeUndone")}
+  size="md"
+  onClose={() => {
+    showDeleteModal = false;
+    selectedModule = null;
+    deleteConfirmText = "";
+  }}
+>
+  {#if selectedModule}
+    <div class="bg-kitsuden-accent-2/5 rounded-lg p-4 mb-4 border border-kitsuden-accent-2/20">
+      <p class="text-sm text-kitsuden-text-dim mb-2">
+        {t("kons.youAreAboutTo")}
+        <strong class="text-kitsuden-accent-2">{t("kons.permanentlyDelete")}</strong>
+        {t("kons.allDataFor")}
+      </p>
+      <p class="font-semibold text-kitsuden-text">{selectedModule.name}</p>
+
+      {#if "dataSummary" in selectedModule && selectedModule.dataSummary}
+        <div class="mt-3 pt-3 border-t border-kitsuden-accent-2/20">
+          <p class="text-xs text-kitsuden-accent-2 mb-1 flex items-center gap-1">
+            <Trash2 class="w-3 h-3" />
+            {t("kons.thisWillDelete")}
+          </p>
+          <ul class="text-xs text-kitsuden-text-dim space-y-1">
+            {#each selectedModule.dataSummary.tables.slice(0, 4) as table}
+              <li>{t("kons.tableRows", { name: table.name, v: formatNumber(table.rows) })}</li>
+            {/each}
+            {#if selectedModule.dataSummary.tables.length > 4}
+              <li>{t("kons.moreTables", { v: selectedModule.dataSummary.tables.length - 4 })}</li>
+            {/if}
+          </ul>
+        </div>
+      {/if}
+    </div>
+    <Field label={t("kons.typeToConfirm", { name: selectedModule.key.replace(/^grimoire-/, "") })}>
+      <Input
+        bind:value={deleteConfirmText}
+        placeholder={selectedModule.key.replace(/^grimoire-/, "")}
+        autocomplete="off"
+      />
+    </Field>
+  {/if}
+  {#snippet footer()}
+    <Button
+      variant="ghost"
+      onclick={() => {
+        showDeleteModal = false;
+        selectedModule = null;
+        deleteConfirmText = "";
+      }}
+    >
+      {t("common.cancel")}
+    </Button>
+    <Button
+      variant="danger"
+      disabled={!selectedModule ||
+        deleteConfirmText !== selectedModule.key.replace(/^grimoire-/, "")}
+      onclick={confirmDelete}
+    >
+      {t("kons.deleteForever")}
+    </Button>
+  {/snippet}
+</Dialog>
 
 <style>
   @reference "../style.css";

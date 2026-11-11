@@ -8,13 +8,22 @@
   `?version=<id>` opens a version.
 -->
 <script lang="ts">
+  import {
+    Button,
+    Skeleton,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+  } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import { Check, X, RefreshCw, RotateCcw, Play, Save, GitBranch } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
+  import { toast } from "$lib/tallao";
 
   import { isAdmin } from "$lib/auth.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
   import {
     activateCodeVersion,
     approveCodeVersion,
@@ -262,24 +271,24 @@
         class="overflow-x-auto border border-kitsuden-border rounded-sm"
         data-testid="promotion-agents"
       >
-        <table class="w-full text-xs">
-          <thead class="text-kitsuden-subtle">
-            <tr>
-              <th class="text-left px-3 py-2">{t("promotion.colAgent")}</th>
-              <th class="text-left px-3 py-2">{t("promotion.colCanPropose")}</th>
-              <th class="text-left px-3 py-2">{t("promotion.colMode")}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-kitsuden-border/70">
+        <Table class="w-full text-xs">
+          <TableHeader class="text-kitsuden-subtle">
+            <TableRow>
+              <TableHead class="text-left px-3 py-2">{t("promotion.colAgent")}</TableHead>
+              <TableHead class="text-left px-3 py-2">{t("promotion.colCanPropose")}</TableHead>
+              <TableHead class="text-left px-3 py-2">{t("promotion.colMode")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody class="divide-y divide-kitsuden-border/70">
             {#each settings.agents as a (a.id)}
-              <tr>
-                <td class="px-3 py-1.5 text-kitsuden-text"
-                  >{a.name}{a.isActive ? "" : ` (${t("promotion.inactive")})`}</td
+              <TableRow>
+                <TableCell class="px-3 py-1.5 text-kitsuden-text"
+                  >{a.name}{a.isActive ? "" : ` (${t("promotion.inactive")})`}</TableCell
                 >
-                <td class="px-3 py-1.5 text-kitsuden-text-dim"
-                  >{a.canPropose ? t("promotion.yes") : t("promotion.no")}</td
+                <TableCell class="px-3 py-1.5 text-kitsuden-text-dim"
+                  >{a.canPropose ? t("promotion.yes") : t("promotion.no")}</TableCell
                 >
-                <td class="px-3 py-1.5">
+                <TableCell class="px-3 py-1.5">
                   <select
                     class="bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-kitsuden-text"
                     value={a.mode}
@@ -295,11 +304,11 @@
                       <option value={m}>{t(`promotion.mode_${m}`)}</option>
                     {/each}
                   </select>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             {/each}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </section>
   {/if}
@@ -324,9 +333,7 @@
         >
       </div>
       {#if loading}
-        <div class="flex items-center justify-center h-24">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
-        </div>
+        <Skeleton lines={3} />
       {:else if error}
         <div
           class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
@@ -380,9 +387,7 @@
 
     <section class="min-w-0" data-testid="promotion-detail">
       {#if loadingDetail}
-        <div class="flex items-center justify-center h-24">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
-        </div>
+        <Skeleton lines={3} />
       {:else if !detail}
         <p class="text-sm text-kitsuden-subtle">{t("promotion.pick")}</p>
       {:else}

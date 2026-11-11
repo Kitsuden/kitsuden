@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { toast } from "svelte-sonner";
+  import Page from "$lib/components/layout/Page.svelte";
+  import { Button, Dialog, Field, Input, Select, toast } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import {
     Building2,
@@ -144,215 +145,143 @@
   }
 </script>
 
-<div class="space-y-6">
-  <!-- Header -->
-  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-semibold text-kitsuden-text flex items-center gap-3">
-        <Building2 class="w-7 h-7 text-kitsuden-accent" />
-        {t("orgChartPage.orgChart")}
-      </h1>
-      <p class="text-kitsuden-subtle mt-1">{t("orgChartPage.hierarchicalOrganizationView")}</p>
-    </div>
-
-    <div class="flex items-center gap-3">
-      <select
+<Page
+  title={t("orgChartPage.orgChart")}
+  description={t("orgChartPage.hierarchicalOrganizationView")}
+  crumbs={[{ label: t("orgChartPage.orgChart") }]}
+>
+  {#snippet actions()}
+    {#if organizations.length > 0}
+      <Select
         bind:value={selectedOrg}
         onchange={loadOrgChart}
         aria-label={t("orgChartPage.organization")}
-        class="px-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text focus:border-kitsuden-accent/50 focus:outline-hidden"
-      >
-        {#each organizations as org}
-          <option value={org.id}>{org.name}</option>
-        {/each}
-      </select>
-    </div>
-  </div>
-
-  <!-- Search -->
-  <div class="card p-4">
-    <div class="relative max-w-md">
-      <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-subtle" />
-      <input
-        type="text"
-        aria-label={t("orgChartPage.searchEmployee")}
-        placeholder={t("orgChartPage.searchEmployee")}
-        bind:value={searchQuery}
-        class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-hidden"
+        options={organizations.map((org) => ({ value: org.id, label: org.name }))}
+        width="auto"
       />
-    </div>
-  </div>
-
-  <!-- Org Chart -->
-  <div class="card p-6 min-h-[500px]">
-    {#if loading}
-      <div class="flex items-center justify-center h-64">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
-      </div>
-    {:else if organizations.length === 0}
-      <div class="text-center py-12">
-        <Building2 class="w-16 h-16 text-kitsuden-subtle mx-auto mb-4" />
-        <h3 class="text-lg font-medium text-kitsuden-text mb-2">
-          {t("orgChartPage.noOrganizations")}
-        </h3>
-        <p class="text-kitsuden-subtle mb-4">{t("orgChartPage.createsAnOrganizationToSee")}</p>
-        <button
-          class="btn btn-primary gap-2"
-          onclick={() => {
-            showCreateOrgModal = true;
-            resetOrgForm();
-          }}
-        >
-          <Plus class="w-4 h-4" />
-          {t("orgChartPage.createOrganization")}
-        </button>
-      </div>
-    {:else if orgData.length === 0}
-      <div class="text-center py-12">
-        <Users class="w-16 h-16 text-kitsuden-subtle mx-auto mb-4" />
-        <h3 class="text-lg font-medium text-kitsuden-text mb-2">{t("orgChartPage.noEmployees")}</h3>
-        <p class="text-kitsuden-subtle">
-          {t("orgChartPage.theSelectedOrganizationDoesNotHave")}
-        </p>
-      </div>
-    {:else}
-      <div class="space-y-2">
-        {#each filterNodes(orgData) as root}
-          {@render OrgNode({
-            node: root,
-            level: 0,
-            expandedNodes,
-            toggleNode,
-            getInitials,
-            onSelect: (e: Employee) => (selectedEmployee = e),
-          })}
-        {/each}
-      </div>
     {/if}
-  </div>
-
-  <!-- Employee Detail Modal -->
-  {#if selectedEmployee}
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        class="absolute inset-0 bg-black/70 backdrop-blur-xs"
-        onclick={() => (selectedEmployee = null)}
-      ></div>
-
-      <div
-        class="relative bg-kitsuden-card border border-kitsuden-border rounded-2xl shadow-2xl max-w-md w-full"
-      >
-        <div class="p-6">
-          <!-- Header -->
-          <div class="flex items-start gap-4 mb-6">
-            <div
-              class="w-16 h-16 rounded-full bg-kitsuden-accent/20 flex items-center justify-center text-kitsuden-accent text-xl font-semibold"
-            >
-              {getInitials(selectedEmployee.firstName, selectedEmployee.lastName)}
-            </div>
-            <div class="flex-1">
-              <h3 class="text-xl font-semibold text-kitsuden-text">
-                {selectedEmployee.displayName ||
-                  `${selectedEmployee.firstName} ${selectedEmployee.lastName}`}
-              </h3>
-              <p class="text-kitsuden-accent">
-                {selectedEmployee.positionTitle || t("orgChartPage.withoutCharge")}
-              </p>
-              <p class="text-sm text-kitsuden-subtle">{selectedEmployee.departmentName || ""}</p>
-            </div>
-          </div>
-
-          <!-- Contact Info -->
-          <div class="space-y-3">
-            {#if selectedEmployee.email}
-              <a
-                href="mailto:{selectedEmployee.email}"
-                class="flex items-center gap-3 p-3 bg-kitsuden-bg rounded-lg hover:bg-kitsuden-text/5 transition-colors"
-              >
-                <Mail class="w-5 h-5 text-kitsuden-accent" />
-                <span class="text-kitsuden-text">{selectedEmployee.email}</span>
-              </a>
-            {/if}
-          </div>
-
-          <!-- Actions -->
-          <div class="flex gap-3 mt-6">
-            <!-- There is no page per employee (`/directory/employees/<id>` was a 404): the
-                 employees table of the kon is where the record is. -->
-            <a href="/g/kon-directory" class="flex-1 btn btn-primary text-center">
-              {t("orgChartPage.openDirectory")}
-            </a>
-            <button class="btn btn-ghost" onclick={() => (selectedEmployee = null)}>
-              {t("orgChartPage.close")}
-            </button>
-          </div>
-        </div>
+  {/snippet}
+  <div class="space-y-6">
+    <!-- Search -->
+    <div class="card p-4">
+      <div class="relative max-w-md">
+        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-subtle" />
+        <input
+          type="text"
+          aria-label={t("orgChartPage.searchEmployee")}
+          placeholder={t("orgChartPage.searchEmployee")}
+          bind:value={searchQuery}
+          class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-hidden"
+        />
       </div>
     </div>
-  {/if}
-</div>
 
-<!-- Create Organization Modal -->
-{#if showCreateOrgModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center">
-    <div
-      class="absolute inset-0 bg-black/60 backdrop-blur-xs"
-      onclick={() => (showCreateOrgModal = false)}
-    ></div>
-    <div
-      class="relative bg-kitsuden-card border border-kitsuden-border rounded-2xl shadow-2xl max-w-md w-full mx-4"
-    >
-      <div class="flex items-center justify-between p-6 border-b border-kitsuden-border">
-        <h3 class="text-lg font-semibold text-kitsuden-text">
-          {t("orgChartPage.newOrganization")}
-        </h3>
-        <button
-          onclick={() => (showCreateOrgModal = false)}
-          aria-label={t("orgChartPage.close")}
-          class="p-2 rounded-xl text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-text/5"
-        >
-          <X class="w-5 h-5" />
-        </button>
-      </div>
-      <form onsubmit={createOrganization} class="p-6 space-y-4">
-        <div>
-          <label for="neworgname" class="block text-sm font-medium text-kitsuden-subtle mb-1.5"
-            >{t("orgChartPage.name")}</label
-          >
-          <input
-            id="neworgname"
-            bind:value={newOrgName}
-            type="text"
-            placeholder={t("orgChartPage.ejAcmeCorp")}
-            class="w-full px-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-hidden"
-            required
-          />
+    <!-- Org Chart -->
+    <div class="card p-6 min-h-[500px]">
+      {#if loading}
+        <div class="flex items-center justify-center h-64">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
         </div>
-        <div class="flex justify-end gap-3 pt-2">
+      {:else if organizations.length === 0}
+        <div class="text-center py-12">
+          <Building2 class="w-16 h-16 text-kitsuden-subtle mx-auto mb-4" />
+          <h3 class="text-lg font-medium text-kitsuden-text mb-2">
+            {t("orgChartPage.noOrganizations")}
+          </h3>
+          <p class="text-kitsuden-subtle mb-4">{t("orgChartPage.createsAnOrganizationToSee")}</p>
           <button
-            type="button"
-            onclick={() => (showCreateOrgModal = false)}
-            class="px-4 py-2 rounded-lg text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-text/5 transition-all"
-            >{t("common.cancel")}</button
+            class="btn btn-primary gap-2"
+            onclick={() => {
+              showCreateOrgModal = true;
+              resetOrgForm();
+            }}
           >
-          <button
-            type="submit"
-            disabled={savingOrg || !newOrgName.trim()}
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-kitsuden-accent text-kitsuden-on-accent hover:bg-kitsuden-accent/90 transition-all disabled:opacity-50"
-          >
-            {#if savingOrg}
-              <Loader2 class="w-4 h-4 animate-spin" />
-              {t("orgChartPage.creating")}
-            {:else}
-              <Plus class="w-4 h-4" />
-              {t("common.create")}
-            {/if}
+            <Plus class="w-4 h-4" />
+            {t("orgChartPage.createOrganization")}
           </button>
         </div>
-      </form>
+      {:else if orgData.length === 0}
+        <div class="text-center py-12">
+          <Users class="w-16 h-16 text-kitsuden-subtle mx-auto mb-4" />
+          <h3 class="text-lg font-medium text-kitsuden-text mb-2">
+            {t("orgChartPage.noEmployees")}
+          </h3>
+          <p class="text-kitsuden-subtle">
+            {t("orgChartPage.theSelectedOrganizationDoesNotHave")}
+          </p>
+        </div>
+      {:else}
+        <div class="space-y-2">
+          {#each filterNodes(orgData) as root}
+            {@render OrgNode({
+              node: root,
+              level: 0,
+              expandedNodes,
+              toggleNode,
+              getInitials,
+              onSelect: (e: Employee) => (selectedEmployee = e),
+            })}
+          {/each}
+        </div>
+      {/if}
     </div>
+
+    <!-- Employee detail -->
+    <Dialog
+      open={selectedEmployee !== null}
+      onClose={() => (selectedEmployee = null)}
+      size="md"
+      title={selectedEmployee
+        ? selectedEmployee.displayName ||
+          `${selectedEmployee.firstName} ${selectedEmployee.lastName}`
+        : ""}
+      description={selectedEmployee
+        ? [
+            selectedEmployee.positionTitle || t("orgChartPage.withoutCharge"),
+            selectedEmployee.departmentName,
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : undefined}
+    >
+      {#if selectedEmployee?.email}
+        <Button variant="secondary" href="mailto:{selectedEmployee.email}">
+          <Mail size={16} aria-hidden="true" />
+          {selectedEmployee.email}
+        </Button>
+      {/if}
+      {#snippet footer()}
+        <Button variant="ghost" onclick={() => (selectedEmployee = null)}>
+          {t("orgChartPage.close")}
+        </Button>
+        <!-- There is no page per employee: the kon's employees table is where the record is. -->
+        <Button href="/g/kon-directory">{t("orgChartPage.openDirectory")}</Button>
+      {/snippet}
+    </Dialog>
   </div>
-{/if}
+</Page>
+
+<!-- Create organization -->
+<Dialog bind:open={showCreateOrgModal} title={t("orgChartPage.newOrganization")} size="md">
+  <form id="new-org-form" onsubmit={createOrganization}>
+    <Field label={t("orgChartPage.name")} required>
+      <Input bind:value={newOrgName} required placeholder={t("orgChartPage.ejAcmeCorp")} />
+    </Field>
+  </form>
+  {#snippet footer()}
+    <Button variant="ghost" onclick={() => (showCreateOrgModal = false)}>
+      {t("common.cancel")}
+    </Button>
+    <Button
+      type="submit"
+      form="new-org-form"
+      loading={savingOrg}
+      disabled={savingOrg || !newOrgName.trim()}
+    >
+      {savingOrg ? t("orgChartPage.creating") : t("common.create")}
+    </Button>
+  {/snippet}
+</Dialog>
 
 <!-- Recursive Org Node Component -->
 {#snippet OrgNode({

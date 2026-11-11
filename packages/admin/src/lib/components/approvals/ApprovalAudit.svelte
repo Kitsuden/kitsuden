@@ -3,11 +3,19 @@
   when, who proposed, who approved or rejected, and the outcome.
 -->
 <script lang="ts">
+  import {
+    Button,
+    Skeleton,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+  } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import { RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
-
-  import Button from "$lib/components/ui/Button.svelte";
   import { listApprovalAudit } from "$lib/services/approvals";
   import type { ApprovalAuditEvent } from "$lib/types/approvals";
 
@@ -102,9 +110,7 @@
     </Button>
   </div>
   {#if loading}
-    <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <Skeleton lines={3} />
   {:else if error}
     <div
       class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
@@ -115,31 +121,34 @@
     <p class="text-sm text-kitsuden-subtle">{t("approvals.noEvents")}</p>
   {:else}
     <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
-      <table class="w-full text-xs">
-        <thead class="text-kitsuden-subtle">
-          <tr>
-            <th class="text-left px-3 py-2">{t("approvals.colWhen")}</th>
-            <th class="text-left px-3 py-2">{t("approvals.colAction")}</th>
-            <th class="text-left px-3 py-2">{t("approvals.colWho")}</th>
-            <th class="text-left px-3 py-2">{t("approvals.colAgent")}</th>
-            <th class="text-left px-3 py-2">{t("approvals.colDetails")}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-kitsuden-border/70">
+      <Table class="w-full text-xs">
+        <TableHeader class="text-kitsuden-subtle">
+          <TableRow>
+            <TableHead class="text-left px-3 py-2">{t("approvals.colWhen")}</TableHead>
+            <TableHead class="text-left px-3 py-2">{t("approvals.colAction")}</TableHead>
+            <TableHead class="text-left px-3 py-2">{t("approvals.colWho")}</TableHead>
+            <TableHead class="text-left px-3 py-2">{t("approvals.colAgent")}</TableHead>
+            <TableHead class="text-left px-3 py-2">{t("approvals.colDetails")}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody class="divide-y divide-kitsuden-border/70">
           {#each events as e (e.id)}
-            <tr data-testid="audit-row" data-action={e.action}>
-              <td class="px-3 py-1.5 whitespace-nowrap text-kitsuden-text-dim">{date(e.at)}</td>
-              <td class="px-3 py-1.5 whitespace-nowrap {KIND[e.action] ?? 'text-kitsuden-text'}"
-                >{t(`approvals.action_${e.action}`)}</td
+            <TableRow data-testid="audit-row" data-action={e.action}>
+              <TableCell class="px-3 py-1.5 whitespace-nowrap text-kitsuden-text-dim"
+                >{date(e.at)}</TableCell
               >
-              <td class="px-3 py-1.5 text-kitsuden-text">
+              <TableCell
+                class="px-3 py-1.5 whitespace-nowrap {KIND[e.action] ?? 'text-kitsuden-text'}"
+                >{t(`approvals.action_${e.action}`)}</TableCell
+              >
+              <TableCell class="px-3 py-1.5 text-kitsuden-text">
                 {e.byName ??
                   (e.action === "proposal_created" || e.action === "promotion_submitted"
                     ? (e.agentName ?? "—")
                     : t("approvals.system"))}
-              </td>
-              <td class="px-3 py-1.5 text-kitsuden-text-dim">{e.agentName ?? "—"}</td>
-              <td class="px-3 py-1.5 text-kitsuden-text-dim min-w-0">
+              </TableCell>
+              <TableCell class="px-3 py-1.5 text-kitsuden-text-dim">{e.agentName ?? "—"}</TableCell>
+              <TableCell class="px-3 py-1.5 text-kitsuden-text-dim min-w-0">
                 {#if e.resource && e.action.startsWith("proposal_")}
                   <code class="text-kitsuden-text break-all">{e.resource}</code>
                 {/if}
@@ -156,11 +165,11 @@
                     class="ml-1 text-kitsuden-accent hover:underline">{t("approvals.open")}</a
                   >
                 {/if}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           {/each}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   {/if}
 </div>

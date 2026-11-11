@@ -1,66 +1,150 @@
-<script lang="ts">
-  import StateMessage from "$lib/components/feedback/StateMessage.svelte";
-  import { t, localeFormat } from "$lib/i18n";
-  import { Plus, Bot, Play, Activity, Trash2, Key, Settings } from "lucide-svelte";
-  import { onMount } from "svelte";
+<!--
+  Agents, on the list template: name (a link to the agent's page), state, type or model,
+  scopes, rate limit, the proposals of each agent that wait for a person, last change.
+  Filters come from the fields (state, type); the row menu opens the page, its settings or
+  the playground, and deletes.
 
-  import TokenDisplay from "$lib/components/agents/TokenDisplay.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Modal from "$lib/components/ui/Modal.svelte";
+  "New agent" opens the create dialog (`/agents?new=1` opens it too: the command palette
+  links there). The key of a new agent is shown once, with a copy button (TokenDisplay).
+-->
+<script lang="ts">
   import { AGENT_PRESETS } from "@kitsuden/shared";
-  import { listAgents, createAgent, deleteAgent } from "$lib/services/agents";
-  import { Alert, Checkbox, Field, Input, Select, Spinner, Textarea } from "$lib/tallao";
+  import { untrack } from "svelte";
+
+  import { agentRow, pendingByAgent } from "$lib/agents/agent-rows";
+  import { isStaff } from "$lib/auth.svelte";
+  import TokenDisplay from "$lib/components/agents/TokenDisplay.svelte";
+  import Page from "$lib/components/layout/Page.svelte";
+  import ListView from "$lib/components/list/ListView.svelte";
+  import { t } from "$lib/i18n";
+  import { memorySource, type Row } from "$lib/list/source";
+  import { setQuery } from "$lib/page";
+  import { createAgent, deleteAgent, listAgents } from "$lib/services/agents";
+  import { listProposals } from "$lib/services/approvals";
+  import {
+    Alert,
+    Button,
+    Checkbox,
+    Dialog,
+    Field,
+    Input,
+    MenuItem,
+    Select,
+    Textarea,
+  } from "$lib/tallao";
   import type { Agent, CreateAgentInput } from "$lib/types/agents";
 
-  let agents: Agent[] = $state([]);
-  let loading = $state(true);
-  let error = $state<string | null>(null);
+  import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
+
+  let agents = $state<Agent[]>([]);
+  let pending = $state(new Map<string, number>());
+  let loaded = $state(false);
+  let loadError = $state<string | null>(null);
+  let total = $state<number | null>(null);
+  let reloadKey = $state(0);
   let newToken = $state<string | undefined>();
 
-  // Modal states
-  let showCreateModal = $state(false);
-  let showDeleteModal = $state<string | null>(null);
-  let creating = $state(false);
-
-  // Without read permissions, every MCP tool answers «lacks required scope». Read
-  // only by default; the rest is adjusted later under Configure.
+  // Without read permissions, every MCP tool answers "lacks required scope". Read only by
+  // default; the rest is adjusted later on the agent's page.
   const ACCESS_PRESETS = AGENT_PRESETS.filter((p) =>
     ["read-only", "data-editor", "connect-only"].includes(p.id)
   );
-  let access = $state("read-only");
-  let deleting = $state(false);
-
-  // Form state
-  let formData = $state<CreateAgentInput>({
+  const emptyForm = (): CreateAgentInput => ({
     name: "",
     description: "",
     identityId: "",
     model: "gpt-4",
     enabled: true,
   });
+  let access = $state("read-only");
+  let formData = $state<CreateAgentInput>(emptyForm());
+  let creating = $state(false);
+  let createError = $state<string | null>(null);
 
-  onMount(async () => {
-    await loadAgents();
-  });
+  // The create dialog is `?new=1`: a link opens it, and Back closes it.
+  const creatingOpen = $derived($page.url.searchParams.get("new") === "1");
+  function setCreating(open: boolean) {
+    if (open === creatingOpen) return;
+    createError = null;
+    void setQuery($page.url, { new: open ? "1" : null }, { replace: !open });
+  }
 
-  /** The list could not be loaded: shown instead of "no agents", with Retry. */
-  let loadError = $state<string | null>(null);
-
-  async function loadAgents() {
+  async function load() {
+    loadError = null;
     try {
-      loading = true;
-      error = null;
-      loadError = null;
-      agents = await listAgents();
+      const [list, proposals] = await Promise.all([
+        listAgents(),
+        // The counter of what waits is the team's; without it the column stays at zero.
+        isStaff()
+          ? listProposals({ status: "pending", limit: 200 })
+              .then((r) => r.proposals)
+              .catch(() => [])
+          : Promise.resolve([]),
+      ]);
+      agents = list;
+      pending = pendingByAgent(proposals);
     } catch (e) {
       loadError = e instanceof Error ? e.message : t("agentsView.errorLoadingAgents");
     } finally {
-      loading = false;
+      loaded = true;
+      reloadKey += 1;
     }
   }
 
+  $effect(() => {
+    untrack(() => void load());
+  });
+
+  const typeOptions = $derived(
+    [...new Set(agents.map((a) => a.model ?? a.type ?? "").filter(Boolean))]
+      .sort()
+      .map((value) => ({ value, label: value }))
+  );
+
+  const source = $derived(
+    memorySource({
+      id: "agents",
+      label: t("shell.agents"),
+      singular: t("agentPage.agent"),
+      titleField: "name",
+      fields: [
+        { key: "name", label: t("common.name"), kind: "text", sortable: true },
+        {
+          key: "status",
+          label: t("common.status"),
+          kind: "select",
+          sortable: true,
+          options: [
+            { value: "active", label: t("agentsView.status_active") },
+            { value: "paused", label: t("agentsView.status_paused") },
+            { value: "error", label: t("agentsView.status_error") },
+          ],
+        },
+        {
+          key: "kind",
+          label: t("agentPage.kind"),
+          kind: "select",
+          sortable: true,
+          options: typeOptions,
+        },
+        { key: "pending", label: t("agentPage.pendingColumn"), kind: "number", sortable: true },
+        { key: "scopes", label: t("agentPage.scopesColumn"), kind: "number", sortable: true },
+        { key: "rateLimit", label: t("agentPage.rateLimitColumn"), kind: "number", sortable: true },
+        { key: "description", label: t("common.description"), kind: "text", hidden: true },
+        { key: "updatedAt", label: t("agentPage.updatedColumn"), kind: "datetime", sortable: true },
+      ],
+      rows: () => agents.map((agent) => agentRow(agent, pending)),
+      remove: async (id) => {
+        await deleteAgent(id);
+        agents = agents.filter((a) => a.id !== id);
+      },
+    })
+  );
+
   async function handleCreate() {
+    if (creating) return;
+    createError = null;
     try {
       creating = true;
       const result = await createAgent({
@@ -68,187 +152,71 @@
         scopes: [...(ACCESS_PRESETS.find((p) => p.id === access)?.scopes ?? ["mcp:connect"])],
       });
       newToken = result.token;
-      await loadAgents();
-      showCreateModal = false;
-      formData = { name: "", description: "", identityId: "", model: "gpt-4", enabled: true };
+      formData = emptyForm();
       access = "read-only";
+      setCreating(false);
+      await load();
     } catch (e) {
-      error = e instanceof Error ? e.message : t("agentsView.errorCreatingAgent");
+      createError = e instanceof Error ? e.message : t("agentsView.errorCreatingAgent");
     } finally {
       creating = false;
     }
   }
 
-  async function handleDelete(id: string) {
-    try {
-      deleting = true;
-      await deleteAgent(id);
-      await loadAgents();
-      showDeleteModal = null;
-    } catch (e) {
-      error = e instanceof Error ? e.message : t("agentsView.errorRemovingAgent");
-    } finally {
-      deleting = false;
-    }
-  }
-
-  function getStatusColor(status: string): string {
-    switch (status) {
-      case "active":
-        return "bg-kitsuden-green";
-      case "paused":
-        return "bg-kitsuden-amber";
-      case "error":
-        return "bg-kitsuden-danger";
-      default:
-        return "bg-kitsuden-subtle";
-    }
-  }
+  const hrefFor = (row: Row) => `/agents/${String(row.id)}`;
 </script>
 
-<div class="p-6 space-y-6">
-  <!-- Header -->
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-bold text-kitsuden-text">{t("agentsView.agents")}</h1>
-      <p class="text-kitsuden-subtle mt-1">{t("agentsView.manageYourAiAgentsAnd")}</p>
-    </div>
-    <Button variant="primary" onclick={() => (showCreateModal = true)}>
-      <Plus size={18} class="mr-2" />
+<Page title={t("shell.agents")} description={t("agentsView.manageYourAiAgentsAnd")}>
+  {#snippet meta()}
+    {#if total !== null}
+      {total === 1 ? t("agentPage.countOne") : t("agentPage.count", { n: total })}
+    {/if}
+  {/snippet}
+  {#snippet actions()}
+    <Button onclick={() => setCreating(true)} data-testid="new-agent">
       {t("agentsView.newAgent")}
     </Button>
-  </div>
+  {/snippet}
 
-  <!-- Error -->
-  {#if error}
-    <Alert variant="error" onDismiss={() => (error = null)}>{error}</Alert>
-  {/if}
+  <ListView
+    {source}
+    bind:total
+    {reloadKey}
+    {hrefFor}
+    pending={!loaded}
+    {loadError}
+    onRetry={load}
+    onNew={() => setCreating(true)}
+    emptyTitle={t("agentsView.noAgents")}
+    emptyDescription={t("agentsView.createsYourFirstAgentFor")}
+  >
+    {#snippet rowMenu(row)}
+      <MenuItem onSelect={() => goto(`${hrefFor(row)}?tab=settings`)}>
+        {t("agentsView.configure")}
+      </MenuItem>
+      <MenuItem onSelect={() => goto(`${hrefFor(row)}?playground=1`)}>
+        {t("agentsView.playground")}
+      </MenuItem>
+    {/snippet}
+  </ListView>
+</Page>
 
-  <!-- Agents Grid -->
-  {#if loading}
-    <div class="flex items-center justify-center h-64">
-      <Spinner size="lg" class="text-kitsuden-accent" />
-    </div>
-  {:else if loadError && agents.length === 0}
-    <StateMessage
-      kind="error"
-      title={t("agentsView.errorLoadingAgents")}
-      description={loadError}
-      onRetry={loadAgents}
-    />
-  {:else if agents.length === 0}
-    <Card class="p-12 text-center">
-      <Bot size={48} class="mx-auto text-kitsuden-subtle mb-4" />
-      <h2 class="text-lg font-medium text-kitsuden-text">{t("agentsView.noAgents")}</h2>
-      <p class="text-kitsuden-subtle mt-2 mb-6">{t("agentsView.createsYourFirstAgentFor")}</p>
-      <Button variant="primary" onclick={() => (showCreateModal = true)}>
-        <Plus size={18} class="mr-2" />
-        {t("agentsView.createAgent")}
-      </Button>
-    </Card>
-  {:else}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {#each agents as agent}
-        <Card class="p-5 min-w-0 hover:border-kitsuden-accent/30 transition-colors group">
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="p-2 bg-kitsuden-accent/10 rounded-lg shrink-0">
-                <Bot size={20} class="text-kitsuden-accent" />
-              </div>
-              <div class="min-w-0">
-                <h3 class="font-medium text-kitsuden-text truncate" title={agent.name}>
-                  {agent.name}
-                </h3>
-                {#if agent.model ?? agent.type}
-                  <p class="text-xs text-kitsuden-subtle truncate">{agent.model ?? agent.type}</p>
-                {/if}
-              </div>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <!-- The state in words too: a dot told it by colour alone. -->
-              <span class="w-2 h-2 rounded-full {getStatusColor(agent.status)}" aria-hidden="true"
-              ></span>
-              <span class="text-xs text-kitsuden-text-dim" data-testid="agent-status">
-                {t(`agentsView.status_${agent.status}`)}
-              </span>
-            </div>
-          </div>
-
-          {#if agent.description}
-            <p class="mt-3 text-sm text-kitsuden-text-dim line-clamp-2">{agent.description}</p>
-          {/if}
-
-          <!-- The list endpoint sends no totals: they are shown only when they come,
-               instead of a "0 traces" that was never counted. -->
-          {#if agent.totalTraces !== undefined || agent.totalTokens !== undefined}
-            <div
-              class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-kitsuden-subtle"
-            >
-              {#if agent.totalTraces !== undefined}
-                <span class="flex items-center gap-1">
-                  <Activity size={14} />
-                  {t("agentsView.traces", { v: agent.totalTraces })}
-                </span>
-              {/if}
-              {#if agent.totalTokens !== undefined}
-                <span class="flex items-center gap-1">
-                  <Key size={14} />
-                  {t("agentsView.tokens", { v: agent.totalTokens.toLocaleString(localeFormat()) })}
-                </span>
-              {/if}
-            </div>
-          {/if}
-
-          <!--
-            `flex-wrap` + `min-w-0`: in the three-column grid the card
-            is ~200 px and "Playground" + "Configure" + the trash button do not fit on
-            one line; unable to wrap, the trash button spilled over the edge.
-            Now the text buttons wrap to the next line and the trash button stays
-            always inside, stuck to the right (`ml-auto`, `shrink-0`).
-          -->
-          <div
-            class="mt-4 pt-4 border-t border-kitsuden-border flex flex-wrap items-center gap-2 min-w-0"
-            data-testid="agent-card-actions"
-          >
-            <Button variant="ghost" size="sm" href="/agents/{agent.id}">
-              <Play size={16} class="mr-1" />
-              {t("agentsView.playground")}
-            </Button>
-            <Button variant="ghost" size="sm" href="/agents/{agent.id}?tab=settings">
-              <Settings size={16} class="mr-1" />
-              {t("agentsView.configure")}
-            </Button>
-            <Button
-              variant="danger-ghost"
-              size="icon"
-              class="ml-auto shrink-0"
-              ariaLabel={t("agentsView.removeAgent")}
-              title={t("agentsView.removeAgent")}
-              onclick={() => (showDeleteModal = agent.id)}
-            >
-              <Trash2 size={16} />
-            </Button>
-          </div>
-        </Card>
-      {/each}
-    </div>
-  {/if}
-</div>
-
-<!-- Create Modal -->
-<Modal
-  open={showCreateModal}
+<Dialog
+  open={creatingOpen}
+  onOpenChange={setCreating}
   title={t("agentsView.createNewAgent")}
   description={t("agentsView.configuresANewAiAgent")}
-  onClose={() => (showCreateModal = false)}
 >
   <form
     class="space-y-4"
+    data-testid="create-agent-form"
     onsubmit={(e) => {
       e.preventDefault();
-      handleCreate();
+      void handleCreate();
     }}
   >
+    {#if createError}<Alert variant="error">{createError}</Alert>{/if}
+
     <Field label={t("common.name")} required>
       <Input
         bind:value={formData.name}
@@ -290,45 +258,23 @@
       />
     </Field>
 
-    <div class="pt-2">
-      <Checkbox
-        bind:checked={() => formData.enabled ?? true, (v) => (formData.enabled = v)}
-        label={t("agentsView.activateImmediately")}
-      />
-    </div>
+    <Checkbox
+      bind:checked={() => formData.enabled ?? true, (v) => (formData.enabled = v)}
+      label={t("agentsView.activateImmediately")}
+    />
 
-    <div class="flex justify-end gap-3 pt-4">
-      <Button type="button" variant="secondary" onclick={() => (showCreateModal = false)}>
+    <div class="flex justify-end gap-3 pt-2">
+      <Button type="button" variant="secondary" onclick={() => setCreating(false)}>
         {t("common.cancel")}
       </Button>
-      <Button type="submit" variant="primary" loading={creating}>{t("common.create")}</Button>
+      <Button type="submit" loading={creating}>{t("common.create")}</Button>
     </div>
   </form>
-</Modal>
+</Dialog>
 
-<!-- Delete Confirmation Modal -->
-<Modal
-  open={!!showDeleteModal}
-  title={t("agentsView.removeAgent")}
-  description={t("agentsView.areYouSureThisActionNot")}
-  size="sm"
-  onClose={() => (showDeleteModal = null)}
->
-  <div class="flex justify-end gap-3">
-    <Button variant="secondary" onclick={() => (showDeleteModal = null)}
-      >{t("common.cancel")}</Button
-    >
-    <Button
-      variant="danger"
-      loading={deleting}
-      onclick={() => showDeleteModal && handleDelete(showDeleteModal)}
-    >
-      {t("common.remove")}
-    </Button>
-  </div>
-</Modal>
-
-<!-- Token Display: only after creating an agent (before it always showed, empty, under the list) -->
+<!-- The key of the agent just created: shown once, with a copy button. -->
 {#if newToken}
-  <TokenDisplay token={newToken} onCopy={() => {}} />
+  {#key newToken}
+    <TokenDisplay token={newToken} onCopy={() => {}} />
+  {/key}
 {/if}

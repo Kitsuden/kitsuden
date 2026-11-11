@@ -4,11 +4,19 @@
   owner filter or with RLS. And the summary per operation.
 -->
 <script lang="ts">
+  import {
+    Button,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+  } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import { RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
 
-  import Button from "$lib/components/ui/Button.svelte";
   import {
     listRequestTraces,
     requestTraceSummary,
@@ -155,105 +163,97 @@
       <p class="text-sm text-kitsuden-subtle">{t("systemTraces.empty")}</p>
     {:else}
       <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
-        <table class="w-full text-xs">
-          <thead class="text-kitsuden-subtle">
-            <tr>
-              <th class="text-left px-3 py-2">{t("systemTraces.colWhen")}</th>
-              <th class="text-left px-3 py-2">{t("systemTraces.colRequest")}</th>
-              <th class="text-left px-3 py-2">{t("systemTraces.colStatus")}</th>
-              <th class="text-left px-3 py-2">{t("systemTraces.colActor")}</th>
-              <th class="text-left px-3 py-2">{t("systemTraces.colOperation")}</th>
-              <th class="text-right px-3 py-2">{t("systemTraces.colDuration")}</th>
-              <th class="text-right px-3 py-2">{t("systemTraces.colDb")}</th>
-              <th class="text-right px-3 py-2">{t("systemTraces.colRows")}</th>
-              <th class="text-left px-3 py-2">{t("systemTraces.colBlocked")}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-kitsuden-border/70">
+        <Table density="compact">
+          <TableHeader>
+            <TableRow>
+              <TableHead class="text-left">{t("systemTraces.colWhen")}</TableHead>
+              <TableHead class="text-left">{t("systemTraces.colRequest")}</TableHead>
+              <TableHead class="text-left">{t("systemTraces.colStatus")}</TableHead>
+              <TableHead class="text-left">{t("systemTraces.colActor")}</TableHead>
+              <TableHead class="text-left">{t("systemTraces.colOperation")}</TableHead>
+              <TableHead class="text-right">{t("systemTraces.colDuration")}</TableHead>
+              <TableHead class="text-right">{t("systemTraces.colDb")}</TableHead>
+              <TableHead class="text-right">{t("systemTraces.colRows")}</TableHead>
+              <TableHead class="text-left">{t("systemTraces.colBlocked")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {#each traces as tr, i (`${tr.request_id ?? ""}-${i}`)}
-              <tr data-testid="trace-row">
-                <td class="px-3 py-1.5 whitespace-nowrap text-kitsuden-text-dim"
-                  >{date(requestTraceTime(tr))}</td
-                >
-                <td class="px-3 py-1.5 font-mono text-kitsuden-text">{tr.method} {tr.route}</td>
-                <td
+              <TableRow data-testid="trace-row">
+                <TableCell class="whitespace-nowrap">{date(requestTraceTime(tr))}</TableCell>
+                <TableCell class="font-mono">{tr.method} {tr.route}</TableCell>
+                <TableCell
                   class="px-3 py-1.5 {tr.status >= 500
                     ? 'text-kitsuden-danger'
                     : tr.status >= 400
                       ? 'text-kitsuden-amber'
-                      : 'text-kitsuden-green'}">{tr.status}</td
+                      : 'text-kitsuden-green'}">{tr.status}</TableCell
                 >
-                <td class="px-3 py-1.5 text-kitsuden-text"
+                <TableCell
                   >{actorOf(tr)}<span class="block text-kitsuden-subtle font-mono"
                     >{tr.actor_id ?? ""}</span
-                  ></td
+                  ></TableCell
                 >
-                <td class="px-3 py-1.5 text-kitsuden-text-dim"
-                  >{tr.kon ?? "—"}{tr.operation ? ` · ${tr.operation}` : ""}</td
+                <TableCell>{tr.kon ?? "—"}{tr.operation ? ` · ${tr.operation}` : ""}</TableCell>
+                <TableCell class="text-right">{ms(tr.duration_ms)}</TableCell>
+                <TableCell class="text-right"
+                  >{ms(tr.db_time_ms)}{tr.queries ? ` · ${tr.queries}q` : ""}</TableCell
                 >
-                <td class="px-3 py-1.5 text-right text-kitsuden-text">{ms(tr.duration_ms)}</td>
-                <td class="px-3 py-1.5 text-right text-kitsuden-text-dim"
-                  >{ms(tr.db_time_ms)}{tr.queries ? ` · ${tr.queries}q` : ""}</td
-                >
-                <td class="px-3 py-1.5 text-right text-kitsuden-text-dim"
-                  >{tr.rows_affected ?? "—"}</td
-                >
-                <td class="px-3 py-1.5">
+                <TableCell class="text-right">{tr.rows_affected ?? "—"}</TableCell>
+                <TableCell>
                   {#each tr.denial_details ?? [] as b}
                     <span
                       class="inline-block mr-1 px-1.5 py-0.5 rounded-sm bg-kitsuden-amber/15 text-kitsuden-amber"
                       >{b.operation} {b.table}: {reason(b.reason)}</span
                     >
                   {/each}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             {/each}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     {/if}
   {:else if summary.length === 0}
     <p class="text-sm text-kitsuden-subtle">{t("systemTraces.empty")}</p>
   {:else}
     <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
-      <table class="w-full text-xs">
-        <thead class="text-kitsuden-subtle">
-          <tr>
-            <th class="text-left px-3 py-2">{t("systemTraces.colRequest")}</th>
-            <th class="text-left px-3 py-2">{t("systemTraces.colOperation")}</th>
-            <th class="text-right px-3 py-2">{t("systemTraces.colCount")}</th>
-            <th class="text-right px-3 py-2">{t("systemTraces.colErrors")}</th>
-            <th class="text-right px-3 py-2">{t("systemTraces.colBlocked")}</th>
-            <th class="text-right px-3 py-2">{t("systemTraces.colP95")}</th>
-            <th class="text-right px-3 py-2">{t("systemTraces.colDb")}</th>
-            <th class="text-right px-3 py-2">{t("systemTraces.colRows")}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-kitsuden-border/70">
+      <Table density="compact">
+        <TableHeader>
+          <TableRow>
+            <TableHead class="text-left">{t("systemTraces.colRequest")}</TableHead>
+            <TableHead class="text-left">{t("systemTraces.colOperation")}</TableHead>
+            <TableHead class="text-right">{t("systemTraces.colCount")}</TableHead>
+            <TableHead class="text-right">{t("systemTraces.colErrors")}</TableHead>
+            <TableHead class="text-right">{t("systemTraces.colBlocked")}</TableHead>
+            <TableHead class="text-right">{t("systemTraces.colP95")}</TableHead>
+            <TableHead class="text-right">{t("systemTraces.colDb")}</TableHead>
+            <TableHead class="text-right">{t("systemTraces.colRows")}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {#each summary as r, i (`${r.method}-${r.route}-${i}`)}
-            <tr>
-              <td class="px-3 py-1.5 font-mono text-kitsuden-text">{r.method} {r.route}</td>
-              <td class="px-3 py-1.5 text-kitsuden-text-dim"
-                >{r.kon ?? "—"}{r.operation ? ` · ${r.operation}` : ""}</td
-              >
-              <td class="px-3 py-1.5 text-right text-kitsuden-text">{r.requests}</td>
-              <td
+            <TableRow>
+              <TableCell class="font-mono">{r.method} {r.route}</TableCell>
+              <TableCell>{r.kon ?? "—"}{r.operation ? ` · ${r.operation}` : ""}</TableCell>
+              <TableCell class="text-right">{r.requests}</TableCell>
+              <TableCell
                 class="px-3 py-1.5 text-right {Number(r.errors) > 0
                   ? 'text-kitsuden-danger'
-                  : 'text-kitsuden-subtle'}">{r.errors}</td
+                  : 'text-kitsuden-subtle'}">{r.errors}</TableCell
               >
-              <td
+              <TableCell
                 class="px-3 py-1.5 text-right {Number(r.denials) > 0
                   ? 'text-kitsuden-amber'
-                  : 'text-kitsuden-subtle'}">{r.denials}</td
+                  : 'text-kitsuden-subtle'}">{r.denials}</TableCell
               >
-              <td class="px-3 py-1.5 text-right text-kitsuden-text">{ms(r.p95_ms)}</td>
-              <td class="px-3 py-1.5 text-right text-kitsuden-text-dim">{ms(r.avg_db_ms)}</td>
-              <td class="px-3 py-1.5 text-right text-kitsuden-text-dim">{r.rows}</td>
-            </tr>
+              <TableCell class="text-right">{ms(r.p95_ms)}</TableCell>
+              <TableCell class="text-right">{ms(r.avg_db_ms)}</TableCell>
+              <TableCell class="text-right">{r.rows}</TableCell>
+            </TableRow>
           {/each}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   {/if}
 </div>
