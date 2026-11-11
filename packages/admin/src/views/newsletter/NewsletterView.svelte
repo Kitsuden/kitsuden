@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t, localeFormat } from "$lib/i18n";
   /**
    * Newsletter — kon administration panel
@@ -263,7 +264,7 @@
   }
 
   async function removeSuppression(email: string) {
-    if (!confirm(t("newsletterView.removeFromListOf", { email }))) return;
+    if (!(await confirmDialog(t("newsletterView.removeFromListOf", { email })))) return;
     await api(`/suppressions/${encodeURIComponent(email)}`, { method: "DELETE" }).catch(
       (e) => (notice = String(e))
     );
@@ -322,7 +323,7 @@
       </p>
     </div>
     <button
-      class="px-4 py-2 rounded-lg bg-kitsuden-accent text-white text-sm font-medium"
+      class="px-4 py-2 rounded-lg bg-kitsuden-accent text-kitsuden-on-accent text-sm font-medium"
       onclick={startNew}
     >
       {t("newsletterView.newCampaign")}
@@ -485,10 +486,10 @@
           {t("newsletterView.declarativeFilterStatusLocalesTiers")}
         </p>
         <textarea
-          class="w-full h-40 font-mono text-sm p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-border"
+          class="w-full h-40 font-mono text-sm p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-input"
           bind:value={segmentFilter}></textarea>
         <button
-          class="mt-2 px-4 py-2 rounded-lg bg-kitsuden-accent text-white text-sm"
+          class="mt-2 px-4 py-2 rounded-lg bg-kitsuden-accent text-kitsuden-on-accent text-sm"
           onclick={previewSegment}>{t("newsletterView.calculateScope")}</button
         >
       </div>
@@ -522,19 +523,19 @@
       </h2>
 
       <input
-        class="w-full p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-border"
+        class="w-full p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-input"
         placeholder={t("newsletterView.subject")}
         bind:value={draftSubject}
       />
       <input
-        class="w-full p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-border text-sm"
+        class="w-full p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-input text-sm"
         placeholder={t("newsletterView.preheaderWhatIsVisible")}
         bind:value={draftPreview}
       />
 
       <div class="grid md:grid-cols-2 gap-4">
         <textarea
-          class="w-full h-72 font-mono text-sm p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-border"
+          class="w-full h-72 font-mono text-sm p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-input"
           placeholder={t("newsletterView.newsletterHtml")}
           bind:value={draftHtml}></textarea>
         <!-- sandbox without allow-scripts: the HTML is content, not code. -->
@@ -553,7 +554,7 @@
         <input
           id="nl-schedule"
           type="datetime-local"
-          class="p-2 rounded-lg bg-kitsuden-surface border border-kitsuden-border text-sm"
+          class="p-2 rounded-lg bg-kitsuden-surface border border-kitsuden-input text-sm"
           bind:value={draftScheduledAt}
         />
         <span class="text-xs text-kitsuden-text-dim">
@@ -569,7 +570,7 @@
           {t("common.cancel")}
         </button>
         <button
-          class="px-4 py-2 rounded-lg bg-kitsuden-accent text-white text-sm"
+          class="px-4 py-2 rounded-lg bg-kitsuden-accent text-kitsuden-on-accent text-sm"
           disabled={saving}
           onclick={saveDraft}
         >
@@ -604,7 +605,10 @@
         >
           {t("common.cancel")}
         </button>
-        <button class="px-4 py-2 rounded-lg bg-kitsuden-green text-white text-sm" onclick={doSend}>
+        <button
+          class="px-4 py-2 rounded-lg bg-kitsuden-green text-kitsuden-on-status text-sm"
+          onclick={doSend}
+        >
           {t("newsletterView.sendTo", { recipients: confirmSend.recipients })}
         </button>
       </div>

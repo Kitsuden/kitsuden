@@ -215,7 +215,7 @@
   <!-- Stats -->
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
     <div class="kitsuden-card p-4">
-      <p class="text-[10px] font-semibold uppercase tracking-wider text-kitsuden-subtle">
+      <p class="text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle">
         {tr("brainView.totalNotes")}
       </p>
       <div class="flex items-end gap-2 mt-1">
@@ -226,7 +226,7 @@
       </div>
     </div>
     <div class="kitsuden-card p-4">
-      <p class="text-[10px] font-semibold uppercase tracking-wider text-kitsuden-subtle">
+      <p class="text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle">
         {tr("brainView.connections")}
       </p>
       <div class="flex items-end gap-2 mt-1">
@@ -237,7 +237,7 @@
       </div>
     </div>
     <div class="kitsuden-card p-4">
-      <p class="text-[10px] font-semibold uppercase tracking-wider text-kitsuden-subtle">
+      <p class="text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle">
         {tr("brainView.lastScan")}
       </p>
       <div class="flex items-end gap-2 mt-1">
@@ -359,7 +359,7 @@
                     </td>
                     <td class="px-4 py-3">
                       <span
-                        class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/20"
+                        class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/20"
                       >
                         {note.category}
                       </span>
@@ -371,15 +371,13 @@
                       <div class="flex flex-wrap gap-1 max-w-[160px]">
                         {#each note.tags.slice(0, 3) as tag}
                           <span
-                            class="text-[10px] px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim"
+                            class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim"
                           >
                             {tag}
                           </span>
                         {/each}
                         {#if note.tags.length > 3}
-                          <span class="text-[10px] text-kitsuden-subtle"
-                            >+{note.tags.length - 3}</span
-                          >
+                          <span class="text-xs text-kitsuden-subtle">+{note.tags.length - 3}</span>
                         {/if}
                       </div>
                     </td>

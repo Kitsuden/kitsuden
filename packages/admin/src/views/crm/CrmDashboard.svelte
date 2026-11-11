@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t as tr, localeFormat } from "$lib/i18n";
   import {
     Users,
@@ -240,7 +241,7 @@
   }
 
   async function ofTheDeal(id: string) {
-    if (!confirm(tr("crmDashboard.deleteThisDeal"))) return;
+    if (!(await confirmDialog(tr("crmDashboard.deleteThisDeal")))) return;
     try {
       await api.deleteCrmDeal(id);
       toast.success(tr("crmDashboard.dealDeleted"));
@@ -251,7 +252,11 @@
     }
   }
   async function bulkDelDeals() {
-    if (!selDeals.size || !confirm(tr("crmDashboard.deleteDeals", { size: selDeals.size }))) return;
+    if (
+      !selDeals.size ||
+      !(await confirmDialog(tr("crmDashboard.deleteDeals", { size: selDeals.size })))
+    )
+      return;
     await Promise.all([...selDeals].map((id) => api.deleteCrmDeal(id)));
     toast.success(tr("crmDashboard.dealsDeleted", { size: selDeals.size }));
     selDeals = new Set();
@@ -259,7 +264,7 @@
     await loadStats();
   }
   async function ofTheContact(id: string) {
-    if (!confirm(tr("crmDashboard.deleteThisContact"))) return;
+    if (!(await confirmDialog(tr("crmDashboard.deleteThisContact")))) return;
     try {
       await api.deleteCrmContact(id);
       toast.success(tr("crmDashboard.contactDeleted"));
@@ -272,7 +277,7 @@
   async function bulkDelContacts() {
     if (
       !selContacts.size ||
-      !confirm(tr("crmDashboard.deleteContacts", { size: selContacts.size }))
+      !(await confirmDialog(tr("crmDashboard.deleteContacts", { size: selContacts.size })))
     )
       return;
     await Promise.all([...selContacts].map((id) => api.deleteCrmContact(id)));
@@ -282,7 +287,7 @@
     await loadStats();
   }
   async function ofTheCompany(id: string) {
-    if (!confirm(tr("crmDashboard.deleteThisCompany"))) return;
+    if (!(await confirmDialog(tr("crmDashboard.deleteThisCompany")))) return;
     try {
       await api.deleteCrmCompany(id);
       toast.success(tr("crmDashboard.companyDeleted"));
@@ -295,7 +300,7 @@
   async function bulkDelCompanies() {
     if (
       !selCompanies.size ||
-      !confirm(tr("crmDashboard.deleteCompanies", { size: selCompanies.size }))
+      !(await confirmDialog(tr("crmDashboard.deleteCompanies", { size: selCompanies.size })))
     )
       return;
     await Promise.all([...selCompanies].map((id) => api.deleteCrmCompany(id)));
@@ -408,19 +413,19 @@
           label: tr("crmDashboard.contacts"),
           value: stats.contacts.toLocaleString(localeFormat()),
           icon: Users,
-          cls: "bg-indigo-500/10 text-indigo-400",
+          cls: "bg-kitsuden-accent/10 text-kitsuden-accent",
         },
         {
           label: tr("crmDashboard.companies"),
           value: stats.companies.toLocaleString(localeFormat()),
           icon: Building2,
-          cls: "bg-emerald-500/10 text-emerald-400",
+          cls: "bg-kitsuden-green/10 text-kitsuden-green",
         },
         {
           label: tr("crmDashboard.openDeals"),
           value: fmtCur(stats.deals.values.open),
           icon: Briefcase,
-          cls: "bg-amber-500/10 text-amber-400",
+          cls: "bg-kitsuden-amber/10 text-kitsuden-amber",
         },
         {
           label: tr("crmDashboard.pipelineValue"),
@@ -502,7 +507,7 @@
                     {fmtCur(d.value, d.currency)}
                   </p>
                   <span
-                    class="inline-block mt-1 px-2 py-0.5 text-[10px] font-medium rounded-full border {dCols[
+                    class="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full border {dCols[
                       d.status
                     ] || dCols.open}">{d.status}</span
                   >
@@ -548,7 +553,7 @@
                 </div>
                 <div class="text-right shrink-0 ml-3">
                   <span
-                    class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full border {cCols[
+                    class="inline-block px-2 py-0.5 text-xs font-medium rounded-full border {cCols[
                       c.status
                     ] || cCols.lead}">{c.status}</span
                   >
@@ -602,7 +607,7 @@
                 loadDeals();
               }}
               placeholder={tr("crmDashboard.searchDeals")}
-              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
+              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
             />
           </div>
           <select
@@ -611,7 +616,7 @@
               dealsPag.offset = 0;
               loadDeals();
             }}
-            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             ><option value="">{tr("crmDashboard.allStatuses")}</option><option value="open"
               >{tr("crmDashboard.open")}</option
             ><option value="won">{tr("crmDashboard.won")}</option><option value="lost"
@@ -624,7 +629,7 @@
               dealsPag.offset = 0;
               loadDeals();
             }}
-            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             ><option value="">{tr("crmDashboard.allPipelines")}</option
             >{#each pipelines as p}<option value={p.id}>{p.name}</option>{/each}</select
           >
@@ -720,7 +725,7 @@
                     <td class="px-4 py-3 text-kitsuden-text">{fmtCur(d.value, d.currency)}</td>
                     <td class="px-4 py-3"
                       ><span
-                        class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full border {dCols[
+                        class="inline-block px-2 py-0.5 text-xs font-medium rounded-full border {dCols[
                           d.status
                         ] || dCols.open}">{d.status}</span
                       ></td
@@ -731,10 +736,10 @@
                     <td class="px-4 py-3"
                       ><div class="flex flex-wrap gap-1">
                         {#each (d.tags ?? []).slice(0, 3) as t}<span
-                            class="px-1.5 py-0.5 text-[10px] rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
+                            class="px-1.5 py-0.5 text-xs rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
                             >{t}</span
                           >{/each}{#if (d.tags ?? []).length > 3}<span
-                            class="px-1.5 py-0.5 text-[10px] rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
+                            class="px-1.5 py-0.5 text-xs rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
                             >+{(d.tags ?? []).length - 3}</span
                           >{/if}
                       </div></td
@@ -796,7 +801,7 @@
                 loadContacts();
               }}
               placeholder={tr("crmDashboard.searchContacts")}
-              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
+              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
             />
           </div>
           <select
@@ -805,7 +810,7 @@
               contactsPag.offset = 0;
               loadContacts();
             }}
-            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             ><option value="">{tr("crmDashboard.allStatuses")}</option><option value="lead"
               >{tr("crmDashboard.lead")}</option
             ><option value="prospect">{tr("crmDashboard.prospect")}</option><option value="customer"
@@ -890,7 +895,7 @@
                     <td class="px-4 py-3 text-kitsuden-subtle">{c.email}</td>
                     <td class="px-4 py-3"
                       ><span
-                        class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full border {cCols[
+                        class="inline-block px-2 py-0.5 text-xs font-medium rounded-full border {cCols[
                           c.status
                         ] || cCols.lead}">{c.status}</span
                       ></td
@@ -956,7 +961,7 @@
                 loadCompanies();
               }}
               placeholder={tr("crmDashboard.searchCompanies")}
-              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
+              class="w-full pl-9 pr-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
             />
           </div>
           <select
@@ -965,7 +970,7 @@
               companiesPag.offset = 0;
               loadCompanies();
             }}
-            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+            class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             ><option value="">{tr("crmDashboard.allIndustries")}</option
             >{#each [...new Set(companies.map((c) => c.industry).filter(Boolean))] as i}<option
                 value={i}>{i}</option
@@ -1129,7 +1134,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                   {#if pl.isDefault}<span
-                      class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-kitsuden-green/10 text-kitsuden-green border border-kitsuden-green/20"
+                      class="px-2 py-0.5 text-xs font-medium rounded-full bg-kitsuden-green/10 text-kitsuden-green border border-kitsuden-green/20"
                       >{tr("crmDashboard.default")}</span
                     >{/if}
                   {#if expandedPipelineId === pl.id}<ChevronUp

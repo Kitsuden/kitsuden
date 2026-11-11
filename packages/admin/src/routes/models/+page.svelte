@@ -43,40 +43,40 @@
 </script>
 
 <div class="h-full flex flex-col">
-  <div class="flex items-center gap-3 px-6 py-4 border-b border-zinc-800">
-    <div class="p-2 bg-indigo-500/10 rounded-lg">
-      <Database size={20} class="text-indigo-400" />
+  <div class="flex items-center gap-3 px-6 py-4 border-b border-kitsuden-border">
+    <div class="p-2 bg-kitsuden-accent/10 rounded-lg">
+      <Database size={20} class="text-kitsuden-accent" />
     </div>
     <div class="min-w-0">
-      <h1 class="text-lg font-semibold text-zinc-100">{t("models.title")}</h1>
-      <p class="text-xs text-zinc-500">{t("models.subtitle")}</p>
+      <h1 class="text-lg font-semibold text-kitsuden-text">{t("models.title")}</h1>
+      <p class="text-xs text-kitsuden-subtle">{t("models.subtitle")}</p>
     </div>
   </div>
 
   <div class="flex-1 overflow-auto p-6">
     {#if loading}
-      <p class="text-sm text-zinc-500">{t("models.loading")}</p>
+      <p class="text-sm text-kitsuden-subtle">{t("models.loading")}</p>
     {:else if error}
       <div
-        class="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300"
+        class="rounded-lg border border-kitsuden-danger/40 bg-kitsuden-danger/10 p-3 text-sm text-kitsuden-danger"
         role="alert"
       >
         {t("models.errorLoading")}: {error}
       </div>
     {:else if models.length === 0}
-      <div class="card p-12 text-center text-sm text-zinc-500">{t("models.empty")}</div>
+      <div class="card p-12 text-center text-sm text-kitsuden-subtle">{t("models.empty")}</div>
     {:else}
       <div class="flex flex-col gap-6 md:flex-row">
         <nav class="md:w-56 shrink-0 space-y-1" aria-label={t("models.pick")}>
           {#each models as m (key(m))}
             <button
               class="w-full rounded-lg px-3 py-2 text-left text-sm {active && key(active) === key(m)
-                ? 'bg-indigo-500/10 text-indigo-300'
-                : 'text-zinc-300 hover:bg-zinc-800/60'}"
+                ? 'bg-kitsuden-accent/10 text-kitsuden-accent'
+                : 'text-kitsuden-text hover:bg-kitsuden-border/60'}"
               onclick={() => (chosenItem = key(m))}
             >
               <span class="block font-medium">{m.descriptor.tag}</span>
-              <span class="block text-[11px] text-zinc-500">{m.kon}</span>
+              <span class="block text-[11px] text-kitsuden-subtle">{m.kon}</span>
             </button>
           {/each}
         </nav>

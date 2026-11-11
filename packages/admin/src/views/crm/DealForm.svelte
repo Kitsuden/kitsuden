@@ -143,13 +143,13 @@
 </script>
 
 <div class="space-y-6">
-  <div class="flex items-center gap-2 text-sm text-zinc-400">
+  <div class="flex items-center gap-2 text-sm text-kitsuden-text-dim">
     <Button variant="ghost" size="sm" onclick={onBack} class="gap-1">
       <ArrowLeft class="w-4 h-4" />
       {tr("dealForm.deals")}
     </Button>
     <span>/</span>
-    <span class="text-zinc-100"
+    <span class="text-kitsuden-text"
       >{dealId ? tr("common.edit") : tr("dealForm.new")} {tr("dealForm.deal")}</span
     >
   </div>
@@ -157,14 +157,16 @@
   <div class="space-y-8">
     <section>
       <h3
-        class="text-sm font-semibold text-zinc-200 uppercase tracking-wider mb-3 border-b border-zinc-800 pb-2"
+        class="text-sm font-semibold text-kitsuden-text uppercase tracking-wider mb-3 border-b border-kitsuden-border pb-2"
       >
         {tr("dealForm.dealInformation")}
       </h3>
       <div class="grid gap-4 md:grid-cols-2">
         <!-- Title -->
         <div class="space-y-2 md:col-span-2">
-          <Label for="title">{tr("dealForm.dealTitle")} <span class="text-red-400">*</span></Label>
+          <Label for="title"
+            >{tr("dealForm.dealTitle")} <span class="text-kitsuden-danger">*</span></Label
+          >
           <Input
             id="title"
             bind:value={formData.title}
@@ -189,7 +191,7 @@
           <input
             id="value"
             type="number"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-zinc-500"
+            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-subtle"
             bind:value={formData.value}
             placeholder="10000"
           />
@@ -206,7 +208,7 @@
           <Label for="status">{tr("common.status")}</Label>
           <select
             id="status"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100"
+            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text"
             bind:value={formData.status}
           >
             {#each statuses as status}
@@ -223,7 +225,7 @@
             type="number"
             min="0"
             max="100"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-zinc-500"
+            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-subtle"
             bind:value={formData.probability}
             placeholder="50"
           />
@@ -232,11 +234,11 @@
         <!-- Pipeline -->
         <div class="space-y-2">
           <Label for="pipelineId"
-            >{tr("dealForm.pipeline")} <span class="text-red-400">*</span></Label
+            >{tr("dealForm.pipeline")} <span class="text-kitsuden-danger">*</span></Label
           >
           <select
             id="pipelineId"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100"
+            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text"
             bind:value={formData.pipelineId}
           >
             <option value="">{tr("dealForm.selectPipeline")}</option>
@@ -248,10 +250,12 @@
 
         <!-- Stage -->
         <div class="space-y-2">
-          <Label for="stageId">{tr("dealForm.stage")} <span class="text-red-400">*</span></Label>
+          <Label for="stageId"
+            >{tr("dealForm.stage")} <span class="text-kitsuden-danger">*</span></Label
+          >
           <select
             id="stageId"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100"
+            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text"
             bind:value={formData.stageId}
           >
             <option value="">{tr("dealForm.selectStage")}</option>
@@ -267,7 +271,7 @@
           <input
             id="expectedCloseDate"
             type="date"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-zinc-500"
+            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-subtle"
             bind:value={formData.expectedCloseDate}
           />
         </div>
@@ -306,7 +310,7 @@
 
     <section>
       <h3
-        class="text-sm font-semibold text-zinc-200 uppercase tracking-wider mb-3 border-b border-zinc-800 pb-2"
+        class="text-sm font-semibold text-kitsuden-text uppercase tracking-wider mb-3 border-b border-kitsuden-border pb-2"
       >
         {tr("dealForm.relatedEntities")}
       </h3>
@@ -315,7 +319,7 @@
           <Label for="contactId">{tr("dealForm.relatedContact")}</Label>
           <select
             id="contactId"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100"
+            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text"
             bind:value={formData.contactId}
           >
             <option value="">{tr("dealForm.none")}</option>
@@ -328,7 +332,7 @@
           <Label for="companyId">{tr("dealForm.relatedCompany")}</Label>
           <select
             id="companyId"
-            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100"
+            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text"
             bind:value={formData.companyId}
           >
             <option value="">{tr("dealForm.none")}</option>
@@ -348,7 +352,7 @@
       </div>
     </section>
 
-    <div class="border-t border-zinc-800 pt-4 flex gap-2">
+    <div class="border-t border-kitsuden-border pt-4 flex gap-2">
       <Button onclick={handleSubmit} disabled={loading}>
         {loading
           ? tr("common.saving")

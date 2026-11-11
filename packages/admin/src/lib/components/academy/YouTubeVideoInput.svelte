@@ -99,7 +99,7 @@
   <label class="block text-sm font-medium text-kitsuden-text">
     {label}
     {#if required}
-      <span class="text-red-400">*</span>
+      <span class="text-kitsuden-danger">*</span>
     {/if}
   </label>
 
@@ -113,21 +113,21 @@
       oninput={handleInput}
       onblur={handleValidate}
       placeholder="https://www.youtube.com/watch?v=..."
-      class="w-full pl-10 pr-10 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent/50"
+      class="w-full pl-10 pr-10 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent/50"
     />
     {#if loading}
       <div class="absolute right-3 top-1/2 -translate-y-1/2">
         <Loader2 class="w-4 h-4 animate-spin text-kitsuden-accent" />
       </div>
     {:else if videoInfo}
-      <div class="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+      <div class="absolute right-3 top-1/2 -translate-y-1/2 text-kitsuden-green">
         <Check class="w-4 h-4" />
       </div>
     {/if}
   </div>
 
   {#if error}
-    <div class="flex items-center gap-2 text-sm text-red-400">
+    <div class="flex items-center gap-2 text-sm text-kitsuden-danger">
       <AlertCircle class="w-4 h-4" />
       {error}
     </div>

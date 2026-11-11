@@ -64,7 +64,7 @@
       : count <= max
         ? "text-kitsuden-green"
         : "text-kitsuden-accent-2"}
-  <span class="text-[10px] font-mono {cls}">{count}/{max}</span>
+  <span class="text-xs font-mono {cls}">{count}/{max}</span>
 {/snippet}
 
 <div class="space-y-5">
@@ -167,7 +167,7 @@
         <div class="flex flex-col items-center gap-2 text-kitsuden-subtle">
           <ImagePlus class="w-8 h-8" />
           <p class="text-xs">{t("sEOAnalyzer.dropImageOrClickTo")}</p>
-          <p class="text-[10px]">{t("sEOAnalyzer.recommended1200630px")}</p>
+          <p class="text-xs">{t("sEOAnalyzer.recommended1200630px")}</p>
         </div>
       {/if}
     </div>

@@ -107,10 +107,22 @@
   const date = (v: string | null) => (v ? new Date(v).toLocaleString(localeFormat()) : "—");
 
   const STATUS: Record<AgentApiKey["status"], { text: () => string; kind: string }> = {
-    active: { text: () => t("agentKeys.statusActive"), kind: "bg-emerald-500/15 text-emerald-300" },
-    expiring: { text: () => t("agentKeys.statusExpiring"), kind: "bg-amber-500/15 text-amber-300" },
-    expired: { text: () => t("agentKeys.statusExpired"), kind: "bg-zinc-700/40 text-zinc-400" },
-    revoked: { text: () => t("agentKeys.statusRevoked"), kind: "bg-red-500/15 text-red-300" },
+    active: {
+      text: () => t("agentKeys.statusActive"),
+      kind: "bg-kitsuden-green/15 text-kitsuden-green",
+    },
+    expiring: {
+      text: () => t("agentKeys.statusExpiring"),
+      kind: "bg-kitsuden-amber/15 text-kitsuden-amber",
+    },
+    expired: {
+      text: () => t("agentKeys.statusExpired"),
+      kind: "bg-kitsuden-muted/40 text-kitsuden-text-dim",
+    },
+    revoked: {
+      text: () => t("agentKeys.statusRevoked"),
+      kind: "bg-kitsuden-danger/15 text-kitsuden-danger",
+    },
   };
   const alive = (k: AgentApiKey) => k.status === "active" || k.status === "expiring";
 </script>
@@ -118,8 +130,8 @@
 <div class="space-y-4" data-testid="agent-keys">
   <div class="flex flex-wrap items-center gap-3">
     <div class="min-w-0">
-      <h3 class="text-sm font-semibold text-zinc-300">{t("agentKeys.title")}</h3>
-      <p class="text-xs text-zinc-500">{t("agentKeys.help")}</p>
+      <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentKeys.title")}</h3>
+      <p class="text-xs text-kitsuden-subtle">{t("agentKeys.help")}</p>
     </div>
     <div class="flex-1"></div>
     <Button variant="primary" size="sm" onclick={() => (creating = true)}>
@@ -129,16 +141,20 @@
 
   {#if loading}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if keys.length === 0}
-    <p class="text-sm text-zinc-500">{t("agentKeys.none")}</p>
+    <p class="text-sm text-kitsuden-subtle">{t("agentKeys.none")}</p>
   {:else}
-    <div class="overflow-x-auto border border-zinc-800 rounded-lg">
+    <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
       <table class="w-full text-sm">
-        <thead class="text-xs text-zinc-500">
+        <thead class="text-xs text-kitsuden-subtle">
           <tr>
             <th class="text-left px-3 py-2">{t("agentKeys.key")}</th>
             <th class="text-left px-3 py-2">{t("agentKeys.status")}</th>
@@ -148,17 +164,19 @@
             <th class="px-3 py-2"></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-zinc-800/70">
+        <tbody class="divide-y divide-kitsuden-border/70">
           {#each keys as k (k.id)}
             <tr data-testid="key-row">
               <td class="px-3 py-2 min-w-0">
                 <div class="flex items-center gap-2">
-                  <KeyRound size={14} class="text-zinc-500 shrink-0" />
-                  <span class="text-zinc-200">{k.name || t("agentKeys.unnamed")}</span>
+                  <KeyRound size={14} class="text-kitsuden-subtle shrink-0" />
+                  <span class="text-kitsuden-text">{k.name || t("agentKeys.unnamed")}</span>
                 </div>
-                <code class="text-[11px] text-zinc-500 break-all">{k.prefix}</code>
+                <code class="text-[11px] text-kitsuden-subtle break-all">{k.prefix}</code>
                 {#if k.rotatedFrom}
-                  <div class="text-[11px] text-zinc-500">{t("agentKeys.rotatedFromNote")}</div>
+                  <div class="text-[11px] text-kitsuden-subtle">
+                    {t("agentKeys.rotatedFromNote")}
+                  </div>
                 {/if}
               </td>
               <td class="px-3 py-2">
@@ -166,11 +184,12 @@
                   >{STATUS[k.status].text()}</span
                 >
               </td>
-              <td class="px-3 py-2 text-zinc-400 whitespace-nowrap">{date(k.createdAt)}</td>
-              <td class="px-3 py-2 text-zinc-400 whitespace-nowrap"
+              <td class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap">{date(k.createdAt)}</td
+              >
+              <td class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap"
                 >{k.lastUsedAt ? date(k.lastUsedAt) : t("agentKeys.never")}</td
               >
-              <td class="px-3 py-2 text-zinc-400 whitespace-nowrap">
+              <td class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap">
                 {k.revokedAt
                   ? date(k.revokedAt)
                   : k.expiresAt
@@ -186,7 +205,7 @@
                     <Button
                       variant="ghost"
                       size="sm"
-                      class="text-red-400 hover:text-red-300"
+                      class="text-kitsuden-danger hover:text-kitsuden-danger"
                       onclick={() => (revoking = k)}
                     >
                       <Ban size={14} class="mr-1" />{t("agentKeys.revoke")}
@@ -216,24 +235,24 @@
     }}
   >
     <div>
-      <label for="key-name" class="block text-sm font-medium text-zinc-300 mb-1.5"
+      <label for="key-name" class="block text-sm font-medium text-kitsuden-text mb-1.5"
         >{t("agentKeys.name")}</label
       >
       <input
         id="key-name"
         bind:value={name}
         placeholder={t("agentKeys.namePlaceholder")}
-        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+        class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
       />
     </div>
     <div>
-      <label for="key-expiry" class="block text-sm font-medium text-zinc-300 mb-1.5"
+      <label for="key-expiry" class="block text-sm font-medium text-kitsuden-text mb-1.5"
         >{t("agentKeys.expiry")}</label
       >
       <select
         id="key-expiry"
         bind:value={expiry}
-        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+        class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
       >
         <option value="30">{t("agentKeys.days", { n: 30 })}</option>
         <option value="90">{t("agentKeys.days", { n: 90 })}</option>
@@ -258,13 +277,13 @@
 >
   <div class="space-y-4">
     <div>
-      <label for="key-grace" class="block text-sm font-medium text-zinc-300 mb-1.5"
+      <label for="key-grace" class="block text-sm font-medium text-kitsuden-text mb-1.5"
         >{t("agentKeys.grace")}</label
       >
       <select
         id="key-grace"
         bind:value={grace}
-        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+        class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
       >
         <option value="0">{t("agentKeys.graceNow")}</option>
         <option value="1">{t("agentKeys.hours", { n: 1 })}</option>

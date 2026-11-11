@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t as tr, localeFormat } from "$lib/i18n";
   import {
     Gamepad2,
@@ -271,7 +272,7 @@
   });
 
   async function deleteGame(id: string) {
-    if (!confirm(tr("gamesView.deleteThisGame"))) return;
+    if (!(await confirmDialog(tr("gamesView.deleteThisGame")))) return;
     try {
       await api.deleteGame(id);
       toast.success(tr("gamesView.gameDeleted"));
@@ -283,7 +284,11 @@
   }
   async function bulkDeleteGames() {
     const ids = Array.from(selectedGameIds);
-    if (!ids.length || !confirm(tr("gamesView.deleteGames", { idsCount: ids.length }))) return;
+    if (
+      !ids.length ||
+      !(await confirmDialog(tr("gamesView.deleteGames", { idsCount: ids.length })))
+    )
+      return;
     try {
       await Promise.all(ids.map((id) => api.deleteGame(id)));
       toast.success(tr("gamesView.gamesDeleted", { idsCount: ids.length }));
@@ -348,7 +353,7 @@
     }
   }
   async function deleteCollection(id: string) {
-    if (!confirm(tr("gamesView.deleteThisCollection"))) return;
+    if (!(await confirmDialog(tr("gamesView.deleteThisCollection")))) return;
     try {
       await api.deleteGameCollection(id);
       toast.success(tr("gamesView.collectionDeleted"));
@@ -546,8 +551,8 @@
         </div>
       </div>
       <div class="card p-4 flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
-          <Layers class="w-4 h-4 text-purple-400" />
+        <div class="w-9 h-9 rounded-lg bg-kitsuden-purple/10 flex items-center justify-center">
+          <Layers class="w-4 h-4 text-kitsuden-purple" />
         </div>
         <div>
           <p class="text-xs text-kitsuden-subtle">{tr("gamesView.collections")}</p>
@@ -580,7 +585,7 @@
           <input
             type="text"
             placeholder={tr("gamesView.searchByTitleOrDeveloper")}
-            class="w-full bg-kitsuden-card border border-kitsuden-border rounded-lg pl-9 pr-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg pl-9 pr-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
             bind:value={gamesSearch}
             onkeydown={(e) => {
               if (e.key === "Enter") {
@@ -591,7 +596,7 @@
           />
         </div>
         <select
-          class="bg-kitsuden-card border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+          class="bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
           bind:value={gamesStatus}
           onchange={() => {
             gamesPage = 1;
@@ -635,7 +640,7 @@
               <th class="px-4 py-3 w-10"
                 ><input
                   type="checkbox"
-                  class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                  class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                   checked={selectedGameIds.size === games.length && games.length > 0}
                   onchange={toggleAll}
                 /></th
@@ -706,7 +711,7 @@
                   <td class="px-4 py-2.5"
                     ><input
                       type="checkbox"
-                      class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                      class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                       checked={selectedGameIds.has(game.id)}
                       onchange={() => toggleSelection(game.id)}
                     /></td
@@ -721,7 +726,7 @@
                           class="w-full h-full object-cover"
                           loading="lazy"
                         />{:else}<div
-                          class="w-full h-full flex items-center justify-center text-[10px]"
+                          class="w-full h-full flex items-center justify-center text-xs"
                         >
                           🎮
                         </div>{/if}
@@ -748,11 +753,11 @@
                     ><a href={"/g/kon-games"} class="hover:text-kitsuden-accent transition-colors"
                       >{game.title}</a
                     >
-                    <div class="text-[10px] text-kitsuden-subtle">/{game.slug}</div></td
+                    <div class="text-xs text-kitsuden-subtle">/{game.slug}</div></td
                   >
                   <td class="px-4 py-2.5"
                     ><span
-                      class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border {statusClasses(
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border {statusClasses(
                         game.status
                       )}">{game.status}</span
                     ></td
@@ -761,7 +766,7 @@
                   <td class="px-4 py-2.5 text-kitsuden-text-dim">{formatDate(game.releaseDate)}</td>
                   <td class="px-4 py-2.5"
                     ><span
-                      class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold {metacriticClass(
+                      class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold {metacriticClass(
                         game.metacriticScore
                       )}">{game.metacriticScore ?? "-"}</span
                     ></td
@@ -769,7 +774,7 @@
                   <td class="px-4 py-2.5 text-center"
                     ><input
                       type="checkbox"
-                      class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                      class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                       checked={!!game.isFeaturedOnHome}
                       onchange={() => toggleFeatured(game)}
                     /></td
@@ -830,7 +835,7 @@
             ><input
               id="coll-name"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGIndieGems")}
               value={newCollectionName}
               oninput={(e) => onCollName(e.currentTarget.value)}
@@ -842,7 +847,7 @@
             ><input
               id="coll-slug"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.exampleTagSlug")}
               bind:value={newCollectionSlug}
             />
@@ -886,20 +891,20 @@
                   {#if editingCollectionId === c.id}
                     <td class="px-4 py-2.5"
                       ><input
-                        class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-sm px-2 py-1 text-sm"
+                        class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
                         bind:value={editCollectionName}
                       /></td
                     >
                     <td class="px-4 py-2.5"
                       ><input
-                        class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-sm px-2 py-1 text-sm"
+                        class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
                         bind:value={editCollectionSlug}
                       /></td
                     >
                     <td class="px-4 py-2.5"
                       ><input
                         type="number"
-                        class="w-20 bg-kitsuden-bg border border-kitsuden-border rounded-sm px-2 py-1 text-sm"
+                        class="w-20 bg-kitsuden-bg border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
                         bind:value={editCollectionOrder}
                       /></td
                     >
@@ -954,7 +959,7 @@
             ><input
               id="plat-name"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGPlaystation5")}
               value={newPlatformName}
               oninput={(e) => onPlatName(e.currentTarget.value)}
@@ -966,7 +971,7 @@
             ><input
               id="plat-slug"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGPs5")}
               bind:value={newPlatformSlug}
             />
@@ -977,7 +982,7 @@
             ><input
               id="plat-mfr"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGSony")}
               bind:value={newPlatformManufacturer}
             />
@@ -988,7 +993,7 @@
             ><input
               id="plat-short"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder="PS5"
               bind:value={newPlatformShort}
             />
@@ -1054,7 +1059,7 @@
             ><input
               id="tag-name"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGRpg")}
               value={newTagName}
               oninput={(e) => onTagName(e.currentTarget.value)}
@@ -1066,7 +1071,7 @@
             ><input
               id="tag-slug"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGRpg2")}
               bind:value={newTagSlug}
             />
@@ -1077,7 +1082,7 @@
             ><input
               id="tag-color"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder="#ff00ff"
               bind:value={newTagColor}
             />
@@ -1088,7 +1093,7 @@
             ><input
               id="tag-cat"
               type="text"
-              class="w-full bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
+              class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
               placeholder={tr("gamesView.eGGenre")}
               bind:value={newTagCategory}
             />

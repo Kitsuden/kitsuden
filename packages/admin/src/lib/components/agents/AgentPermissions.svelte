@@ -10,6 +10,7 @@
   list (broad ∪ fine − denied). The rule: docs/agents/permissions.md.
 -->
 <script lang="ts">
+  import UnsavedGuard from "$lib/components/feedback/UnsavedGuard.svelte";
   import { t } from "$lib/i18n";
   import { Check, Ban, ShieldCheck, RotateCcw, Save } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -164,12 +165,24 @@
   const STATUS: Record<AccessState, { text: () => string; kind: string }> = {
     granted: {
       text: () => t("agentAccess.stateGranted"),
-      kind: "bg-emerald-500/15 text-emerald-300",
+      kind: "bg-kitsuden-green/15 text-kitsuden-green",
     },
-    denied: { text: () => t("agentAccess.stateDenied"), kind: "bg-red-500/15 text-red-300" },
-    open: { text: () => t("agentAccess.stateOpen"), kind: "bg-sky-500/15 text-sky-300" },
-    policy: { text: () => t("agentAccess.statePolicy"), kind: "bg-amber-500/15 text-amber-300" },
-    none: { text: () => t("agentAccess.stateNone"), kind: "bg-zinc-700/40 text-zinc-400" },
+    denied: {
+      text: () => t("agentAccess.stateDenied"),
+      kind: "bg-kitsuden-danger/15 text-kitsuden-danger",
+    },
+    open: {
+      text: () => t("agentAccess.stateOpen"),
+      kind: "bg-kitsuden-info/15 text-kitsuden-info",
+    },
+    policy: {
+      text: () => t("agentAccess.statePolicy"),
+      kind: "bg-kitsuden-amber/15 text-kitsuden-amber",
+    },
+    none: {
+      text: () => t("agentAccess.stateNone"),
+      kind: "bg-kitsuden-muted/40 text-kitsuden-text-dim",
+    },
   };
 
   const summary = $derived.by(() => {
@@ -203,25 +216,32 @@
   let deployed = $state<Record<string, boolean>>({});
 </script>
 
+<!-- Unsaved permission changes: ask before leaving the page or the tab. -->
+<UnsavedGuard dirty={changed} watchParam="tab" message={t("agentAccess.unsavedLeave")} />
+
 <div class="space-y-6" data-testid="agent-permissions">
   {#if loading}
     <div class="flex items-center justify-center h-32">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if catalog && access}
     <!-- Bar: mode + save -->
     <div class="flex flex-wrap items-center gap-3">
-      <div class="flex items-center gap-1 bg-zinc-900 p-1 rounded-lg" role="tablist">
+      <div class="flex items-center gap-1 bg-kitsuden-card p-1 rounded-lg" role="tablist">
         {#each [["broad", () => t("agentAccess.modeBroad")], ["fine", () => t("agentAccess.modeFine")], ["raw", () => t("agentAccess.modeRaw")]] as [id, text] (id)}
           <button
             role="tab"
             aria-selected={mode === id}
             data-testid="mode-{id}"
             class="px-3 py-1.5 text-sm rounded-md transition-colors {mode === id
-              ? 'bg-zinc-800 text-zinc-100'
-              : 'text-zinc-500 hover:text-zinc-300'}"
+              ? 'bg-kitsuden-border text-kitsuden-text'
+              : 'text-kitsuden-subtle hover:text-kitsuden-text'}"
             onclick={() => {
               if (mode === "raw")
                 draft = rawValue
@@ -236,7 +256,7 @@
       </div>
       <div class="flex-1"></div>
       {#if changed}
-        <span class="text-xs text-amber-400">{t("agentAccess.unsaved")}</span>
+        <span class="text-xs text-kitsuden-amber">{t("agentAccess.unsaved")}</span>
         <Button variant="ghost" size="sm" onclick={undo}>
           <RotateCcw size={14} class="mr-1" />{t("agentAccess.discard")}
         </Button>
@@ -246,23 +266,24 @@
       </Button>
     </div>
 
-    <p class="text-sm text-zinc-500">{t("agentAccess.unionRule")}</p>
+    <p class="text-sm text-kitsuden-subtle">{t("agentAccess.unionRule")}</p>
 
     {#if mode === "broad"}
       <!-- Presets -->
       <section class="space-y-3">
-        <h3 class="text-sm font-semibold text-zinc-300">{t("agentAccess.presets")}</h3>
+        <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentAccess.presets")}</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {#each catalog.presets as p (p.id)}
             <Card class="p-4 min-w-0 space-y-2">
               <div class="flex items-center gap-2">
-                <ShieldCheck size={16} class="text-indigo-400 shrink-0" />
-                <h4 class="font-medium text-zinc-100">{PRESET_TEXTS[p.id]?.name() ?? p.id}</h4>
+                <ShieldCheck size={16} class="text-kitsuden-accent shrink-0" />
+                <h4 class="font-medium text-kitsuden-text">{PRESET_TEXTS[p.id]?.name() ?? p.id}</h4>
               </div>
-              <p class="text-sm text-zinc-400">{PRESET_TEXTS[p.id]?.desc() ?? ""}</p>
+              <p class="text-sm text-kitsuden-text-dim">{PRESET_TEXTS[p.id]?.desc() ?? ""}</p>
               <div class="flex flex-wrap gap-1">
                 {#each p.scopes as s (s)}
-                  <code class="text-[11px] px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-300"
+                  <code
+                    class="text-[11px] px-1.5 py-0.5 rounded-sm bg-kitsuden-border text-kitsuden-text"
                     >{s}</code
                   >
                 {/each}
@@ -273,26 +294,26 @@
             </Card>
           {/each}
         </div>
-        <p class="text-xs text-zinc-500">{t("agentAccess.presetReplaces")}</p>
+        <p class="text-xs text-kitsuden-subtle">{t("agentAccess.presetReplaces")}</p>
       </section>
 
       <!-- Broad scopes -->
       <section class="space-y-2">
-        <h3 class="text-sm font-semibold text-zinc-300">{t("agentAccess.broadScopes")}</h3>
-        <div class="divide-y divide-zinc-800 border border-zinc-800 rounded-lg">
+        <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentAccess.broadScopes")}</h3>
+        <div class="divide-y divide-kitsuden-border border border-kitsuden-border rounded-lg">
           {#each catalog.broad as b (b.scope)}
-            <label class="flex items-start gap-3 p-3 hover:bg-zinc-900/50 cursor-pointer">
+            <label class="flex items-start gap-3 p-3 hover:bg-kitsuden-card/50 cursor-pointer">
               <input
                 type="checkbox"
-                class="mt-1 w-4 h-4 rounded-sm border-zinc-700 bg-zinc-950 text-indigo-500"
+                class="mt-1 w-4 h-4 rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
                 checked={draft.includes(b.scope)}
                 onchange={(e) => toggle(b.scope, (e.currentTarget as HTMLInputElement).checked)}
               />
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
-                  <code class="text-xs text-indigo-300">{b.scope}</code>
+                  <code class="text-xs text-kitsuden-accent">{b.scope}</code>
                   {#if b.operations.length || b.datasets.length}
-                    <span class="text-[11px] text-zinc-500"
+                    <span class="text-[11px] text-kitsuden-subtle"
                       >{t("agentAccess.opensCount", {
                         ops: b.operations.length,
                         ds: b.datasets.length,
@@ -300,15 +321,16 @@
                     >
                   {/if}
                 </div>
-                <p class="text-sm text-zinc-400">{broadDescription(b.scope)}</p>
+                <p class="text-sm text-kitsuden-text-dim">{broadDescription(b.scope)}</p>
                 {#if b.operations.length}
                   <details class="mt-1">
-                    <summary class="text-xs text-zinc-500 cursor-pointer"
+                    <summary class="text-xs text-kitsuden-subtle cursor-pointer"
                       >{t("agentAccess.showOperations")}</summary
                     >
                     <div class="mt-1 flex flex-wrap gap-1">
                       {#each b.operations as o (o)}
-                        <code class="text-[11px] px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-400"
+                        <code
+                          class="text-[11px] px-1.5 py-0.5 rounded-sm bg-kitsuden-border text-kitsuden-text-dim"
                           >{o}</code
                         >
                       {/each}
@@ -322,52 +344,55 @@
       </section>
     {:else if mode === "fine"}
       <section class="space-y-3">
-        <h3 class="text-sm font-semibold text-zinc-300">{t("agentAccess.operationsByKon")}</h3>
-        <p class="text-xs text-zinc-500">{t("agentAccess.denyExplained")}</p>
+        <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentAccess.operationsByKon")}</h3>
+        <p class="text-xs text-kitsuden-subtle">{t("agentAccess.denyExplained")}</p>
         {#each catalog.kons as k (k.konId)}
           <details
-            class="border border-zinc-800 rounded-lg"
+            class="border border-kitsuden-border rounded-lg"
             bind:open={
               () => deployed[k.konId] ?? catalog!.kons.length <= 2, (v) => (deployed[k.konId] = v)
             }
           >
-            <summary class="px-3 py-2 cursor-pointer text-sm text-zinc-200 flex items-center gap-2">
+            <summary
+              class="px-3 py-2 cursor-pointer text-sm text-kitsuden-text flex items-center gap-2"
+            >
               <span class="font-medium">{k.kon}</span>
-              <code class="text-[11px] text-zinc-500">kon:{k.kon}:*</code>
-              <span class="ml-auto text-xs text-zinc-500"
+              <code class="text-[11px] text-kitsuden-subtle">kon:{k.kon}:*</code>
+              <span class="ml-auto text-xs text-kitsuden-subtle"
                 >{t("agentAccess.selectedCount", {
                   n: k.operations.filter((o) => choiceOf(o.scope) !== "none").length,
                   total: k.operations.length,
                 })}</span
               >
             </summary>
-            <div class="divide-y divide-zinc-800/70">
+            <div class="divide-y divide-kitsuden-border/70">
               {#each k.operations as o (o.scope)}
                 <div
                   class="flex flex-wrap items-center gap-2 px-3 py-2 min-w-0"
                   data-testid="op-{o.scope}"
                 >
                   <span
-                    class="text-[10px] font-mono w-14 shrink-0 text-center rounded px-1 py-0.5 {o.write
-                      ? 'bg-amber-500/10 text-amber-300'
-                      : 'bg-sky-500/10 text-sky-300'}">{o.method}</span
+                    class="text-xs font-mono w-14 shrink-0 text-center rounded px-1 py-0.5 {o.write
+                      ? 'bg-kitsuden-amber/10 text-kitsuden-amber'
+                      : 'bg-kitsuden-info/10 text-kitsuden-info'}">{o.method}</span
                   >
                   <div class="min-w-0 flex-1">
-                    <div class="text-sm text-zinc-200 truncate">{o.summary}</div>
-                    <code class="text-[11px] text-zinc-500 break-all">{o.scope}</code>
+                    <div class="text-sm text-kitsuden-text truncate">{o.summary}</div>
+                    <code class="text-[11px] text-kitsuden-subtle break-all">{o.scope}</code>
                   </div>
                   {#if o.sensitive}
-                    <span class="text-[10px] px-1.5 py-0.5 rounded-sm bg-red-500/10 text-red-300"
+                    <span
+                      class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-danger/10 text-kitsuden-danger"
                       >{t("agentAccess.sensitive")}</span
                     >
                   {/if}
                   {#if o.cost !== 1}
-                    <span class="text-[10px] text-zinc-500"
+                    <span class="text-xs text-kitsuden-subtle"
                       >{t("agentAccess.cost", { n: o.cost })}</span
                     >
                   {/if}
                   <select
-                    class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
+                    class="px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
                     aria-label={t("agentAccess.permissionFor", { scope: o.scope })}
                     value={choiceOf(o.scope)}
                     onchange={(e) =>
@@ -383,38 +408,38 @@
           </details>
         {/each}
         {#if catalog.legacyKons.length}
-          <p class="text-xs text-zinc-500">
+          <p class="text-xs text-kitsuden-subtle">
             {t("agentAccess.legacyKons", { list: catalog.legacyKons.map((k) => k.kon).join(", ") })}
           </p>
         {/if}
       </section>
 
       <section class="space-y-2">
-        <h3 class="text-sm font-semibold text-zinc-300">{t("agentAccess.datasets")}</h3>
-        <p class="text-xs text-zinc-500">{t("agentAccess.datasetsExplained")}</p>
+        <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentAccess.datasets")}</h3>
+        <p class="text-xs text-kitsuden-subtle">{t("agentAccess.datasetsExplained")}</p>
         {#if catalog.datasets.length === 0}
-          <p class="text-sm text-zinc-500">{t("agentAccess.noDatasets")}</p>
+          <p class="text-sm text-kitsuden-subtle">{t("agentAccess.noDatasets")}</p>
         {:else}
-          <div class="overflow-x-auto border border-zinc-800 rounded-lg">
+          <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
             <table class="w-full text-sm">
-              <thead class="text-xs text-zinc-500">
+              <thead class="text-xs text-kitsuden-subtle">
                 <tr>
                   <th class="text-left px-3 py-2">{t("agentAccess.dataset")}</th>
                   {#each ACTIONS as a (a)}<th class="text-left px-3 py-2">{ACTION_NAME[a]()}</th
                     >{/each}
                 </tr>
               </thead>
-              <tbody class="divide-y divide-zinc-800/70">
+              <tbody class="divide-y divide-kitsuden-border/70">
                 {#each catalog.datasets as d (d.slug)}
                   <tr data-testid="ds-{d.slug}">
                     <td class="px-3 py-2 min-w-0">
-                      <div class="text-zinc-200">{d.name}</div>
-                      <code class="text-[11px] text-zinc-500">{d.slug}</code>
+                      <div class="text-kitsuden-text">{d.name}</div>
+                      <code class="text-[11px] text-kitsuden-subtle">{d.slug}</code>
                     </td>
                     {#each ACTIONS as a (a)}
                       <td class="px-3 py-2">
                         <select
-                          class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
+                          class="px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
                           aria-label={t("agentAccess.permissionFor", {
                             scope: `datasets:${d.slug}:${a}`,
                           })}
@@ -440,50 +465,50 @@
       </section>
     {:else}
       <section class="space-y-2">
-        <label for="raw-scopes" class="block text-sm font-semibold text-zinc-300"
+        <label for="raw-scopes" class="block text-sm font-semibold text-kitsuden-text"
           >{t("agentAccess.rawScopes")}</label
         >
-        <p class="text-xs text-zinc-500">{t("agentAccess.rawHelp")}</p>
+        <p class="text-xs text-kitsuden-subtle">{t("agentAccess.rawHelp")}</p>
         <textarea
           id="raw-scopes"
           bind:value={rawValue}
           rows={10}
-          class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm font-mono text-zinc-100"
+          class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm font-mono text-kitsuden-text"
         ></textarea>
       </section>
     {/if}
 
     <!-- What it can do (saved) -->
     <section class="space-y-3" data-testid="effective-access">
-      <h3 class="text-sm font-semibold text-zinc-300">{t("agentAccess.effectiveTitle")}</h3>
-      <p class="text-xs text-zinc-500">{t("agentAccess.effectiveHelp")}</p>
+      <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentAccess.effectiveTitle")}</h3>
+      <p class="text-xs text-kitsuden-subtle">{t("agentAccess.effectiveHelp")}</p>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card class="p-3"
-          ><div class="text-xs text-zinc-500">{t("agentAccess.statGranted")}</div>
-          <div class="text-xl text-emerald-300">{summary.granted}</div></Card
+          ><div class="text-xs text-kitsuden-subtle">{t("agentAccess.statGranted")}</div>
+          <div class="text-xl text-kitsuden-green">{summary.granted}</div></Card
         >
         <Card class="p-3"
-          ><div class="text-xs text-zinc-500">{t("agentAccess.statDenied")}</div>
-          <div class="text-xl text-red-300">{summary.deniedMany}</div></Card
+          ><div class="text-xs text-kitsuden-subtle">{t("agentAccess.statDenied")}</div>
+          <div class="text-xl text-kitsuden-danger">{summary.deniedMany}</div></Card
         >
         <Card class="p-3"
-          ><div class="text-xs text-zinc-500">{t("agentAccess.statPolicy")}</div>
-          <div class="text-xl text-amber-300">{summary.policy}</div></Card
+          ><div class="text-xs text-kitsuden-subtle">{t("agentAccess.statPolicy")}</div>
+          <div class="text-xl text-kitsuden-amber">{summary.policy}</div></Card
         >
         <Card class="p-3"
-          ><div class="text-xs text-zinc-500">{t("agentAccess.statTotal")}</div>
-          <div class="text-xl text-zinc-200">{summary.total}</div></Card
+          ><div class="text-xs text-kitsuden-subtle">{t("agentAccess.statTotal")}</div>
+          <div class="text-xl text-kitsuden-text">{summary.total}</div></Card
         >
       </div>
 
       {#if access.broad.length}
         <div class="space-y-1">
-          <h4 class="text-xs font-semibold text-zinc-400">{t("agentAccess.broadHeld")}</h4>
+          <h4 class="text-xs font-semibold text-kitsuden-text-dim">{t("agentAccess.broadHeld")}</h4>
           {#each access.broad as b (b.scope)}
             <div class="flex flex-wrap items-baseline gap-2 text-sm">
-              <Check size={14} class="text-emerald-400 shrink-0" />
-              <code class="text-xs text-indigo-300">{b.scope}</code>
-              <span class="text-zinc-400"
+              <Check size={14} class="text-kitsuden-green shrink-0" />
+              <code class="text-xs text-kitsuden-accent">{b.scope}</code>
+              <span class="text-kitsuden-text-dim"
                 >{b.known ? broadDescription(b.scope) : t("agentAccess.unknownScope")}</span
               >
             </div>
@@ -492,11 +517,13 @@
       {/if}
       {#if access.denies.length}
         <div class="space-y-1">
-          <h4 class="text-xs font-semibold text-zinc-400">{t("agentAccess.deniesHeld")}</h4>
+          <h4 class="text-xs font-semibold text-kitsuden-text-dim">
+            {t("agentAccess.deniesHeld")}
+          </h4>
           {#each access.denies as d (d)}
             <div class="flex items-center gap-2 text-sm">
-              <Ban size={14} class="text-red-400 shrink-0" /><code class="text-xs text-red-300"
-                >{d}</code
+              <Ban size={14} class="text-kitsuden-danger shrink-0" /><code
+                class="text-xs text-kitsuden-danger">{d}</code
               >
             </div>
           {/each}
@@ -506,29 +533,32 @@
       {#if opsWithPermission.length}
         <div class="space-y-2">
           {#each byKon as g (g.kon)}
-            <details class="border border-zinc-800 rounded-lg" data-testid="effective-{g.kon}">
+            <details
+              class="border border-kitsuden-border rounded-lg"
+              data-testid="effective-{g.kon}"
+            >
               <summary
-                class="px-3 py-2 cursor-pointer text-sm text-zinc-200 flex flex-wrap items-center gap-2"
+                class="px-3 py-2 cursor-pointer text-sm text-kitsuden-text flex flex-wrap items-center gap-2"
               >
                 <span class="font-medium">{g.kon}</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded-sm {STATUS.granted.kind}"
+                <span class="text-xs px-1.5 py-0.5 rounded-sm {STATUS.granted.kind}"
                   >{t("agentAccess.groupGranted", { n: g.granted })}</span
                 >
                 {#if g.deniedMany}
-                  <span class="text-[10px] px-1.5 py-0.5 rounded-sm {STATUS.denied.kind}"
+                  <span class="text-xs px-1.5 py-0.5 rounded-sm {STATUS.denied.kind}"
                     >{t("agentAccess.groupDenied", { n: g.deniedMany })}</span
                   >
                 {/if}
               </summary>
-              <div class="divide-y divide-zinc-800/70 border-t border-zinc-800">
+              <div class="divide-y divide-kitsuden-border/70 border-t border-kitsuden-border">
                 {#each g.ops as o (o.scope)}
                   <div class="flex flex-wrap items-center gap-2 px-3 py-2 text-sm min-w-0">
-                    <span class="text-[10px] px-1.5 py-0.5 rounded-sm {STATUS[o.state].kind}"
+                    <span class="text-xs px-1.5 py-0.5 rounded-sm {STATUS[o.state].kind}"
                       >{STATUS[o.state].text()}</span
                     >
-                    <span class="font-mono text-[11px] text-zinc-500">{o.method}</span>
-                    <span class="text-zinc-300 truncate min-w-0">{o.path}</span>
-                    {#if o.by}<code class="ml-auto text-[11px] text-zinc-500"
+                    <span class="font-mono text-[11px] text-kitsuden-subtle">{o.method}</span>
+                    <span class="text-kitsuden-text truncate min-w-0">{o.path}</span>
+                    {#if o.by}<code class="ml-auto text-[11px] text-kitsuden-subtle"
                         >{t("agentAccess.by", { scope: o.by })}</code
                       >{/if}
                   </div>
@@ -538,27 +568,28 @@
           {/each}
         </div>
       {:else}
-        <p class="text-sm text-zinc-500">{t("agentAccess.noOperationGrants")}</p>
+        <p class="text-sm text-kitsuden-subtle">{t("agentAccess.noOperationGrants")}</p>
       {/if}
 
       {#if access.datasets.length}
-        <div class="overflow-x-auto border border-zinc-800 rounded-lg">
+        <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
           <table class="w-full text-sm">
-            <thead class="text-xs text-zinc-500">
+            <thead class="text-xs text-kitsuden-subtle">
               <tr>
                 <th class="text-left px-3 py-2">{t("agentAccess.dataset")}</th>
                 {#each ACTIONS as a (a)}<th class="text-left px-3 py-2">{ACTION_NAME[a]()}</th
                   >{/each}
               </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-800/70">
+            <tbody class="divide-y divide-kitsuden-border/70">
               {#each access.datasets as d (d.slug)}
                 <tr>
-                  <td class="px-3 py-2"><code class="text-xs text-zinc-300">{d.slug}</code></td>
+                  <td class="px-3 py-2"><code class="text-xs text-kitsuden-text">{d.slug}</code></td
+                  >
                   {#each ACTIONS as a (a)}
                     <td class="px-3 py-2">
                       <span
-                        class="text-[10px] px-1.5 py-0.5 rounded-sm {STATUS[d[a].state].kind}"
+                        class="text-xs px-1.5 py-0.5 rounded-sm {STATUS[d[a].state].kind}"
                         title={d[a].by ?? ""}>{STATUS[d[a].state].text()}</span
                       >
                     </td>

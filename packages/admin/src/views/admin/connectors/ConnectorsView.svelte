@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
+  import { toast } from "svelte-sonner";
   import { t } from "$lib/i18n";
   import {
     Plug,
@@ -104,10 +106,10 @@
         await loadConnectors();
       } else {
         const err = await res.json();
-        alert(err.error || t("connectorsView.failedToCreateConnector"));
+        toast.error(err.error || t("connectorsView.failedToCreateConnector"));
       }
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       creating = false;
     }
@@ -164,7 +166,7 @@
   }
 
   async function deleteConnector(id: string) {
-    if (!confirm(t("connectorsView.deleteThisConnectorThisCannot"))) return;
+    if (!(await confirmDialog(t("connectorsView.deleteThisConnectorThisCannot")))) return;
     try {
       await fetch(`${API_URL}/api/custom/connectors/${id}`, {
         method: "DELETE",
@@ -172,7 +174,7 @@
       });
       await loadConnectors();
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     }
   }
 
@@ -186,7 +188,7 @@
       });
       await loadConnectors();
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     }
   }
 
@@ -317,7 +319,7 @@
             bind:value={formName}
             placeholder={t("connectorsView.eGLegacyMysql")}
             required
-            class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+            class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
           />
         </div>
         <div>
@@ -327,7 +329,7 @@
           <select
             id="formtype"
             bind:value={formType}
-            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
           >
             <option value="database">{t("connectorsView.databaseMysqlMariadb")}</option>
             <option value="api">{t("connectorsView.restApi")}</option>
@@ -346,7 +348,7 @@
               type="text"
               bind:value={formHost}
               placeholder="localhost"
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
           <div>
@@ -358,7 +360,7 @@
               type="text"
               bind:value={formPort}
               placeholder="3306"
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
           <div>
@@ -368,7 +370,7 @@
             <select
               id="formdialect"
               bind:value={formDialect}
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             >
               <option value="mysql">{t("connectorsView.mysql")}</option>
               <option value="mariadb">{t("connectorsView.mariadb")}</option>
@@ -386,7 +388,7 @@
               bind:value={formDbName}
               placeholder="my_database"
               required
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
           <div>
@@ -399,7 +401,7 @@
               bind:value={formUser}
               placeholder="root"
               required
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
           <div>
@@ -411,7 +413,7 @@
               type="password"
               bind:value={formPass}
               placeholder="********"
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
         </div>
@@ -427,7 +429,7 @@
               bind:value={formBaseUrl}
               placeholder="https://api.example.com/v1"
               required
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
           <div>
@@ -439,7 +441,7 @@
               type="password"
               bind:value={formApiKey}
               placeholder="sk-..."
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder-kitsuden-text-dim border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             />
           </div>
         </div>

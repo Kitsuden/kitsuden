@@ -438,7 +438,7 @@
   }
 
   .field-label {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -514,7 +514,7 @@
   }
 
   .field-note {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     margin: 0;
   }
 
@@ -580,7 +580,7 @@
 
   .auth-hint {
     text-align: center;
-    font-size: 0.66rem;
+    font-size: 0.75rem;
     line-height: 1.5;
     color: rgba(255, 255, 255, 0.3);
     margin-top: 1.5rem;

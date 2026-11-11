@@ -1042,21 +1042,21 @@
   function statusBadgeClass(status?: string) {
     switch (status) {
       case "published":
-        return "bg-blue-500/10 text-blue-500";
+        return "bg-kitsuden-info/10 text-kitsuden-info";
       case "approved":
-        return "bg-green-500/10 text-green-500";
+        return "bg-kitsuden-green/10 text-kitsuden-green";
       case "review_pending":
-        return "bg-yellow-500/10 text-yellow-500";
+        return "bg-kitsuden-amber/10 text-kitsuden-amber";
       case "draft":
-        return "bg-gray-500/10 text-gray-400";
+        return "bg-kitsuden-subtle/10 text-kitsuden-text-dim";
       case "archived":
-        return "bg-purple-500/10 text-purple-500";
+        return "bg-kitsuden-purple/10 text-kitsuden-purple";
       case "deprecated":
-        return "bg-red-500/10 text-red-500";
+        return "bg-kitsuden-danger/10 text-kitsuden-danger";
       case "changes_requested":
-        return "bg-orange-500/10 text-orange-500";
+        return "bg-kitsuden-amber/10 text-kitsuden-amber";
       default:
-        return "bg-gray-500/10 text-gray-400";
+        return "bg-kitsuden-subtle/10 text-kitsuden-text-dim";
     }
   }
 
@@ -1096,10 +1096,8 @@
   <div class="border-b border-kitsuden-border bg-kitsuden-card px-6 py-4 shrink-0">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div
-          class="w-10 h-10 rounded-xl bg-linear-to-br from-orange-500 to-amber-500 flex items-center justify-center"
-        >
-          <FileStack class="w-5 h-5 text-white" />
+        <div class="w-10 h-10 rounded-xl bg-kitsuden-amber flex items-center justify-center">
+          <FileStack class="w-5 h-5 text-kitsuden-on-status" />
         </div>
         <div>
           <h1 class="text-xl font-bold text-kitsuden-text">{tr("dMSView.documentManagement")}</h1>
@@ -1148,7 +1146,7 @@
             <Bell class="w-4 h-4" />
             {#if unreadCount > 0}
               <span
-                class="ml-0.5 px-1.5 py-0.5 rounded-full bg-kitsuden-accent-2 text-white text-[10px] leading-none"
+                class="ml-0.5 px-1.5 py-0.5 rounded-full bg-kitsuden-accent-2 text-kitsuden-on-accent text-xs leading-none"
                 >{unreadCount}</span
               >
             {/if}
@@ -1163,8 +1161,8 @@
     {#if stats && (activeSection === "documents" || activeSection === "templates")}
       <div class="grid grid-cols-5 gap-4 mt-3 pt-3 border-t border-kitsuden-border">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
-            <FileText class="w-4 h-4 text-blue-500" />
+          <div class="w-9 h-9 rounded-lg bg-kitsuden-info/10 flex items-center justify-center">
+            <FileText class="w-4 h-4 text-kitsuden-info" />
           </div>
           <div>
             <p class="text-lg font-bold text-kitsuden-text">{stats.documents?.total || 0}</p>
@@ -1172,8 +1170,8 @@
           </div>
         </div>
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center">
-            <CheckCircle class="w-4 h-4 text-green-500" />
+          <div class="w-9 h-9 rounded-lg bg-kitsuden-green/10 flex items-center justify-center">
+            <CheckCircle class="w-4 h-4 text-kitsuden-green" />
           </div>
           <div>
             <p class="text-lg font-bold text-kitsuden-text">{stats.documents?.published || 0}</p>
@@ -1181,8 +1179,8 @@
           </div>
         </div>
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-            <Clock class="w-4 h-4 text-yellow-500" />
+          <div class="w-9 h-9 rounded-lg bg-kitsuden-amber/10 flex items-center justify-center">
+            <Clock class="w-4 h-4 text-kitsuden-amber" />
           </div>
           <div>
             <p class="text-lg font-bold text-kitsuden-text">{stats.documents?.draft || 0}</p>
@@ -1190,8 +1188,8 @@
           </div>
         </div>
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
-            <AlertCircle class="w-4 h-4 text-purple-500" />
+          <div class="w-9 h-9 rounded-lg bg-kitsuden-purple/10 flex items-center justify-center">
+            <AlertCircle class="w-4 h-4 text-kitsuden-purple" />
           </div>
           <div>
             <p class="text-lg font-bold text-kitsuden-text">
@@ -1305,7 +1303,7 @@
               <input
                 type="text"
                 placeholder={tr("dMSView.searchDocuments")}
-                class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent/50"
+                class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent/50"
                 bind:value={searchQuery}
                 oninput={() => {
                   currentPage = 1;
@@ -1314,7 +1312,7 @@
               />
             </div>
             <select
-              class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
+              class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
               bind:value={statusFilter}
               onchange={() => {
                 currentPage = 1;
@@ -1327,7 +1325,7 @@
               {/each}
             </select>
             <select
-              class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
+              class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
               bind:value={typeFilter}
               onchange={() => {
                 currentPage = 1;
@@ -1384,7 +1382,7 @@
                   <th class="px-4 py-3 w-10">
                     <input
                       type="checkbox"
-                      class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                      class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                       checked={allSelected}
                       indeterminate={someSelected}
                       onchange={toggleSelectAll}
@@ -1416,7 +1414,7 @@
                     <td class="px-4 py-3">
                       <input
                         type="checkbox"
-                        class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                        class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                         checked={selectedIds.has(doc.id)}
                         onchange={() => toggleSelect(doc.id)}
                       />
@@ -1426,7 +1424,7 @@
                       <div class="flex items-center gap-2">
                         {#if doc.requiresReview || isOverdue(doc.reviewDueDate)}
                           <span title={tr("dMSView.reviewOverdue")}
-                            ><AlertCircle class="w-3.5 h-3.5 text-red-500 shrink-0" /></span
+                            ><AlertCircle class="w-3.5 h-3.5 text-kitsuden-danger shrink-0" /></span
                           >
                         {/if}
                         <span class="font-medium text-kitsuden-text">{doc.title}</span>
@@ -1731,9 +1729,9 @@
                       </p>
                     </div>
                     <div
-                      class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center"
+                      class="w-12 h-12 rounded-xl bg-kitsuden-info/10 flex items-center justify-center"
                     >
-                      <FileText class="w-6 h-6 text-blue-500" />
+                      <FileText class="w-6 h-6 text-kitsuden-info" />
                     </div>
                   </div>
                 </div>
@@ -1746,9 +1744,9 @@
                       </p>
                     </div>
                     <div
-                      class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center"
+                      class="w-12 h-12 rounded-xl bg-kitsuden-green/10 flex items-center justify-center"
                     >
-                      <CheckCircle class="w-6 h-6 text-green-500" />
+                      <CheckCircle class="w-6 h-6 text-kitsuden-green" />
                     </div>
                   </div>
                 </div>
@@ -1761,9 +1759,9 @@
                       </p>
                     </div>
                     <div
-                      class="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center"
+                      class="w-12 h-12 rounded-xl bg-kitsuden-amber/10 flex items-center justify-center"
                     >
-                      <Clock class="w-6 h-6 text-yellow-500" />
+                      <Clock class="w-6 h-6 text-kitsuden-amber" />
                     </div>
                   </div>
                 </div>
@@ -1776,9 +1774,9 @@
                       </p>
                     </div>
                     <div
-                      class="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center"
+                      class="w-12 h-12 rounded-xl bg-kitsuden-amber/10 flex items-center justify-center"
                     >
-                      <ClipboardCheck class="w-6 h-6 text-orange-500" />
+                      <ClipboardCheck class="w-6 h-6 text-kitsuden-amber" />
                     </div>
                   </div>
                 </div>
@@ -1791,9 +1789,9 @@
                       </p>
                     </div>
                     <div
-                      class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center"
+                      class="w-12 h-12 rounded-xl bg-kitsuden-purple/10 flex items-center justify-center"
                     >
-                      <Archive class="w-6 h-6 text-purple-500" />
+                      <Archive class="w-6 h-6 text-kitsuden-purple" />
                     </div>
                   </div>
                 </div>
@@ -1806,9 +1804,9 @@
                       </p>
                     </div>
                     <div
-                      class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center"
+                      class="w-12 h-12 rounded-xl bg-kitsuden-danger/10 flex items-center justify-center"
                     >
-                      <AlertCircle class="w-6 h-6 text-red-500" />
+                      <AlertCircle class="w-6 h-6 text-kitsuden-danger" />
                     </div>
                   </div>
                 </div>
@@ -1872,13 +1870,13 @@
             <span class="text-xs font-mono text-kitsuden-subtle">{drawerDoc?.code || "—"}</span>
             {#if drawerDoc?.isTemplate}
               <span
-                class="px-1.5 py-0.5 rounded-sm bg-purple-500/10 text-purple-400 text-[10px] font-medium"
+                class="px-1.5 py-0.5 rounded-sm bg-kitsuden-purple/10 text-kitsuden-purple text-xs font-medium"
                 >{tr("dMSView.template2")}</span
               >
             {/if}
             {#if drawerDoc?.requiresReview || isOverdue(drawerDoc?.reviewDueDate)}
               <span
-                class="px-1.5 py-0.5 rounded-sm bg-red-500/10 text-red-400 text-[10px] font-medium"
+                class="px-1.5 py-0.5 rounded-sm bg-kitsuden-danger/10 text-kitsuden-danger text-xs font-medium"
                 >{tr("dMSView.reviewOverdue2")}</span
               >
             {/if}
@@ -1947,13 +1945,13 @@
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
             {#if tab === "comments" && comments.length > 0}
               <span
-                class="px-1 py-0 rounded-full bg-kitsuden-accent/20 text-kitsuden-accent text-[9px]"
+                class="px-1 py-0 rounded-full bg-kitsuden-accent/20 text-kitsuden-accent text-xs"
                 >{comments.length}</span
               >
             {/if}
             {#if tab === "versions" && versions.length > 0}
               <span
-                class="px-1 py-0 rounded-full bg-kitsuden-accent/20 text-kitsuden-accent text-[9px]"
+                class="px-1 py-0 rounded-full bg-kitsuden-accent/20 text-kitsuden-accent text-xs"
                 >{versions.length}</span
               >
             {/if}
@@ -2068,7 +2066,7 @@
                   id="reviewduedate"
                   type="date"
                   class="kitsuden-input w-full {isOverdue(formDoc.reviewDueDate)
-                    ? 'border-red-500/50 text-red-400'
+                    ? 'border-kitsuden-danger/50 text-kitsuden-danger'
                     : ''}"
                   bind:value={formDoc.reviewDueDate}
                 />
@@ -2088,7 +2086,7 @@
                 <input
                   type="checkbox"
                   id="reqAck"
-                  class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
+                  class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
                   bind:checked={formDoc.requiresAcknowledgment}
                 />
                 <label for="reqAck" class="text-sm text-kitsuden-text"
@@ -2292,7 +2290,7 @@
                             >v{v.versionNumber}</span
                           >
                           <span
-                            class="px-2 py-0.5 rounded-full text-[10px] font-medium {statusBadgeClass(
+                            class="px-2 py-0.5 rounded-full text-xs font-medium {statusBadgeClass(
                               v.status
                             )}">{getStatusConfig(v.status).label}</span
                           >
@@ -2343,7 +2341,7 @@
                             {tr("dMSView.publish")}
                           </button>
                         {:else if v.status === "published"}
-                          <span class="text-xs text-blue-400 flex items-center gap-1">
+                          <span class="text-xs text-kitsuden-info flex items-center gap-1">
                             <CheckCircle class="w-3 h-3" />
                             {tr("common.published")}
                           </span>
@@ -2423,14 +2421,14 @@
                         </button>
                         {#if !comment.resolved}
                           <button
-                            class="text-xs text-kitsuden-subtle hover:text-green-400 flex items-center gap-1"
+                            class="text-xs text-kitsuden-subtle hover:text-kitsuden-green flex items-center gap-1"
                             onclick={() => resolveComment(comment.id)}
                           >
                             <Check class="w-3 h-3" />
                             {tr("dMSView.resolve")}
                           </button>
                         {:else}
-                          <span class="text-xs text-green-400 flex items-center gap-1">
+                          <span class="text-xs text-kitsuden-green flex items-center gap-1">
                             <CheckCircle class="w-3 h-3" />
                             {tr("dMSView.resolved")}
                           </span>
@@ -2448,7 +2446,7 @@
                           {#each comment.replies as reply}
                             <div class="flex items-start gap-2">
                               <div
-                                class="w-6 h-6 rounded-full bg-kitsuden-bg border border-kitsuden-border flex items-center justify-center text-kitsuden-text text-[10px] font-bold shrink-0"
+                                class="w-6 h-6 rounded-full bg-kitsuden-bg border border-kitsuden-border flex items-center justify-center text-kitsuden-text text-xs font-bold shrink-0"
                               >
                                 {getInitials(reply.createdBy?.name)}
                               </div>
@@ -2457,7 +2455,7 @@
                                   <span class="text-xs font-medium text-kitsuden-text"
                                     >{reply.createdBy?.name || tr("dMSView.unknown")}</span
                                   >
-                                  <span class="text-[10px] text-kitsuden-subtle"
+                                  <span class="text-xs text-kitsuden-subtle"
                                     >{formatDateTime(reply.createdAt)}</span
                                   >
                                 </div>
@@ -2551,7 +2549,7 @@
                       </p>
                       {#if entry.details}
                         <pre
-                          class="text-[10px] text-kitsuden-text-dim bg-kitsuden-bg p-2 rounded-sm mt-2 overflow-auto">{JSON.stringify(
+                          class="text-xs text-kitsuden-text-dim bg-kitsuden-bg p-2 rounded-sm mt-2 overflow-auto">{JSON.stringify(
                             entry.details,
                             null,
                             2
@@ -2728,7 +2726,7 @@
           <button type="submit" disabled={saving || !formDoc.title} class="btn-primary">
             {#if saving}
               <span
-                class="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"
+                class="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin"
               ></span>
               {tr("common.creating")}
             {:else}
@@ -2807,7 +2805,7 @@
               id="newcategorycolor"
               bind:value={newCategoryColor}
               type="color"
-              class="w-full h-10 bg-kitsuden-bg border border-kitsuden-border rounded-lg px-2 py-1"
+              class="w-full h-10 bg-kitsuden-bg border border-kitsuden-input rounded-lg px-2 py-1"
             />
           </div>
         </div>
@@ -2833,7 +2831,7 @@
           <button type="submit" disabled={saving || !newCategoryName} class="btn-primary">
             {#if saving}
               <span
-                class="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"
+                class="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin"
               ></span>
               {tr("common.creating")}
             {:else}
@@ -2994,9 +2992,9 @@
     <div
       class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium min-w-[280px] transition-all duration-300
       {toast.type === 'success'
-        ? 'bg-kitsuden-card border-green-500/30 text-green-400'
+        ? 'bg-kitsuden-card border-kitsuden-green/30 text-kitsuden-green'
         : toast.type === 'error'
-          ? 'bg-kitsuden-card border-red-500/30 text-red-400'
+          ? 'bg-kitsuden-card border-kitsuden-danger/30 text-kitsuden-danger'
           : 'bg-kitsuden-card border-kitsuden-accent/30 text-kitsuden-accent'}"
     >
       {#if toast.type === "success"}<CheckCircle class="w-4 h-4 shrink-0" />{/if}
@@ -3011,7 +3009,7 @@
   @reference "../../style.css";
 
   .btn-primary {
-    @apply inline-flex items-center gap-2 px-4 py-2 bg-kitsuden-accent text-kitsuden-bg rounded-lg font-medium hover:bg-kitsuden-accent-dim active:scale-[0.98] transition-all disabled:opacity-50;
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-kitsuden-accent text-kitsuden-on-accent rounded-lg font-medium hover:bg-kitsuden-accent-dim active:scale-[0.98] transition-all disabled:opacity-50;
   }
   .btn-secondary {
     @apply inline-flex items-center gap-2 px-4 py-2 bg-kitsuden-card border border-kitsuden-border text-kitsuden-text rounded-lg hover:bg-kitsuden-muted/30 transition-all disabled:opacity-50;

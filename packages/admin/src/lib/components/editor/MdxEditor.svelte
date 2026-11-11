@@ -294,7 +294,7 @@
       -->
       {#if previewError}
         <p
-          class="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-kitsuden-text-dim"
+          class="mb-4 rounded-md border border-kitsuden-amber/30 bg-kitsuden-amber/10 px-3 py-2 text-xs text-kitsuden-text-dim"
         >
           {previewError}
         </p>

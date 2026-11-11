@@ -13,24 +13,30 @@
   ];
 </script>
 
-<div class="flex h-full">
-  <!-- Sidebar -->
-  <aside class="w-60 border-r border-zinc-800 bg-zinc-900/50">
-    <div class="p-4">
-      <h2 class="text-sm font-semibold text-zinc-400 uppercase tracking-wider">
+<div class="flex h-full flex-col md:flex-row">
+  <!-- Section navigation -->
+  <aside
+    class="md:w-60 shrink-0 border-b md:border-b-0 md:border-r border-kitsuden-border bg-kitsuden-card/50"
+  >
+    <div class="p-4 hidden md:block">
+      <p class="text-sm font-semibold text-kitsuden-text-dim uppercase tracking-wider">
         {t("agentsLayout.aiControlCenter")}
-      </h2>
+      </p>
     </div>
 
-    <nav class="px-2 space-y-1">
+    <nav
+      class="flex gap-1 p-2 md:block md:space-y-1 md:pt-0"
+      aria-label={t("agentsLayout.aiControlCenter")}
+    >
       {#each navItems as item}
         <a
           href={item.href}
+          aria-current={$page.url.pathname === item.href ? "page" : undefined}
           class={cn(
             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
             $page.url.pathname === item.href
-              ? "bg-indigo-500/10 text-indigo-400"
-              : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50"
+              ? "bg-kitsuden-accent/10 text-kitsuden-accent"
+              : "text-kitsuden-text-dim hover:text-kitsuden-text hover:bg-kitsuden-border/50"
           )}
         >
           <svelte:component this={item.icon} size={18} />
@@ -40,8 +46,8 @@
     </nav>
   </aside>
 
-  <!-- Main content -->
-  <main class="flex-1 overflow-auto">
+  <!-- The section's content. Not a <main>: the shell already has the page's only one. -->
+  <div class="flex-1 min-w-0 overflow-auto">
     <slot />
-  </main>
+  </div>
 </div>

@@ -21,7 +21,7 @@
     max={config.options?.max}
     step={config.options?.step}
     placeholder={config.options?.placeholder}
-    class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+    class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
     oninput={(e) => onChange?.(e.currentTarget.valueAsNumber)}
   />
 {/if}

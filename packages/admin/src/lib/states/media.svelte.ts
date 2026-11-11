@@ -1,3 +1,4 @@
+import { confirmDialog } from "$lib/confirm.svelte";
 import { t } from "$lib/i18n";
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -84,6 +85,9 @@ export class MediaStore {
   selectedFile = $state<MediaFile | null>(null);
   selectedFolder = $state<MediaFolder | null>(null);
   error = $state<string | null>(null);
+  /** The LIST failed to load (as opposed to `error`, which any action sets): the library
+   *  shows this instead of "no files yet". */
+  loadError = $state<string | null>(null);
   searchQuery = $state<string>("");
   filterType = $state<string>(""); // "image", "video", "document", ""
   viewMode = $state<"grid" | "list">("grid");
@@ -134,6 +138,7 @@ export class MediaStore {
   async fetchFiles(folderId?: string, search?: string): Promise<void> {
     this.isLoading = true;
     this.error = null;
+    this.loadError = null;
 
     try {
       const params = new URLSearchParams();
@@ -153,6 +158,7 @@ export class MediaStore {
       this.files = data.docs || [];
     } catch (err) {
       this.error = err instanceof Error ? err.message : t("mediaStore.couldNotLoadFiles");
+      this.loadError = this.error;
       console.error("[MediaStore] fetchFiles error:", err);
     } finally {
       this.isLoading = false;
@@ -263,7 +269,7 @@ export class MediaStore {
   }
 
   async deleteFile(id: string): Promise<boolean> {
-    if (!confirm(t("mediaStore.confirmDelete"))) return false;
+    if (!(await confirmDialog(t("mediaStore.confirmDelete")))) return false;
 
     try {
       const response = await fetch(`${API_URL}/api/media/${id}`, {

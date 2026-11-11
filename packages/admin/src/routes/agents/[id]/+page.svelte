@@ -14,6 +14,7 @@
     History,
   } from "lucide-svelte";
   import { onMount } from "svelte";
+  import { toast } from "svelte-sonner";
 
   import AgentApproval from "$lib/components/agents/AgentApproval.svelte";
   import AgentPromotion from "$lib/components/agents/AgentPromotion.svelte";
@@ -36,7 +37,10 @@
     listTraces,
     listTraceSteps,
   } from "$lib/services/agents";
-  import { ConfirmDialog } from "$lib/tallao";
+  import StateMessage from "$lib/components/feedback/StateMessage.svelte";
+  import UnsavedGuard from "$lib/components/feedback/UnsavedGuard.svelte";
+  import { pageTitle, queryChoice, setQuery } from "$lib/page";
+  import { ConfirmDialog, Input, Select, Tabs, Textarea, type TabItem } from "$lib/tallao";
   import type { Agent, AgentTraceStep } from "$lib/types/agents";
 
   import { goto } from "$app/navigation";
@@ -83,8 +87,44 @@
     "history",
     "traces",
   ];
-  const initialTab = $page.url.searchParams.get("tab") as Tab | null;
-  let activeTab = $state<Tab>(initialTab && TABS.includes(initialTab) ? initialTab : "playground");
+  /**
+   * The tab IS the `?tab=` of the address: choosing one navigates (a history entry), so
+   * back/forward walk the tabs and a copied link opens the same one. It used to be local
+   * state read once from the URL and never written back.
+   */
+  const activeTab = $derived(queryChoice($page.url, "tab", TABS, "playground"));
+  function selectTab(tab: string) {
+    void setQuery($page.url, { tab: tab === "playground" ? null : tab });
+  }
+
+  const TAB_ICONS: Partial<Record<Tab, typeof Play>> = {
+    playground: Play,
+    access: ShieldCheck,
+    keys: KeyRound,
+    quotas: Gauge,
+    sponsor: PenLine,
+    approval: UserCheck,
+    history: History,
+  };
+  const TAB_LABELS: Record<Tab, () => string> = {
+    playground: () => t("idPage.playground"),
+    settings: () => t("idPage.configuration"),
+    access: () => t("agentAccess.tab"),
+    keys: () => t("agentKeys.tab"),
+    quotas: () => t("agentQuotas.tab"),
+    sponsor: () => t("agentSponsor.tab"),
+    approval: () => t("agentApproval.tab"),
+    history: () => t("agentVersions.tab"),
+    traces: () => t("common.traces"),
+  };
+  const TAB_ITEMS = $derived<TabItem[]>(
+    TABS.map((id) => ({
+      id,
+      label: TAB_LABELS[id](),
+      controls: "agent-panel",
+      tabId: `agent-tab-${id}`,
+    }))
+  );
 
   // Playground state
   let messages = $state<
@@ -111,6 +151,13 @@
 
   // Settings form
   let formData = $state<Partial<Agent>>({});
+  /** The settings form differs from the saved agent: leaving would lose it. */
+  const settingsDirty = $derived(
+    !!agent &&
+      (["name", "description", "model"] as const).some(
+        (key) => (formData[key] ?? "") !== (agent?.[key] ?? "")
+      )
+  );
 
   onMount(async () => {
     await loadAgent();
@@ -134,8 +181,12 @@
       saving = true;
       await updateAgent(agentId, formData);
       await loadAgent();
+      toast.success(t("idPage.saved"));
     } catch (e) {
-      error = e instanceof Error ? e.message : t("idPage.errorSavingChanges");
+      // A toast, not the page's `error`: that one replaces the whole form with a message.
+      toast.error(t("idPage.errorSavingChanges"), {
+        description: e instanceof Error ? e.message : undefined,
+      });
     } finally {
       saving = false;
     }
@@ -224,23 +275,32 @@
   }
 </script>
 
+<svelte:head>
+  <title
+    >{pageTitle(agent?.name ? `${agent.name} · ${t("titles.agents")}` : t("titles.agent"))}</title
+  >
+</svelte:head>
+
+<!-- Unsaved settings: ask before leaving the page (the form survives a change of tab). -->
+<UnsavedGuard dirty={settingsDirty} />
+
 <div class="h-full flex flex-col">
   <!-- Header -->
-  <div class="flex items-center gap-4 px-6 py-4 border-b border-zinc-800">
-    <Button variant="ghost" size="sm" href="/agents">
+  <div class="flex items-center gap-4 px-6 py-4 border-b border-kitsuden-border">
+    <Button variant="ghost" size="sm" href="/agents" aria-label={t("idPage.backToAgents")}>
       <ArrowLeft size={18} />
     </Button>
 
     {#if loading}
-      <div class="animate-pulse h-6 w-48 bg-zinc-800 rounded-sm"></div>
+      <div class="animate-pulse h-6 w-48 bg-kitsuden-border rounded-sm"></div>
     {:else if agent}
       <div class="flex items-center gap-3">
-        <div class="p-2 bg-indigo-500/10 rounded-lg">
-          <Bot size={20} class="text-indigo-400" />
+        <div class="p-2 bg-kitsuden-accent/10 rounded-lg">
+          <Bot size={20} class="text-kitsuden-accent" />
         </div>
         <div>
-          <h1 class="text-xl font-semibold text-zinc-100">{agent.name}</h1>
-          <p class="text-xs text-zinc-500">
+          <h1 class="text-xl font-semibold text-kitsuden-text">{agent.name}</h1>
+          <p class="text-xs text-kitsuden-subtle">
             {[agent.model ?? agent.type, t(`agentsView.status_${agent.status}`)]
               .filter(Boolean)
               .join(" • ")}
@@ -251,98 +311,43 @@
 
     <div class="flex-1"></div>
 
-    <!-- Tabs -->
-    <div class="flex flex-wrap items-center gap-1 bg-zinc-900 p-1 rounded-lg">
-      <button
-        class="px-3 py-1.5 text-sm rounded-md transition-colors {activeTab === 'playground'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500 hover:text-zinc-300'}"
-        onclick={() => (activeTab = "playground")}
-      >
-        <Play size={14} class="inline mr-1.5" />
-        {t("idPage.playground")}
-      </button>
-      <button
-        class="px-3 py-1.5 text-sm rounded-md transition-colors {activeTab === 'settings'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500 hover:text-zinc-300'}"
-        onclick={() => (activeTab = "settings")}
-      >
-        {t("idPage.configuration")}
-      </button>
-      <button
-        class="px-3 py-1.5 text-sm rounded-md transition-colors {activeTab === 'access'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500 hover:text-zinc-300'}"
-        onclick={() => (activeTab = "access")}
-      >
-        <ShieldCheck size={14} class="inline mr-1.5" />
-        {t("agentAccess.tab")}
-      </button>
-      <button
-        class="px-3 py-1.5 text-sm rounded-md transition-colors {activeTab === 'keys'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500 hover:text-zinc-300'}"
-        onclick={() => (activeTab = "keys")}
-      >
-        <KeyRound size={14} class="inline mr-1.5" />
-        {t("agentKeys.tab")}
-      </button>
-      <button
-        class="px-3 py-1.5 text-sm rounded-md transition-colors {activeTab === 'quotas'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500 hover:text-zinc-300'}"
-        onclick={() => (activeTab = "quotas")}
-      >
-        <Gauge size={14} class="inline mr-1.5" />
-        {t("agentQuotas.tab")}
-      </button>
-      <button
-        class="px-3 py-1.5 text-sm rounded-md transition-colors {activeTab === 'sponsor'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500 hover:text-zinc-300'}"
-        onclick={() => (activeTab = "sponsor")}
-      >
-        <PenLine size={14} class="inline mr-1.5" />
-        {t("agentSponsor.tab")}
-      </button>
-      <button
-        class="px-3 py-1.5 text-sm rounded-md transition-colors {activeTab === 'approval'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500 hover:text-zinc-300'}"
-        onclick={() => (activeTab = "approval")}
-      >
-        <UserCheck size={14} class="inline mr-1.5" />
-        {t("agentApproval.tab")}
-      </button>
-      <button
-        class="px-3 py-1.5 text-sm rounded-md transition-colors {activeTab === 'history'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500 hover:text-zinc-300'}"
-        onclick={() => (activeTab = "history")}
-      >
-        <History size={14} class="inline mr-1.5" />
-        {t("agentVersions.tab")}
-      </button>
-      <button
-        class="px-3 py-1.5 text-sm rounded-md transition-colors {activeTab === 'traces'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500 hover:text-zinc-300'}"
-        onclick={() => (activeTab = "traces")}
-      >
-        {t("common.traces")}
-      </button>
-    </div>
+    <!-- Tabs (tallao: tablist/tab roles, arrow keys). The panel is the content below. -->
+    <Tabs
+      items={TAB_ITEMS}
+      bind:value={() => activeTab, selectTab}
+      variant="pills"
+      wrap
+      panels={false}
+      ariaLabel={agent?.name ?? t("titles.agent")}
+    >
+      {#snippet tab(item)}
+        {@const Icon = TAB_ICONS[item.id as Tab]}
+        {#if Icon}<Icon size={14} />{/if}
+        {item.label}
+      {/snippet}
+    </Tabs>
   </div>
 
   <!-- Content -->
-  <div class="flex-1 overflow-hidden">
+  <div
+    class="flex-1 overflow-hidden"
+    id="agent-panel"
+    role="tabpanel"
+    aria-labelledby="agent-tab-{activeTab}"
+  >
     {#if loading}
       <div class="flex items-center justify-center h-full">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
       </div>
     {:else if error}
-      <div class="p-8 text-center text-red-400">{error}</div>
+      <div class="p-6">
+        <StateMessage
+          kind="error"
+          title={t("idPage.errorLoadingAgent")}
+          description={error}
+          onRetry={loadAgent}
+        />
+      </div>
     {:else if agent}
       {#if activeTab === "playground"}
         <div class="h-full p-4">
@@ -358,50 +363,43 @@
         <div class="p-6 max-w-2xl">
           <Card class="p-6 space-y-6">
             <div>
-              <label for="name" class="block text-sm font-medium text-zinc-300 mb-1.5"
+              <label for="name" class="block text-sm font-medium text-kitsuden-text mb-1.5"
                 >{t("common.name")}</label
               >
-              <input
-                id="name"
-                type="text"
-                bind:value={formData.name}
-                class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50"
+              <Input id="name" bind:value={() => formData.name ?? "", (v) => (formData.name = v)} />
+            </div>
+
+            <div>
+              <label for="description" class="block text-sm font-medium text-kitsuden-text mb-1.5"
+                >{t("common.description")}</label
+              >
+              <Textarea
+                id="description"
+                bind:value={() => formData.description ?? "", (v) => (formData.description = v)}
+                rows={3}
               />
             </div>
 
             <div>
-              <label for="description" class="block text-sm font-medium text-zinc-300 mb-1.5"
-                >{t("common.description")}</label
-              >
-              <textarea
-                id="description"
-                bind:value={formData.description}
-                rows={3}
-                class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50 resize-none"
-              ></textarea>
-            </div>
-
-            <div>
-              <label for="model" class="block text-sm font-medium text-zinc-300 mb-1.5"
+              <label for="model" class="block text-sm font-medium text-kitsuden-text mb-1.5"
                 >{t("common.model")}</label
               >
-              <select
+              <Select
                 id="model"
-                bind:value={formData.model}
-                class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50"
+                bind:value={() => formData.model ?? "", (v) => (formData.model = v)}
               >
                 <option value="gpt-4">{t("idPage.gpt4")}</option>
                 <option value="gpt-4-turbo">{t("idPage.gpt4Turbo")}</option>
                 <option value="gpt-3.5-turbo">{t("idPage.gpt35Turbo")}</option>
                 <option value="claude-3-opus">{t("idPage.claude3Opus")}</option>
                 <option value="claude-3-sonnet">{t("idPage.claude3Sonnet")}</option>
-              </select>
+              </Select>
             </div>
 
-            <div class="flex items-center justify-between pt-4 border-t border-zinc-800">
+            <div class="flex items-center justify-between pt-4 border-t border-kitsuden-border">
               <Button
                 variant="secondary"
-                class="text-red-400 hover:text-red-300"
+                class="text-kitsuden-danger hover:text-kitsuden-danger"
                 onclick={() => (confirmingRemoval = true)}
               >
                 <Trash2 size={16} class="mr-2" />
@@ -445,10 +443,14 @@
         <div class="p-6 space-y-6">
           {#if tracesLoading}
             <div class="flex items-center justify-center h-32">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+              <div
+                class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"
+              ></div>
             </div>
           {:else if traceSteps.length === 0}
-            <div class="text-center text-zinc-500 py-12">{t("idPage.noTracesAvailable")}</div>
+            <div class="text-center text-kitsuden-subtle py-12">
+              {t("idPage.noTracesAvailable")}
+            </div>
           {:else}
             <Timeline steps={traceSteps} />
           {/if}

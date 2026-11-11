@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { toast } from "svelte-sonner";
   import { t as tr } from "$lib/i18n";
   /**
    * DatasetCreator - Dataset creator with support for computed fields
@@ -178,7 +179,7 @@
     if (result) {
       goto("/datasets");
     } else {
-      alert(tr("datasetCreator.failedToCreateDataset", { error: datasetStore.error }));
+      toast.error(tr("datasetCreator.failedToCreateDataset", { error: datasetStore.error }));
     }
   }
 
@@ -244,7 +245,7 @@
       <button
         class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all {step ===
         s.id
-          ? 'bg-kitsuden-accent text-black'
+          ? 'bg-kitsuden-accent text-kitsuden-on-accent'
           : step > s.id
             ? 'bg-kitsuden-accent/20 text-kitsuden-accent'
             : 'bg-kitsuden-surface text-kitsuden-subtle'}"
@@ -283,7 +284,7 @@
             type="text"
             bind:value={datasetLabel}
             placeholder={tr("datasetCreator.eGSalesOrders")}
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
           />
         </div>
 
@@ -296,7 +297,7 @@
             type="text"
             bind:value={datasetName}
             placeholder={tr("datasetCreator.eGSalesOrders2")}
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text font-mono focus:outline-hidden focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text font-mono focus:outline-hidden focus:border-kitsuden-accent"
           />
           <p class="mt-1 text-xs text-kitsuden-subtle">
             {tr("datasetCreator.usedInApiEndpointsAuto")}
@@ -312,7 +313,7 @@
             bind:value={description}
             placeholder={tr("datasetCreator.whatDataDoesThisDataset")}
             rows="3"
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
           ></textarea>
         </div>
       </div>
@@ -356,7 +357,7 @@
                         type="text"
                         bind:value={field.label}
                         placeholder={tr("datasetCreator.fieldLabel")}
-                        class="flex-1 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded-sm text-sm"
+                        class="flex-1 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-sm"
                         onblur={() => {
                           if (!field.name) {
                             field.name = field.label.toLowerCase().replace(/[^a-z0-9]+/g, "_");
@@ -367,11 +368,11 @@
                         type="text"
                         bind:value={field.name}
                         placeholder="name"
-                        class="w-32 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded-sm text-sm font-mono"
+                        class="w-32 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-sm font-mono"
                       />
                       <select
                         bind:value={field.type}
-                        class="px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded-sm text-sm"
+                        class="px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-sm"
                       >
                         {#each nativeFieldTypes as type}
                           <option value={type.id}>{type.label}</option>
@@ -464,7 +465,8 @@
                   <div class="flex items-center gap-2">
                     <span class="font-medium text-kitsuden-text">{cf.label}</span>
                     {#if cf.isKpi}
-                      <span class="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-sm"
+                      <span
+                        class="text-xs px-2 py-0.5 bg-kitsuden-amber/10 text-kitsuden-amber rounded-sm"
                         >{tr("datasetCreator.kpi")}</span
                       >
                     {/if}
@@ -558,7 +560,7 @@
                 >
                   {cf.label}
                   {#if cf.isKpi}
-                    <span class="text-amber-400 ml-1">★</span>
+                    <span class="text-kitsuden-amber ml-1">★</span>
                   {/if}
                 </span>
               {/each}
@@ -608,7 +610,7 @@
   @reference "../../style.css";
 
   .btn-primary {
-    @apply px-4 py-2 bg-kitsuden-accent text-black font-medium rounded-lg hover:brightness-110 transition-all;
+    @apply px-4 py-2 bg-kitsuden-accent text-kitsuden-on-accent font-medium rounded-lg hover:brightness-110 transition-all;
   }
   .btn-secondary {
     @apply px-4 py-2 bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text rounded-lg hover:border-kitsuden-accent/50 transition-all;

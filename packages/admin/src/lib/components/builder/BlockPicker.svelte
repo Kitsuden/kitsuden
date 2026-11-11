@@ -68,7 +68,7 @@
       {@const catBlocks = BLOCK_REGISTRY.filter((b) => b.category === cat.id)}
       {#if catBlocks.length > 0}
         <div>
-          <h4 class="text-[10px] font-semibold uppercase tracking-wider text-kitsuden-subtle mb-3">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle mb-3">
             {cat.label}
           </h4>
           <div class="grid grid-cols-2 gap-2">
@@ -96,7 +96,7 @@
                   >
                     {block.label}
                   </p>
-                  <p class="text-[9px] text-kitsuden-subtle mt-0.5 line-clamp-2">
+                  <p class="text-xs text-kitsuden-subtle mt-0.5 line-clamp-2">
                     {block.description}
                   </p>
                 </div>
@@ -110,7 +110,7 @@
 
   <!-- Footer tip -->
   <div class="p-3 border-t border-kitsuden-border bg-kitsuden-bg/50">
-    <p class="text-[10px] text-kitsuden-subtle text-center">
+    <p class="text-xs text-kitsuden-subtle text-center">
       {t("blockPicker.tipYouCanAlsoDrag")}
     </p>
   </div>

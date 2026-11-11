@@ -242,7 +242,7 @@
           <input
             id="secret-key"
             class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border {keyValid
-              ? 'border-kitsuden-border'
+              ? 'border-kitsuden-input'
               : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
             placeholder={t("secretsPanel.openaiApiKey")}
             bind:value={formKey}
@@ -262,7 +262,7 @@
               <input
                 id="secret-value"
                 type="text"
-                class="w-full px-3 py-2 pr-10 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
+                class="w-full px-3 py-2 pr-10 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
                 placeholder="sk-..."
                 bind:value={formValue}
               />
@@ -270,7 +270,7 @@
               <input
                 id="secret-value"
                 type="password"
-                class="w-full px-3 py-2 pr-10 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
+                class="w-full px-3 py-2 pr-10 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
                 placeholder="sk-..."
                 bind:value={formValue}
               />
@@ -290,7 +290,7 @@
           >
           <input
             id="secret-desc"
-            class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
+            class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
             placeholder={t("secretsPanel.productionApiKeyOf")}
             bind:value={formDescription}
           />
@@ -302,7 +302,7 @@
             >
             <select
               id="secret-cat"
-              class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
+              class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
               bind:value={formCategory}
             >
               {#each categories as cat (cat)}
@@ -347,7 +347,7 @@
     <div
       class="flex flex-col items-center justify-center py-12 rounded-xl border border-dashed border-kitsuden-border text-center"
     >
-      <KeyRound class="w-8 h-8 text-kitsuden-muted mb-3" />
+      <KeyRound class="w-8 h-8 text-kitsuden-subtle mb-3" />
       <p class="text-sm text-kitsuden-text font-medium">{t("secretsPanel.withoutSecretsYet")}</p>
       <p class="text-xs text-kitsuden-subtle mt-1 max-w-sm">
         {t("secretsPanel.createsYourFirstSecretAnd")}
@@ -389,7 +389,7 @@
                 {#if s.autoInject}
                   <CheckCircle2 class="w-4 h-4 text-kitsuden-green" />
                 {:else}
-                  <span class="text-kitsuden-muted text-xs">{t("secretsPanel.manual")}</span>
+                  <span class="text-kitsuden-subtle text-xs">{t("secretsPanel.manual")}</span>
                 {/if}
               </td>
               <td class="px-4 py-3 text-xs text-kitsuden-subtle">{fmtDate(s.lastRotatedAt)}</td>

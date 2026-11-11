@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Alert, Button } from "$lib/tallao";
+  import { toast } from "svelte-sonner";
   import { t } from "$lib/i18n";
   import type { DatasetDefinition } from "@kitsuden/shared";
   import { ArrowLeft } from "lucide-svelte";
@@ -25,9 +27,16 @@
     saving = true;
     error = null;
     try {
-      await datasetStore.createDataset(datasetSchema);
-      // Navigate back to list on success
-      goto("/datasets");
+      // The store does not throw: it returns null and leaves the reason in `error`. The page
+      // used to go back to the list either way, so a refused dataset looked created.
+      const created = await datasetStore.createDataset(datasetSchema);
+      if (!created) {
+        error = datasetStore.error || t("newPage.failedToCreateDataset");
+        return;
+      }
+      toast.success(t("newPage.created", { name: created.name }));
+      // Straight to where the next step happens: the new dataset's entries.
+      await goto(`/datasets/${created.id}/entries`);
     } catch (err: any) {
       error = err.message || t("newPage.failedToCreateDataset");
       console.error(err);
@@ -43,12 +52,15 @@
 
 <div class="space-y-6 animate-fade-in pb-20">
   <div class="flex items-center gap-4">
-    <button
-      class="btn-icon p-2 hover:bg-kitsuden-surface rounded-lg transition-colors text-kitsuden-subtle"
+    <Button
+      variant="ghost"
+      size="icon"
       onclick={handleCancel}
+      ariaLabel={t("newPage.back")}
+      title={t("newPage.back")}
     >
       <ArrowLeft class="w-5 h-5" />
-    </button>
+    </Button>
     <div>
       <h1 class="text-2xl font-bold text-kitsuden-text">{t("common.createDataset")}</h1>
       <p class="text-sm text-kitsuden-text-dim mt-1">
@@ -58,9 +70,7 @@
   </div>
 
   {#if error}
-    <div class="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-      {error}
-    </div>
+    <Alert variant="error" onDismiss={() => (error = null)}>{error}</Alert>
   {/if}
 
   <div class="card p-6 border-kitsuden-accent/20">

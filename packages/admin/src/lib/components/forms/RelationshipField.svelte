@@ -277,7 +277,7 @@
                   <div class="min-w-0 flex-1">
                     <p class="truncate">{getDisplayLabel(item)}</p>
                     {#if item.subtitle}
-                      <p class="text-[10px] text-kitsuden-subtle truncate">{item.subtitle}</p>
+                      <p class="text-xs text-kitsuden-subtle truncate">{item.subtitle}</p>
                     {/if}
                   </div>
                   {#if value === item.id}
@@ -373,7 +373,7 @@
                   <div class="min-w-0 flex-1">
                     <p class="truncate">{getDisplayLabel(item)}</p>
                     {#if item.subtitle}
-                      <p class="text-[10px] text-kitsuden-subtle truncate">{item.subtitle}</p>
+                      <p class="text-xs text-kitsuden-subtle truncate">{item.subtitle}</p>
                     {/if}
                   </div>
                 </button>
@@ -386,10 +386,10 @@
   {/if}
 
   {#if helpText}
-    <p class="text-[10px] text-kitsuden-subtle">{helpText}</p>
+    <p class="text-xs text-kitsuden-subtle">{helpText}</p>
   {/if}
   {#if error}
-    <p class="text-[10px] text-kitsuden-accent-2">{error}</p>
+    <p class="text-xs text-kitsuden-accent-2">{error}</p>
   {/if}
 </div>
 

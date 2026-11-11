@@ -160,7 +160,7 @@
         type="text"
         placeholder={t("dataDataExplorer.searchGames")}
         bind:value={search}
-        class="w-full pl-10 pr-4 py-2 bg-kitsuden-card border border-kitsuden-border rounded-lg text-sm focus:outline-hidden focus:border-kitsuden-accent"
+        class="w-full pl-10 pr-4 py-2 bg-kitsuden-card border border-kitsuden-input rounded-lg text-sm focus:outline-hidden focus:border-kitsuden-accent"
       />
     </div>
     <button class="btn-secondary">
@@ -208,9 +208,7 @@
                 {#if game.platform}
                   <div class="flex gap-1">
                     {#each game.platform as p}
-                      <span class="px-1.5 py-0.5 text-[10px] bg-kitsuden-surface rounded-sm"
-                        >{p}</span
-                      >
+                      <span class="px-1.5 py-0.5 text-xs bg-kitsuden-surface rounded-sm">{p}</span>
                     {/each}
                   </div>
                 {:else}
@@ -252,8 +250,8 @@
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-kitsuden-border">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-            <Megaphone class="w-5 h-5 text-emerald-400" />
+          <div class="w-10 h-10 rounded-xl bg-kitsuden-green/10 flex items-center justify-center">
+            <Megaphone class="w-5 h-5 text-kitsuden-green" />
           </div>
           <div>
             <h3 class="text-lg font-bold text-kitsuden-text">
@@ -297,7 +295,7 @@
               type="text"
               bind:value={titleTemplate}
               placeholder={t("dataDataExplorer.analysisTitle")}
-              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm focus:outline-hidden focus:border-kitsuden-accent"
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm focus:outline-hidden focus:border-kitsuden-accent"
             />
             <p class="text-xs text-kitsuden-subtle mt-1">
               {t("dataDataExplorer.useForDynamicValuesE", {
@@ -317,7 +315,7 @@
               type="text"
               bind:value={slugPrefix}
               placeholder="analysis"
-              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm focus:outline-hidden focus:border-kitsuden-accent"
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm focus:outline-hidden focus:border-kitsuden-accent"
             />
             <p class="text-xs text-kitsuden-subtle mt-1">
               {t("dataDataExplorer.resultBlog")}{slugPrefix || "entry"}{t(
@@ -330,7 +328,7 @@
             <input
               type="checkbox"
               bind:checked={autoPublish}
-              class="w-4 h-4 rounded-sm border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
+              class="w-4 h-4 rounded-sm border-kitsuden-input bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
             />
             <span class="text-sm text-kitsuden-text"
               >{t("dataDataExplorer.autoPublishImmediately")}</span
@@ -340,14 +338,14 @@
 
         <!-- Messages -->
         {#if promoteError}
-          <div class="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
-            <p class="text-sm text-red-400">{promoteError}</p>
+          <div class="rounded-lg bg-kitsuden-danger/10 border border-kitsuden-danger/20 p-3">
+            <p class="text-sm text-kitsuden-danger">{promoteError}</p>
           </div>
         {/if}
 
         {#if promoteSuccess}
-          <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3">
-            <p class="text-sm text-emerald-400">{@html promoteSuccess}</p>
+          <div class="rounded-lg bg-kitsuden-green/10 border border-kitsuden-green/20 p-3">
+            <p class="text-sm text-kitsuden-green">{@html promoteSuccess}</p>
           </div>
         {/if}
       </div>
@@ -364,7 +362,7 @@
         >
           {#if promoteLoading}
             <div
-              class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
+              class="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin"
             ></div>
             {t("common.creating")}
           {:else}

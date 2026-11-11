@@ -39,7 +39,8 @@
   const stripeClass = $derived.by(() => {
     if (isThemeModule && module.enabled)
       return "bg-linear-to-r from-kitsuden-accent-2/60 via-kitsuden-purple/30 to-transparent";
-    if (module.enabled) return "bg-linear-to-r from-green-500/60 via-green-400/30 to-transparent";
+    if (module.enabled)
+      return "bg-linear-to-r from-kitsuden-green/60 via-kitsuden-green/30 to-transparent";
     return "bg-linear-to-r from-kitsuden-subtle/20 to-transparent";
   });
 
@@ -74,7 +75,7 @@
         <p class="font-semibold text-kitsuden-text text-sm">{module.name}</p>
         {#if module.category === "core"}
           <span
-            class="text-[9px] font-bold px-1.5 py-0.5 rounded-full {module.enabled
+            class="text-xs font-bold px-1.5 py-0.5 rounded-full {module.enabled
               ? 'bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/20'
               : 'bg-kitsuden-border/50 text-kitsuden-subtle border border-kitsuden-border'}"
             >{t("moduleCard.core")}</span
@@ -82,7 +83,7 @@
         {/if}
         {#if isThemeModule}
           <span
-            class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border border-kitsuden-accent-2/20 flex items-center gap-1"
+            class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border border-kitsuden-accent-2/20 flex items-center gap-1"
           >
             <Sparkles class="w-2.5 h-2.5" />
             {t("moduleCard.theme")}
@@ -90,7 +91,7 @@
         {/if}
         {#if module.version}
           <span
-            class="text-[9px] px-1.5 py-0.5 rounded-sm bg-kitsuden-subtle/20 text-kitsuden-text-dim border border-kitsuden-border"
+            class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-subtle/20 text-kitsuden-text-dim border border-kitsuden-border"
             >v{module.version}</span
           >
         {/if}
@@ -102,10 +103,10 @@
 
       {#if module.dependsOn?.length}
         <div class="mt-2 flex items-center gap-1 flex-wrap">
-          <span class="text-[10px] text-kitsuden-subtle">{t("moduleCard.requires")}</span>
+          <span class="text-xs text-kitsuden-subtle">{t("moduleCard.requires")}</span>
           {#each module.dependsOn as dep}
             <span
-              class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-kitsuden-bg border border-kitsuden-border {isDepEnabled(
+              class="text-xs font-mono px-1.5 py-0.5 rounded bg-kitsuden-bg border border-kitsuden-border {isDepEnabled(
                 dep
               )
                 ? 'text-kitsuden-green'
@@ -160,7 +161,7 @@
       <span class="flex items-center gap-1.5 text-xs text-kitsuden-green"
         ><CheckCircle class="w-3.5 h-3.5" /> {t("moduleCard.active")}</span
       >
-      {#if module.tables?.length}<span class="text-[10px] text-kitsuden-subtle font-mono"
+      {#if module.tables?.length}<span class="text-xs text-kitsuden-subtle font-mono"
           >{module.tables.length}
           {t("moduleCard.table")}{module.tables.length !== 1 ? "s" : ""}</span
         >{/if}
@@ -175,7 +176,7 @@
       <span class="flex items-center gap-1.5 text-xs text-kitsuden-accent-2"
         ><Sparkles class="w-3.5 h-3.5" /> {t("moduleCard.enabledByTheme")}</span
       >
-      {#if module.themeId}<span class="text-[10px] text-kitsuden-subtle font-mono"
+      {#if module.themeId}<span class="text-xs text-kitsuden-subtle font-mono"
           >{module.themeId}</span
         >{/if}
     </div>

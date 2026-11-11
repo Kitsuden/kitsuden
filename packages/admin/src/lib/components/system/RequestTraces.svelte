@@ -72,16 +72,16 @@
 </script>
 
 <div class="space-y-3" data-testid="request-traces">
-  <p class="text-xs text-zinc-500">{t("systemTraces.help")}</p>
+  <p class="text-xs text-kitsuden-subtle">{t("systemTraces.help")}</p>
 
   <div class="flex flex-wrap items-center gap-2">
-    <div class="flex items-center gap-1 bg-zinc-900 p-1 rounded-lg" role="tablist">
+    <div class="flex items-center gap-1 bg-kitsuden-card p-1 rounded-lg" role="tablist">
       <button
         role="tab"
         aria-selected={view === "list"}
         class="px-3 py-1 text-xs rounded-md {view === 'list'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500'}"
+          ? 'bg-kitsuden-border text-kitsuden-text'
+          : 'text-kitsuden-subtle'}"
         onclick={() => {
           view = "list";
           load();
@@ -91,20 +91,20 @@
         role="tab"
         aria-selected={view === "summary"}
         class="px-3 py-1 text-xs rounded-md {view === 'summary'
-          ? 'bg-zinc-800 text-zinc-100'
-          : 'text-zinc-500'}"
+          ? 'bg-kitsuden-border text-kitsuden-text'
+          : 'text-kitsuden-subtle'}"
         onclick={() => {
           view = "summary";
           load();
         }}>{t("systemTraces.viewSummary")}</button
       >
     </div>
-    <label class="text-xs text-zinc-400 flex items-center gap-1">
+    <label class="text-xs text-kitsuden-text-dim flex items-center gap-1">
       {t("systemTraces.window")}
       <select
         bind:value={hours}
         onchange={load}
-        class="bg-zinc-900 border border-zinc-800 rounded-sm px-1 py-0.5"
+        class="bg-kitsuden-card border border-kitsuden-input rounded-sm px-1 py-0.5"
       >
         <option value={1}>1 h</option>
         <option value={24}>24 h</option>
@@ -112,7 +112,7 @@
       </select>
     </label>
     {#if view === "list"}
-      <label class="text-xs text-zinc-400 flex items-center gap-1">
+      <label class="text-xs text-kitsuden-text-dim flex items-center gap-1">
         <input
           type="checkbox"
           bind:checked={onlyBlockers}
@@ -121,12 +121,12 @@
         />
         {t("systemTraces.onlyBlocked")}
       </label>
-      <label class="text-xs text-zinc-400 flex items-center gap-1">
+      <label class="text-xs text-kitsuden-text-dim flex items-center gap-1">
         <input type="checkbox" bind:checked={onlyErrors} onchange={load} />
         {t("systemTraces.onlyErrors")}
       </label>
       <input
-        class="text-xs bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 w-56"
+        class="text-xs bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 w-56"
         placeholder={t("systemTraces.actorPlaceholder")}
         bind:value={actor}
         onkeydown={(e) => e.key === "Enter" && load()}
@@ -140,19 +140,23 @@
 
   {#if loading}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if !turnedOnItems}
-    <p class="text-sm text-zinc-500">{t("systemTraces.disabled")}</p>
+    <p class="text-sm text-kitsuden-subtle">{t("systemTraces.disabled")}</p>
   {:else if view === "list"}
     {#if traces.length === 0}
-      <p class="text-sm text-zinc-500">{t("systemTraces.empty")}</p>
+      <p class="text-sm text-kitsuden-subtle">{t("systemTraces.empty")}</p>
     {:else}
-      <div class="overflow-x-auto border border-zinc-800 rounded-lg">
+      <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
         <table class="w-full text-xs">
-          <thead class="text-zinc-500">
+          <thead class="text-kitsuden-subtle">
             <tr>
               <th class="text-left px-3 py-2">{t("systemTraces.colWhen")}</th>
               <th class="text-left px-3 py-2">{t("systemTraces.colRequest")}</th>
@@ -165,37 +169,39 @@
               <th class="text-left px-3 py-2">{t("systemTraces.colBlocked")}</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-zinc-800/70">
+          <tbody class="divide-y divide-kitsuden-border/70">
             {#each traces as tr, i (`${tr.request_id ?? ""}-${i}`)}
               <tr data-testid="trace-row">
-                <td class="px-3 py-1.5 whitespace-nowrap text-zinc-400"
+                <td class="px-3 py-1.5 whitespace-nowrap text-kitsuden-text-dim"
                   >{date(requestTraceTime(tr))}</td
                 >
-                <td class="px-3 py-1.5 font-mono text-zinc-200">{tr.method} {tr.route}</td>
+                <td class="px-3 py-1.5 font-mono text-kitsuden-text">{tr.method} {tr.route}</td>
                 <td
                   class="px-3 py-1.5 {tr.status >= 500
-                    ? 'text-red-300'
+                    ? 'text-kitsuden-danger'
                     : tr.status >= 400
-                      ? 'text-amber-300'
-                      : 'text-emerald-300'}">{tr.status}</td
+                      ? 'text-kitsuden-amber'
+                      : 'text-kitsuden-green'}">{tr.status}</td
                 >
-                <td class="px-3 py-1.5 text-zinc-300"
-                  >{actorOf(tr)}<span class="block text-zinc-500 font-mono"
+                <td class="px-3 py-1.5 text-kitsuden-text"
+                  >{actorOf(tr)}<span class="block text-kitsuden-subtle font-mono"
                     >{tr.actor_id ?? ""}</span
                   ></td
                 >
-                <td class="px-3 py-1.5 text-zinc-400"
+                <td class="px-3 py-1.5 text-kitsuden-text-dim"
                   >{tr.kon ?? "—"}{tr.operation ? ` · ${tr.operation}` : ""}</td
                 >
-                <td class="px-3 py-1.5 text-right text-zinc-300">{ms(tr.duration_ms)}</td>
-                <td class="px-3 py-1.5 text-right text-zinc-400"
+                <td class="px-3 py-1.5 text-right text-kitsuden-text">{ms(tr.duration_ms)}</td>
+                <td class="px-3 py-1.5 text-right text-kitsuden-text-dim"
                   >{ms(tr.db_time_ms)}{tr.queries ? ` · ${tr.queries}q` : ""}</td
                 >
-                <td class="px-3 py-1.5 text-right text-zinc-400">{tr.rows_affected ?? "—"}</td>
+                <td class="px-3 py-1.5 text-right text-kitsuden-text-dim"
+                  >{tr.rows_affected ?? "—"}</td
+                >
                 <td class="px-3 py-1.5">
                   {#each tr.denial_details ?? [] as b}
                     <span
-                      class="inline-block mr-1 px-1.5 py-0.5 rounded-sm bg-amber-500/15 text-amber-300"
+                      class="inline-block mr-1 px-1.5 py-0.5 rounded-sm bg-kitsuden-amber/15 text-kitsuden-amber"
                       >{b.operation} {b.table}: {reason(b.reason)}</span
                     >
                   {/each}
@@ -207,11 +213,11 @@
       </div>
     {/if}
   {:else if summary.length === 0}
-    <p class="text-sm text-zinc-500">{t("systemTraces.empty")}</p>
+    <p class="text-sm text-kitsuden-subtle">{t("systemTraces.empty")}</p>
   {:else}
-    <div class="overflow-x-auto border border-zinc-800 rounded-lg">
+    <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
       <table class="w-full text-xs">
-        <thead class="text-zinc-500">
+        <thead class="text-kitsuden-subtle">
           <tr>
             <th class="text-left px-3 py-2">{t("systemTraces.colRequest")}</th>
             <th class="text-left px-3 py-2">{t("systemTraces.colOperation")}</th>
@@ -223,27 +229,27 @@
             <th class="text-right px-3 py-2">{t("systemTraces.colRows")}</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-zinc-800/70">
+        <tbody class="divide-y divide-kitsuden-border/70">
           {#each summary as r, i (`${r.method}-${r.route}-${i}`)}
             <tr>
-              <td class="px-3 py-1.5 font-mono text-zinc-200">{r.method} {r.route}</td>
-              <td class="px-3 py-1.5 text-zinc-400"
+              <td class="px-3 py-1.5 font-mono text-kitsuden-text">{r.method} {r.route}</td>
+              <td class="px-3 py-1.5 text-kitsuden-text-dim"
                 >{r.kon ?? "—"}{r.operation ? ` · ${r.operation}` : ""}</td
               >
-              <td class="px-3 py-1.5 text-right text-zinc-300">{r.requests}</td>
+              <td class="px-3 py-1.5 text-right text-kitsuden-text">{r.requests}</td>
               <td
                 class="px-3 py-1.5 text-right {Number(r.errors) > 0
-                  ? 'text-red-300'
-                  : 'text-zinc-500'}">{r.errors}</td
+                  ? 'text-kitsuden-danger'
+                  : 'text-kitsuden-subtle'}">{r.errors}</td
               >
               <td
                 class="px-3 py-1.5 text-right {Number(r.denials) > 0
-                  ? 'text-amber-300'
-                  : 'text-zinc-500'}">{r.denials}</td
+                  ? 'text-kitsuden-amber'
+                  : 'text-kitsuden-subtle'}">{r.denials}</td
               >
-              <td class="px-3 py-1.5 text-right text-zinc-300">{ms(r.p95_ms)}</td>
-              <td class="px-3 py-1.5 text-right text-zinc-400">{ms(r.avg_db_ms)}</td>
-              <td class="px-3 py-1.5 text-right text-zinc-400">{r.rows}</td>
+              <td class="px-3 py-1.5 text-right text-kitsuden-text">{ms(r.p95_ms)}</td>
+              <td class="px-3 py-1.5 text-right text-kitsuden-text-dim">{ms(r.avg_db_ms)}</td>
+              <td class="px-3 py-1.5 text-right text-kitsuden-text-dim">{r.rows}</td>
             </tr>
           {/each}
         </tbody>

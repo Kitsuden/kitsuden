@@ -231,7 +231,7 @@
     <div
       class="absolute bottom-3 left-3 max-w-[220px] rounded-lg border border-kitsuden-border bg-kitsuden-card/90 backdrop-blur-xs p-2.5 shadow-lg"
     >
-      <p class="text-[10px] font-semibold uppercase tracking-wider text-kitsuden-subtle mb-2">
+      <p class="text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle mb-2">
         {t("knowledgeGraph.categories")}
       </p>
       <div class="grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -239,7 +239,7 @@
           <div class="flex items-center gap-1.5">
             <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: {item.color}"
             ></span>
-            <span class="text-[10px] text-kitsuden-text-dim truncate">{item.label}</span>
+            <span class="text-xs text-kitsuden-text-dim truncate">{item.label}</span>
           </div>
         {/each}
       </div>

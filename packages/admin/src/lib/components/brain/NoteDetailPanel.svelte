@@ -83,7 +83,7 @@
       <!-- Header -->
       <div>
         <span
-          class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/20"
+          class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/20"
         >
           {displayCategory}
         </span>
@@ -111,7 +111,7 @@
       <!-- Metrics -->
       <div class="grid grid-cols-2 gap-3">
         <div class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3">
-          <p class="text-[10px] uppercase tracking-wider text-kitsuden-subtle mb-1">
+          <p class="text-xs uppercase tracking-wider text-kitsuden-subtle mb-1">
             {t("noteDetailPanel.importance")}
           </p>
           <div class="flex items-center gap-2">
@@ -129,7 +129,7 @@
 
         {#if displayConfidence !== null}
           <div class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3">
-            <p class="text-[10px] uppercase tracking-wider text-kitsuden-subtle mb-1">
+            <p class="text-xs uppercase tracking-wider text-kitsuden-subtle mb-1">
               {t("noteDetailPanel.confidence")}
             </p>
             <div class="flex items-center gap-2">
@@ -152,7 +152,7 @@
         <div class="flex items-start gap-2 text-sm">
           <FileText class="w-4 h-4 text-kitsuden-text-dim shrink-0 mt-0.5" />
           <div class="min-w-0">
-            <p class="text-kitsuden-subtle text-[10px] uppercase tracking-wider">
+            <p class="text-kitsuden-subtle text-xs uppercase tracking-wider">
               {t("common.source")}
             </p>
             <p class="text-kitsuden-text truncate">{displaySource}</p>
@@ -163,7 +163,7 @@
           <div class="flex items-start gap-2 text-sm">
             <Tag class="w-4 h-4 text-kitsuden-text-dim shrink-0 mt-0.5" />
             <div class="min-w-0">
-              <p class="text-kitsuden-subtle text-[10px] uppercase tracking-wider">
+              <p class="text-kitsuden-subtle text-xs uppercase tracking-wider">
                 {t("noteDetailPanel.path")}
               </p>
               <p class="text-kitsuden-text-dim text-xs break-all font-mono">{displayPath}</p>
@@ -175,13 +175,13 @@
       <!-- Tags -->
       {#if displayTags.length > 0}
         <div>
-          <p class="text-[10px] uppercase tracking-wider text-kitsuden-subtle mb-2">
+          <p class="text-xs uppercase tracking-wider text-kitsuden-subtle mb-2">
             {t("common.tags")}
           </p>
           <div class="flex flex-wrap gap-1.5">
             {#each displayTags as tag}
               <span
-                class="inline-flex items-center rounded-md bg-kitsuden-bg border border-kitsuden-border px-2 py-1 text-[10px] text-kitsuden-text-dim"
+                class="inline-flex items-center rounded-md bg-kitsuden-bg border border-kitsuden-border px-2 py-1 text-xs text-kitsuden-text-dim"
               >
                 {tag}
               </span>
@@ -193,11 +193,11 @@
       <!-- Metadata -->
       {#if detail?.metadata && Object.keys(detail.metadata).length > 0}
         <div>
-          <p class="text-[10px] uppercase tracking-wider text-kitsuden-subtle mb-2">
+          <p class="text-xs uppercase tracking-wider text-kitsuden-subtle mb-2">
             {t("noteDetailPanel.metadata")}
           </p>
           <pre
-            class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3 text-[10px] text-kitsuden-text-dim overflow-x-auto">{JSON.stringify(
+            class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3 text-xs text-kitsuden-text-dim overflow-x-auto">{JSON.stringify(
               detail.metadata,
               null,
               2
@@ -205,11 +205,11 @@
         </div>
       {:else if note?.metadata && Object.keys(note.metadata).length > 0 && !detail}
         <div>
-          <p class="text-[10px] uppercase tracking-wider text-kitsuden-subtle mb-2">
+          <p class="text-xs uppercase tracking-wider text-kitsuden-subtle mb-2">
             {t("noteDetailPanel.metadata")}
           </p>
           <pre
-            class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3 text-[10px] text-kitsuden-text-dim overflow-x-auto">{JSON.stringify(
+            class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3 text-xs text-kitsuden-text-dim overflow-x-auto">{JSON.stringify(
               note.metadata,
               null,
               2
@@ -220,7 +220,7 @@
       <!-- Content snippet -->
       {#if detail?.content}
         <div>
-          <p class="text-[10px] uppercase tracking-wider text-kitsuden-subtle mb-2">
+          <p class="text-xs uppercase tracking-wider text-kitsuden-subtle mb-2">
             {t("common.content")}
           </p>
           <div

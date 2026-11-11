@@ -147,7 +147,7 @@
       {:else}
         <Badge variant="error">{t("journalForm.unbalanced")}</Badge>
       {/if}
-      <span class="text-sm text-zinc-400"
+      <span class="text-sm text-kitsuden-text-dim"
         >{t("journalForm.debitCredit", { v: totalDebit.toFixed(2) })} {totalCredit.toFixed(2)}</span
       >
     </div>
@@ -155,7 +155,7 @@
 
   {#if loading}
     <div class="flex items-center justify-center h-48">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else}
     <div class="grid gap-4 md:grid-cols-3">
@@ -170,7 +170,7 @@
         <Label>{t("common.type")}</Label>
         <select
           bind:value={journal.journalType}
-          class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm"
+          class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm"
         >
           <option value="standard">{t("journalForm.standard")}</option>
           <option value="trust_deposit">{t("journalForm.trustDeposit")}</option>
@@ -188,7 +188,7 @@
       <Label>{t("journalForm.counterparty")}</Label>
       <select
         bind:value={journal.counterpartyId}
-        class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm"
+        class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm"
       >
         <option value="">{t("journalForm.none")}</option>
         {#each counterparties as cp}
@@ -205,9 +205,9 @@
         >
       </div>
 
-      <div class="border border-zinc-800 rounded-lg overflow-hidden">
+      <div class="border border-kitsuden-border rounded-lg overflow-hidden">
         <table class="w-full text-sm">
-          <thead class="bg-zinc-900/80 text-zinc-400 text-left">
+          <thead class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left">
             <tr>
               <th class="px-3 py-2 font-medium">{t("journalForm.account")}</th>
               <th class="px-3 py-2 font-medium">{t("common.description")}</th>
@@ -217,13 +217,13 @@
               <th class="px-3 py-2 font-medium w-10"></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-zinc-800">
+          <tbody class="divide-y divide-kitsuden-border">
             {#each journal.lines as line, idx}
-              <tr class="hover:bg-zinc-800/20">
+              <tr class="hover:bg-kitsuden-border/20">
                 <td class="px-3 py-2">
                   <select
                     bind:value={line.accountId}
-                    class="w-full bg-zinc-900 border border-zinc-700 rounded-sm px-2 py-1 text-sm"
+                    class="w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
                   >
                     <option value="">{t("common.select")}</option>
                     {#each accounts as a}
@@ -253,14 +253,14 @@
                 <td class="px-3 py-2">
                   <select
                     bind:value={line.currency}
-                    class="w-full bg-zinc-900 border border-zinc-700 rounded-sm px-2 py-1 text-sm"
+                    class="w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
                   >
                     {#each currencies as c}<option value={c.code}>{c.code}</option>{/each}
                   </select>
                 </td>
                 <td class="px-3 py-2">
                   <Button variant="ghost" size="sm" onclick={() => removeLine(idx)}
-                    ><X class="w-4 h-4 text-red-400" /></Button
+                    ><X class="w-4 h-4 text-kitsuden-danger" /></Button
                   >
                 </td>
               </tr>
@@ -270,7 +270,7 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-between pt-4 border-t border-zinc-800">
+    <div class="flex items-center justify-between pt-4 border-t border-kitsuden-border">
       <Button variant="outline" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
       <div class="flex items-center gap-2">
         <Button variant="secondary" onclick={saveDraft} loading={saving}

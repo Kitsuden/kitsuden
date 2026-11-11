@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { toast } from "svelte-sonner";
   import { t } from "$lib/i18n";
   import {
     Building2,
@@ -136,7 +137,7 @@
       await loadOrganizations();
       if (selectedOrg) await loadOrgChart();
     } catch (err: any) {
-      alert(err?.body?.error || t("orgChartPage.errorCreatingOrganization"));
+      toast.error(err?.body?.error || t("orgChartPage.errorCreatingOrganization"));
     } finally {
       savingOrg = false;
     }
@@ -147,7 +148,7 @@
   <!-- Header -->
   <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-semibold text-white flex items-center gap-3">
+      <h1 class="text-2xl font-semibold text-kitsuden-text flex items-center gap-3">
         <Building2 class="w-7 h-7 text-kitsuden-accent" />
         {t("orgChartPage.orgChart")}
       </h1>
@@ -158,7 +159,8 @@
       <select
         bind:value={selectedOrg}
         onchange={loadOrgChart}
-        class="px-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-white focus:border-kitsuden-accent/50 focus:outline-hidden"
+        aria-label={t("orgChartPage.organization")}
+        class="px-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text focus:border-kitsuden-accent/50 focus:outline-hidden"
       >
         {#each organizations as org}
           <option value={org.id}>{org.name}</option>
@@ -173,9 +175,10 @@
       <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-subtle" />
       <input
         type="text"
+        aria-label={t("orgChartPage.searchEmployee")}
         placeholder={t("orgChartPage.searchEmployee")}
         bind:value={searchQuery}
-        class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-white placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-hidden"
+        class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-hidden"
       />
     </div>
   </div>
@@ -189,7 +192,9 @@
     {:else if organizations.length === 0}
       <div class="text-center py-12">
         <Building2 class="w-16 h-16 text-kitsuden-subtle mx-auto mb-4" />
-        <h3 class="text-lg font-medium text-white mb-2">{t("orgChartPage.noOrganizations")}</h3>
+        <h3 class="text-lg font-medium text-kitsuden-text mb-2">
+          {t("orgChartPage.noOrganizations")}
+        </h3>
         <p class="text-kitsuden-subtle mb-4">{t("orgChartPage.createsAnOrganizationToSee")}</p>
         <button
           class="btn btn-primary gap-2"
@@ -205,7 +210,7 @@
     {:else if orgData.length === 0}
       <div class="text-center py-12">
         <Users class="w-16 h-16 text-kitsuden-subtle mx-auto mb-4" />
-        <h3 class="text-lg font-medium text-white mb-2">{t("orgChartPage.noEmployees")}</h3>
+        <h3 class="text-lg font-medium text-kitsuden-text mb-2">{t("orgChartPage.noEmployees")}</h3>
         <p class="text-kitsuden-subtle">
           {t("orgChartPage.theSelectedOrganizationDoesNotHave")}
         </p>
@@ -246,7 +251,7 @@
               {getInitials(selectedEmployee.firstName, selectedEmployee.lastName)}
             </div>
             <div class="flex-1">
-              <h3 class="text-xl font-semibold text-white">
+              <h3 class="text-xl font-semibold text-kitsuden-text">
                 {selectedEmployee.displayName ||
                   `${selectedEmployee.firstName} ${selectedEmployee.lastName}`}
               </h3>
@@ -262,10 +267,10 @@
             {#if selectedEmployee.email}
               <a
                 href="mailto:{selectedEmployee.email}"
-                class="flex items-center gap-3 p-3 bg-kitsuden-bg rounded-lg hover:bg-white/5 transition-colors"
+                class="flex items-center gap-3 p-3 bg-kitsuden-bg rounded-lg hover:bg-kitsuden-text/5 transition-colors"
               >
                 <Mail class="w-5 h-5 text-kitsuden-accent" />
-                <span class="text-white">{selectedEmployee.email}</span>
+                <span class="text-kitsuden-text">{selectedEmployee.email}</span>
               </a>
             {/if}
           </div>
@@ -298,10 +303,13 @@
       class="relative bg-kitsuden-card border border-kitsuden-border rounded-2xl shadow-2xl max-w-md w-full mx-4"
     >
       <div class="flex items-center justify-between p-6 border-b border-kitsuden-border">
-        <h3 class="text-lg font-semibold text-white">{t("orgChartPage.newOrganization")}</h3>
+        <h3 class="text-lg font-semibold text-kitsuden-text">
+          {t("orgChartPage.newOrganization")}
+        </h3>
         <button
           onclick={() => (showCreateOrgModal = false)}
-          class="p-2 rounded-xl text-kitsuden-subtle hover:text-white hover:bg-white/5"
+          aria-label={t("orgChartPage.close")}
+          class="p-2 rounded-xl text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-text/5"
         >
           <X class="w-5 h-5" />
         </button>
@@ -316,7 +324,7 @@
             bind:value={newOrgName}
             type="text"
             placeholder={t("orgChartPage.ejAcmeCorp")}
-            class="w-full px-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-white placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-hidden"
+            class="w-full px-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-hidden"
             required
           />
         </div>
@@ -324,13 +332,13 @@
           <button
             type="button"
             onclick={() => (showCreateOrgModal = false)}
-            class="px-4 py-2 rounded-lg text-kitsuden-subtle hover:text-white hover:bg-white/5 transition-all"
+            class="px-4 py-2 rounded-lg text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-text/5 transition-all"
             >{t("common.cancel")}</button
           >
           <button
             type="submit"
             disabled={savingOrg || !newOrgName.trim()}
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-kitsuden-accent text-kitsuden-bg hover:bg-kitsuden-accent/90 transition-all disabled:opacity-50"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-kitsuden-accent text-kitsuden-on-accent hover:bg-kitsuden-accent/90 transition-all disabled:opacity-50"
           >
             {#if savingOrg}
               <Loader2 class="w-4 h-4 animate-spin" />
@@ -365,14 +373,18 @@
   <div class="select-none">
     <!-- Node Card -->
     <div
-      class="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group"
+      class="flex items-center gap-3 p-3 rounded-lg hover:bg-kitsuden-text/5 transition-colors cursor-pointer group"
       style="padding-left: {level * 24 + 12}px"
       onclick={() => onSelect(node)}
     >
       <!-- Expand/Collapse -->
       {#if node.children && node.children.length > 0}
         <button
-          class="p-1 rounded-sm hover:bg-white/10 transition-colors"
+          class="p-1 rounded-sm hover:bg-kitsuden-text/10 transition-colors"
+          aria-label={t("orgChartPage.toggleReports", {
+            name: node.displayName || node.firstName + " " + node.lastName,
+          })}
+          aria-expanded={expandedNodes.has(node.id)}
           onclick={(e) => {
             e.stopPropagation();
             toggleNode(node.id);
@@ -397,7 +409,7 @@
 
       <!-- Info -->
       <div class="flex-1 min-w-0">
-        <p class="font-medium text-white truncate">
+        <p class="font-medium text-kitsuden-text truncate">
           {node.displayName || `${node.firstName} ${node.lastName}`}
         </p>
         <p class="text-sm text-kitsuden-subtle truncate">
@@ -416,7 +428,10 @@
       <!-- View Button (visible on hover) -->
       <a
         href="/directory/employees/{node.id}"
-        class="opacity-0 group-hover:opacity-100 p-2 text-kitsuden-subtle hover:text-white transition-all"
+        class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 p-2 text-kitsuden-subtle hover:text-kitsuden-text transition-all"
+        aria-label={t("orgChartPage.viewProfile", {
+          name: node.displayName || node.firstName + " " + node.lastName,
+        })}
         onclick={(e) => e.stopPropagation()}
       >
         <User class="w-4 h-4" />
@@ -458,10 +473,10 @@
   }
 
   .btn-primary {
-    @apply bg-kitsuden-accent text-kitsuden-bg hover:bg-kitsuden-accent/90;
+    @apply bg-kitsuden-accent text-kitsuden-on-accent hover:bg-kitsuden-accent/90;
   }
 
   .btn-ghost {
-    @apply text-kitsuden-subtle hover:text-white hover:bg-white/5;
+    @apply text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-text/5;
   }
 </style>

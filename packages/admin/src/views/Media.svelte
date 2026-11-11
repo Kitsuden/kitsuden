@@ -1,4 +1,5 @@
 <script lang="ts">
+  import StateMessage from "$lib/components/feedback/StateMessage.svelte";
   import { t, localeFormat } from "$lib/i18n";
   /**
    * Media.svelte
@@ -235,7 +236,7 @@
 
   <!-- Tabs -->
   <div class="border-b border-kitsuden-border">
-    <div class="flex gap-1">
+    <div class="flex gap-1" role="tablist" aria-label={t("media.sections")}>
       <button
         class="px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2"
         class:border-kitsuden-accent={activeTab === "library"}
@@ -243,6 +244,8 @@
         class:border-transparent={activeTab !== "library"}
         class:text-kitsuden-subtle={activeTab !== "library"}
         class:hover:text-kitsuden-text={activeTab !== "library"}
+        role="tab"
+        aria-selected={activeTab === "library"}
         onclick={() => (activeTab = "library")}
       >
         <Image class="w-4 h-4" />
@@ -255,6 +258,8 @@
         class:border-transparent={activeTab !== "folders"}
         class:text-kitsuden-subtle={activeTab !== "folders"}
         class:hover:text-kitsuden-text={activeTab !== "folders"}
+        role="tab"
+        aria-selected={activeTab === "folders"}
         onclick={() => (activeTab = "folders")}
       >
         <Folder class="w-4 h-4" />
@@ -267,6 +272,8 @@
         class:border-transparent={activeTab !== "upload"}
         class:text-kitsuden-subtle={activeTab !== "upload"}
         class:hover:text-kitsuden-text={activeTab !== "upload"}
+        role="tab"
+        aria-selected={activeTab === "upload"}
         onclick={() => (activeTab = "upload")}
       >
         <Upload class="w-4 h-4" />
@@ -280,6 +287,8 @@
           class:border-transparent={activeTab !== "settings"}
           class:text-kitsuden-subtle={activeTab !== "settings"}
           class:hover:text-kitsuden-text={activeTab !== "settings"}
+          role="tab"
+          aria-selected={activeTab === "settings"}
           onclick={() => (activeTab = "settings")}
         >
           <Settings class="w-4 h-4" />
@@ -358,6 +367,15 @@
           <Loader2 class="w-8 h-8 text-kitsuden-accent animate-spin mx-auto mb-4" />
           <p class="text-kitsuden-subtle">{t("media.loadingFiles")}</p>
         </div>
+      {:else if mediaStore.loadError && mediaStore.files.length === 0}
+        <!-- The error replaces the empty state: a failed load is not "no files yet". -->
+        <StateMessage
+          kind="error"
+          title={t("media.loadFailed")}
+          description={mediaStore.loadError}
+          onRetry={() => void mediaStore.fetchFiles()}
+          retrying={mediaStore.isLoading}
+        />
       {:else if mediaStore.filteredFiles.length === 0}
         <div
           class="card p-12 text-center border-2 border-dashed border-kitsuden-border/50 hover:border-kitsuden-accent/30 transition-colors"
@@ -418,7 +436,7 @@
                   onclick={() => handleCopyUrl(file.url || file.publicUrl || "", file.id)}
                 >
                   {#if copiedId === file.id}
-                    <Check class="w-3.5 h-3.5 text-green-500" />
+                    <Check class="w-3.5 h-3.5 text-kitsuden-green" />
                   {:else}
                     <span class="text-xs">{t("media.copy")}</span>
                   {/if}
@@ -499,7 +517,7 @@
                         onclick={() => handleCopyUrl(file.url || file.publicUrl || "", file.id)}
                       >
                         {#if copiedId === file.id}<Check
-                            class="w-4 h-4 text-green-500"
+                            class="w-4 h-4 text-kitsuden-green"
                           />{:else}<span class="text-xs">{t("media.copy")}</span>{/if}
                       </button>
                       <button
@@ -670,7 +688,7 @@
                   {#if field.type === "checkbox"}
                     <input
                       type="checkbox"
-                      class="w-4 h-4 rounded-sm border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
+                      class="w-4 h-4 rounded-sm border-kitsuden-input bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
                       bind:checked={config.storage[field.key]}
                     />
                     <label class="text-sm text-kitsuden-text">{field.label}</label>
@@ -714,7 +732,7 @@
           {#if testResult}
             <div
               class="flex items-center gap-2 text-sm"
-              class:text-green-500={testResult.success}
+              class:text-kitsuden-green={testResult.success}
               class:text-kitsuden-accent-2={!testResult.success}
             >
               {#if testResult.success}
@@ -741,7 +759,7 @@
             </div>
             <input
               type="checkbox"
-              class="w-5 h-5 rounded-sm border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
+              class="w-5 h-5 rounded-sm border-kitsuden-input bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
               bind:checked={config.features.thumbnails}
             />
           </div>
@@ -753,7 +771,7 @@
             </div>
             <input
               type="checkbox"
-              class="w-5 h-5 rounded-sm border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
+              class="w-5 h-5 rounded-sm border-kitsuden-input bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
               bind:checked={config.features.imageOptimization}
             />
           </div>
@@ -767,7 +785,7 @@
             </div>
             <input
               type="checkbox"
-              class="w-5 h-5 rounded-sm border-kitsuden-border bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
+              class="w-5 h-5 rounded-sm border-kitsuden-input bg-kitsuden-surface text-kitsuden-accent focus:ring-kitsuden-accent"
               bind:checked={config.features.signedUrls}
             />
           </div>
@@ -798,7 +816,7 @@
             {grimoireConfigStore.getConfigError(GRIMOIRE_ID)}
           </div>
         {:else if grimoireConfigStore.getConfigSaveSuccess(GRIMOIRE_ID)}
-          <div class="text-sm text-green-500 flex items-center gap-2">
+          <div class="text-sm text-kitsuden-green flex items-center gap-2">
             <Check class="w-4 h-4" />
             {t("media.settingsSavedSuccessfully")}
           </div>

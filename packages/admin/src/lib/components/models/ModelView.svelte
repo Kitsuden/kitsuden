@@ -9,6 +9,7 @@
   collection route (`/api/notas/notes`).
 -->
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import type { DescribedField, ModelDescriptor } from "@kitsuden/shared";
 
   import { api } from "$lib/api";
@@ -184,7 +185,7 @@
   }
 
   async function remove(row: Row) {
-    if (!confirm(t("models.confirmDelete"))) return;
+    if (!(await confirmDialog(t("models.confirmDelete")))) return;
     try {
       await request("DELETE", `${base}/${row.id}`);
       warning = t("models.deleted");
@@ -205,9 +206,9 @@
 <section class="space-y-4" data-testid="model-view" data-model={descriptor.name}>
   <header class="flex flex-wrap items-start justify-between gap-3">
     <div class="min-w-0">
-      <h2 class="text-lg font-semibold text-zinc-100">{descriptor.tag}</h2>
-      <p class="text-sm text-zinc-400">{descriptor.description}</p>
-      <p class="mt-1 text-xs text-zinc-500">
+      <h2 class="text-lg font-semibold text-kitsuden-text">{descriptor.tag}</h2>
+      <p class="text-sm text-kitsuden-text-dim">{descriptor.description}</p>
+      <p class="mt-1 text-xs text-kitsuden-subtle">
         {t("models.readAccess", { value: t(`models.access_${descriptor.access.read}`) })} ·
         {t("models.writeAccess", { value: t(`models.access_${descriptor.access.write}`) })} ·
         {t("models.scopes", { read: descriptor.scopes.read, write: descriptor.scopes.write })}
@@ -222,7 +223,7 @@
 
   {#if error}
     <div
-      class="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300"
+      class="rounded-lg border border-kitsuden-danger/40 bg-kitsuden-danger/10 p-3 text-sm text-kitsuden-danger"
       role="alert"
     >
       {error}
@@ -230,7 +231,7 @@
   {/if}
   {#if warning}
     <div
-      class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-300"
+      class="rounded-lg border border-kitsuden-green/40 bg-kitsuden-green/10 p-3 text-sm text-kitsuden-green"
       role="status"
     >
       {warning}
@@ -239,15 +240,17 @@
 
   {#if editing !== null}
     <form class="card p-4 space-y-3" data-testid="model-form" onsubmit={save}>
-      <h3 class="text-sm font-semibold text-zinc-200">
+      <h3 class="text-sm font-semibold text-kitsuden-text">
         {editing === "new"
           ? t("models.createTitle", { model: descriptor.tag })
           : t("models.editTitle", { model: descriptor.tag })}
       </h3>
       {#each descriptor.fields as c (c.key)}
         <div class="space-y-1">
-          <label class="text-xs text-zinc-400" for={`field-${c.key}`}>
-            {c.tag}{#if c.required}<span class="text-zinc-500"> ({t("models.required")})</span>{/if}
+          <label class="text-xs text-kitsuden-text-dim" for={`field-${c.key}`}>
+            {c.tag}{#if c.required}<span class="text-kitsuden-subtle">
+                ({t("models.required")})</span
+              >{/if}
           </label>
           {#if c.type === "boolean"}
             <input
@@ -302,8 +305,11 @@
               bind:value={values[c.key]}
             />
           {/if}
-          {#if c.description}<p class="text-[11px] text-zinc-500">{c.description}</p>{/if}
-          {#if fieldFailures[c.key]}<p class="text-xs text-red-400" data-testid={`error-${c.key}`}>
+          {#if c.description}<p class="text-[11px] text-kitsuden-subtle">{c.description}</p>{/if}
+          {#if fieldFailures[c.key]}<p
+              class="text-xs text-kitsuden-danger"
+              data-testid={`error-${c.key}`}
+            >
               {fieldFailures[c.key]}
             </p>{/if}
         </div>
@@ -318,13 +324,13 @@
       </div>
     </form>
   {:else if loading}
-    <p class="text-sm text-zinc-500">{t("models.loading")}</p>
+    <p class="text-sm text-kitsuden-subtle">{t("models.loading")}</p>
   {:else if rows.length === 0}
-    <div class="card p-12 text-center text-sm text-zinc-500">{t("models.noRows")}</div>
+    <div class="card p-12 text-center text-sm text-kitsuden-subtle">{t("models.noRows")}</div>
   {:else}
-    <div class="overflow-x-auto rounded-lg border border-zinc-800">
+    <div class="overflow-x-auto rounded-lg border border-kitsuden-border">
       <table class="w-full text-sm" data-testid="model-table">
-        <thead class="text-left text-xs text-zinc-500">
+        <thead class="text-left text-xs text-kitsuden-subtle">
           <tr>
             {#each columns as c (c.key)}<th class="px-3 py-2">{c.tag}</th>{/each}
             {#if descriptor.withOwner}<th class="px-3 py-2">{t("models.owner")}</th>{/if}
@@ -332,23 +338,23 @@
             <th class="px-3 py-2 text-right">{t("models.actions")}</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-zinc-800/70">
+        <tbody class="divide-y divide-kitsuden-border/70">
           {#each rows as row (row.id)}
             <tr>
-              {#each columns as c (c.key)}<td class="px-3 py-2 text-zinc-200"
+              {#each columns as c (c.key)}<td class="px-3 py-2 text-kitsuden-text"
                   >{show(c, row[c.key])}</td
                 >{/each}
-              {#if descriptor.withOwner}<td class="px-3 py-2 text-zinc-400"
+              {#if descriptor.withOwner}<td class="px-3 py-2 text-kitsuden-text-dim"
                   >{String(row.ownerId ?? t("models.none"))}</td
                 >{/if}
-              <td class="px-3 py-2 text-zinc-400"
+              <td class="px-3 py-2 text-kitsuden-text-dim"
                 >{new Date(String(row.updatedAt)).toLocaleString()}</td
               >
               <td class="px-3 py-2 text-right whitespace-nowrap">
                 <button class="btn-ghost btn-sm" onclick={() => open(row)}
                   >{t("models.edit")}</button
                 >
-                <button class="btn-ghost btn-sm text-red-400" onclick={() => remove(row)}
+                <button class="btn-ghost btn-sm text-kitsuden-danger" onclick={() => remove(row)}
                   >{t("models.delete")}</button
                 >
               </td>
@@ -357,7 +363,7 @@
         </tbody>
       </table>
     </div>
-    <div class="flex items-center justify-between text-xs text-zinc-500">
+    <div class="flex items-center justify-between text-xs text-kitsuden-subtle">
       <span>{t("models.rows", { n: total })}</span>
       <span class="flex gap-2">
         <button

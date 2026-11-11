@@ -194,7 +194,7 @@
           <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-kitsuden-text">{rel.title}</span>
             <span
-              class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-kitsuden-surface text-kitsuden-subtle border border-kitsuden-border"
+              class="px-2 py-0.5 text-xs font-bold rounded-full bg-kitsuden-surface text-kitsuden-subtle border border-kitsuden-border"
             >
               {data.length}
             </span>

@@ -84,37 +84,43 @@
 
 <div class="space-y-4" data-testid="agent-quotas">
   <div>
-    <h3 class="text-sm font-semibold text-zinc-300">{t("agentQuotas.title")}</h3>
-    <p class="text-xs text-zinc-500">{t("agentQuotas.help")}</p>
+    <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentQuotas.title")}</h3>
+    <p class="text-xs text-kitsuden-subtle">{t("agentQuotas.help")}</p>
   </div>
 
   {#if loading}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if quotas}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       {#each [{ id: "rpm", label: t("agentQuotas.requestsPerMinute"), used: quotas.usage.requestsThisMinute, limit: quotas.limits.requestsPerMinute, help: t("agentQuotas.requestsPerMinuteHelp") }, { id: "writes", label: t("agentQuotas.writesPerDay"), used: quotas.usage.writesToday, limit: quotas.limits.writesPerDay, help: t("agentQuotas.writesPerDayHelp") }, { id: "units", label: t("agentQuotas.unitsPerDay"), used: quotas.usage.unitsToday, limit: quotas.limits.budgetUnitsPerDay, help: t("agentQuotas.unitsPerDayHelp") }] as q (q.id)}
         <Card class="p-4 space-y-2 min-w-0">
-          <div class="text-xs text-zinc-500">{q.label}</div>
-          <div class="text-lg text-zinc-100">
+          <div class="text-xs text-kitsuden-subtle">{q.label}</div>
+          <div class="text-lg text-kitsuden-text">
             {q.limit
               ? t("agentQuotas.usedOf", { used: q.used, limit: q.limit })
               : t("agentQuotas.usedUnlimited", { used: q.used })}
           </div>
-          <div class="h-1.5 rounded-sm bg-zinc-800 overflow-hidden">
+          <div class="h-1.5 rounded-sm bg-kitsuden-border overflow-hidden">
             <div
-              class="h-full {percentage(q.used, q.limit) >= 90 ? 'bg-red-500' : 'bg-indigo-500'}"
+              class="h-full {percentage(q.used, q.limit) >= 90
+                ? 'bg-kitsuden-danger'
+                : 'bg-kitsuden-accent'}"
               style="width: {percentage(q.used, q.limit)}%"
             ></div>
           </div>
-          <p class="text-[11px] text-zinc-500">{q.help}</p>
+          <p class="text-[11px] text-kitsuden-subtle">{q.help}</p>
         </Card>
       {/each}
     </div>
-    <p class="text-xs text-zinc-500">
+    <p class="text-xs text-kitsuden-subtle">
       {t("agentQuotas.usageNote", {
         day: quotas.usage.day,
         store: STORE[quotas.usage.store]?.() ?? quotas.usage.store,
@@ -124,31 +130,31 @@
     <!-- Savings of the auto format versus compact JSON (lib/format-savings.ts) -->
     <div class="space-y-2" data-testid="agent-format-savings">
       <div>
-        <h3 class="text-sm font-semibold text-zinc-300">{t("agentQuotas.savingsTitle")}</h3>
-        <p class="text-xs text-zinc-500">{t("agentQuotas.savingsHelp")}</p>
+        <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentQuotas.savingsTitle")}</h3>
+        <p class="text-xs text-kitsuden-subtle">{t("agentQuotas.savingsHelp")}</p>
       </div>
       {#if quotas.formatSavings === null}
-        <p class="text-xs text-zinc-500">{t("agentQuotas.savingsUnavailable")}</p>
+        <p class="text-xs text-kitsuden-subtle">{t("agentQuotas.savingsUnavailable")}</p>
       {:else if !quotas.formatSavings || quotas.formatSavings.period.responses === 0}
-        <p class="text-xs text-zinc-500">{t("agentQuotas.savingsNone")}</p>
+        <p class="text-xs text-kitsuden-subtle">{t("agentQuotas.savingsNone")}</p>
       {:else}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           {#each [{ id: "today", label: t("agentQuotas.savingsToday"), r: quotas.formatSavings.today }, { id: "period", label: t( "agentQuotas.savingsPeriod", { days: quotas.formatSavings.period.days } ), r: quotas.formatSavings.period }] as s (s.id)}
             <Card class="p-4 space-y-1 min-w-0">
-              <div class="text-xs text-zinc-500">{s.label}</div>
-              <div class="text-lg text-zinc-100">
+              <div class="text-xs text-kitsuden-subtle">{s.label}</div>
+              <div class="text-lg text-kitsuden-text">
                 {t("agentQuotas.savingsTokens", {
                   saved: integer(s.r.savedTokensEst),
                   percent: s.r.savedPercent,
                 })}
               </div>
-              <p class="text-[11px] text-zinc-500">
+              <p class="text-[11px] text-kitsuden-subtle">
                 {t("agentQuotas.savingsBytes", {
                   saved: integer(s.r.savedBytes),
                   total: integer(s.r.jsonBytes),
                 })}
               </p>
-              <p class="text-[11px] text-zinc-500">
+              <p class="text-[11px] text-kitsuden-subtle">
                 {t("agentQuotas.savingsResponses", {
                   count: integer(s.r.responses),
                   compacted: integer(s.r.compacted),
@@ -168,7 +174,7 @@
       }}
     >
       <div>
-        <label for="q-rpm" class="block text-sm text-zinc-300 mb-1.5"
+        <label for="q-rpm" class="block text-sm text-kitsuden-text mb-1.5"
           >{t("agentQuotas.requestsPerMinute")}</label
         >
         <input
@@ -176,11 +182,11 @@
           type="number"
           min="1"
           bind:value={rpm}
-          class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+          class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
         />
       </div>
       <div>
-        <label for="q-writes" class="block text-sm text-zinc-300 mb-1.5"
+        <label for="q-writes" class="block text-sm text-kitsuden-text mb-1.5"
           >{t("agentQuotas.writesPerDay")}</label
         >
         <input
@@ -189,11 +195,11 @@
           min="1"
           bind:value={writes}
           placeholder={t("agentQuotas.unlimited")}
-          class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+          class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
         />
       </div>
       <div>
-        <label for="q-units" class="block text-sm text-zinc-300 mb-1.5"
+        <label for="q-units" class="block text-sm text-kitsuden-text mb-1.5"
           >{t("agentQuotas.unitsPerDay")}</label
         >
         <input
@@ -202,7 +208,7 @@
           min="1"
           bind:value={units}
           placeholder={t("agentQuotas.unlimited")}
-          class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+          class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
         />
       </div>
       <div class="md:col-span-3 flex justify-end">

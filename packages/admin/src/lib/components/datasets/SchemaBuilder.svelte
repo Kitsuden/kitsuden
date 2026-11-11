@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Switch } from "$lib/tallao";
   import { t as tr } from "$lib/i18n";
   /**
    * SchemaBuilder.svelte — Drag-and-drop field designer
@@ -398,7 +399,7 @@
     <div class="w-56 shrink-0 card overflow-y-auto">
       <div class="p-3 border-b border-kitsuden-border sticky top-0 bg-kitsuden-card z-10">
         <p class="label">{tr("schemaBuilder.fieldTypes")}</p>
-        <p class="text-[10px] text-kitsuden-subtle mt-0.5">
+        <p class="text-xs text-kitsuden-subtle mt-0.5">
           {tr("schemaBuilder.dragOrClickToAdd")}
         </p>
       </div>
@@ -425,7 +426,7 @@
               >
                 {ft.label}
               </p>
-              <p class="text-[10px] text-kitsuden-subtle truncate">{ft.description}</p>
+              <p class="text-xs text-kitsuden-subtle truncate">{ft.description}</p>
             </div>
           </button>
         {/each}
@@ -446,7 +447,7 @@
             oninput={autoSlug}
             type="text"
             placeholder={tr("schemaBuilder.eGProducts")}
-            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+            class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
           />
         </div>
         <div>
@@ -456,11 +457,11 @@
               bind:value={localDef.slug}
               type="text"
               placeholder="products"
-              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 font-mono text-xs"
+              class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent font-mono text-xs"
             />
             <select
               bind:value={localDef.icon}
-              class="w-20 px-2 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-center text-lg appearance-none"
+              class="w-20 px-2 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent text-center text-lg appearance-none"
             >
               {#each iconOptions as ic}
                 <option value={ic}>{ic}</option>
@@ -476,7 +477,7 @@
           bind:value={localDef.description}
           type="text"
           placeholder={tr("schemaBuilder.optionalDescriptionForThisData")}
-          class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+          class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
         />
       </div>
     </div>
@@ -525,10 +526,10 @@
           >
             <div class="flex items-center gap-2">
               <p class="label">{tr("schemaBuilder.schemaFields")}</p>
-              <span class="badge-cyan text-[9px]">{localDef.fields.length}</span>
+              <span class="badge-cyan text-xs">{localDef.fields.length}</span>
             </div>
             {#if localDef.fields.length > 0}
-              <button onclick={collapseAll} class="btn-ghost btn-sm text-[10px]"
+              <button onclick={collapseAll} class="btn-ghost btn-sm text-xs"
                 >{tr("schemaBuilder.collapseAll")}</button
               >
             {/if}
@@ -536,7 +537,7 @@
 
           {#if localDef.fields.length === 0}
             <div class="flex flex-col items-center justify-center py-12 text-kitsuden-subtle">
-              <Layers class="w-10 h-10 mb-3 text-kitsuden-muted" />
+              <Layers class="w-10 h-10 mb-3 text-kitsuden-subtle" />
               <p class="text-sm font-medium">{tr("schemaBuilder.noFieldsYet")}</p>
               <p class="text-xs mt-1">{tr("schemaBuilder.clickOrDragFieldTypes")}</p>
             </div>
@@ -573,7 +574,7 @@
                   >
                     <!-- Drag handle -->
                     <GripVertical
-                      class="w-4 h-4 text-kitsuden-muted shrink-0 opacity-0 group-hover:opacity-60 cursor-grab transition-opacity"
+                      class="w-4 h-4 text-kitsuden-subtle shrink-0 opacity-0 group-hover:opacity-60 cursor-grab transition-opacity"
                     />
 
                     <!-- Type icon -->
@@ -596,18 +597,18 @@
                         {#if field.isRequired}<span class="text-kitsuden-accent-2 ml-1">*</span
                           >{/if}
                       </p>
-                      <p class="text-[10px] font-mono text-kitsuden-subtle">
+                      <p class="text-xs font-mono text-kitsuden-subtle">
                         {field.key || tr("schemaBuilder.noKey")} · {field.type}
                       </p>
                     </div>
 
                     <!-- Badges -->
                     <div class="flex items-center gap-1.5 shrink-0">
-                      {#if field.isUnique}<span class="badge-amber text-[8px] py-0"
+                      {#if field.isUnique}<span class="badge-amber text-xs py-0"
                           >{tr("schemaBuilder.unq")}</span
                         >{/if}
                       {#if field.relation}
-                        <span class="badge-pink text-[8px] py-0">
+                        <span class="badge-pink text-xs py-0">
                           {field.relation.type === "many-to-many"
                             ? "M:N"
                             : field.relation.type === "one-to-many"
@@ -647,7 +648,7 @@
             <Shield class="w-4 h-4 text-kitsuden-amber" />
             <p class="label">{tr("schemaBuilder.accessControl")}</p>
           </div>
-          <p class="text-[10px] text-kitsuden-subtle mt-0.5">
+          <p class="text-xs text-kitsuden-subtle mt-0.5">
             {tr("schemaBuilder.configureWhoCanReadAnd")}
           </p>
         </div>
@@ -655,7 +656,7 @@
         {#if !localDef.policyJson}
           <div class="flex flex-col items-center justify-center py-8 px-4 text-kitsuden-subtle">
             <div class="flex items-start gap-4 w-full max-w-lg">
-              <ShieldOff class="w-10 h-10 text-kitsuden-muted shrink-0 mt-1" />
+              <ShieldOff class="w-10 h-10 text-kitsuden-subtle shrink-0 mt-1" />
               <div class="flex-1">
                 <p class="text-sm font-medium text-kitsuden-text">
                   {tr("schemaBuilder.defaultAdminOnly")}
@@ -686,7 +687,7 @@
                   >
                     <opt.icon class="w-5 h-5 mx-auto mb-1.5" />
                     <p class="text-xs font-semibold">{opt.label}</p>
-                    <p class="text-[9px] text-kitsuden-subtle mt-0.5">{opt.desc}</p>
+                    <p class="text-xs text-kitsuden-subtle mt-0.5">{opt.desc}</p>
                   </button>
                 {/each}
               </div>
@@ -706,7 +707,7 @@
                   >
                     <opt.icon class="w-5 h-5 mx-auto mb-1.5" />
                     <p class="text-xs font-semibold">{opt.label}</p>
-                    <p class="text-[9px] text-kitsuden-subtle mt-0.5">{opt.desc}</p>
+                    <p class="text-xs text-kitsuden-subtle mt-0.5">{opt.desc}</p>
                   </button>
                 {/each}
               </div>
@@ -720,24 +721,16 @@
                     <Lock class="w-3.5 h-3.5 text-kitsuden-amber" />
                     {tr("schemaBuilder.rowLevelSecurity")}
                   </p>
-                  <p class="text-[10px] text-kitsuden-subtle mt-0.5">
+                  <p class="text-xs text-kitsuden-subtle mt-0.5">
                     {tr("schemaBuilder.filterRowsBasedOnUser")}
                   </p>
                 </div>
-                <button
-                  onclick={() => (localDef.policyJson!.enableRLS = !localDef.policyJson!.enableRLS)}
-                  class="relative w-10 h-6 rounded-full transition-colors {localDef.policyJson!
-                    .enableRLS
-                    ? 'bg-kitsuden-amber'
-                    : 'bg-kitsuden-border'}"
-                >
-                  <span
-                    class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {localDef
-                      .policyJson!.enableRLS
-                      ? 'translate-x-4.5'
-                      : 'translate-x-0.5'}"
-                  ></span>
-                </button>
+                <Switch
+                  checked={!!localDef.policyJson!.enableRLS}
+                  ariaLabel={tr("schemaBuilder.rowLevelSecurity")}
+                  onchange={() =>
+                    (localDef.policyJson!.enableRLS = !localDef.policyJson!.enableRLS)}
+                />
               </div>
 
               <!-- RLS Rules -->
@@ -749,11 +742,11 @@
                         bind:value={rule.field}
                         type="text"
                         placeholder="field_key"
-                        class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 flex-1 font-mono text-xs"
+                        class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent flex-1 font-mono text-xs"
                       />
                       <select
                         bind:value={rule.operator}
-                        class="px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 appearance-none w-24 text-xs"
+                        class="px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent appearance-none w-24 text-xs"
                       >
                         <option value="eq">{tr("schemaBuilder.equals")}</option>
                         <option value="neq">{tr("schemaBuilder.notEqual")}</option>
@@ -765,7 +758,7 @@
                         bind:value={rule.value}
                         type="text"
                         placeholder={tr("schemaBuilder.valueOrUserId")}
-                        class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 flex-1 text-xs"
+                        class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent flex-1 text-xs"
                       />
                       <button
                         onclick={() => localDef.policyJson!.rlsRules!.splice(ri, 1)}
@@ -808,7 +801,7 @@
             <GitPullRequest class="w-4 h-4 text-kitsuden-purple" />
             <p class="label">{tr("schemaBuilder.workflowApprovals")}</p>
           </div>
-          <p class="text-[10px] text-kitsuden-subtle mt-0.5">
+          <p class="text-xs text-kitsuden-subtle mt-0.5">
             {tr("schemaBuilder.requireReviewBeforeEntriesGo")}
           </p>
         </div>
@@ -816,7 +809,7 @@
         {#if !localDef.workflowJson || !localDef.workflowJson.requireApproval}
           <div class="flex flex-col items-center justify-center py-8 px-4 text-kitsuden-subtle">
             <div class="flex items-start gap-4 w-full max-w-lg">
-              <Zap class="w-10 h-10 text-kitsuden-muted shrink-0 mt-1" />
+              <Zap class="w-10 h-10 text-kitsuden-subtle shrink-0 mt-1" />
               <div class="flex-1">
                 <p class="text-sm font-medium text-kitsuden-text">
                   {tr("schemaBuilder.defaultInstantPublish")}
@@ -840,32 +833,23 @@
                   <CheckCircle class="w-3.5 h-3.5 text-kitsuden-purple" />
                   {tr("schemaBuilder.requireApproval")}
                 </p>
-                <p class="text-[10px] text-kitsuden-subtle mt-0.5">
+                <p class="text-xs text-kitsuden-subtle mt-0.5">
                   {tr("schemaBuilder.newEntriesStartAsDrafts")}
                 </p>
               </div>
-              <button
-                onclick={() =>
+              <Switch
+                checked={!!localDef.workflowJson!.requireApproval}
+                ariaLabel={tr("schemaBuilder.requireApproval")}
+                onchange={() =>
                   (localDef.workflowJson!.requireApproval =
                     !localDef.workflowJson!.requireApproval)}
-                class="relative w-10 h-6 rounded-full transition-colors {localDef.workflowJson!
-                  .requireApproval
-                  ? 'bg-kitsuden-purple'
-                  : 'bg-kitsuden-border'}"
-              >
-                <span
-                  class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {localDef
-                    .workflowJson!.requireApproval
-                    ? 'translate-x-4.5'
-                    : 'translate-x-0.5'}"
-                ></span>
-              </button>
+              />
             </div>
 
             <!-- Approver IDs -->
             <div>
               <label class="label mb-2 block">{tr("schemaBuilder.approverUserIds")}</label>
-              <p class="text-[10px] text-kitsuden-subtle mb-3">
+              <p class="text-xs text-kitsuden-subtle mb-3">
                 {tr("schemaBuilder.usersWhoCanReviewAnd")}
               </p>
               <div class="space-y-2">
@@ -875,7 +859,7 @@
                       bind:value={localDef.workflowJson!.approverUserIds![ai]}
                       type="text"
                       placeholder={tr("common.userId")}
-                      class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 flex-1 font-mono text-xs"
+                      class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent flex-1 font-mono text-xs"
                     />
                     <button
                       onclick={() => localDef.workflowJson!.approverUserIds!.splice(ai, 1)}
@@ -918,7 +902,7 @@
         <button onclick={onCancel} class="btn-ghost">{tr("common.cancel")}</button>
         <button onclick={save} disabled={!canSave} class="btn-primary">
           <Save class="w-4 h-4" />
-          {localDef.id ? tr("schemaBuilder.updateSchema") : tr("common.createDataset")}
+          {localDef.id ? tr("schemaBuilder.updateSchema") : tr("common.create")}
         </button>
       </div>
     </div>
@@ -960,7 +944,7 @@
             oninput={() => autoFieldKey(selectedField)}
             type="text"
             placeholder={tr("schemaBuilder.eGWeaponName")}
-            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+            class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
           />
         </div>
 
@@ -972,7 +956,7 @@
             bind:value={selectedField.key}
             type="text"
             placeholder={tr("schemaBuilder.eGWeaponName2")}
-            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 font-mono text-xs"
+            class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent font-mono text-xs"
           />
         </div>
 
@@ -984,7 +968,7 @@
             bind:value={selectedField.helpText}
             type="text"
             placeholder={tr("schemaBuilder.shownBelowTheField")}
-            class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+            class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
           />
         </div>
 
@@ -996,42 +980,28 @@
           <div class="flex items-center justify-between py-2">
             <div>
               <p class="text-sm text-kitsuden-text">{tr("schemaBuilder.required")}</p>
-              <p class="text-[10px] text-kitsuden-subtle">{tr("schemaBuilder.mustHaveAValue")}</p>
+              <p class="text-xs text-kitsuden-subtle">{tr("schemaBuilder.mustHaveAValue")}</p>
             </div>
-            <button
-              onclick={() => (selectedField.isRequired = !selectedField.isRequired)}
-              class="relative w-10 h-6 rounded-full transition-colors {selectedField.isRequired
-                ? 'bg-kitsuden-accent'
-                : 'bg-kitsuden-border'}"
-            >
-              <span
-                class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {selectedField.isRequired
-                  ? 'translate-x-4.5'
-                  : 'translate-x-0.5'}"
-              ></span>
-            </button>
+            <Switch
+              checked={!!selectedField.isRequired}
+              ariaLabel={tr("schemaBuilder.required")}
+              onchange={() => (selectedField.isRequired = !selectedField.isRequired)}
+            />
           </div>
 
           <!-- Unique -->
           <div class="flex items-center justify-between py-2">
             <div>
               <p class="text-sm text-kitsuden-text">{tr("schemaBuilder.unique")}</p>
-              <p class="text-[10px] text-kitsuden-subtle">
+              <p class="text-xs text-kitsuden-subtle">
                 {tr("schemaBuilder.noDuplicateValues")}
               </p>
             </div>
-            <button
-              onclick={() => (selectedField.isUnique = !selectedField.isUnique)}
-              class="relative w-10 h-6 rounded-full transition-colors {selectedField.isUnique
-                ? 'bg-kitsuden-amber'
-                : 'bg-kitsuden-border'}"
-            >
-              <span
-                class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {selectedField.isUnique
-                  ? 'translate-x-4.5'
-                  : 'translate-x-0.5'}"
-              ></span>
-            </button>
+            <Switch
+              checked={!!selectedField.isUnique}
+              ariaLabel={tr("schemaBuilder.unique")}
+              onchange={() => (selectedField.isUnique = !selectedField.isUnique)}
+            />
           </div>
 
           <!-- Default value -->
@@ -1044,7 +1014,7 @@
               bind:value={selectedField.defaultValue}
               type="text"
               placeholder={tr("schemaBuilder.eGUnknown")}
-              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+              class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
             />
           </div>
 
@@ -1059,7 +1029,7 @@
                 bind:value={selectedField.validationRegex}
                 type="text"
                 placeholder={tr("schemaBuilder.eGAZaZ0")}
-                class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 font-mono text-xs"
+                class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent font-mono text-xs"
               />
             </div>
           {/if}
@@ -1073,7 +1043,7 @@
                   id="minvalue"
                   bind:value={selectedField.minValue}
                   type="number"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                   placeholder="0"
                 />
               </div>
@@ -1083,7 +1053,7 @@
                   id="maxvalue"
                   bind:value={selectedField.maxValue}
                   type="number"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                   placeholder="100"
                 />
               </div>
@@ -1101,7 +1071,7 @@
                   id="minlength"
                   bind:value={selectedField.minLength}
                   type="number"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                   placeholder="0"
                 />
               </div>
@@ -1113,7 +1083,7 @@
                   id="maxlength"
                   bind:value={selectedField.maxLength}
                   type="number"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                   placeholder="255"
                 />
               </div>
@@ -1134,7 +1104,7 @@
                       (opt.value = opt.label.toLowerCase().replace(/[^a-z0-9]+/g, "_"))}
                     type="text"
                     placeholder={tr("schemaBuilder.option", { v: oi + 1 })}
-                    class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 flex-1"
+                    class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent flex-1"
                   />
                   <button
                     onclick={() => selectedField.options!.splice(oi, 1)}
@@ -1166,7 +1136,7 @@
               {#if selectedField.relation}
                 <select
                   bind:value={selectedField.relation.target}
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500 appearance-none"
+                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent appearance-none"
                 >
                   <option value="">{tr("schemaBuilder.selectCollection")}</option>
                   <option value="games">{tr("schemaBuilder.games")}</option>
@@ -1218,9 +1188,9 @@
                   bind:value={selectedField.relation.displayField}
                   type="text"
                   placeholder={tr("schemaBuilder.eGTitleName")}
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                 />
-                <p class="text-[10px] text-kitsuden-subtle mt-1">
+                <p class="text-xs text-kitsuden-subtle mt-1">
                   {tr("schemaBuilder.whichFieldToShowIn")}
                 </p>
               {/if}
@@ -1235,21 +1205,21 @@
               <Rows3 class="w-3 h-3 inline text-kitsuden-accent-2 mr-1" />
               {tr("schemaBuilder.rowFields")}
             </p>
-            <p class="text-[10px] text-kitsuden-subtle mb-3">
+            <p class="text-xs text-kitsuden-subtle mb-3">
               {tr("schemaBuilder.eachEntryStoresAList")}
             </p>
 
             <div class="space-y-2">
               {#each selectedField.subFields || [] as sub, si (sub.id)}
-                <div class="rounded-lg border border-kitsuden-border p-2.5 bg-slate-900/40">
+                <div class="rounded-lg border border-kitsuden-border p-2.5 bg-kitsuden-card/40">
                   <div class="flex items-center gap-2 mb-2">
-                    <span class="text-[10px] text-kitsuden-subtle font-mono w-4">{si + 1}</span>
+                    <span class="text-xs text-kitsuden-subtle font-mono w-4">{si + 1}</span>
                     <input
                       bind:value={sub.label}
                       oninput={() => autoSubKey(sub)}
                       type="text"
                       placeholder={tr("schemaBuilder.label2")}
-                      class="flex-1 px-2 py-1.5 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-sm text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                      class="flex-1 px-2 py-1.5 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-sm text-sm focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                     />
                     <button
                       onclick={() => moveSubField(si, -1)}
@@ -1271,7 +1241,7 @@
                   <div class="grid grid-cols-2 gap-2">
                     <select
                       bind:value={sub.type}
-                      class="px-2 py-1.5 bg-slate-800 border border-slate-700 text-gray-100 rounded-sm text-xs focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                      class="px-2 py-1.5 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-sm text-xs focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                     >
                       {#each SUBFIELD_TYPES as t}
                         <option value={t.type}>{t.label}</option>
@@ -1281,19 +1251,23 @@
                       bind:value={sub.key}
                       type="text"
                       placeholder="key"
-                      class="px-2 py-1.5 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-sm font-mono text-xs focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                      class="px-2 py-1.5 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-sm font-mono text-xs focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                     />
                   </div>
 
                   <label class="flex items-center gap-2 mt-2 text-[11px] text-kitsuden-subtle">
-                    <input type="checkbox" bind:checked={sub.isRequired} class="accent-teal-500" />
+                    <input
+                      type="checkbox"
+                      bind:checked={sub.isRequired}
+                      class="accent-kitsuden-accent"
+                    />
                     {tr("schemaBuilder.requiredInEveryRow")}
                   </label>
 
                   {#if sub.type === "select"}
                     <!-- A dropdown with no options cannot be filled in; it is
                          flagged here instead of letting it fail on save. -->
-                    <p class="text-[10px] text-kitsuden-subtle mt-1.5">
+                    <p class="text-xs text-kitsuden-subtle mt-1.5">
                       {tr("schemaBuilder.optionsForSubfieldSelectsAre")}
                     </p>
                   {/if}
@@ -1323,7 +1297,7 @@
                   type="number"
                   min="0"
                   placeholder="0"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                 />
               </div>
               <div>
@@ -1335,7 +1309,7 @@
                   type="number"
                   min="0"
                   placeholder="∞"
-                  class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                 />
               </div>
             </div>
@@ -1350,27 +1324,20 @@
                 <Eye class="w-3 h-3 inline text-kitsuden-accent mr-1" />
                 {tr("schemaBuilder.conditional")}
               </p>
-              <p class="text-[10px] text-kitsuden-subtle">
+              <p class="text-xs text-kitsuden-subtle">
                 {tr("schemaBuilder.showOnlyWhenAnotherField")}
               </p>
             </div>
-            <button
-              onclick={toggleCondition}
+            <Switch
+              checked={!!selectedField.showIf}
+              ariaLabel={tr("schemaBuilder.conditional")}
               disabled={conditionSources(selectedField).length === 0}
-              class="relative w-10 h-6 rounded-full transition-colors disabled:opacity-30 {selectedField.showIf
-                ? 'bg-kitsuden-accent'
-                : 'bg-kitsuden-border'}"
-            >
-              <span
-                class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {selectedField.showIf
-                  ? 'translate-x-4.5'
-                  : 'translate-x-0.5'}"
-              ></span>
-            </button>
+              onchange={toggleCondition}
+            />
           </div>
 
           {#if conditionSources(selectedField).length === 0}
-            <p class="text-[10px] text-kitsuden-subtle italic mt-2">
+            <p class="text-xs text-kitsuden-subtle italic mt-2">
               {tr("schemaBuilder.needsAtLeastOneOther")}
             </p>
           {/if}
@@ -1379,7 +1346,7 @@
             <div class="mt-3 space-y-2">
               <select
                 bind:value={selectedField.showIf.field}
-                class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
               >
                 {#each conditionSources(selectedField) as f}
                   <option value={f.key}>{f.label || f.key}</option>
@@ -1389,7 +1356,7 @@
               <div class="grid grid-cols-2 gap-2">
                 <select
                   bind:value={selectedField.showIf.operator}
-                  class="px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                  class="px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                 >
                   <option value="eq">{tr("schemaBuilder.equals")}</option>
                   <option value="neq">{tr("schemaBuilder.notEquals")}</option>
@@ -1401,19 +1368,19 @@
                   bind:value={selectedField.showIf.value}
                   type="text"
                   placeholder="value"
-                  class="px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+                  class="px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
                 />
               </div>
 
               {#if selectedField.isRequired}
                 <!-- What people do not expect: a conditional required field is only
                      enforced when it is shown. Saying so here avoids the ticket. -->
-                <p class="text-[10px] text-kitsuden-subtle">
+                <p class="text-xs text-kitsuden-subtle">
                   {tr("schemaBuilder.requiredOnlyWhileThisCondition")}
                 </p>
               {/if}
               {#if selectedField.showIf.operator === "gt" || selectedField.showIf.operator === "lt"}
-                <p class="text-[10px] text-kitsuden-subtle">
+                <p class="text-xs text-kitsuden-subtle">
                   {tr("schemaBuilder.comparedAsNumbersNonNumeric")}
                 </p>
               {/if}
@@ -1427,22 +1394,15 @@
           <div class="flex items-center justify-between py-2">
             <div>
               <p class="text-sm text-kitsuden-text">{tr("schemaBuilder.hiddenInGrid")}</p>
-              <p class="text-[10px] text-kitsuden-subtle">
+              <p class="text-xs text-kitsuden-subtle">
                 {tr("schemaBuilder.onlyVisibleInForm")}
               </p>
             </div>
-            <button
-              onclick={() => (selectedField.hidden = !selectedField.hidden)}
-              class="relative w-10 h-6 rounded-full transition-colors {selectedField.hidden
-                ? 'bg-kitsuden-subtle'
-                : 'bg-kitsuden-border'}"
-            >
-              <span
-                class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {selectedField.hidden
-                  ? 'translate-x-4.5'
-                  : 'translate-x-0.5'}"
-              ></span>
-            </button>
+            <Switch
+              checked={!!selectedField.hidden}
+              ariaLabel={tr("schemaBuilder.hiddenInGrid")}
+              onchange={() => (selectedField.hidden = !selectedField.hidden)}
+            />
           </div>
           <div class="pt-2">
             <label for="width" class="label mb-1.5 block">{tr("schemaBuilder.columnWidthPx")}</label
@@ -1452,7 +1412,7 @@
               bind:value={selectedField.width}
               type="number"
               placeholder={tr("schemaBuilder.auto")}
-              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-gray-100 placeholder-slate-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+              class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
             />
           </div>
         </div>

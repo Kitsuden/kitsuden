@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t as tr, localeFormat } from "$lib/i18n";
   import {
     Search,
@@ -24,6 +25,7 @@
     FileJson,
     Columns3,
     Copy,
+    MoreHorizontal,
   } from "lucide-svelte";
   import { onMount, untrack } from "svelte";
 
@@ -41,7 +43,18 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
 
-  import { explorerEndpoint, isApiBase } from "$lib/explorer-endpoint";
+  import StateMessage from "$lib/components/feedback/StateMessage.svelte";
+  import {
+    ariaSort,
+    columnLabel,
+    defaultHiddenColumns,
+    orderColumns,
+    relationDisplay,
+    rowTitle,
+  } from "$lib/data-explorer/table-columns";
+  import { explorerEndpoint, isApiBase, sortParams } from "$lib/explorer-endpoint";
+  import { resolveRelatedTable } from "$lib/explorer-relations";
+  import { Button, DropdownMenu, MenuItem, MenuSeparator } from "$lib/tallao";
   import { knownTables } from "$lib/explorer-tables";
 
   import AutoFormModal from "./AutoFormModal.svelte";
@@ -78,7 +91,14 @@
   const sortColumn = $derived(sortStack[0]?.column || null);
   const sortDirection = $derived<"asc" | "desc">(sortStack[0]?.direction || "asc");
   // Column visibility
-  let hiddenColumns = $state<Set<string>>(new Set());
+  /**
+   * The user's own choice of hidden columns; `null` until they touch the chooser. Before
+   * that the defaults apply: a row's identifiers (id, uuid) start hidden and stay one
+   * click away in the column chooser.
+   */
+  let hiddenChoice = $state<Set<string> | null>(null);
+  /** A failed load, so it is never drawn as "no records". */
+  let loadError = $state<string | null>(null);
   let showColumnMenu = $state(false);
   let activeFilters = $state<Record<string, any>>({});
   let showFilters = $state(false);
@@ -88,10 +108,6 @@
   // Modal state
   let showFormModal = $state(false);
   let editRecord = $state<Record<string, any> | null>(null);
-  let showDeleteConfirm = $state(false);
-  let deleteTarget = $state<any>(null);
-  let deleting = $state(false);
-  let showBulkDeleteConfirm = $state(false);
 
   // FK display cache: { "games": { "uuid-123": "Fortnite" } }
   let fkDisplayCache = $state<Record<string, Record<string, string>>>({});
@@ -203,7 +219,9 @@
   const columns = $derived<SchemaColumn[]>(schema?.columns || generateColumnsFromData(data));
 
   // Separate columns for display vs filtering
-  const visibleColumns = $derived(columns.filter((c) => !hiddenColumns.has(c.name)));
+  const hiddenColumns = $derived<Set<string>>(hiddenChoice ?? defaultHiddenColumns(columns));
+  // The column that titles the row goes first, identifiers last (see table-columns.ts).
+  const visibleColumns = $derived(orderColumns(columns).filter((c) => !hiddenColumns.has(c.name)));
   const displayColumns = $derived(visibleColumns.slice(0, 12));
   const filterableColumns = $derived(
     columns.filter(
@@ -332,50 +350,20 @@
     return isApiBase(ep) ? ep : undefined;
   });
 
-  // FK column detection
-  const FK_TABLE_MAP: Record<string, string> = {
-    platform_id: "platforms",
-    platformId: "platforms",
-    tag_id: "tags",
-    tagId: "tags",
-    streamer_id: "streamers",
-    streamerId: "streamers",
-    collection_id: "collections",
-    collectionId: "collections",
-    user_id: "auth_users",
-    userId: "auth_users",
-    author_id: "auth_users",
-    authorId: "auth_users",
-    assigned_to_id: "auth_users",
-    assignedToId: "auth_users",
-    contact_id: "contacts",
-    contactId: "contacts",
-    dataset_id: "datasets",
-    datasetId: "datasets",
-    cover_art_id: "media",
-    coverArtId: "media",
-    featured_image_id: "media",
-    featuredImageId: "media",
-    avatar_id: "media",
-    avatarId: "media",
-    icon_id: "media",
-    iconId: "media",
-    thumbnail_id: "media",
-    thumbnailId: "media",
-    uploaded_by_id: "auth_users",
-    uploadedById: "auth_users",
-    created_by_id: "auth_users",
-    createdById: "auth_users",
-  };
-
+  // FK column detection (the rules are shared with the form: $lib/explorer-relations)
   function isRelationColumn(colName: string): boolean {
     return colName.endsWith("_id") || (colName.endsWith("Id") && colName !== "id");
   }
 
+  /**
+   * The table each relation column points to, resolved against the tables the explorer
+   * really has (also behind this table's own prefix: `directory_departments`). A column
+   * that resolves to nothing has no entry and shows its sibling name or a short id.
+   */
+  let relatedTables = $state<Record<string, string>>({});
+
   function getRelatedTable(colName: string): string | undefined {
-    if (FK_TABLE_MAP[colName]) return FK_TABLE_MAP[colName];
-    const base = colName.replace(/_id$/, "").replace(/Id$/, "");
-    return base.endsWith("s") ? base : base + "s";
+    return relatedTables[colName];
   }
 
   onMount(async () => {
@@ -447,7 +435,8 @@
     currentPage = 1;
     sortStack = [];
     activeFilters = {};
-    hiddenColumns = new Set();
+    hiddenChoice = null;
+    relatedTables = {};
     schema = null;
 
     /**
@@ -650,6 +639,7 @@
 
   async function loadData() {
     loading = true;
+    loadError = null;
     try {
       const params = new URLSearchParams();
       params.set("limit", String(pageSize));
@@ -668,14 +658,9 @@
         }
       }
 
-      // Multi-column sort
-      if (sortStack.length > 0) {
-        params.set(
-          "sort",
-          sortStack.map((s) => `${s.direction === "desc" ? "-" : ""}${s.column}`).join(",")
-        );
-        // Legacy single sort for backward compat
-        params.set("dir", sortStack[0].direction);
+      // Sort, in the dialect of the endpoint that will answer (see `sortParams`).
+      for (const [key, value] of Object.entries(sortParams(getEndpoint(), sortStack))) {
+        params.set(key, value);
       }
 
       // Apply active filters
@@ -744,9 +729,22 @@
 
         // Load FK display values for relation columns
         await loadFkDisplayValues();
+      } else {
+        // A refused or failed request used to leave the table on "No records found".
+        const body = (await res.json().catch(() => null)) as {
+          detail?: string;
+          message?: string;
+          error?: string;
+        } | null;
+        loadError = body?.detail || body?.message || body?.error || `HTTP ${res.status}`;
+        data = [];
+        totalCount = 0;
       }
     } catch (e) {
       console.error("Failed to load data", e);
+      loadError = e instanceof Error ? e.message : String(e);
+      data = [];
+      totalCount = 0;
     } finally {
       loading = false;
     }
@@ -761,8 +759,12 @@
     const known = await knownTables();
 
     for (const col of relationCols) {
-      const relTable = getRelatedTable(col.name);
-      if (!relTable || fkDisplayCache[relTable] || !known.has(relTable)) continue;
+      const relTable = resolveRelatedTable(col.name, activeTable ?? "", known);
+      if (!relTable) continue;
+      if (relatedTables[col.name] !== relTable) {
+        relatedTables = { ...relatedTables, [col.name]: relTable };
+      }
+      if (fkDisplayCache[relTable]) continue;
 
       try {
         const res = await fetch(`${API_URL}/api/explorer/${relTable}/options`, {
@@ -788,13 +790,10 @@
     }
   }
 
-  function resolveFkDisplay(colName: string, rawValue: any): string {
-    if (rawValue === null || rawValue === undefined) return "-";
+  /** A relation by its display field when the data has it; a short id otherwise. */
+  function resolveFkDisplay(colName: string, row: Record<string, unknown>): string {
     const relTable = getRelatedTable(colName);
-    if (relTable && fkDisplayCache[relTable]) {
-      return fkDisplayCache[relTable][String(rawValue)] || String(rawValue).slice(0, 8) + "…";
-    }
-    return String(rawValue).slice(0, 8) + "…";
+    return relationDisplay(row, colName, relTable ? fkDisplayCache[relTable] : undefined);
   }
 
   async function handleInlineEdit(rowId: string, field: string, value: any) {
@@ -816,7 +815,6 @@
   }
 
   async function handleDelete(record: any) {
-    deleting = true;
     const endpoint = getEndpoint();
     try {
       const res = await fetch(`${API_URL}${endpoint}/${record.id}`, {
@@ -824,22 +822,30 @@
         credentials: "include",
       });
       if (res.ok) {
-        showDeleteConfirm = false;
-        deleteTarget = null;
+        toast.success(tr("dataExplorer.recordRemoved"));
         await loadData();
       } else {
-        console.error("Failed to delete", await res.text());
+        // A refused delete used to close nothing and say nothing.
+        const body = (await res.json().catch(() => null)) as {
+          detail?: string;
+          message?: string;
+          error?: string;
+        } | null;
+        toast.error(tr("dataExplorer.couldNotRemove"), {
+          description: body?.detail || body?.message || body?.error || `HTTP ${res.status}`,
+        });
       }
     } catch (e) {
       console.error("Error deleting record", e);
-    } finally {
-      deleting = false;
+      toast.error(tr("dataExplorer.couldNotRemove"), {
+        description: e instanceof Error ? e.message : undefined,
+      });
     }
   }
 
   // ── Row Actions ──
   async function executeRowAction(action: RowAction, row: any) {
-    if (action.confirm && !confirm(action.confirm)) return;
+    if (action.confirm && !(await confirmDialog(action.confirm))) return;
     const endpoint = getEndpoint();
     try {
       const url = action.endpoint
@@ -858,38 +864,6 @@
       }
     } catch (e) {
       console.error("Error executing row action", e);
-    }
-  }
-
-  function getRowActionClasses(variant?: string): string {
-    const base =
-      "group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all duration-200 text-xs font-medium ";
-    switch (variant) {
-      case "success":
-        return (
-          base +
-          "bg-emerald-500/5 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/30"
-        );
-      case "warning":
-        return (
-          base +
-          "bg-amber-500/5 border-amber-500/20 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/30"
-        );
-      case "danger":
-        return (
-          base +
-          "bg-red-500/5 border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30"
-        );
-      case "primary":
-        return (
-          base +
-          "bg-kitsuden-accent/5 border-kitsuden-accent/20 text-kitsuden-accent hover:bg-kitsuden-accent/10 hover:border-kitsuden-accent/30"
-        );
-      default:
-        return (
-          base +
-          "bg-kitsuden-surface border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-accent/5 hover:border-kitsuden-accent/20 hover:text-kitsuden-accent"
-        );
     }
   }
 
@@ -959,12 +933,17 @@
     await loadData();
   }
 
-  function confirmBulkDelete() {
-    showBulkDeleteConfirm = true;
+  /** Asks with the panel's dialog (tallao ConfirmDialog: focus trap, Escape, focus back). */
+  async function confirmBulkDelete() {
+    const ok = await confirmDialog({
+      title: tr("dataExplorer.deleteRecords", { size: selectedRows.size }),
+      description: tr("dataExplorer.thisActionCannotBeUndone"),
+      confirmLabel: tr("common.delete"),
+    });
+    if (ok) await executeBulkDelete();
   }
 
   async function executeBulkDelete() {
-    showBulkDeleteConfirm = false;
     bulkActionLoading = true;
     const endpoint = getEndpoint();
     for (const id of selectedRows) {
@@ -1081,9 +1060,17 @@
     showFormModal = true;
   }
 
-  function confirmDelete(row: any) {
-    deleteTarget = row;
-    showDeleteConfirm = true;
+  /** Asks with the panel's dialog, naming the record, then deletes it. */
+  async function confirmDelete(row: any) {
+    const title = rowTitle(row, columns);
+    const ok = await confirmDialog({
+      title: title
+        ? tr("dataExplorer.removeRecordNamed", { title })
+        : tr("dataExplorer.removeRecord"),
+      description: tr("dataExplorer.thisActionCannot"),
+      confirmLabel: tr("common.remove"),
+    });
+    if (ok) await handleDelete(row);
   }
 
   function handleSort(column: string, multi = false) {
@@ -1134,11 +1121,11 @@
     } else {
       newSet.add(colName);
     }
-    hiddenColumns = newSet;
+    hiddenChoice = newSet;
   }
 
   function showAllColumns() {
-    hiddenColumns = new Set();
+    hiddenChoice = new Set();
   }
 
   function handleSortClick(column: string, e: MouseEvent) {
@@ -1314,7 +1301,7 @@
         </button>
 
         <button
-          class="group inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-emerald-500/5 hover:border-emerald-500/20 hover:text-emerald-400 transition-all duration-200"
+          class="group inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-green/5 hover:border-kitsuden-green/20 hover:text-kitsuden-green transition-all duration-200"
           onclick={handleExportCsv}
           title={tr("dataExplorer.exportAsCsv")}
         >
@@ -1323,7 +1310,7 @@
         </button>
 
         <button
-          class="group inline-flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-kitsuden-accent to-kitsuden-accent text-black rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
+          class="group inline-flex items-center gap-2 px-5 py-2.5 bg-kitsuden-accent text-kitsuden-on-accent rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
           onclick={openCreateModal}
         >
           <Plus class="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
@@ -1336,9 +1323,13 @@
     {#if views.length > 1}
       <div
         class="flex items-center gap-1 p-1 bg-kitsuden-bg border border-kitsuden-border rounded-lg w-fit"
+        role="tablist"
+        aria-label={tr("dataExplorer.views")}
       >
         {#each views as v}
           <button
+            role="tab"
+            aria-selected={activeView?.id === v.id}
             class="px-3 py-1.5 text-sm rounded-md transition-colors {activeView?.id === v.id
               ? 'bg-kitsuden-card text-kitsuden-text shadow-xs'
               : 'text-kitsuden-text-dim hover:text-kitsuden-text'}"
@@ -1375,7 +1366,7 @@
         <span class="hidden sm:inline">{tr("dataExplorer.filters")}</span>
         {#if activeFilterCount > 0}
           <span
-            class="ml-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-kitsuden-accent text-white"
+            class="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-kitsuden-accent text-kitsuden-on-accent"
           >
             {activeFilterCount}
           </span>
@@ -1395,7 +1386,7 @@
           <span class="hidden sm:inline">{tr("dataExplorer.columns")}</span>
           {#if hiddenColumns.size > 0}
             <span
-              class="ml-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500 text-white"
+              class="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-kitsuden-amber text-kitsuden-on-status"
             >
               {hiddenColumns.size}
             </span>
@@ -1415,7 +1406,7 @@
               </p>
               {#if hiddenColumns.size > 0}
                 <button
-                  class="text-[10px] text-kitsuden-accent hover:underline"
+                  class="text-xs text-kitsuden-accent hover:underline"
                   onclick={showAllColumns}>{tr("dataExplorer.showAll")}</button
                 >
               {/if}
@@ -1428,14 +1419,10 @@
                   type="checkbox"
                   checked={!hiddenColumns.has(col.name)}
                   onchange={() => toggleColumnVisibility(col.name)}
-                  class="w-3.5 h-3.5 rounded-sm border-kitsuden-border accent-kitsuden-accent"
+                  class="w-3.5 h-3.5 rounded-sm border-kitsuden-input accent-kitsuden-accent"
                 />
                 <span class="text-sm text-kitsuden-text-dim truncate">
-                  {col.name
-                    .replace(/([A-Z])/g, " $1")
-                    .replace(/_/g, " ")
-                    .replace(/^\w/, (c) => c.toUpperCase())
-                    .trim()}
+                  {columnLabel(col.name)}
                 </span>
               </label>
             {/each}
@@ -1588,7 +1575,7 @@
         <div class="flex items-center gap-2">
           {#if hasStatusField()}
             <button
-              class="group inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 transition-all duration-200 disabled:opacity-50"
+              class="group inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-green/10 hover:border-kitsuden-green/30 hover:text-kitsuden-green transition-all duration-200 disabled:opacity-50"
               onclick={handleBulkPublish}
               disabled={bulkActionLoading}
               title={tr("dataExplorer.publishSelected")}
@@ -1597,7 +1584,7 @@
               {tr("dataExplorer.publish")}
             </button>
             <button
-              class="group inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-400 transition-all duration-200 disabled:opacity-50"
+              class="group inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-amber/10 hover:border-kitsuden-amber/30 hover:text-kitsuden-amber transition-all duration-200 disabled:opacity-50"
               onclick={handleBulkUnpublish}
               disabled={bulkActionLoading}
               title={tr("dataExplorer.unpublishSelected")}
@@ -1620,7 +1607,7 @@
           <div class="w-px h-6 bg-kitsuden-border mx-1"></div>
 
           <button
-            class="group inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-linear-to-r from-red-500/10 to-red-600/10 text-red-400 border border-red-500/20 hover:from-red-500/20 hover:to-red-600/20 hover:border-red-500/30 transition-all duration-200 disabled:opacity-50"
+            class="group inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-linear-to-r from-kitsuden-danger/10 to-kitsuden-danger/10 text-kitsuden-danger border border-kitsuden-danger/20 hover:from-kitsuden-danger/20 hover:to-kitsuden-danger/20 hover:border-kitsuden-danger/30 transition-all duration-200 disabled:opacity-50"
             onclick={confirmBulkDelete}
             disabled={bulkActionLoading}
             title={tr("dataExplorer.deleteSelected")}
@@ -1638,72 +1625,79 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-kitsuden-border bg-kitsuden-bg">
-              <th class="w-10 p-3">
+              <th class="w-10 px-3 py-2" scope="col">
                 <input
                   type="checkbox"
                   checked={data.length > 0 && selectedRows.size === data.length}
                   indeterminate={selectedRows.size > 0 && selectedRows.size < data.length}
                   onchange={toggleAllSelection}
-                  class="w-4 h-4 rounded-sm border-kitsuden-border accent-kitsuden-accent"
+                  aria-label={tr("dataExplorer.selectAllRows")}
+                  class="w-4 h-4 rounded-sm border-kitsuden-input accent-kitsuden-accent"
                 />
               </th>
               {#each displayColumns as column}
                 {@const dir = getSortDir(column.name)}
                 {@const idx = getSortIndex(column.name)}
-                <th class="p-3 text-left">
+                <th class="px-3 py-2 text-left" scope="col" aria-sort={ariaSort(dir)}>
                   <button
-                    class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors {dir
+                    class="group flex items-center gap-1 rounded-sm text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kitsuden-accent {dir
                       ? 'text-kitsuden-accent'
                       : 'text-kitsuden-subtle hover:text-kitsuden-accent'}"
                     onclick={(e) => handleSortClick(column.name, e)}
                     title={tr("dataExplorer.clickToSortShiftClick")}
                   >
-                    {#if isRelationColumn(column.name)}
-                      {column.name
-                        .replace(/_id$/, "")
-                        .replace(/Id$/, "")
-                        .replace(/_/g, " ")
-                        .replace(/^\w/, (c) => c.toUpperCase())}
-                    {:else}
-                      {column.name
-                        .replace(/([A-Z])/g, " $1")
-                        .replace(/_/g, " ")
-                        .replace(/^\w/, (c) => c.toUpperCase())
-                        .trim()}
-                    {/if}
+                    {columnLabel(column.name)}
                     {#if dir === "asc"}
                       <ArrowUp class="w-3 h-3" />
                     {:else if dir === "desc"}
                       <ArrowDown class="w-3 h-3" />
                     {:else}
-                      <ArrowUpDown class="w-3 h-3 opacity-0 group-hover:opacity-30" />
+                      <ArrowUpDown
+                        class="w-3 h-3 opacity-0 group-hover:opacity-60 group-focus-visible:opacity-60"
+                      />
                     {/if}
                     {#if sortStack.length > 1 && idx >= 0}
                       <span
-                        class="text-[9px] font-bold bg-kitsuden-accent/20 text-kitsuden-accent rounded-full w-4 h-4 flex items-center justify-center"
+                        class="text-xs font-bold bg-kitsuden-accent/20 text-kitsuden-accent rounded-full w-4 h-4 flex items-center justify-center"
                         >{idx + 1}</span
                       >
                     {/if}
                   </button>
                 </th>
               {/each}
+              <!-- One sticky column for every row action, behind a single "⋯" menu. -->
               <th
-                class="p-3 text-right text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle"
-                >{tr("common.actions")}</th
+                scope="col"
+                class="sticky -right-px z-10 w-12 border-l border-kitsuden-border bg-kitsuden-bg px-2 py-2"
               >
+                <span class="sr-only">{tr("common.actions")}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {#if loading}
               {#each Array(5) as _, i}
-                <tr class="border-b border-kitsuden-border">
+                <tr class="h-11 border-b border-kitsuden-border">
                   {#each Array(Math.min(displayColumns.length + 2, 10)) as __}
-                    <td class="p-3">
+                    <td class="px-3 py-1.5">
                       <div class="h-4 bg-kitsuden-border/30 rounded-sm animate-pulse"></div>
                     </td>
                   {/each}
                 </tr>
               {/each}
+            {:else if loadError}
+              <!-- The error replaces the empty state: a failed load is not "no records". -->
+              <tr>
+                <td colspan="100" class="p-6">
+                  <StateMessage
+                    kind="error"
+                    title={tr("dataExplorer.loadFailed")}
+                    description={loadError}
+                    onRetry={() => loadData()}
+                    class="border-0 bg-transparent"
+                  />
+                </td>
+              </tr>
             {:else if data.length === 0}
               <tr>
                 <td colspan="100" class="p-12 text-center">
@@ -1730,33 +1724,33 @@
               </tr>
             {:else}
               {#each data as row}
-                <tr
-                  class="border-b border-kitsuden-border hover:bg-kitsuden-accent/3 transition-colors"
-                >
-                  <td class="p-3">
+                {@const title = rowTitle(row, columns)}
+                <tr class="group/row h-11 border-b border-kitsuden-border transition-colors">
+                  <td class="px-3 py-1.5 group-hover/row:bg-kitsuden-accent/5">
                     <input
                       type="checkbox"
                       checked={selectedRows.has(row.id)}
                       onchange={() => toggleRowSelection(row.id)}
-                      class="w-4 h-4 rounded-sm border-kitsuden-border accent-kitsuden-accent"
+                      aria-label={tr("dataExplorer.selectRow", { title })}
+                      class="w-4 h-4 rounded-sm border-kitsuden-input accent-kitsuden-accent"
                     />
                   </td>
                   {#each displayColumns as column}
                     {@const value = getCellValue(row, column.name)}
                     {@const colType = getColumnType(column.name)}
-                    <td class="p-3">
+                    <td class="px-3 py-1.5 group-hover/row:bg-kitsuden-accent/5">
                       <!-- BOOLEAN: colored badge -->
                       {#if colType === "boolean"}
                         {#if value === true}
                           <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-kitsuden-green/10 text-kitsuden-green border border-kitsuden-green/20"
                           >
                             <Check class="w-3 h-3" />
                             {tr("dataExplorer.si")}
                           </span>
                         {:else if value === false}
                           <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-kitsuden-danger/10 text-kitsuden-danger border border-kitsuden-danger/20"
                           >
                             <X class="w-3 h-3" />
                             {tr("common.no")}
@@ -1777,10 +1771,10 @@
                         <!-- RELATION: FK badge -->
                       {:else if colType === "relation" || isRelationColumn(column.name)}
                         <span
-                          class="inline-flex items-center px-2 py-0.5 rounded-md bg-kitsuden-surface text-xs font-medium text-kitsuden-text-dim"
+                          class="inline-block max-w-[14rem] truncate align-middle whitespace-nowrap px-2 py-0.5 rounded-md bg-kitsuden-surface text-xs font-medium text-kitsuden-text-dim"
                           title={String(value || "")}
                         >
-                          {resolveFkDisplay(column.name, value)}
+                          {resolveFkDisplay(column.name, row)}
                         </span>
 
                         <!-- URL: clickable link -->
@@ -1857,7 +1851,7 @@
                       {:else if colType === "json"}
                         {#if value !== null && value !== undefined}
                           <span
-                            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-mono bg-kitsuden-surface text-kitsuden-subtle"
+                            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-xs font-mono bg-kitsuden-surface text-kitsuden-subtle"
                             title={JSON.stringify(value, null, 2)}
                           >
                             <FileJson class="w-3 h-3" />
@@ -1885,38 +1879,52 @@
                       {/if}
                     </td>
                   {/each}
-                  <td class="p-3 text-right">
-                    <div class="flex items-center justify-end gap-2 flex-wrap">
+                  <!--
+                    Every action of the row behind one "⋯" (tallao DropdownMenu): the kon's own
+                    actions, Edit and Delete. The column is sticky, so it stays in reach on a
+                    wide table, and the button is always drawn: nothing depends on hover.
+                  -->
+                  <td
+                    class="sticky -right-px border-l border-kitsuden-border bg-kitsuden-card px-2 py-1 text-right"
+                  >
+                    <DropdownMenu
+                      label={tr("dataExplorer.actionsFor", { title })}
+                      placement="bottom-end"
+                    >
+                      {#snippet trigger(props)}
+                        <Button
+                          {...props}
+                          variant="ghost"
+                          size="icon"
+                          ariaLabel={tr("dataExplorer.actionsFor", { title })}
+                          title={tr("dataExplorer.rowActions")}
+                          data-testid="row-actions"
+                        >
+                          <MoreHorizontal class="w-4 h-4" />
+                        </Button>
+                      {/snippet}
                       {#each rowActions as action}
                         {@const visible =
                           !action.showIf || row[action.showIf.field] === action.showIf.equals}
                         {#if visible}
-                          <button
-                            class={getRowActionClasses(action.variant)}
-                            title={action.label}
-                            onclick={() => executeRowAction(action, row)}
+                          <MenuItem
+                            variant={action.variant === "danger" ? "danger" : "default"}
+                            onSelect={() => executeRowAction(action, row)}
                           >
-                            <span>{action.label}</span>
-                          </button>
+                            {action.label}
+                          </MenuItem>
                         {/if}
                       {/each}
-                      <button
-                        class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-accent/10 hover:border-kitsuden-accent/30 hover:text-kitsuden-accent transition-all duration-200"
-                        title={tr("dataExplorer.edit")}
-                        onclick={() => openEditModal(row)}
-                      >
+                      <MenuItem onSelect={() => openEditModal(row)}>
                         <Edit class="w-3.5 h-3.5" />
-                        <span class="text-xs font-medium">{tr("dataExplorer.edit")}</span>
-                      </button>
-                      <button
-                        class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-all duration-200"
-                        title={tr("common.remove")}
-                        onclick={() => confirmDelete(row)}
-                      >
+                        {tr("dataExplorer.edit")}
+                      </MenuItem>
+                      <MenuSeparator />
+                      <MenuItem variant="danger" onSelect={() => confirmDelete(row)}>
                         <Trash2 class="w-3.5 h-3.5" />
-                        <span class="text-xs font-medium">{tr("common.remove")}</span>
-                      </button>
-                    </div>
+                        {tr("common.remove")}…
+                      </MenuItem>
+                    </DropdownMenu>
                   </td>
                 </tr>
               {/each}
@@ -1941,7 +1949,7 @@
 
         <div class="flex items-center gap-2">
           <select
-            class="px-3 py-2 text-sm rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/50 focus:border-kitsuden-accent/50 transition-all duration-200 hover:border-kitsuden-accent/30 cursor-pointer"
+            class="px-3 py-2 text-sm rounded-xl bg-kitsuden-surface border border-kitsuden-input text-kitsuden-text focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/50 focus:border-kitsuden-accent/50 transition-all duration-200 hover:border-kitsuden-accent/30 cursor-pointer"
             bind:value={pageSize}
             onchange={() => {
               currentPage = 1;
@@ -2034,102 +2042,4 @@
       editRecord = null;
     }}
   />
-{/if}
-
-<!-- Delete Confirmation Modal -->
-{#if showDeleteConfirm && deleteTarget}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs"
-    onclick={() => {
-      showDeleteConfirm = false;
-      deleteTarget = null;
-    }}
-  >
-    <div
-      class="bg-kitsuden-card border border-kitsuden-border rounded-xl shadow-2xl p-6 max-w-sm w-full"
-      onclick={(e) => e.stopPropagation()}
-    >
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
-          <Trash2 class="w-6 h-6 text-red-400" />
-        </div>
-        <div>
-          <h3 class="text-lg font-semibold text-kitsuden-text">
-            {tr("dataExplorer.removeRecord")}
-          </h3>
-          <p class="text-sm text-kitsuden-text-dim">{tr("dataExplorer.thisActionCannot")}</p>
-        </div>
-      </div>
-      <div class="flex items-center justify-end gap-3">
-        <button
-          class="px-5 py-2.5 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-bg transition-all duration-200"
-          onclick={() => {
-            showDeleteConfirm = false;
-            deleteTarget = null;
-          }}
-        >
-          {tr("common.cancel")}
-        </button>
-        <button
-          class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-linear-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
-          disabled={deleting}
-          onclick={() => handleDelete(deleteTarget)}
-        >
-          <Trash2 class="w-4 h-4 group-hover:animate-bounce" />
-          {deleting ? tr("dataExplorer.removing") : tr("common.remove")}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Bulk Delete Confirmation Modal -->
-{#if showBulkDeleteConfirm}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs"
-    onclick={() => {
-      showBulkDeleteConfirm = false;
-    }}
-  >
-    <div
-      class="bg-kitsuden-card border border-kitsuden-border rounded-xl shadow-2xl p-6 max-w-sm w-full"
-      onclick={(e) => e.stopPropagation()}
-    >
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
-          <Trash2 class="w-6 h-6 text-red-400" />
-        </div>
-        <div>
-          <h3 class="text-lg font-semibold text-kitsuden-text">
-            {tr("dataExplorer.deleteRecords", { size: selectedRows.size })}
-          </h3>
-          <p class="text-sm text-kitsuden-text-dim">
-            {tr("dataExplorer.thisActionCannotBeUndone")}
-          </p>
-        </div>
-      </div>
-      <div class="flex items-center justify-end gap-3">
-        <button
-          class="px-5 py-2.5 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-bg transition-all duration-200"
-          onclick={() => {
-            showBulkDeleteConfirm = false;
-          }}
-        >
-          {tr("common.cancel")}
-        </button>
-        <button
-          class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-linear-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
-          disabled={bulkActionLoading}
-          onclick={executeBulkDelete}
-        >
-          <Trash2 class="w-4 h-4 group-hover:animate-bounce" />
-          {bulkActionLoading ? tr("dataExplorer.deleting") : tr("common.delete")}
-        </button>
-      </div>
-    </div>
-  </div>
 {/if}

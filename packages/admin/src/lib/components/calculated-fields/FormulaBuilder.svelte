@@ -180,19 +180,19 @@
 
   function getFieldColor(fieldName: string): string {
     const field = availableFields.find((f) => f.name === fieldName);
-    if (!field) return "bg-gray-500/20 text-gray-400";
+    if (!field) return "bg-kitsuden-subtle/20 text-kitsuden-text-dim";
 
     switch (field.type) {
       case "number":
-        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+        return "bg-kitsuden-info/20 text-kitsuden-info border-kitsuden-info/30";
       case "text":
-        return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+        return "bg-kitsuden-purple/20 text-kitsuden-purple border-kitsuden-purple/30";
       case "date":
-        return "bg-green-500/20 text-green-400 border-green-500/30";
+        return "bg-kitsuden-green/20 text-kitsuden-green border-kitsuden-green/30";
       case "boolean":
-        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+        return "bg-kitsuden-amber/20 text-kitsuden-amber border-kitsuden-amber/30";
       default:
-        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+        return "bg-kitsuden-subtle/20 text-kitsuden-text-dim border-kitsuden-subtle/30";
     }
   }
 
@@ -246,7 +246,7 @@
               </span>
             {:else if token.type === "function"}
               <span
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono text-sm"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-kitsuden-amber/20 text-kitsuden-amber border border-kitsuden-amber/30 font-mono text-sm"
               >
                 <Sigma class="w-3.5 h-3.5" />
                 {token.value}()
@@ -381,7 +381,7 @@
     <textarea
       id="expression"
       bind:value={expression}
-      class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm font-mono text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+      class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm font-mono text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
       rows="2"
       oninput={(e) => {
         expression = e.currentTarget.value;

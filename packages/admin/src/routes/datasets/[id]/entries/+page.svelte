@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { pageTitle } from "$lib/page";
+  import StateMessage from "$lib/components/feedback/StateMessage.svelte";
+  import { confirmDialog } from "$lib/confirm.svelte";
   /**
    * Entries of a dataset: list, create, edit and delete.
    *
@@ -116,7 +119,12 @@
   }
 
   async function remove(e: Input) {
-    if (!confirm(t("entriesPage.confirmDelete", { title: e.title ?? e.id }))) return;
+    const ok = await confirmDialog({
+      title: t("entriesPage.confirmDelete", { title: e.title ?? e.id }),
+      description: t("entriesPage.confirmDeleteHelp"),
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
     try {
       await api.delete(`/datasets/${datasetId}/entries/${e.id}`);
       toast.success(t("entriesPage.deletedInput"));
@@ -135,6 +143,12 @@
   }
 </script>
 
+<svelte:head>
+  <title
+    >{pageTitle(name ? `${name} · ${t("entriesPage.entries")}` : t("entriesPage.entries"))}</title
+  >
+</svelte:head>
+
 <div class="space-y-4">
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-3">
@@ -147,7 +161,7 @@
         <ArrowLeft class="w-5 h-5" />
       </Button>
       <div>
-        <h2 class="text-xl font-bold text-kitsuden-text">{name || t("entriesPage.entries")}</h2>
+        <h1 class="text-xl font-bold text-kitsuden-text">{name || t("entriesPage.entries")}</h1>
         <p class="text-sm text-kitsuden-text-dim mt-0.5">
           {t("entriesPage.records", { n: inputs.length })}
         </p>
@@ -174,7 +188,12 @@
       <Spinner class="text-kitsuden-accent" />
     </div>
   {:else if error}
-    <div class="card p-6 text-sm text-kitsuden-accent-2">{error}</div>
+    <StateMessage
+      kind="error"
+      title={t("entriesPage.loadFailed")}
+      description={error}
+      onRetry={load}
+    />
   {:else if fields.length === 0}
     <div class="card p-16 text-center">
       <p class="text-kitsuden-text-dim">{t("entriesPage.withoutFields")}</p>
@@ -186,9 +205,12 @@
       </a>
     </div>
   {:else if inputs.length === 0}
-    <div class="card p-16 text-center">
-      <p class="text-kitsuden-text-dim">{t("dataExplorer.noRecordsFound")}</p>
-    </div>
+    <StateMessage title={t("entriesPage.empty")}>
+      <Button onclick={openSignup} size="sm">
+        <Plus class="w-3.5 h-3.5" />
+        {t("entriesPage.newEntry")}
+      </Button>
+    </StateMessage>
   {:else}
     <Table aria-label={name || t("entriesPage.entries")}>
       <TableHeader>
@@ -212,7 +234,7 @@
                   size="icon"
                   onclick={() => openEdit(e)}
                   title={t("common.edit")}
-                  ariaLabel={t("common.edit")}
+                  ariaLabel={`${t("common.edit")}: ${e.title ?? e.id}`}
                 >
                   <Pencil class="w-4 h-4" />
                 </Button>
@@ -221,7 +243,7 @@
                   size="icon"
                   onclick={() => remove(e)}
                   title={t("common.delete")}
-                  ariaLabel={t("common.delete")}
+                  ariaLabel={`${t("common.delete")}: ${e.title ?? e.id}`}
                 >
                   <Trash2 class="w-4 h-4" />
                 </Button>

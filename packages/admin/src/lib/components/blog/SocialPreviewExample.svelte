@@ -148,7 +148,7 @@
       {#if error}
         <div class="preview-error">
           <p>{t("socialPreviewExample.errorLoadingPreview")} {error}</p>
-          <button onclick={loadSEOPreview}>{t("socialPreviewExample.reintentar")}</button>
+          <button onclick={loadSEOPreview}>{t("socialPreviewExample.retry")}</button>
         </div>
       {:else}
         <SocialPreview {seoData} {postTitle} postUrl={`${siteUrl}/blog/${postSlug}`} {postSlug} />

@@ -47,38 +47,42 @@
 <div class="space-y-4" data-testid="agent-decisions">
   <div class="flex flex-wrap items-start gap-3">
     <div class="min-w-0 flex-1">
-      <h3 class="text-sm font-semibold text-zinc-300">{t("agentDecisions.title")}</h3>
-      <p class="text-xs text-zinc-500">{t("agentDecisions.help")}</p>
+      <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentDecisions.title")}</h3>
+      <p class="text-xs text-kitsuden-subtle">{t("agentDecisions.help")}</p>
     </div>
     <select
       bind:value={days}
       onchange={load}
       aria-label={t("agentDecisions.days", { n: days })}
-      class="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-200"
+      class="px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
     >
       {#each PERIODS as p}
         <option value={p}>{t("agentDecisions.days", { n: p })}</option>
       {/each}
     </select>
     <Button variant="ghost" size="sm" onclick={load}><RefreshCw size={14} /></Button>
-    <a href="/approvals?tab=inbox" class="text-xs text-indigo-300 hover:underline self-center"
+    <a href="/approvals?tab=inbox" class="text-xs text-kitsuden-accent hover:underline self-center"
       >{t("agentDecisions.inboxLink")}</a
     >
   </div>
 
   {#if loading}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if decisions.length === 0}
-    <p class="text-sm text-zinc-500 py-6 text-center">{t("agentDecisions.empty")}</p>
+    <p class="text-sm text-kitsuden-subtle py-6 text-center">{t("agentDecisions.empty")}</p>
   {:else}
-    <p class="text-xs text-zinc-500">{t("agentDecisions.total", { n: total })}</p>
-    <div class="overflow-x-auto border border-zinc-800 rounded-lg">
+    <p class="text-xs text-kitsuden-subtle">{t("agentDecisions.total", { n: total })}</p>
+    <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
       <table class="w-full text-sm">
-        <thead class="bg-zinc-900 text-xs text-zinc-500 text-left">
+        <thead class="bg-kitsuden-card text-xs text-kitsuden-subtle text-left">
           <tr>
             <th class="px-3 py-2 font-medium">{t("agentDecisions.colWhen")}</th>
             {#if !agentId}<th class="px-3 py-2 font-medium">{t("agentDecisions.colAgent")}</th>{/if}
@@ -90,21 +94,23 @@
         </thead>
         <tbody>
           {#each decisions as d (d.id)}
-            <tr class="border-t border-zinc-800 align-top" data-testid="decision-row">
-              <td class="px-3 py-2 whitespace-nowrap text-xs text-zinc-500">{date(d.createdAt)}</td>
+            <tr class="border-t border-kitsuden-border align-top" data-testid="decision-row">
+              <td class="px-3 py-2 whitespace-nowrap text-xs text-kitsuden-subtle"
+                >{date(d.createdAt)}</td
+              >
               {#if !agentId}
                 <td class="px-3 py-2 whitespace-nowrap">
-                  <a href="/agents/{d.agentId}" class="text-indigo-300 hover:underline"
+                  <a href="/agents/{d.agentId}" class="text-kitsuden-accent hover:underline"
                     >{d.agentName ?? d.agentId}</a
                   >
                 </td>
               {/if}
-              <td class="px-3 py-2 text-zinc-200">{d.action}</td>
-              <td class="px-3 py-2 text-zinc-400">{d.reason}</td>
-              <td class="px-3 py-2 text-zinc-400">
+              <td class="px-3 py-2 text-kitsuden-text">{d.action}</td>
+              <td class="px-3 py-2 text-kitsuden-text-dim">{d.reason}</td>
+              <td class="px-3 py-2 text-kitsuden-text-dim">
                 {#each d.alternatives as a}<div>{a}</div>{/each}
               </td>
-              <td class="px-3 py-2 text-xs text-zinc-500 whitespace-nowrap">
+              <td class="px-3 py-2 text-xs text-kitsuden-subtle whitespace-nowrap">
                 {d.version != null ? t("agentVersions.version", { n: d.version }) : ""}
               </td>
             </tr>

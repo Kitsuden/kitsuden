@@ -3,10 +3,12 @@
   import { explorerEndpoint } from "$lib/explorer-endpoint";
   import { knownTables } from "$lib/explorer-tables";
   import { resolveFieldType } from "@kitsuden/shared";
-  import { X, Loader2, Save } from "lucide-svelte";
+  import { Loader2, Save } from "lucide-svelte";
   import { onMount } from "svelte";
 
+  import { resolveRelatedTable } from "$lib/explorer-relations";
   import { autosaveStore } from "$lib/states/autosave.svelte";
+  import { Alert, Button, Checkbox, Dialog, Input, Select, Textarea } from "$lib/tallao";
   import type { SchemaColumn } from "$lib/types/admin";
 
   import AutoSaveIndicator from "./AutoSaveIndicator.svelte";
@@ -101,27 +103,11 @@
     columns.filter((c) => !READONLY_FIELDS.has(c.name) && !c.isPrimary)
   );
 
-  // FK column name → related table name mapping
-  const FK_TABLE_MAP: Record<string, string> = {
-    platform_id: "platforms",
-    platformId: "platforms",
-    tag_id: "tags",
-    tagId: "tags",
-    streamer_id: "streamers",
-    streamerId: "streamers",
-    collection_id: "collections",
-    collectionId: "collections",
-    user_id: "auth_users",
-    userId: "auth_users",
-    author_id: "auth_users",
-    authorId: "auth_users",
-    assigned_to_id: "auth_users",
-    assignedToId: "auth_users",
-    contact_id: "contacts",
-    contactId: "contacts",
-    dataset_id: "datasets",
-    datasetId: "datasets",
-  };
+  /**
+   * The table each relation column points to, once resolved against the tables the
+   * explorer really has (see $lib/explorer-relations). Empty until then.
+   */
+  const relatedTables = $state<Record<string, string>>({});
 
   function isRelationColumn(col: SchemaColumn): boolean {
     return (
@@ -131,12 +117,7 @@
     );
   }
 
-  function getRelatedTable(colName: string): string | undefined {
-    if (FK_TABLE_MAP[colName]) return FK_TABLE_MAP[colName];
-    const base = colName.replace(/_id$/, "").replace(/Id$/, "");
-    const plural = base.endsWith("s") ? base : base + "s";
-    return plural;
-  }
+  const uid = $props.id();
 
   /**
    * Canonical registry type → HTML `input` type.
@@ -206,12 +187,14 @@
 
     loadingRelations = true;
     const promises = relationCols.map(async (col) => {
-      const relTable = getRelatedTable(col.name);
+      // The table is a guess from the column's name. It is matched against the tables the
+      // explorer knows — also behind this table's own prefix (`directory_employees` →
+      // `directory_departments`), which is how a kon names its tables — and options are
+      // requested only for one that exists: a blind guess was a 404 per column, and a
+      // guess without the prefix left every relation select of a kon empty.
+      const relTable = resolveRelatedTable(col.name, tableName, await knownTables());
       if (!relTable) return;
-      // The table is GUESSED from the column name (`room_id` → `rooms`) and almost
-      // never exists: every create in Bookings fired ten 404s. Options are only requested
-      // for tables the explorer knows.
-      if (!(await knownTables()).has(relTable)) return;
+      relatedTables[col.name] = relTable;
       try {
         const res = await fetch(`${API_URL}/api/explorer/${relTable}/options`, {
           credentials: "include",
@@ -323,172 +306,160 @@
       saving = false;
     }
   }
+  /** Cancel, Escape, the X or a click outside. */
+  function close() {
+    autosaveStore.stopAutosave();
+    onclose?.();
+  }
 </script>
 
-<!-- Backdrop -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs"
-  onclick={(e) => {
-    if (e.target === e.currentTarget) {
-      autosaveStore.stopAutosave();
-      onclose?.();
-    }
-  }}
+<!--
+  A real dialog: tallao's Dialog (native <dialog> + showModal()) gives the role, the focus
+  trap, Escape and focus back on the row's button. It used to be a hand-made overlay of
+  divs: no role, Tab walked out of it into the page behind, Escape did nothing.
+  The parent mounts this component only while the form is open, so it is always `open`.
+-->
+<Dialog
+  open
+  title={isEdit ? t("autoFormModal.editRecord") : t("autoFormModal.newRecord")}
+  description={tableName}
+  size="2xl"
+  onClose={close}
 >
-  <div
-    class="bg-kitsuden-card border border-kitsuden-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col"
-    onclick={(e) => e.stopPropagation()}
-  >
-    <!-- Header -->
-    <div
-      class="flex items-center justify-between px-6 py-4 border-b border-kitsuden-border shrink-0"
-    >
-      <div>
-        <h2 class="text-lg font-semibold text-kitsuden-text">
-          {isEdit ? t("common.edit") : t("common.create")}
-          {t("autoFormModal.record")}
-        </h2>
-        <p class="text-xs text-kitsuden-subtle mt-0.5">{tableName}</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <AutoSaveIndicator />
-        <button
-          onclick={() => {
-            autosaveStore.stopAutosave();
-            onclose?.();
-          }}
-          class="p-2 rounded-lg hover:bg-kitsuden-border/30 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
-        >
-          <X class="w-5 h-5" />
-        </button>
-      </div>
-    </div>
-
-    <!-- Form Body -->
-    <div class="flex-1 overflow-y-auto px-6 py-5">
-      {#if error}
-        <div
-          class="mb-4 p-3 rounded-lg bg-kitsuden-accent-2/10 border border-kitsuden-accent-2/20 text-sm text-kitsuden-accent-2"
-        >
-          {error}
-        </div>
-      {/if}
-
-      <div class="space-y-4">
-        {#if editableColumns.length === 0}
-          <div class="p-8 text-center">
-            <div
-              class="w-12 h-12 rounded-full bg-kitsuden-accent/10 flex items-center justify-center mx-auto mb-3"
-            >
-              <span class="text-2xl">⚠️</span>
-            </div>
-            <h3 class="text-kitsuden-text font-medium mb-1">
-              {t("autoFormModal.noFieldsAvailable")}
-            </h3>
-            <p class="text-sm text-kitsuden-subtle">
-              {t("autoFormModal.couldNotLoadSchemaFor", { tableName })}
-            </p>
-            <p class="text-xs text-kitsuden-subtle mt-2">
-              {t("autoFormModal.totalColumnsReceived")}
-              {columns.length}<br />
-              {t("autoFormModal.editableColumns", { editableColumnsCount: editableColumns.length })}
-            </p>
-          </div>
-        {/if}
-        {#each editableColumns as col}
-          {@const inputType = inferInputType(col)}
-          <div>
-            <label class="block text-sm font-medium text-kitsuden-text mb-1.5">
-              {formatLabel(col.name)}
-              {#if !col.nullable}
-                <span class="text-kitsuden-accent-2 ml-0.5">*</span>
-              {/if}
-            </label>
-
-            {#if inputType === "relation"}
-              <!-- FK Dropdown -->
-              <select class="input w-full" bind:value={formData[col.name]}>
-                <option value="">{t("common.select")}</option>
-                {#if relationOptions[col.name]}
-                  {#each relationOptions[col.name] as opt}
-                    <option value={opt.value}>{opt.label}</option>
-                  {/each}
-                {/if}
-              </select>
-              <p class="text-[10px] text-kitsuden-subtle mt-1">
-                {t("autoFormModal.relatedTo")}
-                {getRelatedTable(col.name) || "unknown"}
-              </p>
-            {:else if inputType === "checkbox"}
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  bind:checked={formData[col.name]}
-                  class="w-4 h-4 rounded-sm border-kitsuden-border accent-kitsuden-accent"
-                />
-                <span class="text-sm text-kitsuden-text-dim">{t("autoFormModal.enabled")}</span>
-              </label>
-            {:else if inputType === "textarea"}
-              <textarea
-                class="input w-full min-h-[80px] resize-y"
-                bind:value={formData[col.name]}
-                placeholder={formatLabel(col.name)}
-                rows="3"></textarea>
-            {:else if inputType === "json"}
-              <textarea
-                class="input w-full font-mono text-xs min-h-[80px] resize-y"
-                bind:value={formData[col.name]}
-                placeholder={'{"key": "value"}'}
-                rows="3"></textarea>
-            {:else if inputType === "number"}
-              <input
-                type="number"
-                class="input w-full"
-                bind:value={formData[col.name]}
-                placeholder={formatLabel(col.name)}
-              />
-            {:else if inputType === "date" || inputType === "datetime-local"}
-              <input type={inputType} class="input w-full" bind:value={formData[col.name]} />
-            {:else}
-              <input
-                type={inputType}
-                class="input w-full"
-                bind:value={formData[col.name]}
-                placeholder={formatLabel(col.name)}
-              />
-            {/if}
-          </div>
-        {/each}
-      </div>
-
-      {#if isGame}
-        <GameTags bind:this={gameSelector} gameId={editData?.id ?? null} />
-      {/if}
-
-      <!-- Inline Relations (edit mode only) -->
-      {#if isEdit && editData?.id}
-        <InlineRelationPanel {grimoireId} parentTable={tableName} parentId={editData.id} />
-      {/if}
-    </div>
-
-    <!-- Footer -->
-    <div
-      class="flex items-center justify-end gap-3 px-6 py-4 border-t border-kitsuden-border shrink-0"
-    >
-      <button class="btn-secondary-sm" onclick={() => onclose?.()} disabled={saving}>
-        {t("common.cancel")}
-      </button>
-      <button class="btn-primary flex items-center gap-2" onclick={handleSubmit} disabled={saving}>
-        {#if saving}
-          <Loader2 class="w-4 h-4 animate-spin" />
-          {t("common.saving")}
-        {:else}
-          <Save class="w-4 h-4" />
-          {isEdit ? t("autoFormModal.update") : t("common.create")}
-        {/if}
-      </button>
-    </div>
+  <div class="mb-3 flex justify-end">
+    <AutoSaveIndicator />
   </div>
-</div>
+
+  {#if error}
+    <div class="mb-4">
+      <Alert variant="error">{error}</Alert>
+    </div>
+  {/if}
+
+  <form
+    id="{uid}-form"
+    class="space-y-4"
+    novalidate
+    onsubmit={(e) => {
+      e.preventDefault();
+      void handleSubmit();
+    }}
+  >
+    {#if editableColumns.length === 0}
+      <div class="p-8 text-center">
+        <h3 class="text-kitsuden-text font-medium mb-1">
+          {t("autoFormModal.noFieldsAvailable")}
+        </h3>
+        <p class="text-sm text-kitsuden-subtle">
+          {t("autoFormModal.couldNotLoadSchemaFor", { tableName })}
+        </p>
+        <p class="text-xs text-kitsuden-subtle mt-2">
+          {t("autoFormModal.totalColumnsReceived")}
+          {columns.length}<br />
+          {t("autoFormModal.editableColumns", { editableColumnsCount: editableColumns.length })}
+        </p>
+      </div>
+    {/if}
+    {#each editableColumns as col (col.name)}
+      {@const inputType = inferInputType(col)}
+      {@const id = `${uid}-${col.name}`}
+      <div>
+        {#if inputType === "checkbox"}
+          <Checkbox
+            bind:checked={() => !!formData[col.name], (v) => (formData[col.name] = v)}
+            label={formatLabel(col.name)}
+            {id}
+          />
+        {:else}
+          <label class="block text-sm font-medium text-kitsuden-text mb-1.5" for={id}>
+            {formatLabel(col.name)}
+            {#if !col.nullable}
+              <span class="text-kitsuden-danger ml-0.5" aria-hidden="true">*</span>
+            {/if}
+          </label>
+
+          {#if inputType === "relation"}
+            {#if relationOptions[col.name]?.length}
+              <!-- The related records by their display field. -->
+              <Select
+                {id}
+                bind:value={() => formData[col.name] ?? "", (v) => (formData[col.name] = v)}
+                placeholder={t("common.select")}
+                options={relationOptions[col.name].map((o) => ({
+                  value: String(o.value),
+                  label: o.label,
+                }))}
+                required={!col.nullable}
+                aria-describedby="{id}-help"
+              />
+              <p class="text-xs text-kitsuden-subtle mt-1" id="{id}-help">
+                {t("autoFormModal.relatedTo")}
+                {relatedTables[col.name]}
+              </p>
+            {:else}
+              <!--
+                No list to choose from (the related table is not one the explorer serves, or
+                it is empty). An empty select would hide the current value and make the
+                field impossible to set: the id itself stays editable.
+              -->
+              <Input
+                {id}
+                bind:value={() => formData[col.name] ?? "", (v) => (formData[col.name] = v)}
+                placeholder={t("autoFormModal.relationIdPlaceholder")}
+                required={!col.nullable}
+                aria-describedby="{id}-help"
+              />
+              <p class="text-xs text-kitsuden-subtle mt-1" id="{id}-help">
+                {loadingRelations ? t("common.loading") : t("autoFormModal.relationNoOptions")}
+              </p>
+            {/if}
+          {:else if inputType === "textarea"}
+            <Textarea
+              {id}
+              bind:value={() => formData[col.name] ?? "", (v) => (formData[col.name] = v)}
+              rows={3}
+              required={!col.nullable}
+            />
+          {:else if inputType === "json"}
+            <Textarea
+              {id}
+              mono
+              bind:value={() => formData[col.name] ?? "", (v) => (formData[col.name] = v)}
+              placeholder={'{"key": "value"}'}
+              rows={3}
+            />
+          {:else}
+            <Input
+              {id}
+              type={inputType}
+              bind:value={() => formData[col.name] ?? "", (v) => (formData[col.name] = v)}
+              required={!col.nullable}
+            />
+          {/if}
+        {/if}
+      </div>
+    {/each}
+  </form>
+
+  {#if isGame}
+    <GameTags bind:this={gameSelector} gameId={editData?.id ?? null} />
+  {/if}
+
+  <!-- Inline Relations (edit mode only) -->
+  {#if isEdit && editData?.id}
+    <InlineRelationPanel {grimoireId} parentTable={tableName} parentId={editData.id} />
+  {/if}
+
+  {#snippet footer()}
+    <Button variant="ghost" onclick={close} disabled={saving}>{t("common.cancel")}</Button>
+    <Button type="submit" form="{uid}-form" disabled={saving}>
+      {#if saving}
+        <Loader2 class="w-4 h-4 animate-spin" />
+        {t("common.saving")}
+      {:else}
+        <Save class="w-4 h-4" />
+        {isEdit ? t("autoFormModal.update") : t("common.create")}
+      {/if}
+    </Button>
+  {/snippet}
+</Dialog>

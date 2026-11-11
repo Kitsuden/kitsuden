@@ -111,40 +111,42 @@
 <div class="max-w-2xl mx-auto p-6 space-y-6" data-testid="oauth-consent">
   {#if loading}
     <div class="flex items-center justify-center h-40">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if !view}
     <div
-      class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400"
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
       data-testid="oauth-consent-error"
     >
       {error}
     </div>
   {:else}
     <div class="flex items-start gap-3">
-      <div class="p-2 rounded-lg bg-indigo-500/10 text-indigo-300"><Plug size={22} /></div>
+      <div class="p-2 rounded-lg bg-kitsuden-accent/10 text-kitsuden-accent">
+        <Plug size={22} />
+      </div>
       <div>
-        <h1 class="text-xl font-semibold text-zinc-100">
+        <h1 class="text-xl font-semibold text-kitsuden-text">
           {t("oauthConsent.title", { client: view.client.name })}
         </h1>
-        <p class="text-sm text-zinc-400">{t("oauthConsent.subtitle")}</p>
+        <p class="text-sm text-kitsuden-text-dim">{t("oauthConsent.subtitle")}</p>
       </div>
     </div>
 
-    <section class="p-4 rounded-lg border border-zinc-800 space-y-1 text-sm">
-      <p class="text-zinc-300">
+    <section class="p-4 rounded-lg border border-kitsuden-border space-y-1 text-sm">
+      <p class="text-kitsuden-text">
         {t("oauthConsent.clientId")}
-        <code class="text-xs text-zinc-400 break-all">{view.client.id}</code>
+        <code class="text-xs text-kitsuden-text-dim break-all">{view.client.id}</code>
       </p>
-      <p class="text-zinc-300">
+      <p class="text-kitsuden-text">
         {view.client.kind === "cimd" ? t("oauthConsent.kindCimd") : t("oauthConsent.kindDcr")}
       </p>
-      <p class="text-zinc-300" data-testid="oauth-redirect-host">
+      <p class="text-kitsuden-text" data-testid="oauth-redirect-host">
         {t("oauthConsent.redirectsTo", { host: view.client.redirectHost })}
       </p>
       {#if view.client.localhostRedirect}
         <p
-          class="flex items-start gap-2 text-amber-300 text-xs pt-1"
+          class="flex items-start gap-2 text-kitsuden-amber text-xs pt-1"
           data-testid="oauth-localhost-warning"
         >
           <AlertTriangle size={14} class="mt-0.5 shrink-0" />
@@ -154,22 +156,22 @@
     </section>
 
     <section class="space-y-2">
-      <h2 class="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+      <h2 class="text-sm font-semibold text-kitsuden-text flex items-center gap-2">
         <Bot size={16} />{t("oauthConsent.actAs")}
       </h2>
       {#if view.agents.length === 0 && !view.human.canCreateAgent}
-        <p class="text-sm text-amber-300">{t("oauthConsent.noAgents")}</p>
+        <p class="text-sm text-kitsuden-amber">{t("oauthConsent.noAgents")}</p>
       {/if}
       {#if view.moreAgents}
-        <p class="text-xs text-zinc-500" data-testid="consent-more-agents">
+        <p class="text-xs text-kitsuden-subtle" data-testid="consent-more-agents">
           {t("oauthConsent.moreAgents")}
         </p>
       {/if}
       {#each view.agents as a (a.id)}
         <label
           class="flex items-start gap-3 p-3 rounded-lg border {chosenAgent === a.id
-            ? 'border-indigo-500/60 bg-indigo-500/5'
-            : 'border-zinc-800'} cursor-pointer"
+            ? 'border-kitsuden-accent/60 bg-kitsuden-accent/5'
+            : 'border-kitsuden-border'} cursor-pointer"
         >
           <input
             type="radio"
@@ -179,10 +181,14 @@
             class="mt-1"
           />
           <span>
-            <span class="block text-sm text-zinc-100">{a.name}</span>
-            {#if a.description}<span class="block text-xs text-zinc-500">{a.description}</span>{/if}
+            <span class="block text-sm text-kitsuden-text">{a.name}</span>
+            {#if a.description}<span class="block text-xs text-kitsuden-subtle"
+                >{a.description}</span
+              >{/if}
             {#if a.sponsorUserId && a.sponsorUserId !== view.human.id}
-              <span class="block text-xs text-amber-300/80">{t("oauthConsent.signerChanges")}</span>
+              <span class="block text-xs text-kitsuden-amber"
+                >{t("oauthConsent.signerChanges")}</span
+              >
             {/if}
           </span>
         </label>
@@ -190,8 +196,8 @@
       {#if view.human.canCreateAgent}
         <label
           class="flex items-start gap-3 p-3 rounded-lg border {chosenAgent === NEW
-            ? 'border-indigo-500/60 bg-indigo-500/5'
-            : 'border-zinc-800'} cursor-pointer"
+            ? 'border-kitsuden-accent/60 bg-kitsuden-accent/5'
+            : 'border-kitsuden-border'} cursor-pointer"
         >
           <input
             type="radio"
@@ -201,7 +207,7 @@
             class="mt-1"
           />
           <span class="flex-1">
-            <span class="block text-sm text-zinc-100">{t("oauthConsent.newAgent")}</span>
+            <span class="block text-sm text-kitsuden-text">{t("oauthConsent.newAgent")}</span>
             {#if chosenAgent === NEW}
               <input
                 type="text"
@@ -209,7 +215,7 @@
                 maxlength="100"
                 aria-label={t("oauthConsent.newAgentName")}
                 placeholder={t("oauthConsent.newAgentName")}
-                class="mt-2 w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+                class="mt-2 w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
               />
             {/if}
           </span>
@@ -219,20 +225,20 @@
 
     {#if chosenAgent}
       <section class="space-y-2" data-testid="oauth-scopes">
-        <h2 class="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+        <h2 class="text-sm font-semibold text-kitsuden-text flex items-center gap-2">
           <KeyRound size={16} />{t("oauthConsent.scopes")}
         </h2>
-        <p class="text-xs text-zinc-500">{t("oauthConsent.scopesHelp")}</p>
+        <p class="text-xs text-kitsuden-subtle">{t("oauthConsent.scopesHelp")}</p>
         {#if offered.length === 0}
-          <p class="text-sm text-amber-300">{t("oauthConsent.noScopes")}</p>
+          <p class="text-sm text-kitsuden-amber">{t("oauthConsent.noScopes")}</p>
         {/if}
         <div class="grid gap-1">
           {#each offered as s (s)}
-            <label class="flex items-center gap-2 text-sm text-zinc-200">
+            <label class="flex items-center gap-2 text-sm text-kitsuden-text">
               <input type="checkbox" checked={chosenItems.includes(s)} onchange={() => toggle(s)} />
               <code class="text-xs">{s}</code>
               {#if view.request.requestedScopes.includes(s)}
-                <span class="text-[10px] uppercase tracking-wide text-indigo-300"
+                <span class="text-xs uppercase tracking-wide text-kitsuden-accent"
                   >{t("oauthConsent.requested")}</span
                 >
               {/if}
@@ -240,22 +246,22 @@
           {/each}
         </div>
         {#if agent && agent.notDelegable.length}
-          <p class="text-xs text-zinc-500">
+          <p class="text-xs text-kitsuden-subtle">
             {t("oauthConsent.notDelegable", { scopes: agent.notDelegable.join(", ") })}
           </p>
         {/if}
         {#if agent && agent.denies.length}
-          <p class="text-xs text-zinc-500">
+          <p class="text-xs text-kitsuden-subtle">
             {t("oauthConsent.denies", { scopes: agent.denies.join(", ") })}
           </p>
         {/if}
         {#if !chosenItems.includes("mcp:connect")}
-          <p class="text-xs text-amber-300">{t("oauthConsent.needsConnect")}</p>
+          <p class="text-xs text-kitsuden-amber">{t("oauthConsent.needsConnect")}</p>
         {/if}
       </section>
     {/if}
 
-    <ul class="text-xs text-zinc-500 list-disc pl-5 space-y-1">
+    <ul class="text-xs text-kitsuden-subtle list-disc pl-5 space-y-1">
       <li>{t("oauthConsent.ruleSigner")}</li>
       <li>{t("oauthConsent.ruleNarrow")}</li>
       <li>{t("oauthConsent.ruleRevoke")}</li>
@@ -263,7 +269,7 @@
 
     {#if error}
       <div
-        class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400"
+        class="p-3 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-sm text-kitsuden-danger"
         data-testid="oauth-consent-error"
       >
         {error}

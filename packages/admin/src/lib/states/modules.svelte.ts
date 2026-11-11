@@ -1,3 +1,4 @@
+import { toast } from "svelte-sonner";
 import { t } from "$lib/i18n";
 /**
  * Shared Module State (Svelte 5 Runes)
@@ -263,11 +264,11 @@ class ModuleStore {
           parts.push(t("modulesStore.missingTables", { tables: err.missingTables.join(", ") }));
         }
         if (err.hint) parts.push(err.hint);
-        alert(parts.join("\n\n"));
+        toast.error(parts.join("\n\n"));
         return false;
       }
     } catch {
-      alert(t("modulesStore.networkErrorOnChange"));
+      toast.error(t("modulesStore.networkErrorOnChange"));
       return false;
     }
   }
@@ -298,11 +299,11 @@ class ModuleStore {
         };
       } else {
         const err = await res.json().catch(() => ({}));
-        alert(err.error || err.message || t("modulesStore.couldNotUninstall"));
+        toast.error(err.error || err.message || t("modulesStore.couldNotUninstall"));
         return { success: false };
       }
     } catch {
-      alert(t("modulesStore.uninstallNetworkError"));
+      toast.error(t("modulesStore.uninstallNetworkError"));
       return { success: false };
     }
   }
@@ -330,11 +331,11 @@ class ModuleStore {
         };
       } else {
         const err = await res.json().catch(() => ({}));
-        alert(err.error || err.message || t("modulesStore.couldNotRecover"));
+        toast.error(err.error || err.message || t("modulesStore.couldNotRecover"));
         return { success: false };
       }
     } catch {
-      alert(t("modulesStore.networkErrorOnRecover"));
+      toast.error(t("modulesStore.networkErrorOnRecover"));
       return { success: false };
     }
   }
@@ -368,11 +369,11 @@ class ModuleStore {
         };
       } else {
         const err = await res.json().catch(() => ({}));
-        alert(err.error || err.message || t("modulesStore.couldNotRemove"));
+        toast.error(err.error || err.message || t("modulesStore.couldNotRemove"));
         return { success: false };
       }
     } catch {
-      alert(t("modulesStore.networkErrorOnRemove"));
+      toast.error(t("modulesStore.networkErrorOnRemove"));
       return { success: false };
     }
   }

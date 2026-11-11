@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t } from "$lib/i18n";
   /**
    * PostsView.svelte
@@ -32,10 +33,10 @@
         type: "status-badge",
         options: {
           colors: {
-            draft: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-            scheduled: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-            published: "bg-green-500/10 text-green-500 border-green-500/20",
-            archived: "bg-gray-500/10 text-gray-400 border-gray-500/20",
+            draft: "bg-kitsuden-amber/10 text-kitsuden-amber border-kitsuden-amber/20",
+            scheduled: "bg-kitsuden-info/10 text-kitsuden-info border-kitsuden-info/20",
+            published: "bg-kitsuden-green/10 text-kitsuden-green border-kitsuden-green/20",
+            archived: "bg-kitsuden-subtle/10 text-kitsuden-text-dim border-kitsuden-subtle/20",
           },
         },
       },
@@ -155,7 +156,7 @@
       icon: Trash2,
       variant: "danger" as const,
       handler: async (ids: string[]) => {
-        if (confirm(t("postsView.deletePosts", { idsCount: ids.length }))) {
+        if (await confirmDialog(t("postsView.deletePosts", { idsCount: ids.length }))) {
           console.log("Deleting:", ids);
         }
       },
@@ -196,7 +197,7 @@
     </div>
     <a
       href="/content/edit?collection=blog-posts"
-      class="group inline-flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-kitsuden-accent to-kitsuden-accent text-black rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
+      class="group inline-flex items-center gap-2 px-5 py-2.5 bg-kitsuden-accent text-kitsuden-on-accent rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
     >
       <Plus class="w-4 h-4" />
       <span>{t("postsView.newPost")}</span>

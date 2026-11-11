@@ -15,6 +15,7 @@
     loadSocialProviders,
     mustEnrolTwoFactor,
   } from "$lib/auth.svelte";
+  import ConfirmHost from "$lib/components/feedback/ConfirmHost.svelte";
   import SidebarLayout from "$lib/components/layout/SidebarLayout.svelte";
   import { es, setLabels } from "$lib/tallao";
   import { loadTheme, currentTheme } from "$lib/theme.svelte";
@@ -56,6 +57,13 @@
   panel rendered nothing because nobody mounted <Toaster />: saving, deleting or
   failing gave no signal.
 -->
+<svelte:head>
+  <title>Kitsuden</title>
+</svelte:head>
+
+<!-- The one confirmation dialog every screen asks through ($lib/confirm.svelte.ts). -->
+<ConfirmHost />
+
 <Toaster theme={currentTheme() === "latte" ? "light" : "dark"} richColors position="bottom-right" />
 
 {#if loading}

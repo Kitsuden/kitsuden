@@ -29,10 +29,10 @@
       {...props}
       class="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-colors
       {autosaveStore.status === 'saving'
-        ? 'text-amber-400 bg-amber-400/10'
+        ? 'text-kitsuden-amber bg-kitsuden-amber/10'
         : autosaveStore.status === 'unsaved'
           ? 'text-kitsuden-accent-2 bg-kitsuden-accent-2/10'
-          : 'text-emerald-400 bg-emerald-400/10'}"
+          : 'text-kitsuden-green bg-kitsuden-green/10'}"
       data-testid="autosave-indicator"
     >
       <!--

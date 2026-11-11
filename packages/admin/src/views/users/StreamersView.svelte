@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t, localeFormat } from "$lib/i18n";
   import {
     Tv,
@@ -165,13 +166,13 @@
   function platformClasses(p: string) {
     switch (p) {
       case "twitch":
-        return "bg-purple-500/10 text-purple-400 border-purple-500/20";
+        return "bg-kitsuden-purple/10 text-kitsuden-purple border-kitsuden-purple/20";
       case "youtube":
-        return "bg-red-500/10 text-red-400 border-red-500/20";
+        return "bg-kitsuden-danger/10 text-kitsuden-danger border-kitsuden-danger/20";
       case "kick":
-        return "bg-green-500/10 text-green-400 border-green-500/20";
+        return "bg-kitsuden-green/10 text-kitsuden-green border-kitsuden-green/20";
       default:
-        return "bg-gray-500/10 text-gray-400 border-gray-500/20";
+        return "bg-kitsuden-subtle/10 text-kitsuden-text-dim border-kitsuden-subtle/20";
     }
   }
 
@@ -231,7 +232,7 @@
   }
 
   async function deleteStreamer(id: string) {
-    if (!confirm(t("streamersView.deleteThisStreamer"))) return;
+    if (!(await confirmDialog(t("streamersView.deleteThisStreamer")))) return;
     deletingId = id;
     try {
       await api.deleteStreamer(id);
@@ -248,7 +249,8 @@
   }
 
   async function deleteSelected() {
-    if (!confirm(t("streamersView.deleteSelectedStreamers", { selectedCount }))) return;
+    if (!(await confirmDialog(t("streamersView.deleteSelectedStreamers", { selectedCount }))))
+      return;
     try {
       await Promise.all([...selectedIds].map((id) => api.deleteStreamer(id)));
       toast.success(t("streamersView.streamersDeleted", { selectedCount }));
@@ -345,13 +347,13 @@
         <input
           bind:value={search}
           placeholder={t("streamersView.searchByNameOrChannel")}
-          class="w-full pl-9 pr-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
+          class="w-full pl-9 pr-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
         />
       </div>
       <div class="flex flex-wrap gap-3">
         <select
           bind:value={platformFilter}
-          class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+          class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
         >
           <option value="">{t("streamersView.allPlatforms")}</option>
           <option value="twitch">{t("streamersView.twitch")}</option>
@@ -369,7 +371,7 @@
         <select
           id="sortby"
           bind:value={sortBy}
-          class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+          class="px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
         >
           <option value="followersDesc">{t("streamersView.followers")}</option>
           <option value="viewersDesc">{t("streamersView.viewers")}</option>
@@ -459,7 +461,7 @@
                     />
                   {:else}
                     <div
-                      class="w-8 h-8 rounded-full bg-kitsuden-surface flex items-center justify-center text-[10px] text-kitsuden-subtle font-bold"
+                      class="w-8 h-8 rounded-full bg-kitsuden-surface flex items-center justify-center text-xs text-kitsuden-subtle font-bold"
                     >
                       {s.displayName.charAt(0).toUpperCase()}
                     </div>
@@ -486,7 +488,7 @@
                 </td>
                 <td class="px-4 py-3">
                   <span
-                    class="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full border {platformClasses(
+                    class="inline-block px-2 py-0.5 text-xs font-medium rounded-full border {platformClasses(
                       s.platform
                     )}"
                   >
@@ -497,7 +499,7 @@
                 <td class="px-4 py-3">
                   {#if s.isLive}
                     <span
-                      class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-medium bg-kitsuden-accent-2/10 text-kitsuden-accent-2 rounded-full border border-kitsuden-accent-2/20"
+                      class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium bg-kitsuden-accent-2/10 text-kitsuden-accent-2 rounded-full border border-kitsuden-accent-2/20"
                     >
                       <span class="w-1.5 h-1.5 rounded-full bg-kitsuden-accent-2 animate-pulse"
                       ></span>
@@ -505,7 +507,7 @@
                     </span>
                   {:else}
                     <span
-                      class="px-2 py-0.5 text-[10px] font-medium bg-kitsuden-surface text-kitsuden-subtle rounded-full border border-kitsuden-border"
+                      class="px-2 py-0.5 text-xs font-medium bg-kitsuden-surface text-kitsuden-subtle rounded-full border border-kitsuden-border"
                     >
                       {t("streamersView.offline")}
                     </span>
@@ -593,7 +595,7 @@
           <input
             id="displayname"
             bind:value={form.displayName}
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
           />
         </div>
         <div>
@@ -603,7 +605,7 @@
           <input
             id="slug"
             bind:value={form.slug}
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
           />
         </div>
         <div class="grid grid-cols-2 gap-4">
@@ -614,7 +616,7 @@
             <select
               id="platform"
               bind:value={form.platform}
-              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             >
               <option value="twitch">{t("streamersView.twitch")}</option>
               <option value="youtube">{t("streamersView.youtube")}</option>
@@ -629,7 +631,7 @@
             <input
               id="channelid"
               bind:value={form.channelId}
-              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+              class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
             />
           </div>
         </div>
@@ -641,7 +643,7 @@
             id="channelurl"
             bind:value={form.channelUrl}
             placeholder="https://twitch.tv/..."
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
           />
         </div>
         <div>
@@ -652,7 +654,7 @@
             id="bio"
             bind:value={form.bio}
             rows={3}
-            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent resize-none"
+            class="w-full px-3 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent resize-none"
           ></textarea>
         </div>
       </div>

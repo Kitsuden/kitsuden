@@ -66,41 +66,45 @@
 
 <div class="space-y-4" data-testid="agent-sponsor">
   <div>
-    <h3 class="text-sm font-semibold text-zinc-300">{t("agentSponsor.title")}</h3>
-    <p class="text-xs text-zinc-500">{t("agentSponsor.help")}</p>
+    <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentSponsor.title")}</h3>
+    <p class="text-xs text-kitsuden-subtle">{t("agentSponsor.help")}</p>
   </div>
 
   {#if loading}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if data}
     <div
       class="p-3 rounded-lg border {data.sponsor && !data.sponsor.valid
-        ? 'border-red-500/40 bg-red-500/5'
-        : 'border-zinc-800'}"
+        ? 'border-kitsuden-danger/40 bg-kitsuden-danger/5'
+        : 'border-kitsuden-border'}"
       data-testid="sponsor-current"
     >
       {#if !data.sponsor}
-        <p class="text-sm text-zinc-400">{t("agentSponsor.none")}</p>
-        <p class="text-xs text-zinc-500">{t("agentSponsor.noneHelp")}</p>
+        <p class="text-sm text-kitsuden-text-dim">{t("agentSponsor.none")}</p>
+        <p class="text-xs text-kitsuden-subtle">{t("agentSponsor.noneHelp")}</p>
       {:else}
-        <p class="text-sm text-zinc-200">
+        <p class="text-sm text-kitsuden-text">
           {data.sponsor.name ?? data.sponsor.userId}
-          {#if data.sponsor.email}<span class="text-xs text-zinc-500 ml-1"
+          {#if data.sponsor.email}<span class="text-xs text-kitsuden-subtle ml-1"
               >{data.sponsor.email}</span
             >{/if}
         </p>
         {#if data.sponsor.valid}
-          <p class="text-xs text-emerald-300">
+          <p class="text-xs text-kitsuden-green">
             {t("agentSponsor.valid", {
               role: ROLE[data.sponsor.role ?? ""]?.() ?? data.sponsor.role ?? "",
             })}
           </p>
         {:else}
-          <p class="text-xs text-red-300" data-testid="sponsor-invalid">
+          <p class="text-xs text-kitsuden-danger" data-testid="sponsor-invalid">
             {data.sponsor.reason === "not_found"
               ? t("agentSponsor.invalidDeleted")
               : t("agentSponsor.invalidRole")}
@@ -112,13 +116,13 @@
     {#if isAdmin()}
       <div class="flex flex-wrap items-end gap-3">
         <div class="min-w-64 flex-1">
-          <label for="sponsor-select" class="block text-sm text-zinc-300 mb-1.5"
+          <label for="sponsor-select" class="block text-sm text-kitsuden-text mb-1.5"
             >{t("agentSponsor.choose")}</label
           >
           <select
             id="sponsor-select"
             bind:value={chosenItem}
-            class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
           >
             <option value="">{t("agentSponsor.nobody")}</option>
             {#each data.candidates as c (c.id)}
@@ -145,7 +149,7 @@
           <Button
             variant="ghost"
             size="sm"
-            class="text-red-400"
+            class="text-kitsuden-danger"
             disabled={saving}
             onclick={() => save(null)}
           >
@@ -154,9 +158,9 @@
         {/if}
       </div>
     {:else}
-      <p class="text-xs text-amber-300/80">{t("agentSponsor.readOnly")}</p>
+      <p class="text-xs text-kitsuden-amber">{t("agentSponsor.readOnly")}</p>
     {/if}
-    <ul class="text-xs text-zinc-500 list-disc pl-5 space-y-1">
+    <ul class="text-xs text-kitsuden-subtle list-disc pl-5 space-y-1">
       <li>{t("agentSponsor.rule1")}</li>
       <li>{t("agentSponsor.rule2")}</li>
       <li>{t("agentSponsor.rule3")}</li>

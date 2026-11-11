@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   /**
    * Editor for a Page Builder page (create and edit).
    *
@@ -129,7 +130,8 @@
   }
 
   async function handleDelete() {
-    if (!pageId || !confirm(t("builderView.confirmDelete", { title: pageTitle }))) return;
+    if (!pageId || !(await confirmDialog(t("builderView.confirmDelete", { title: pageTitle }))))
+      return;
     deleting = true;
     try {
       await api.deletePage(pageId);
@@ -173,7 +175,7 @@
             bind:value={pageSlug}
             type="text"
             placeholder="page-slug"
-            class="bg-transparent text-xs text-kitsuden-text-dim outline-hidden border-b border-transparent focus:border-kitsuden-accent/50 transition-colors placeholder:text-kitsuden-subtle/50 font-mono"
+            class="bg-transparent text-xs text-kitsuden-text-dim outline-hidden border-b border-transparent focus:border-kitsuden-accent/50 transition-colors placeholder:text-kitsuden-subtle font-mono"
           />
         </div>
       </div>

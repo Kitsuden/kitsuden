@@ -107,7 +107,7 @@
 
   {#if loading}
     <div class="flex items-center justify-center h-48">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else}
     <div class="grid gap-4 md:grid-cols-2">
@@ -133,7 +133,7 @@
         <Label>{t("common.active")}</Label>
         <select
           bind:value={template.isActive}
-          class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm"
+          class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm"
         >
           <option value={true as any}>{t("common.yes")}</option>
           <option value={false as any}>{t("common.no")}</option>
@@ -144,7 +144,7 @@
     <div class="space-y-2">
       <Label>{t("templateForm.rulesJson")}</Label>
       <Textarea bind:value={rulesJson} rows={10} class="font-mono text-xs" />
-      <p class="text-xs text-zinc-500">
+      <p class="text-xs text-kitsuden-subtle">
         {t("templateForm.eachRule", {
           v: `{ "accountCode": "1200", "side": "debit|credit", "amountFormula": "total", "description": "..." }`,
         })}
@@ -157,8 +157,8 @@
     </div>
 
     {#if templateId}
-      <div class="border border-zinc-800 rounded-lg p-4 space-y-3">
-        <h3 class="text-sm font-semibold text-zinc-200 flex items-center gap-2">
+      <div class="border border-kitsuden-border rounded-lg p-4 space-y-3">
+        <h3 class="text-sm font-semibold text-kitsuden-text flex items-center gap-2">
           <Play class="w-4 h-4" />
           {t("templateForm.testApply")}
         </h3>
@@ -175,14 +175,16 @@
           <div>
             <Label class="text-xs">{t("templateForm.previewResult")}</Label>
             <div
-              class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-xs font-mono h-full min-h-[100px] overflow-auto"
+              class="bg-kitsuden-card border border-kitsuden-border rounded-lg p-3 text-xs font-mono h-full min-h-[100px] overflow-auto"
             >
               {#if testLoading}
-                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-500"></div>
+                <div
+                  class="animate-spin rounded-full h-4 w-4 border-b-2 border-kitsuden-accent"
+                ></div>
               {:else if testResult}
                 <pre>{JSON.stringify(testResult, null, 2)}</pre>
               {:else}
-                <span class="text-zinc-600">{t("templateForm.clickTestToSeePreview")}</span>
+                <span class="text-kitsuden-subtle">{t("templateForm.clickTestToSeePreview")}</span>
               {/if}
             </div>
           </div>
@@ -193,7 +195,7 @@
       </div>
     {/if}
 
-    <div class="flex items-center justify-between pt-4 border-t border-zinc-800">
+    <div class="flex items-center justify-between pt-4 border-t border-kitsuden-border">
       <Button variant="outline" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
       <Button onclick={save} loading={saving}
         ><Save class="w-4 h-4 mr-2" /> {t("templateForm.saveTemplate")}</Button

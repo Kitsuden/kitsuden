@@ -51,9 +51,11 @@
   >
     <div class="space-y-4">
       <!-- Warning -->
-      <div class="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-        <AlertTriangle class="text-amber-400 shrink-0 mt-0.5" size={18} />
-        <div class="text-sm text-amber-200">
+      <div
+        class="flex items-start gap-3 p-3 bg-kitsuden-amber/10 border border-kitsuden-amber/20 rounded-lg"
+      >
+        <AlertTriangle class="text-kitsuden-amber shrink-0 mt-0.5" size={18} />
+        <div class="text-sm text-kitsuden-amber">
           <p class="font-medium">{tr("tokenDisplay.important")}</p>
           <p class="mt-1">
             {tr("tokenDisplay.theTokenIsStoredAs")}
@@ -64,16 +66,16 @@
       <!-- Token Display -->
       <div class="relative">
         <div
-          class="flex items-center gap-2 p-4 bg-zinc-950 border border-zinc-800 rounded-lg font-mono text-sm"
+          class="flex items-center gap-2 p-4 bg-kitsuden-bg border border-kitsuden-border rounded-lg font-mono text-sm"
         >
           <button
-            class="p-1 hover:bg-zinc-800 rounded-sm transition-colors"
+            class="p-1 hover:bg-kitsuden-border rounded-sm transition-colors"
             onclick={() => (showToken = !showToken)}
           >
             {#if showToken}
-              <EyeOff size={16} class="text-zinc-500" />
+              <EyeOff size={16} class="text-kitsuden-subtle" />
             {:else}
-              <Eye size={16} class="text-zinc-500" />
+              <Eye size={16} class="text-kitsuden-subtle" />
             {/if}
           </button>
 
@@ -83,7 +85,7 @@
 
           <Button variant="ghost" size="sm" onclick={copyToClipboard}>
             {#if copied}
-              <Check size={16} class="text-emerald-400" />
+              <Check size={16} class="text-kitsuden-green" />
             {:else}
               <Copy size={16} />
             {/if}
@@ -92,11 +94,11 @@
       </div>
 
       <!-- Usage Example -->
-      <div class="p-3 bg-zinc-950 rounded-lg">
-        <span class="text-xs font-medium text-zinc-500 uppercase"
+      <div class="p-3 bg-kitsuden-bg rounded-lg">
+        <span class="text-xs font-medium text-kitsuden-subtle uppercase"
           >{tr("tokenDisplay.apiUsage")}</span
         >
-        <pre class="mt-2 text-xs text-zinc-400 overflow-x-auto">
+        <pre class="mt-2 text-xs text-kitsuden-text-dim overflow-x-auto">
 Authorization: Bearer {showToken ? displayToken : maskToken(displayToken)}</pre>
       </div>
     </div>
@@ -116,7 +118,7 @@ Authorization: Bearer {showToken ? displayToken : maskToken(displayToken)}</pre>
 
 <!-- Compact display (when token is already saved) -->
 {#if !token}
-  <div class="flex items-center gap-2 text-sm text-zinc-500">
+  <div class="flex items-center gap-2 text-sm text-kitsuden-subtle">
     <EyeOff size={14} />
     <span>{tr("tokenDisplay.tokenHiddenForSecurity")}</span>
   </div>

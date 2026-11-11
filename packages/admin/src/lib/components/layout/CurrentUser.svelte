@@ -53,7 +53,7 @@
     <span class="text-xs font-medium text-kitsuden-text truncate max-w-40" data-testid="user-name">
       {name}
     </span>
-    <span class="text-[10px] text-kitsuden-subtle truncate max-w-40" data-testid="user-role"
+    <span class="text-xs text-kitsuden-subtle truncate max-w-40" data-testid="user-role"
       >{role}</span
     >
   </div>

@@ -123,7 +123,7 @@
             {#if currentTheme() === theme.id}
               <div class="absolute top-2 right-2">
                 <span
-                  class="px-2 py-1 text-[10px] font-medium bg-kitsuden-accent/10 text-kitsuden-accent rounded-full"
+                  class="px-2 py-1 text-xs font-medium bg-kitsuden-accent/10 text-kitsuden-accent rounded-full"
                 >
                   {tr("common.active")}
                 </span>
@@ -236,7 +236,7 @@
               <div class="flex items-center justify-between">
                 <span class="text-sm font-medium">{tr("themesView.overview")}</span>
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                  class="text-xs px-1.5 py-0.5 rounded-full font-medium"
                   style="background: rgb(var(--kitsuden-green) / 0.15); color: rgb(var(--kitsuden-green));"
                 >
                   {tr("themesView.live")}
@@ -274,13 +274,13 @@
 
             <div class="flex gap-2">
               <span
-                class="text-[10px] px-2 py-1 rounded-full font-medium"
+                class="text-xs px-2 py-1 rounded-full font-medium"
                 style="background: rgb(var(--kitsuden-green) / 0.15); color: rgb(var(--kitsuden-green));"
               >
                 {tr("themesView.success")}
               </span>
               <span
-                class="text-[10px] px-2 py-1 rounded-full font-medium"
+                class="text-xs px-2 py-1 rounded-full font-medium"
                 style="background: rgb(var(--kitsuden-amber) / 0.15); color: rgb(var(--kitsuden-amber));"
               >
                 {tr("themesView.warning")}
@@ -328,7 +328,7 @@
         bind:value={jsonInput}
         rows="10"
         placeholder={'{ "id": "custom", "name": "My Theme", "description": "A custom theme", "preview": "linear-gradient(135deg, #000, #fff)", "cssVars": { "--kitsuden-primary": "137 180 250" } }'}
-        class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-xs font-mono placeholder-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent resize-y"
+        class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-xs font-mono placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent resize-y"
       ></textarea>
 
       {#if jsonError}

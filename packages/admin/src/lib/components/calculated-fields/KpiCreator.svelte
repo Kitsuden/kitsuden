@@ -252,7 +252,7 @@
             type="text"
             bind:value={field.label}
             placeholder={t("kpiCreator.eGTotalRevenue")}
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
           />
           {#if errors.label}
             <p class="mt-1 text-sm text-kitsuden-accent-2">{errors.label}</p>
@@ -268,7 +268,7 @@
             type="text"
             bind:value={field.name}
             placeholder={t("kpiCreator.eGTotalRevenue2")}
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent font-mono"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent font-mono"
           />
           <p class="mt-1 text-xs text-kitsuden-subtle">
             {t("kpiCreator.usedInApiAndFormulas")}
@@ -312,7 +312,7 @@
           <input
             type="checkbox"
             bind:checked={field.isKpi}
-            class="w-5 h-5 rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
+            class="w-5 h-5 rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
           />
           <div>
             <p class="font-medium text-kitsuden-text">{t("kpiCreator.markAsKpi")}</p>
@@ -346,7 +346,7 @@
               <select
                 id="sourcetable"
                 bind:value={field.config.sourceTable}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
               >
                 <option value="">{t("kpiCreator.selectTable")}</option>
                 {#each availableTables as table}
@@ -366,7 +366,7 @@
                 <select
                   id="sourcefield"
                   bind:value={field.config.sourceField}
-                  class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+                  class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
                 >
                   <option value="">{t("kpiCreator.selectField")}</option>
                   {#each availableFields.filter((f) => f.type === "number") as field}
@@ -394,7 +394,7 @@
                       fields[index] = e.currentTarget.value;
                       field.config = { ...field.config, fields };
                     }}
-                    class="flex-1 px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                    class="flex-1 px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
                   >
                     <option value="">{t("kpiCreator.selectField")}</option>
                     {#each availableFields.filter((f) => f.type === "text") as f}
@@ -437,7 +437,7 @@
                 type="text"
                 bind:value={field.config.separator}
                 placeholder={t("kpiCreator.eGOr")}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
               />
             </div>
           </div>
@@ -450,7 +450,7 @@
               <select
                 id="startfield"
                 bind:value={field.config.startField}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
               >
                 <option value="">{t("kpiCreator.selectField")}</option>
                 {#each availableFields.filter((f) => f.type === "date") as f}
@@ -466,7 +466,7 @@
               <select
                 id="endfield"
                 bind:value={field.config.endField}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
               >
                 <option value="">{t("kpiCreator.nowCurrentTime")}</option>
                 {#each availableFields.filter((f) => f.type === "date") as f}
@@ -482,7 +482,7 @@
               <select
                 id="unit"
                 bind:value={field.config.unit}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
               >
                 <option value="days">{t("kpiCreator.days")}</option>
                 <option value="hours">{t("kpiCreator.hours")}</option>
@@ -505,7 +505,7 @@
               <div class="grid grid-cols-3 gap-2">
                 <select
                   bind:value={field.config.condition.field}
-                  class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                  class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
                 >
                   <option value="">{t("kpiCreator.selectField")}</option>
                   {#each availableFields as f}
@@ -515,7 +515,7 @@
 
                 <select
                   bind:value={field.config.condition.operator}
-                  class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                  class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
                 >
                   <option value="eq">{t("kpiCreator.equals")}</option>
                   <option value="neq">{t("kpiCreator.notEquals")}</option>
@@ -532,7 +532,7 @@
                     type="text"
                     bind:value={field.config.condition.value}
                     placeholder={t("kpiCreator.value")}
-                    class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                    class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
                   />
                 {/if}
               </div>
@@ -545,7 +545,7 @@
                 type="text"
                 bind:value={field.config.trueValue}
                 placeholder={t("kpiCreator.valueIfTrue")}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
               />
 
               <div class="flex items-center gap-2 text-kitsuden-accent-2 font-medium">
@@ -556,7 +556,7 @@
                 type="text"
                 bind:value={field.config.falseValue}
                 placeholder={t("kpiCreator.valueIfFalse")}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
               />
             </div>
           </div>
@@ -592,7 +592,7 @@
             <select
               id="currency"
               bind:value={field.format.currency}
-              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
             >
               <option value="USD">{t("kpiCreator.usd")}</option>
               <option value="EUR">{t("kpiCreator.eur")}</option>
@@ -613,7 +613,7 @@
               bind:value={field.format.decimals}
               min="0"
               max="10"
-              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
             />
           </div>
         {/if}
@@ -628,7 +628,7 @@
               type="text"
               bind:value={field.format.prefix}
               placeholder="e.g., $"
-              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
             />
           </div>
           <div>
@@ -640,7 +640,7 @@
               type="text"
               bind:value={field.format.suffix}
               placeholder="e.g., %"
-              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
             />
           </div>
         </div>
@@ -663,7 +663,7 @@
                 type="number"
                 bind:value={field.target}
                 placeholder="e.g., 1000"
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
               />
             </div>
 
@@ -672,7 +672,7 @@
                 for="warningthreshold"
                 class="block text-sm font-medium text-kitsuden-text mb-2 flex items-center gap-2"
               >
-                <AlertTriangle class="w-4 h-4 text-amber-400" />
+                <AlertTriangle class="w-4 h-4 text-kitsuden-amber" />
                 {t("kpiCreator.warningThreshold")}
               </label>
               <input
@@ -680,7 +680,7 @@
                 type="number"
                 bind:value={field.warningThreshold}
                 placeholder="e.g., 500"
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-kitsuden-text"
+                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
               />
               <p class="mt-1 text-xs text-kitsuden-subtle">
                 {t("kpiCreator.valueAtWhichToShow")}
@@ -750,7 +750,7 @@
   @reference "../../../style.css";
 
   .btn-primary {
-    @apply bg-kitsuden-accent text-black font-medium rounded-lg hover:brightness-110 transition-all;
+    @apply bg-kitsuden-accent text-kitsuden-on-accent font-medium rounded-lg hover:brightness-110 transition-all;
   }
   .btn-secondary {
     @apply bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text rounded-lg hover:border-kitsuden-accent/50 transition-all;

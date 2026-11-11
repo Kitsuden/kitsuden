@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { toast } from "svelte-sonner";
   import { t } from "$lib/i18n";
   import { Castle, Check, Plus } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -78,7 +79,7 @@
       }
     } catch (err) {
       console.error("Failed to activate grimoire:", err);
-      alert(t("grimoiresView.failedToActivateGrimoirePlease"));
+      toast.error(t("grimoiresView.failedToActivateGrimoirePlease"));
     }
   }
 
@@ -97,7 +98,7 @@
       }
     } catch (err) {
       console.error("Failed to deactivate grimoire:", err);
-      alert(t("grimoiresView.failedToDeactivateGrimoirePlease"));
+      toast.error(t("grimoiresView.failedToDeactivateGrimoirePlease"));
     }
   }
 
@@ -173,7 +174,7 @@
           {#if activeGrimoire === grimoire.id}
             <div class="absolute top-3 right-3">
               <span
-                class="px-2 py-1 text-[10px] font-medium bg-kitsuden-accent/10 text-kitsuden-accent rounded-full flex items-center gap-1"
+                class="px-2 py-1 text-xs font-medium bg-kitsuden-accent/10 text-kitsuden-accent rounded-full flex items-center gap-1"
               >
                 <Check class="w-3 h-3" />
                 {t("common.active")}
@@ -201,22 +202,20 @@
 
           <!-- Included Kons -->
           <div class="mb-4">
-            <p class="text-[10px] font-semibold uppercase tracking-wider text-kitsuden-subtle mb-2">
+            <p class="text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle mb-2">
               {t("grimoiresView.includedKons")}
             </p>
             <div class="flex flex-wrap gap-1.5">
               {#each kons.slice(0, 6) as kon}
                 <span
-                  class="px-2 py-1 text-[10px] bg-kitsuden-surface rounded-md text-kitsuden-text-dim flex items-center gap-1"
+                  class="px-2 py-1 text-xs bg-kitsuden-surface rounded-md text-kitsuden-text-dim flex items-center gap-1"
                 >
                   <span>{getKonIcon(kon)}</span>
                   {getKonName(kon)}
                 </span>
               {/each}
               {#if kons.length > 6}
-                <span
-                  class="px-2 py-1 text-[10px] bg-kitsuden-surface rounded-md text-kitsuden-subtle"
-                >
+                <span class="px-2 py-1 text-xs bg-kitsuden-surface rounded-md text-kitsuden-subtle">
                   {t("common.more", { v: kons.length - 6 })}
                 </span>
               {/if}

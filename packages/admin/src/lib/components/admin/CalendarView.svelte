@@ -137,10 +137,10 @@
   function getEventColor(index: number): string {
     const colors = [
       "bg-kitsuden-accent/20 text-kitsuden-accent border-l-2 border-kitsuden-accent",
-      "bg-purple-500/20 text-purple-400 border-l-2 border-purple-500",
-      "bg-green-500/20 text-green-400 border-l-2 border-green-500",
-      "bg-orange-500/20 text-orange-400 border-l-2 border-orange-500",
-      "bg-pink-500/20 text-pink-400 border-l-2 border-pink-500",
+      "bg-kitsuden-purple/20 text-kitsuden-purple border-l-2 border-kitsuden-purple",
+      "bg-kitsuden-green/20 text-kitsuden-green border-l-2 border-kitsuden-green",
+      "bg-kitsuden-amber/20 text-kitsuden-amber border-l-2 border-kitsuden-amber",
+      "bg-kitsuden-accent-2/20 text-kitsuden-accent-2 border-l-2 border-kitsuden-accent-2",
     ];
     return colors[index % colors.length];
   }
@@ -217,7 +217,7 @@
               <div class="flex items-center justify-between mb-1">
                 <span
                   class="text-xs font-medium {cell.isToday
-                    ? 'bg-kitsuden-accent text-white w-6 h-6 rounded-full flex items-center justify-center'
+                    ? 'bg-kitsuden-accent text-kitsuden-on-accent w-6 h-6 rounded-full flex items-center justify-center'
                     : 'text-kitsuden-text-dim px-1'}"
                 >
                   {cell.date}
@@ -228,7 +228,7 @@
               {#if cell.fullDate && eventsByDate[cell.fullDate]}
                 <div class="space-y-1">
                   {#each eventsByDate[cell.fullDate].slice(0, 3) as event, idx}
-                    <div class="text-[10px] px-1.5 py-0.5 rounded-sm truncate {getEventColor(idx)}">
+                    <div class="text-xs px-1.5 py-0.5 rounded-sm truncate {getEventColor(idx)}">
                       {event[view.titleField] ||
                         event.title ||
                         event.name ||
@@ -236,7 +236,7 @@
                     </div>
                   {/each}
                   {#if eventsByDate[cell.fullDate].length > 3}
-                    <div class="text-[9px] text-kitsuden-subtle px-1.5">
+                    <div class="text-xs text-kitsuden-subtle px-1.5">
                       {t("common.more", { v: eventsByDate[cell.fullDate].length - 3 })}
                     </div>
                   {/if}

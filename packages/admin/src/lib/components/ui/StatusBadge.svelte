@@ -62,7 +62,7 @@
   size={size === "lg" ? "md" : "sm"}
   dot={dot && !pulses[variant]}
   pulse={dot && !!pulses[variant]}
-  class="uppercase tracking-wider {size === 'sm' ? 'text-[10px]' : ''} {className}"
+  class="uppercase tracking-wider {size === 'sm' ? 'text-xs' : ''} {className}"
 >
   {#if label}
     {label}

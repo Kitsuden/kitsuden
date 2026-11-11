@@ -1,4 +1,6 @@
 <script lang="ts">
+  import StateMessage from "$lib/components/feedback/StateMessage.svelte";
+  import { toast } from "svelte-sonner";
   import { t } from "$lib/i18n";
   /**
    * ActionsView.svelte — Unified UI for Workers + Webhooks
@@ -106,8 +108,12 @@
     await loadActions();
   });
 
+  /** Neither the actions API nor the legacy one answered: shown instead of "no actions". */
+  let loadError = $state<string | null>(null);
+
   async function loadActions() {
     loading = true;
+    loadError = null;
     try {
       // Try new API first
       const res = await fetch(`${API}/api/actions`, { credentials: "include" });
@@ -126,20 +132,29 @@
       }
     } catch (err) {
       console.error("Failed to load actions:", err);
-      // Try legacy as fallback
-      await loadLegacyActions();
+      // The API exists and failed (a 404 already went to the legacy routes above): say so.
+      // Falling back here answered an empty legacy list, and a 500 read as "no actions".
+      loadError = err instanceof Error ? err.message : String(err);
+      actions = [];
     } finally {
       loading = false;
     }
   }
 
   // Fallback to legacy APIs
-  async function loadLegacyActions() {
+  async function loadLegacyActions(primaryError?: string) {
     try {
       const [workersRes, webhooksRes] = await Promise.all([
         fetch(`${API}/api/functions`, { credentials: "include" }),
         fetch(`${API}/api/custom/webhooks`, { credentials: "include" }).catch(() => null),
       ]);
+
+      // The legacy route failed as well: an empty list here would read as "no actions".
+      if (!workersRes.ok) {
+        loadError = primaryError ?? `HTTP ${workersRes.status}`;
+        actions = [];
+        return;
+      }
 
       const workers = workersRes.ok ? await workersRes.json() : { docs: [] };
       const webhooks = webhooksRes?.ok ? await webhooksRes.json() : { docs: [] };
@@ -181,6 +196,7 @@
       actions = [...workerActions, ...webhookActions];
     } catch (err) {
       console.error("Failed to load legacy actions:", err);
+      loadError = primaryError ?? (err instanceof Error ? err.message : String(err));
       actions = [];
     }
   }
@@ -222,7 +238,7 @@
       await loadActions();
     } catch (err: any) {
       console.error("Failed to save action:", err);
-      alert(err.message || t("actionsView.failedToCreateAction"));
+      toast.error(err.message || t("actionsView.failedToCreateAction"));
     } finally {
       saving = false;
     }
@@ -427,14 +443,14 @@
     <div class="flex items-center gap-2">
       <button
         onclick={() => openCreateModal("code")}
-        class="group inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-amber-500/5 hover:border-amber-500/20 hover:text-amber-400 transition-all duration-200"
+        class="group inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-amber/5 hover:border-kitsuden-amber/20 hover:text-kitsuden-amber transition-all duration-200"
       >
         <Code class="w-4 h-4 group-hover:scale-110 transition-transform" />
         {t("actionsView.newWorker")}
       </button>
       <button
         onclick={() => openCreateModal("webhook_out")}
-        class="group inline-flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-kitsuden-accent to-kitsuden-accent text-black rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
+        class="group inline-flex items-center gap-2 px-5 py-2.5 bg-kitsuden-accent text-kitsuden-on-accent rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
       >
         <Webhook class="w-4 h-4 group-hover:rotate-12 transition-transform" />
         {t("actionsView.newWebhook")}
@@ -526,26 +542,34 @@
           class="w-6 h-6 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
         ></div>
       </div>
+    {:else if loadError}
+      <StateMessage
+        kind="error"
+        title={t("actionsView.loadFailed")}
+        description={loadError}
+        onRetry={loadActions}
+        class="border-0 rounded-none"
+      />
     {:else if filteredActions.length === 0}
       <div class="p-16 text-center">
         <Zap class="w-16 h-16 mx-auto text-kitsuden-accent/30 mb-4" />
-        <h3 class="text-lg font-medium text-kitsuden-text mb-2">
+        <h2 class="text-lg font-medium text-kitsuden-text mb-2">
           {t("actionsView.noActionsConfigured")}
-        </h3>
+        </h2>
         <p class="text-sm text-kitsuden-subtle mb-4">
           {t("actionsView.createYourFirstAutomationTo")}
         </p>
         <div class="flex justify-center gap-3">
           <button
             onclick={() => openCreateModal("code")}
-            class="group inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-amber-500/5 hover:border-amber-500/20 hover:text-amber-400 transition-all duration-200"
+            class="group inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text hover:bg-kitsuden-amber/5 hover:border-kitsuden-amber/20 hover:text-kitsuden-amber transition-all duration-200"
           >
             <Code class="w-4 h-4 group-hover:scale-110 transition-transform" />
             {t("actionsView.newWorker")}
           </button>
           <button
             onclick={() => openCreateModal("webhook_out")}
-            class="group inline-flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-kitsuden-accent to-kitsuden-accent text-black rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
+            class="group inline-flex items-center gap-2 px-5 py-2.5 bg-kitsuden-accent text-kitsuden-on-accent rounded-xl font-semibold shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200"
           >
             <Webhook class="w-4 h-4 group-hover:rotate-12 transition-transform" />
             {t("actionsView.newWebhook")}
@@ -639,8 +663,8 @@
                   <button
                     class="group/btn p-2 rounded-xl transition-all duration-200 hover:scale-110 {action.status !==
                     'active'
-                      ? 'text-emerald-400 hover:bg-emerald-500/10'
-                      : 'text-amber-400 hover:bg-amber-500/10'}"
+                      ? 'text-kitsuden-green hover:bg-kitsuden-green/10'
+                      : 'text-kitsuden-amber hover:bg-kitsuden-amber/10'}"
                     title={action.status === "active"
                       ? t("actionsView.pause")
                       : t("actionsView.resume")}
@@ -698,7 +722,7 @@
             placeholder={createType === "code"
               ? t("actionsView.exDailyEmailDigest")
               : t("actionsView.exNotifySlack")}
-            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             required
           />
         </div>
@@ -712,7 +736,7 @@
             bind:value={formDescription}
             type="text"
             placeholder={t("actionsView.whatThisActionDoes")}
-            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+            class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
           />
         </div>
 
@@ -724,7 +748,7 @@
             <select
               id="formtrigger"
               bind:value={formTrigger}
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
             >
               {#if createType === "code"}
                 <option value="cron">{t("actionsView.cronSchedule")}</option>
@@ -746,7 +770,7 @@
                 bind:value={formCronExpression}
                 type="text"
                 placeholder="0 * * * *"
-                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
+                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
               />
             </div>
           {:else if formTrigger === "event"}
@@ -757,7 +781,7 @@
               <select
                 id="formeventname"
                 bind:value={formEventName}
-                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
               >
                 <option value="entry.created">{t("actionsView.entryCreated")}</option>
                 <option value="entry.updated">{t("actionsView.entryUpdated")}</option>
@@ -777,7 +801,7 @@
               id="formcode"
               bind:value={formCode}
               rows="6"
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
             ></textarea>
           </div>
         {:else}
@@ -790,7 +814,7 @@
               bind:value={formUrl}
               type="url"
               placeholder="https://hooks.slack.com/services/..."
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
               required
             />
           </div>
@@ -804,7 +828,7 @@
               bind:value={formHeaders}
               rows="3"
               placeholder={'{"Authorization": "Bearer token"}'}
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-border rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
+              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm font-mono focus:border-kitsuden-accent/50 focus:outline-hidden"
             ></textarea>
           </div>
         {/if}
@@ -820,7 +844,7 @@
           <button
             type="submit"
             disabled={saving || !formName || (createType === "webhook_out" && !formUrl)}
-            class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-linear-to-r from-kitsuden-accent to-kitsuden-accent text-black shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
+            class="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-kitsuden-accent text-kitsuden-on-accent shadow-lg shadow-kitsuden-accent/25 hover:shadow-kitsuden-accent/40 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100"
           >
             {#if saving}
               <Loader2 class="w-4 h-4 animate-spin" />

@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { page } from "$app/stores";
+  import { confirmDialog } from "$lib/confirm.svelte";
+  import { toast } from "svelte-sonner";
   import { t, localeFormat } from "$lib/i18n";
   import {
     Settings,
@@ -36,6 +39,8 @@
   import Modal from "$lib/components/ui/Modal.svelte";
   import Select from "$lib/components/ui/Select.svelte";
   import Textarea from "$lib/components/ui/Textarea.svelte";
+  import UnsavedGuard from "$lib/components/feedback/UnsavedGuard.svelte";
+  import { queryChoice, setQuery } from "$lib/page";
   import {
     Alert,
     Button,
@@ -52,8 +57,26 @@
 
   const API_URL = import.meta.env.VITE_API_URL ?? "";
 
-  // State - Read tab from URL parameter
-  let activeTab = $state("general");
+  /**
+   * The tab IS the `?tab=` of the address: choosing one navigates (a history entry), so
+   * back/forward walk the tabs and a copied link opens the same one. It used to be read
+   * once on mount and never written back.
+   */
+  const TAB_IDS = [
+    "general",
+    "appearance",
+    "security",
+    "keys",
+    "secrets",
+    "agents",
+    "mcp",
+    "datasources",
+    "system",
+  ] as const;
+  const activeTab = $derived<string>(queryChoice($page.url, "tab", TAB_IDS, "general"));
+  function selectTab(tab: string) {
+    void setQuery($page.url, { tab: tab === "general" ? null : tab });
+  }
 
   const SETTINGS_TABS: TabItem[] = [
     { id: "general", label: t("settings.general") },
@@ -149,37 +172,20 @@
         // The API refuses to leave the installation without administrators and to let
         // someone demote themselves. The reason travels in `message`; without
         // showing it, the select would snap back with no explanation.
-        alert([body.error, body.message].filter(Boolean).join("\n\n"));
+        toast.error([body.error, body.message].filter(Boolean).join("\n\n"));
         await loadSystem();
         return;
       }
 
       users = users.map((u) => (u.id === id ? { ...u, role } : u));
     } catch (err) {
-      alert(t("settings.couldNotChangeThe", { err: err instanceof Error ? err.message : err }));
+      toast.error(
+        t("settings.couldNotChangeThe", { err: err instanceof Error ? err.message : err })
+      );
     }
   }
 
-  // Initialize tab from URL on mount
   onMount(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tabParam = urlParams.get("tab");
-    if (
-      tabParam &&
-      [
-        "general",
-        "appearance",
-        "security",
-        "keys",
-        "secrets",
-        "agents",
-        "mcp",
-        "datasources",
-        "system",
-      ].includes(tabParam)
-    ) {
-      activeTab = tabParam;
-    }
     loadSettings();
   });
 
@@ -465,6 +471,19 @@
     setTimeout(() => (mcpCopied = false), 2000);
   }
 
+  /**
+   * What was last loaded or saved, to tell whether a form has unsaved changes. `null`
+   * until the settings arrive: nothing is "unsaved" before there is something to compare.
+   */
+  let savedGeneral = $state<string | null>(null);
+  let savedSocials = $state<string | null>(null);
+  const generalSnapshot = () => JSON.stringify({ siteName, siteDescription, siteUrl, branding });
+  const socialsSnapshot = () => JSON.stringify({ socials, youtubeChannels });
+  const settingsDirty = $derived(
+    (savedGeneral !== null && savedGeneral !== generalSnapshot()) ||
+      (savedSocials !== null && savedSocials !== socialsSnapshot())
+  );
+
   async function loadSettings() {
     loadingSettings = true;
     errorSettings = "";
@@ -501,6 +520,8 @@
       if (data.siteDescription) {
         defaultMetadata = JSON.stringify({ description: data.siteDescription }, null, 2);
       }
+      savedGeneral = generalSnapshot();
+      savedSocials = socialsSnapshot();
     } catch (err: any) {
       errorSettings = err.message || t("settings.failedToLoadSettings");
     } finally {
@@ -544,6 +565,9 @@
       siteDescription = data.siteDescription || siteDescription;
       siteUrl = data.siteUrl || siteUrl;
       if (data.branding && typeof data.branding === "object") branding = { ...data.branding };
+      savedGeneral = generalSnapshot();
+      // Saving used to end in silence: the button stopped spinning and that was all.
+      toast.success(t("settings.saved"));
     } catch (err: any) {
       errorSettings = err.message || t("settings.failedToSaveSettings");
     } finally {
@@ -576,6 +600,8 @@
         throw new Error(errData.error || t("settings.failedToSaveSocialLinks"));
       }
       socialsOk = true;
+      savedSocials = socialsSnapshot();
+      toast.success(t("settings.saved"));
       setTimeout(() => (socialsOk = false), 3000);
     } catch (err: any) {
       socialsError = err.message || t("settings.failedToSaveSocialLinks");
@@ -637,7 +663,7 @@
   }
 
   async function revokeKey(id: string) {
-    if (!confirm(t("settings.areYouSureYouWant"))) return;
+    if (!(await confirmDialog(t("settings.areYouSureYouWant")))) return;
 
     try {
       const res = await fetch(`${API_URL}/api/keys/${id}`, {
@@ -648,7 +674,7 @@
 
       keys = keys.filter((k) => k.id !== id);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -708,7 +734,7 @@
   }
 
   async function deleteAgent(agentId: string) {
-    if (!confirm(t("settings.areYouSureYouWant2"))) return;
+    if (!(await confirmDialog(t("settings.areYouSureYouWant2")))) return;
 
     try {
       const res = await fetch(`${API_URL}/api/admin/agents/${agentId}`, {
@@ -751,7 +777,7 @@
   }
 
   async function revokeAgentApiKey(agentId: string, keyId: string) {
-    if (!confirm(t("settings.revokeThisApiKey"))) return;
+    if (!(await confirmDialog(t("settings.revokeThisApiKey")))) return;
 
     try {
       await fetch(`${API_URL}/api/admin/agents/${agentId}/keys/${keyId}`, {
@@ -815,11 +841,11 @@
   }
 
   function getScopeColor(scope: string): string {
-    if (scope.startsWith("mcp:")) return "bg-purple-500/20 text-purple-400";
-    if (scope.startsWith("read:")) return "bg-green-500/20 text-green-400";
-    if (scope.startsWith("write:")) return "bg-amber-500/20 text-amber-400";
-    if (scope.startsWith("delete:")) return "bg-red-500/20 text-red-400";
-    return "bg-gray-500/20 text-gray-400";
+    if (scope.startsWith("mcp:")) return "bg-kitsuden-purple/20 text-kitsuden-purple";
+    if (scope.startsWith("read:")) return "bg-kitsuden-green/20 text-kitsuden-green";
+    if (scope.startsWith("write:")) return "bg-kitsuden-amber/20 text-kitsuden-amber";
+    if (scope.startsWith("delete:")) return "bg-kitsuden-danger/20 text-kitsuden-danger";
+    return "bg-kitsuden-subtle/20 text-kitsuden-text-dim";
   }
 
   function getActionIcon(action: string) {
@@ -952,7 +978,7 @@
   }
 
   async function deleteDataSource(id: string) {
-    if (!confirm(t("settings.areYouSureYouWant3"))) return;
+    if (!(await confirmDialog(t("settings.areYouSureYouWant3")))) return;
 
     try {
       const res = await fetch(`${API_URL}/api/admin/data-sources/${id}`, {
@@ -1005,19 +1031,19 @@
   function getDataSourceTypeColor(type: string): string {
     switch (type) {
       case "postgresql":
-        return "text-blue-400 bg-blue-500/10";
+        return "text-kitsuden-info bg-kitsuden-info/10";
       case "mysql":
-        return "text-amber-400 bg-amber-500/10";
+        return "text-kitsuden-amber bg-kitsuden-amber/10";
       case "mongodb":
-        return "text-green-400 bg-green-500/10";
+        return "text-kitsuden-green bg-kitsuden-green/10";
       case "redis":
-        return "text-red-400 bg-red-500/10";
+        return "text-kitsuden-danger bg-kitsuden-danger/10";
       case "api":
         return "text-kitsuden-accent bg-kitsuden-accent/10";
       case "webhook":
-        return "text-purple-400 bg-purple-500/10";
+        return "text-kitsuden-purple bg-kitsuden-purple/10";
       default:
-        return "text-gray-400 bg-gray-500/10";
+        return "text-kitsuden-text-dim bg-kitsuden-subtle/10";
     }
   }
 
@@ -1027,6 +1053,9 @@
     loadDataSources();
   });
 </script>
+
+<!-- Unsaved site details or social links: ask before leaving the page. -->
+<UnsavedGuard dirty={settingsDirty} />
 
 <div class="space-y-6 animate-fade-in">
   <!-- Header -->
@@ -1046,7 +1075,11 @@
     </div>
   </div>
 
-  <Tabs items={SETTINGS_TABS} bind:value={activeTab} ariaLabel={t("common.settings")}>
+  <Tabs
+    items={SETTINGS_TABS}
+    bind:value={() => activeTab, selectTab}
+    ariaLabel={t("common.settings")}
+  >
     {#snippet tab(item)}
       {@const Icon = TAB_ICONS[item.id]}
       {#if Icon}<Icon class="w-4 h-4" />{/if}
@@ -1131,18 +1164,7 @@
               the wildcard DNS and the certificate have to follow it.
             -->
               <p class="text-xs text-kitsuden-text-dim">
-                {t("settings.sitePublicAddressEach")}
-                <code class="font-mono"
-                  >&lt;wiki&gt;.{siteUrl
-                    ? siteUrl
-                        .replace(/^https?:\/\//, "")
-                        .replace(/^www\./, "")
-                        .replace(/\/+$/, "")
-                    : "this-domain"}</code
-                >
-                {t("settings.andEachGameIn")} <code class="font-mono">/&lt;game&gt;/</code>{t(
-                  "settings.changingItMovesAllWikis"
-                )}
+                {t("settings.siteUrlHelp")}
               </p>
             </div>
 
@@ -1225,7 +1247,7 @@
               <Button type="submit" disabled={savingGeneral}>
                 {#if savingGeneral}
                   <div
-                    class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2 inline-block"
+                    class="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin mr-2 inline-block"
                   ></div>
                   {t("common.saving")}
                 {:else}
@@ -1258,7 +1280,7 @@
             {/if}
             {#if socialsOk}
               <div
-                class="p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-sm"
+                class="p-3 rounded-lg bg-kitsuden-green/10 border border-kitsuden-green/30 text-kitsuden-green text-sm"
               >
                 {t("settings.savedNetworks")}
               </div>
@@ -1331,7 +1353,7 @@
               <Button type="submit" disabled={savingSocials}>
                 {#if savingSocials}
                   <div
-                    class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2 inline-block"
+                    class="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin mr-2 inline-block"
                   ></div>
                   {t("settings.saving")}
                 {:else}
@@ -1362,10 +1384,10 @@
         </div>
 
         {#if newlyGeneratedToken}
-          <div class="card bg-kitsuden-green-10 border-kitsuden-green-30 p-5 mt-4">
+          <div class="card bg-kitsuden-green/10 border-kitsuden-green/30 p-5 mt-4">
             <div class="flex items-start gap-4">
               <div
-                class="w-10 h-10 rounded-full bg-kitsuden-green-20 flex items-center justify-center shrink-0"
+                class="w-10 h-10 rounded-full bg-kitsuden-green/20 flex items-center justify-center shrink-0"
               >
                 <Key class="w-5 h-5 text-kitsuden-green" />
               </div>
@@ -1414,7 +1436,7 @@
 
         {#if errorKeys}
           <div
-            class="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2"
+            class="p-3 rounded-lg bg-kitsuden-danger/10 border border-kitsuden-danger/20 text-kitsuden-danger text-xs flex items-center gap-2"
           >
             <ShieldAlert class="w-4 h-4 shrink-0" />
             {errorKeys}
@@ -1655,7 +1677,7 @@
               <Button
                 variant="ghost"
                 onclick={() =>
-                  alert(
+                  toast.error(
                     "Generate an API Key from the API Keys tab to authenticate external processes."
                   )}
               >
@@ -1803,8 +1825,8 @@
                   </div>
                   <span
                     class="w-2 h-2 rounded-full {source.isActive
-                      ? 'bg-emerald-500'
-                      : 'bg-amber-500'}"
+                      ? 'bg-kitsuden-green'
+                      : 'bg-kitsuden-amber'}"
                   ></span>
                 </div>
 
@@ -2429,8 +2451,8 @@
     {#if testResult}
       <div
         class="p-3 rounded-lg {testResult.success
-          ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
-          : 'bg-red-500/10 border border-red-500/30 text-red-400'} flex items-center gap-2"
+          ? 'bg-kitsuden-green/10 border border-kitsuden-green/30 text-kitsuden-green'
+          : 'bg-kitsuden-danger/10 border border-kitsuden-danger/30 text-kitsuden-danger'} flex items-center gap-2"
       >
         {#if testResult.success}
           <Check class="w-4 h-4" />
@@ -2479,18 +2501,3 @@
     </Button>
   {/snippet}
 </Modal>
-
-<style>
-  :global(.bg-kitsuden-green-10) {
-    background-color: rgba(16, 185, 129, 0.1);
-  }
-  :global(.bg-kitsuden-green-20) {
-    background-color: rgba(16, 185, 129, 0.2);
-  }
-  :global(.border-kitsuden-green-30) {
-    border-color: rgba(16, 185, 129, 0.3);
-  }
-  :global(.text-kitsuden-green) {
-    color: rgb(16, 185, 129);
-  }
-</style>

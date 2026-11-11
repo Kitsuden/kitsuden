@@ -440,7 +440,7 @@
           type="text"
           placeholder={t("common.search")}
           bind:value={searchQuery}
-          class="w-full pl-10 pr-4 py-2 bg-kitsuden-card border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
+          class="w-full pl-10 pr-4 py-2 bg-kitsuden-card border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
         />
       </div>
     {/if}
@@ -465,7 +465,7 @@
             <input
               type="text"
               value={activeFilters[field] || ""}
-              class="w-full px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-border rounded-sm text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+              class="w-full px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
               oninput={(e) => {
                 activeFilters = {
                   ...activeFilters,
@@ -498,7 +498,7 @@
               <input
                 type="checkbox"
                 checked={selectedRows.size === rows.length && rows.length > 0}
-                class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
+                class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
                 onchange={toggleSelectAll}
               />
             </th>
@@ -573,7 +573,7 @@
                   <input
                     type="checkbox"
                     checked={selectedRows.has(row.id)}
-                    class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
+                    class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
                     onchange={() => toggleSelectRow(row.id)}
                   />
                 </td>

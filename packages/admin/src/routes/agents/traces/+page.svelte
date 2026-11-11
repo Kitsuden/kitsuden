@@ -76,38 +76,41 @@
   function getStatusColor(status: string): string {
     switch (status) {
       case "success":
-        return "text-emerald-400";
+        return "text-kitsuden-green";
       case "error":
-        return "text-red-400";
+        return "text-kitsuden-danger";
       case "running":
-        return "text-amber-400";
+        return "text-kitsuden-amber";
       default:
-        return "text-zinc-500";
+        return "text-kitsuden-subtle";
     }
   }
 </script>
 
 <div class="flex h-full">
   <!-- Sidebar - Trace List -->
-  <div class="w-96 border-r border-zinc-800 flex flex-col">
-    <div class="p-4 border-b border-zinc-800">
+  <div class="w-96 border-r border-kitsuden-border flex flex-col">
+    <div class="p-4 border-b border-kitsuden-border">
       <div class="flex items-center gap-3">
-        <Activity size={20} class="text-indigo-400" />
-        <h1 class="text-lg font-semibold text-zinc-100">{t("common.traces")}</h1>
+        <Activity size={20} class="text-kitsuden-accent" />
+        <h1 class="text-lg font-semibold text-kitsuden-text">{t("common.traces")}</h1>
       </div>
-      <p class="text-xs text-zinc-500 mt-1">{total} {t("tracesPage.registeredTraces")}</p>
+      <p class="text-xs text-kitsuden-subtle mt-1">{total} {t("tracesPage.registeredTraces")}</p>
     </div>
 
     <!-- Filters -->
-    <div class="p-3 border-b border-zinc-800">
+    <div class="p-3 border-b border-kitsuden-border">
       <div class="flex items-center gap-2">
         <div class="flex-1 relative">
           <input
             type="text"
             placeholder={t("tracesPage.searchTraces")}
-            class="w-full pl-8 pr-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50"
+            class="w-full pl-8 pr-3 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/50"
           />
-          <Filter size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <Filter
+            size={14}
+            class="absolute left-2.5 top-1/2 -translate-y-1/2 text-kitsuden-subtle"
+          />
         </div>
       </div>
     </div>
@@ -116,38 +119,40 @@
     <div class="flex-1 overflow-y-auto">
       {#if loading}
         <div class="flex items-center justify-center h-32">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
         </div>
       {:else if error}
-        <div class="p-4 m-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+        <div
+          class="p-4 m-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger text-sm"
+        >
           {error}
         </div>
       {:else if traces.length === 0}
-        <div class="p-8 text-center text-zinc-500">
+        <div class="p-8 text-center text-kitsuden-subtle">
           <Activity size={32} class="mx-auto mb-3 opacity-50" />
           <p class="text-sm">{t("tracesPage.noTraces")}</p>
         </div>
       {:else}
-        <div class="divide-y divide-zinc-800/50">
+        <div class="divide-y divide-kitsuden-border/50">
           {#each traces as trace}
             <button
-              class="w-full p-3 text-left hover:bg-zinc-800/30 transition-colors {selectedTrace?.id ===
+              class="w-full p-3 text-left hover:bg-kitsuden-border/30 transition-colors {selectedTrace?.id ===
               trace.id
-                ? 'bg-zinc-800/50'
+                ? 'bg-kitsuden-border/50'
                 : ''}"
               onclick={() => selectTrace(trace)}
             >
               <div class="flex items-start justify-between">
                 <div class="flex items-center gap-2">
                   <span class={getStatusColor(trace.status)}>{getStatusIcon(trace.status)}</span>
-                  <span class="text-sm font-medium text-zinc-200 truncate max-w-[140px]"
+                  <span class="text-sm font-medium text-kitsuden-text truncate max-w-[140px]"
                     >{trace.sessionId || t("tracesPage.withoutSession")}</span
                   >
                 </div>
-                <span class="text-xs text-zinc-600">{formatDate(trace.createdAt)}</span>
+                <span class="text-xs text-kitsuden-subtle">{formatDate(trace.createdAt)}</span>
               </div>
 
-              <div class="flex items-center gap-3 mt-2 text-xs text-zinc-500">
+              <div class="flex items-center gap-3 mt-2 text-xs text-kitsuden-subtle">
                 <span class="flex items-center gap-1">
                   <Bot size={12} />
                   {trace.agentName || t("tracesPage.agent")}
@@ -194,31 +199,33 @@
               <span class="{getStatusColor(selectedTrace.status)} text-lg"
                 >{getStatusIcon(selectedTrace.status)}</span
               >
-              <h2 class="text-xl font-semibold text-zinc-100">
+              <h2 class="text-xl font-semibold text-kitsuden-text">
                 {t("tracesPage.trace", { v: selectedTrace.id.slice(-8) })}
               </h2>
             </div>
-            <p class="text-sm text-zinc-500 mt-1">
+            <p class="text-sm text-kitsuden-subtle mt-1">
               {new Date(selectedTrace.createdAt).toLocaleString(localeFormat())}
             </p>
           </div>
 
           <div class="flex items-center gap-4 text-sm">
             <div class="text-center">
-              <p class="text-2xl font-semibold text-zinc-100">
+              <p class="text-2xl font-semibold text-kitsuden-text">
                 {formatDuration(selectedTrace.totalDurationMs)}
               </p>
-              <p class="text-xs text-zinc-500">{t("tracesPage.duration")}</p>
+              <p class="text-xs text-kitsuden-subtle">{t("tracesPage.duration")}</p>
             </div>
             <div class="text-center">
-              <p class="text-2xl font-semibold text-zinc-100">
+              <p class="text-2xl font-semibold text-kitsuden-text">
                 {selectedTrace.totalTokens.toLocaleString(localeFormat())}
               </p>
-              <p class="text-xs text-zinc-500">{t("tracesPage.tokens")}</p>
+              <p class="text-xs text-kitsuden-subtle">{t("tracesPage.tokens")}</p>
             </div>
             <div class="text-center">
-              <p class="text-2xl font-semibold text-zinc-100">{selectedTrace.steps?.length || 0}</p>
-              <p class="text-xs text-zinc-500">{t("tracesPage.steps")}</p>
+              <p class="text-2xl font-semibold text-kitsuden-text">
+                {selectedTrace.steps?.length || 0}
+              </p>
+              <p class="text-xs text-kitsuden-subtle">{t("tracesPage.steps")}</p>
             </div>
           </div>
         </div>
@@ -226,18 +233,20 @@
         <!-- Timeline -->
         {#if selectedTrace.steps?.length > 0}
           <Card class="p-6">
-            <h3 class="text-sm font-medium text-zinc-400 mb-4">{t("tracesPage.execution")}</h3>
+            <h3 class="text-sm font-medium text-kitsuden-text-dim mb-4">
+              {t("tracesPage.execution")}
+            </h3>
             <Timeline steps={selectedTrace.steps} />
           </Card>
         {:else}
           <Card class="p-12 text-center">
-            <Activity size={48} class="mx-auto text-zinc-600 mb-4" />
-            <p class="text-zinc-500">{t("tracesPage.noStepsRecordedFor")}</p>
+            <Activity size={48} class="mx-auto text-kitsuden-subtle mb-4" />
+            <p class="text-kitsuden-subtle">{t("tracesPage.noStepsRecordedFor")}</p>
           </Card>
         {/if}
       </div>
     {:else}
-      <div class="flex items-center justify-center h-full text-zinc-500">
+      <div class="flex items-center justify-center h-full text-kitsuden-subtle">
         <div class="text-center">
           <Activity size={48} class="mx-auto mb-4 opacity-50" />
           <p>{t("tracesPage.selectATraceToView")}</p>

@@ -73,46 +73,50 @@
   }
 
   const KIND: Record<string, string> = {
-    approval_settings_changed: "text-indigo-300",
-    approval_mode_changed: "text-indigo-300",
-    proposal_created: "text-amber-300",
-    proposal_approved: "text-emerald-300",
-    proposal_executed: "text-emerald-300",
-    proposal_rejected: "text-zinc-300",
-    proposal_failed: "text-red-300",
-    proposal_expired: "text-zinc-500",
-    promotion_submitted: "text-amber-300",
-    promotion_activated: "text-emerald-300",
-    promotion_watch_passed: "text-emerald-300",
-    promotion_rejected: "text-zinc-300",
-    promotion_rolled_back: "text-red-300",
-    promotion_manual_edit: "text-indigo-300",
-    promotion_activation_failed: "text-red-300",
-    promotion_activation_blocked: "text-amber-300",
-    promotion_settings_changed: "text-indigo-300",
-    promotion_mode_changed: "text-indigo-300",
+    approval_settings_changed: "text-kitsuden-accent",
+    approval_mode_changed: "text-kitsuden-accent",
+    proposal_created: "text-kitsuden-amber",
+    proposal_approved: "text-kitsuden-green",
+    proposal_executed: "text-kitsuden-green",
+    proposal_rejected: "text-kitsuden-text",
+    proposal_failed: "text-kitsuden-danger",
+    proposal_expired: "text-kitsuden-subtle",
+    promotion_submitted: "text-kitsuden-amber",
+    promotion_activated: "text-kitsuden-green",
+    promotion_watch_passed: "text-kitsuden-green",
+    promotion_rejected: "text-kitsuden-text",
+    promotion_rolled_back: "text-kitsuden-danger",
+    promotion_manual_edit: "text-kitsuden-accent",
+    promotion_activation_failed: "text-kitsuden-danger",
+    promotion_activation_blocked: "text-kitsuden-amber",
+    promotion_settings_changed: "text-kitsuden-accent",
+    promotion_mode_changed: "text-kitsuden-accent",
   };
 </script>
 
 <div class="space-y-3" data-testid="approvals-audit">
   <div class="flex items-center gap-3">
-    <p class="text-xs text-zinc-500 flex-1">{t("approvals.auditHelp")}</p>
+    <p class="text-xs text-kitsuden-subtle flex-1">{t("approvals.auditHelp")}</p>
     <Button variant="ghost" size="sm" onclick={load}>
       <RefreshCw size={14} class="mr-1" />{t("approvals.refresh")}
     </Button>
   </div>
   {#if loading}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if events.length === 0}
-    <p class="text-sm text-zinc-500">{t("approvals.noEvents")}</p>
+    <p class="text-sm text-kitsuden-subtle">{t("approvals.noEvents")}</p>
   {:else}
-    <div class="overflow-x-auto border border-zinc-800 rounded-lg">
+    <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
       <table class="w-full text-xs">
-        <thead class="text-zinc-500">
+        <thead class="text-kitsuden-subtle">
           <tr>
             <th class="text-left px-3 py-2">{t("approvals.colWhen")}</th>
             <th class="text-left px-3 py-2">{t("approvals.colAction")}</th>
@@ -121,35 +125,35 @@
             <th class="text-left px-3 py-2">{t("approvals.colDetails")}</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-zinc-800/70">
+        <tbody class="divide-y divide-kitsuden-border/70">
           {#each events as e (e.id)}
             <tr data-testid="audit-row" data-action={e.action}>
-              <td class="px-3 py-1.5 whitespace-nowrap text-zinc-400">{date(e.at)}</td>
-              <td class="px-3 py-1.5 whitespace-nowrap {KIND[e.action] ?? 'text-zinc-300'}"
+              <td class="px-3 py-1.5 whitespace-nowrap text-kitsuden-text-dim">{date(e.at)}</td>
+              <td class="px-3 py-1.5 whitespace-nowrap {KIND[e.action] ?? 'text-kitsuden-text'}"
                 >{t(`approvals.action_${e.action}`)}</td
               >
-              <td class="px-3 py-1.5 text-zinc-300">
+              <td class="px-3 py-1.5 text-kitsuden-text">
                 {e.byName ??
                   (e.action === "proposal_created" || e.action === "promotion_submitted"
                     ? (e.agentName ?? "—")
                     : t("approvals.system"))}
               </td>
-              <td class="px-3 py-1.5 text-zinc-400">{e.agentName ?? "—"}</td>
-              <td class="px-3 py-1.5 text-zinc-400 min-w-0">
+              <td class="px-3 py-1.5 text-kitsuden-text-dim">{e.agentName ?? "—"}</td>
+              <td class="px-3 py-1.5 text-kitsuden-text-dim min-w-0">
                 {#if e.resource && e.action.startsWith("proposal_")}
-                  <code class="text-zinc-300 break-all">{e.resource}</code>
+                  <code class="text-kitsuden-text break-all">{e.resource}</code>
                 {/if}
                 <span class="ml-1">{summary(e)}</span>
                 {#if e.proposalId && e.action.startsWith("proposal_")}
                   <a
                     href="/approvals?id={e.proposalId}"
-                    class="ml-1 text-indigo-300 hover:underline">{t("approvals.open")}</a
+                    class="ml-1 text-kitsuden-accent hover:underline">{t("approvals.open")}</a
                   >
                 {:else if e.proposalId && e.action.startsWith("promotion_") && e.resource?.startsWith("action:")}
-                  <code class="text-zinc-300 break-all">{e.resource}</code>
+                  <code class="text-kitsuden-text break-all">{e.resource}</code>
                   <a
                     href="/approvals?tab=promotion&version={e.proposalId}"
-                    class="ml-1 text-indigo-300 hover:underline">{t("approvals.open")}</a
+                    class="ml-1 text-kitsuden-accent hover:underline">{t("approvals.open")}</a
                   >
                 {/if}
               </td>

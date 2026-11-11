@@ -165,45 +165,49 @@
   const json = (v: unknown) => JSON.stringify(v, null, 2);
 
   const COLOR: Record<VersionStatus, string> = {
-    awaiting_approval: "bg-amber-500/15 text-amber-300",
-    approved: "bg-sky-500/15 text-sky-300",
-    active: "bg-emerald-500/15 text-emerald-300",
-    superseded: "bg-zinc-700/40 text-zinc-400",
-    rolled_back: "bg-red-500/15 text-red-300",
-    rejected: "bg-zinc-700/40 text-zinc-300",
-    expired: "bg-zinc-700/40 text-zinc-500",
-    failed: "bg-red-500/15 text-red-300",
+    awaiting_approval: "bg-kitsuden-amber/15 text-kitsuden-amber",
+    approved: "bg-kitsuden-info/15 text-kitsuden-info",
+    active: "bg-kitsuden-green/15 text-kitsuden-green",
+    superseded: "bg-kitsuden-muted/40 text-kitsuden-text-dim",
+    rolled_back: "bg-kitsuden-danger/15 text-kitsuden-danger",
+    rejected: "bg-kitsuden-muted/40 text-kitsuden-text",
+    expired: "bg-kitsuden-muted/40 text-kitsuden-subtle",
+    failed: "bg-kitsuden-danger/15 text-kitsuden-danger",
   };
 
   function stepClass(ok: boolean | null): string {
-    return ok === null ? "border-zinc-800" : ok ? "border-emerald-500/30" : "border-red-500/30";
+    return ok === null
+      ? "border-kitsuden-border"
+      : ok
+        ? "border-kitsuden-green/30"
+        : "border-kitsuden-danger/30";
   }
 </script>
 
 <div class="space-y-6" data-testid="code-promotion">
-  <p class="text-xs text-zinc-500">{t("promotion.help")}</p>
+  <p class="text-xs text-kitsuden-subtle">{t("promotion.help")}</p>
 
   {#if settings && draftConfig}
     <section
-      class="border border-zinc-800 rounded-lg p-4 space-y-3"
+      class="border border-kitsuden-border rounded-lg p-4 space-y-3"
       data-testid="promotion-settings"
     >
-      <h3 class="text-sm font-semibold text-zinc-300">{t("promotion.settingsTitle")}</h3>
+      <h3 class="text-sm font-semibold text-kitsuden-text">{t("promotion.settingsTitle")}</h3>
       {#if !settings.codeActionsEnabled}
         <p
-          class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-sm px-3 py-2"
+          class="text-xs text-kitsuden-amber bg-kitsuden-amber/10 border border-kitsuden-amber/20 rounded-sm px-3 py-2"
           data-testid="code-actions-off"
         >
           {t("promotion.codeActionsOff")}
         </p>
       {/if}
-      <p class="text-xs text-zinc-500">
+      <p class="text-xs text-kitsuden-subtle">
         {t("promotion.approvalsMaster", {
           state: settings.approvalsEnabled ? t("approvals.globalOn") : t("approvals.globalOff"),
         })}
       </p>
       <fieldset class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" disabled={!isAdmin()}>
-        <label class="flex items-start gap-2 text-sm text-zinc-200">
+        <label class="flex items-start gap-2 text-sm text-kitsuden-text">
           <input
             type="checkbox"
             bind:checked={draftConfig.turboAllowed}
@@ -212,30 +216,31 @@
           />
           <span>
             <span class="block">{t("promotion.turboAllowed")}</span>
-            <span class="block text-xs text-zinc-500">{t("promotion.turboAllowedHelp")}</span>
+            <span class="block text-xs text-kitsuden-subtle">{t("promotion.turboAllowedHelp")}</span
+            >
           </span>
         </label>
-        <label class="text-xs text-zinc-400">
+        <label class="text-xs text-kitsuden-text-dim">
           {t("promotion.watchMinutes")}
           <input
             type="number"
             min="1"
             max="1440"
             bind:value={draftConfig.watchMinutes}
-            class="mt-1 w-full bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-sm text-zinc-200"
+            class="mt-1 w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm text-kitsuden-text"
           />
         </label>
-        <label class="text-xs text-zinc-400">
+        <label class="text-xs text-kitsuden-text-dim">
           {t("promotion.minExecutions")}
           <input
             type="number"
             min="1"
             max="1000"
             bind:value={draftConfig.minExecutions}
-            class="mt-1 w-full bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-sm text-zinc-200"
+            class="mt-1 w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm text-kitsuden-text"
           />
         </label>
-        <label class="text-xs text-zinc-400">
+        <label class="text-xs text-kitsuden-text-dim">
           {t("promotion.maxErrorRate")}
           <input
             type="number"
@@ -243,7 +248,7 @@
             max="1"
             step="0.05"
             bind:value={draftConfig.maxErrorRate}
-            class="mt-1 w-full bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-sm text-zinc-200"
+            class="mt-1 w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm text-kitsuden-text"
           />
         </label>
       </fieldset>
@@ -253,27 +258,30 @@
         </Button>
       {/if}
 
-      <div class="overflow-x-auto border border-zinc-800 rounded-sm" data-testid="promotion-agents">
+      <div
+        class="overflow-x-auto border border-kitsuden-border rounded-sm"
+        data-testid="promotion-agents"
+      >
         <table class="w-full text-xs">
-          <thead class="text-zinc-500">
+          <thead class="text-kitsuden-subtle">
             <tr>
               <th class="text-left px-3 py-2">{t("promotion.colAgent")}</th>
               <th class="text-left px-3 py-2">{t("promotion.colCanPropose")}</th>
               <th class="text-left px-3 py-2">{t("promotion.colMode")}</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-zinc-800/70">
+          <tbody class="divide-y divide-kitsuden-border/70">
             {#each settings.agents as a (a.id)}
               <tr>
-                <td class="px-3 py-1.5 text-zinc-300"
+                <td class="px-3 py-1.5 text-kitsuden-text"
                   >{a.name}{a.isActive ? "" : ` (${t("promotion.inactive")})`}</td
                 >
-                <td class="px-3 py-1.5 text-zinc-400"
+                <td class="px-3 py-1.5 text-kitsuden-text-dim"
                   >{a.canPropose ? t("promotion.yes") : t("promotion.no")}</td
                 >
                 <td class="px-3 py-1.5">
                   <select
-                    class="bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-zinc-200"
+                    class="bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-kitsuden-text"
                     value={a.mode}
                     disabled={!isAdmin()}
                     onchange={(e) =>
@@ -300,7 +308,7 @@
     <section class="space-y-3 min-w-0">
       <div class="flex items-center gap-2">
         <select
-          class="bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-xs text-zinc-200"
+          class="bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-xs text-kitsuden-text"
           bind:value={filter}
           onchange={load}
           data-testid="promotion-filter"
@@ -317,14 +325,16 @@
       </div>
       {#if loading}
         <div class="flex items-center justify-center h-24">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
         </div>
       {:else if error}
-        <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+        <div
+          class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+        >
           {error}
         </div>
       {:else if versions.length === 0}
-        <p class="text-sm text-zinc-500">{t("promotion.empty")}</p>
+        <p class="text-sm text-kitsuden-subtle">{t("promotion.empty")}</p>
       {:else}
         <ul class="space-y-1" data-testid="promotion-list">
           {#each versions as v (v.id)}
@@ -332,27 +342,26 @@
               <button
                 class="w-full text-left px-3 py-2 rounded border min-w-0 {detail?.version.id ===
                 v.id
-                  ? 'border-indigo-500/60 bg-indigo-500/5'
-                  : 'border-zinc-800 hover:border-zinc-700'}"
+                  ? 'border-kitsuden-accent/60 bg-kitsuden-accent/5'
+                  : 'border-kitsuden-border hover:border-kitsuden-muted'}"
                 onclick={() => open(v.id)}
                 data-testid="promotion-row"
                 data-status={v.status}
               >
                 <div class="flex items-center gap-2 min-w-0">
-                  <GitBranch size={14} class="text-zinc-500 shrink-0" />
-                  <span class="text-sm text-zinc-200 truncate min-w-0"
+                  <GitBranch size={14} class="text-kitsuden-subtle shrink-0" />
+                  <span class="text-sm text-kitsuden-text truncate min-w-0"
                     >{v.target.slug} · v{v.versionNumber}</span
                   >
-                  {#if v.origin !== "agent"}<span class="text-[10px] text-zinc-500 shrink-0"
+                  {#if v.origin !== "agent"}<span class="text-xs text-kitsuden-subtle shrink-0"
                       >{t(`promotion.origin_${v.origin}`)}</span
                     >{/if}
                   <span
-                    class="ml-auto text-[10px] px-1.5 py-0.5 rounded-full shrink-0 {COLOR[
-                      v.status
-                    ]}">{t(`promotion.status_${v.status}`)}</span
+                    class="ml-auto text-xs px-1.5 py-0.5 rounded-full shrink-0 {COLOR[v.status]}"
+                    >{t(`promotion.status_${v.status}`)}</span
                   >
                 </div>
-                <div class="text-[11px] text-zinc-500 mt-0.5 truncate">
+                <div class="text-[11px] text-kitsuden-subtle mt-0.5 truncate">
                   {v.agentName ?? v.agentId ?? "—"} · {t(`promotion.mode_${v.mode}`)} ·
                   {t("promotion.testsShort", {
                     passed: String(v.testReport?.passed ?? 0),
@@ -372,23 +381,23 @@
     <section class="min-w-0" data-testid="promotion-detail">
       {#if loadingDetail}
         <div class="flex items-center justify-center h-24">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
         </div>
       {:else if !detail}
-        <p class="text-sm text-zinc-500">{t("promotion.pick")}</p>
+        <p class="text-sm text-kitsuden-subtle">{t("promotion.pick")}</p>
       {:else}
         {@const v = detail.version}
         <div class="space-y-3">
           <div class="flex flex-wrap items-center gap-2">
-            <h3 class="text-base font-semibold text-zinc-100 min-w-0 truncate">
+            <h3 class="text-base font-semibold text-kitsuden-text min-w-0 truncate">
               {v.target.name} · v{v.versionNumber}
             </h3>
             <span
-              class="text-[10px] px-1.5 py-0.5 rounded-full {COLOR[v.status]}"
+              class="text-xs px-1.5 py-0.5 rounded-full {COLOR[v.status]}"
               data-testid="detail-status">{t(`promotion.status_${v.status}`)}</span
             >
           </div>
-          <p class="text-xs text-zinc-500">
+          <p class="text-xs text-kitsuden-subtle">
             {t("promotion.byAgent", {
               agent: v.agentName ?? v.agentId ?? "—",
               signer: v.sponsorName ?? v.sponsorUserId ?? "—",
@@ -398,7 +407,7 @@
               base: shortOne(v.baseHash),
             })}
           </p>
-          {#if v.description}<p class="text-sm text-zinc-300">{v.description}</p>{/if}
+          {#if v.description}<p class="text-sm text-kitsuden-text">{v.description}</p>{/if}
 
           <!-- 1. Tests -->
           <div
@@ -409,7 +418,7 @@
             )}"
             data-testid="step-tests"
           >
-            <h4 class="text-xs font-semibold text-zinc-300">
+            <h4 class="text-xs font-semibold text-kitsuden-text">
               {t("promotion.stepTests")} — {t("promotion.testsSummary", {
                 passed: String(v.testReport?.passed ?? 0),
                 failed: String(v.testReport?.failed ?? 0),
@@ -421,20 +430,23 @@
               <ul class="mt-1 space-y-1">
                 {#each v.testReport.cases as c}
                   <li class="text-xs">
-                    <span class={c.status === "passed" ? "text-emerald-300" : "text-red-300"}
+                    <span
+                      class={c.status === "passed" ? "text-kitsuden-green" : "text-kitsuden-danger"}
                       >{t(`promotion.test_${c.status}`)}</span
                     >
-                    <span class="text-zinc-300 ml-1">{c.name}</span>
-                    <span class="text-zinc-600 ml-1"
+                    <span class="text-kitsuden-text ml-1">{c.name}</span>
+                    <span class="text-kitsuden-subtle ml-1"
                       >{t("promotion.ms", { ms: String(c.durationMs) })}</span
                     >
-                    {#each c.mismatches as m}<div class="text-zinc-400 ml-4 break-all">
+                    {#each c.mismatches as m}<div class="text-kitsuden-text-dim ml-4 break-all">
                         {m}
                       </div>{/each}
-                    {#if c.error && c.status !== "passed"}<div class="text-zinc-500 ml-4 break-all">
+                    {#if c.error && c.status !== "passed"}<div
+                        class="text-kitsuden-subtle ml-4 break-all"
+                      >
                         {c.error}
                       </div>{/if}
-                    {#if c.unmockedCalls.length}<div class="text-amber-300/80 ml-4 break-all">
+                    {#if c.unmockedCalls.length}<div class="text-kitsuden-amber ml-4 break-all">
                         {t("promotion.unmocked", { calls: c.unmockedCalls.join(", ") })}
                       </div>{/if}
                   </li>
@@ -448,7 +460,7 @@
             class="border rounded-sm p-3 {stepClass(v.scanReport ? v.scanReport.passed : null)}"
             data-testid="step-scan"
           >
-            <h4 class="text-xs font-semibold text-zinc-300">
+            <h4 class="text-xs font-semibold text-kitsuden-text">
               {t("promotion.stepScan")} — {v.scanReport?.passed
                 ? t("promotion.scanOk")
                 : t("promotion.scanFail")}
@@ -457,17 +469,17 @@
               <div class="text-xs mt-1">
                 <span
                   class={h.severity === "high"
-                    ? "text-red-300"
+                    ? "text-kitsuden-danger"
                     : h.severity === "medium"
-                      ? "text-amber-300"
-                      : "text-zinc-400"}>{h.severity}</span
+                      ? "text-kitsuden-amber"
+                      : "text-kitsuden-text-dim"}>{h.severity}</span
                 >
-                <code class="text-zinc-300 ml-1">{h.rule}</code>
-                <span class="text-zinc-500 ml-1">L{h.line}: {h.message}</span>
+                <code class="text-kitsuden-text ml-1">{h.rule}</code>
+                <span class="text-kitsuden-subtle ml-1">L{h.line}: {h.message}</span>
               </div>
             {/each}
             {#if v.scanReport?.apiCalls?.length}
-              <div class="text-xs text-zinc-500 mt-1 break-all">
+              <div class="text-xs text-kitsuden-subtle mt-1 break-all">
                 {t("promotion.apiCalls")}: {v.scanReport.apiCalls
                   .map((c) => `${c.method} ${c.path ?? "?"}`)
                   .join(", ")}
@@ -476,9 +488,11 @@
           </div>
 
           <!-- 3. Capabilities -->
-          <div class="border rounded-sm p-3 border-zinc-800" data-testid="step-capabilities">
-            <h4 class="text-xs font-semibold text-zinc-300">{t("promotion.stepCapabilities")}</h4>
-            <div class="text-xs text-zinc-400 mt-1 space-y-0.5 break-all">
+          <div class="border rounded-sm p-3 border-kitsuden-border" data-testid="step-capabilities">
+            <h4 class="text-xs font-semibold text-kitsuden-text">
+              {t("promotion.stepCapabilities")}
+            </h4>
+            <div class="text-xs text-kitsuden-text-dim mt-1 space-y-0.5 break-all">
               <div>
                 {t("promotion.declaredScopes")}:
                 <code>{v.capabilities.scopes.join(", ") || "—"}</code>
@@ -488,19 +502,19 @@
                 <code>{v.capabilities.fetchAllow.join(", ") || "—"}</code>
               </div>
               {#if v.capabilityDiff}
-                {#if v.capabilityDiff.newTarget}<div class="text-amber-300">
+                {#if v.capabilityDiff.newTarget}<div class="text-kitsuden-amber">
                     {t("promotion.newTarget")}
                   </div>{/if}
-                {#if v.capabilityDiff.scopesAdded.length}<div class="text-red-300">
+                {#if v.capabilityDiff.scopesAdded.length}<div class="text-kitsuden-danger">
                     + {v.capabilityDiff.scopesAdded.join(", ")}
                   </div>{/if}
-                {#if v.capabilityDiff.denialsRemoved.length}<div class="text-red-300">
+                {#if v.capabilityDiff.denialsRemoved.length}<div class="text-kitsuden-danger">
                     − {v.capabilityDiff.denialsRemoved.join(", ")}
                   </div>{/if}
-                {#if v.capabilityDiff.hostsAdded.length}<div class="text-red-300">
+                {#if v.capabilityDiff.hostsAdded.length}<div class="text-kitsuden-danger">
                     + {v.capabilityDiff.hostsAdded.join(", ")}
                   </div>{/if}
-                {#each v.capabilityDiff.limitsIncreased as l}<div class="text-amber-300">
+                {#each v.capabilityDiff.limitsIncreased as l}<div class="text-kitsuden-amber">
                     {l.field}: {l.before} → {l.after}
                   </div>{/each}
               {/if}
@@ -508,25 +522,25 @@
           </div>
 
           <!-- 4. Decision -->
-          <div class="border rounded-sm p-3 border-zinc-800" data-testid="step-decision">
-            <h4 class="text-xs font-semibold text-zinc-300">
+          <div class="border rounded-sm p-3 border-kitsuden-border" data-testid="step-decision">
+            <h4 class="text-xs font-semibold text-kitsuden-text">
               {t("promotion.stepDecision")} — {v.decision?.route === "turbo"
                 ? t("promotion.routeTurbo")
                 : t("promotion.routeProposal")}
             </h4>
-            <ul class="mt-1 text-xs text-zinc-400 list-disc ml-4">
+            <ul class="mt-1 text-xs text-kitsuden-text-dim list-disc ml-4">
               {#each v.decision?.reasons ?? [] as m}<li data-testid="reason" data-reason={m}>
                   {t(`promotion.reason_${m}`)}
                 </li>{/each}
             </ul>
             {#if detail.proposal}
-              <p class="text-xs text-zinc-500 mt-1">
+              <p class="text-xs text-kitsuden-subtle mt-1">
                 {t("promotion.proposal", {
                   status: t(`approvals.status_${detail.proposal.status}`),
                 })}
                 <a
                   href="/approvals?id={detail.proposal.id}"
-                  class="ml-1 text-indigo-300 hover:underline">{t("approvals.open")}</a
+                  class="ml-1 text-kitsuden-accent hover:underline">{t("approvals.open")}</a
                 >
                 {#if detail.proposal.comment}· {t("approvals.commentShown", {
                     comment: detail.proposal.comment,
@@ -534,7 +548,7 @@
               </p>
             {/if}
             {#if v.activationError}
-              <p class="text-xs text-red-300 mt-1" data-testid="activation-error">
+              <p class="text-xs text-kitsuden-danger mt-1" data-testid="activation-error">
                 {KNOWN_ERRORS.includes(v.activationError)
                   ? t(`promotion.activationError_${v.activationError}`)
                   : t("promotion.activationErrorOther", { error: v.activationError })}
@@ -544,9 +558,9 @@
 
           <!-- 5. Activation and monitoring -->
           {#if v.activatedAt || v.rolledBackAt}
-            <div class="border rounded-sm p-3 border-zinc-800" data-testid="step-watch">
-              <h4 class="text-xs font-semibold text-zinc-300">{t("promotion.stepWatch")}</h4>
-              <div class="text-xs text-zinc-400 mt-1 space-y-0.5">
+            <div class="border rounded-sm p-3 border-kitsuden-border" data-testid="step-watch">
+              <h4 class="text-xs font-semibold text-kitsuden-text">{t("promotion.stepWatch")}</h4>
+              <div class="text-xs text-kitsuden-text-dim mt-1 space-y-0.5">
                 {#if v.activatedAt}<div>
                     {t("promotion.activated", {
                       when: date(v.activatedAt),
@@ -564,13 +578,13 @@
                   </div>
                 {/if}
                 {#if v.rolledBackAt}
-                  <div class="text-red-300">
+                  <div class="text-kitsuden-danger">
                     {t("promotion.rolledBack", {
                       when: date(v.rolledBackAt),
                       by: v.rolledBackByName ?? v.rolledBackBy ?? "—",
                     })}
                   </div>
-                  <div class="text-zinc-500 break-all">{v.rollbackReason}</div>
+                  <div class="text-kitsuden-subtle break-all">{v.rollbackReason}</div>
                 {/if}
               </div>
             </div>
@@ -584,7 +598,7 @@
                   bind:value={comment}
                   rows="2"
                   placeholder={t("promotion.commentPlaceholder")}
-                  class="w-full bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-sm text-zinc-200"
+                  class="w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm text-kitsuden-text"
                 ></textarea>
                 <div class="flex gap-2">
                   <Button
@@ -608,7 +622,7 @@
                 <input
                   bind:value={returnReason}
                   placeholder={t("promotion.rollbackReason")}
-                  class="w-full bg-zinc-900 border border-zinc-800 rounded-sm px-2 py-1 text-sm text-zinc-200"
+                  class="w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm text-kitsuden-text"
                 />
                 <Button
                   variant="secondary"
@@ -632,40 +646,43 @@
           {/if}
 
           <details open>
-            <summary class="text-xs text-zinc-400 cursor-pointer">{t("promotion.code")}</summary>
+            <summary class="text-xs text-kitsuden-text-dim cursor-pointer"
+              >{t("promotion.code")}</summary
+            >
             <pre
-              class="text-xs bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-80 overflow-auto whitespace-pre-wrap break-all text-zinc-200"
+              class="text-xs bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-80 overflow-auto whitespace-pre-wrap break-all text-kitsuden-text"
               data-testid="promotion-code">{v.code}</pre>
           </details>
           {#if detail.previous}
             <details>
-              <summary class="text-xs text-zinc-400 cursor-pointer"
+              <summary class="text-xs text-kitsuden-text-dim cursor-pointer"
                 >{t("promotion.previousCode", {
                   n: String(detail.previous.versionNumber),
                 })}</summary
               >
               <pre
-                class="text-xs bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-80 overflow-auto whitespace-pre-wrap break-all text-zinc-400">{detail
+                class="text-xs bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-80 overflow-auto whitespace-pre-wrap break-all text-kitsuden-text-dim">{detail
                   .previous.code}</pre>
             </details>
           {/if}
           <details>
-            <summary class="text-xs text-zinc-400 cursor-pointer"
+            <summary class="text-xs text-kitsuden-text-dim cursor-pointer"
               >{t("promotion.testCases")}</summary
             >
             <pre
-              class="text-xs bg-zinc-950 border border-zinc-800 rounded-sm p-2 max-h-60 overflow-auto whitespace-pre-wrap break-all">{json(
+              class="text-xs bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-60 overflow-auto whitespace-pre-wrap break-all">{json(
                 v.tests
               )}</pre>
           </details>
           <details>
-            <summary class="text-xs text-zinc-400 cursor-pointer">{t("promotion.timeline")}</summary
+            <summary class="text-xs text-kitsuden-text-dim cursor-pointer"
+              >{t("promotion.timeline")}</summary
             >
             <ul class="mt-1 space-y-0.5" data-testid="promotion-events">
               {#each detail.events as e (e.id)}
-                <li class="text-xs text-zinc-400">
-                  <span class="text-zinc-500">{date(e.at)}</span>
-                  <span class="ml-1 text-zinc-300">{t(`approvals.action_${e.action}`)}</span>
+                <li class="text-xs text-kitsuden-text-dim">
+                  <span class="text-kitsuden-subtle">{date(e.at)}</span>
+                  <span class="ml-1 text-kitsuden-text">{t(`approvals.action_${e.action}`)}</span>
                   {#if e.byName}<span class="ml-1">· {e.byName}</span>{/if}
                 </li>
               {/each}

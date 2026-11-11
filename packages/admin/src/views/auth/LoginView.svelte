@@ -671,7 +671,7 @@
   }
 
   .field-label {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -758,7 +758,7 @@
     align-items: center;
     gap: 12px;
     margin: 1.5rem 0 1rem;
-    font-size: 0.6rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.15em;
     color: rgba(255, 255, 255, 0.2);
@@ -815,7 +815,7 @@
 
   .social-note {
     text-align: center;
-    font-size: 0.6rem;
+    font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.25);
     margin-top: 0.75rem;
   }
@@ -823,7 +823,7 @@
   /* ── Hint ── */
   .login-hint {
     text-align: center;
-    font-size: 0.6rem;
+    font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.15);
     margin-top: 1.5rem;
   }

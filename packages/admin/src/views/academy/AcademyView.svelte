@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t as tr, localeFormat } from "$lib/i18n";
   import {
     GraduationCap,
@@ -113,11 +114,11 @@
   };
 
   const courseTypeColors: Record<string, string> = {
-    INDUCCION: "bg-blue-500/15 text-blue-400",
-    GESTION: "bg-purple-500/15 text-purple-400",
-    TECNICO: "bg-orange-500/15 text-orange-400",
-    HERRAMIENTAS: "bg-green-500/15 text-green-400",
-    DESARROLLO: "bg-pink-500/15 text-pink-400",
+    INDUCCION: "bg-kitsuden-info/15 text-kitsuden-info",
+    GESTION: "bg-kitsuden-purple/15 text-kitsuden-purple",
+    TECNICO: "bg-kitsuden-amber/15 text-kitsuden-amber",
+    HERRAMIENTAS: "bg-kitsuden-green/15 text-kitsuden-green",
+    DESARROLLO: "bg-kitsuden-accent-2/15 text-kitsuden-accent-2",
   };
 
   const tabs = [
@@ -366,7 +367,7 @@
   }
 
   async function deletePath(id: string) {
-    if (!confirm(tr("academyView.deleteThisLearningPath"))) return;
+    if (!(await confirmDialog(tr("academyView.deleteThisLearningPath")))) return;
     try {
       await api.deleteAcademyLearningPath(id);
       toast.success(tr("academyView.learningPathDeleted"));
@@ -377,7 +378,7 @@
   }
 
   async function deleteGroup(id: string) {
-    if (!confirm(tr("academyView.deleteThisGroup"))) return;
+    if (!(await confirmDialog(tr("academyView.deleteThisGroup")))) return;
     try {
       await api.deleteAcademyGroup(id);
       toast.success(tr("academyView.groupDeleted"));
@@ -459,8 +460,8 @@
       </div>
     </div>
     <div class="card p-4 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-lg bg-purple-500/15 flex items-center justify-center">
-        <Users class="w-5 h-5 text-purple-400" />
+      <div class="w-10 h-10 rounded-lg bg-kitsuden-purple/15 flex items-center justify-center">
+        <Users class="w-5 h-5 text-kitsuden-purple" />
       </div>
       <div>
         <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
@@ -548,7 +549,7 @@
             <input
               type="text"
               placeholder={tr("academyView.searchCourses")}
-              class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent/50"
+              class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent/50"
               bind:value={searchQuery}
               oninput={() => (currentPage = 1)}
             />
@@ -591,7 +592,7 @@
                     <th class="px-4 py-3 w-10">
                       <input
                         type="checkbox"
-                        class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
+                        class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
                         checked={allSelected}
                         indeterminate={someSelected}
                         onchange={toggleSelectAll}
@@ -666,7 +667,7 @@
                       <td class="px-4 py-3">
                         <input
                           type="checkbox"
-                          class="rounded-sm border-kitsuden-border bg-kitsuden-bg text-kitsuden-accent"
+                          class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
                           checked={selectedIds.has(r.course.id)}
                           onchange={() => toggleSelect(r.course.id)}
                         />
@@ -675,9 +676,9 @@
                         <div class="flex items-center gap-2">
                           <span class="font-medium text-kitsuden-text">{r.course.title}</span>
                           <span
-                            class="px-1.5 py-0.5 rounded text-[10px] font-medium {courseTypeColors[
+                            class="px-1.5 py-0.5 rounded text-xs font-medium {courseTypeColors[
                               r.course.type
-                            ] || 'bg-gray-500/15 text-gray-400'}"
+                            ] || 'bg-kitsuden-subtle/15 text-kitsuden-text-dim'}"
                             >{courseTypeLabels[r.course.type] || r.course.type}</span
                           >
                         </div>
@@ -970,7 +971,7 @@
           <div class="flex items-center gap-2">
             {#if drawerCourse}
               <span
-                class="px-1.5 py-0.5 rounded text-[10px] font-medium {courseTypeColors[
+                class="px-1.5 py-0.5 rounded text-xs font-medium {courseTypeColors[
                   drawerCourse.course.type
                 ] || ''}"
                 >{courseTypeLabels[drawerCourse.course.type] || drawerCourse.course.type}</span
@@ -1012,7 +1013,7 @@
           {@const s = drawerStats}
           <!-- Stats Grid -->
           <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {#each [{ label: tr("academyView.assigned"), value: s.totalAssigned, icon: Users, color: "text-kitsuden-accent" }, { label: tr("academyView.completed2"), value: s.completedItems, icon: CheckCircle, color: "text-kitsuden-green" }, { label: tr("academyView.inProgress"), value: s.inProgress, icon: TrendingUp, color: "text-kitsuden-amber" }, { label: tr("academyView.notStarted"), value: s.notStarted, icon: AlertCircle, color: "text-kitsuden-accent-2" }, { label: tr("academyView.completionRate2"), value: fmtPct(s.finishRate), icon: BarChart3, color: "text-kitsuden-green" }, { label: tr("academyView.avgProgress2"), value: fmtPct(s.averageProgress), icon: TrendingUp, color: "text-kitsuden-accent" }, { label: tr("academyView.quizPassers"), value: s.passedQuiz, icon: CheckCircle, color: "text-kitsuden-green" }, { label: tr("academyView.avgQuizScore"), value: s.averageQuizScore?.toFixed(1) ?? "—", icon: Star, color: "text-kitsuden-amber" }, { label: tr("academyView.surveys2"), value: s.totalSurveys, icon: Layers, color: "text-kitsuden-accent" }, { label: tr("academyView.satisfaction2"), value: fmtStar(s.averageSatisfaction), icon: Star, color: "text-kitsuden-amber" }, { label: tr("academyView.instructorRating"), value: s.averageExhibitor?.toFixed(1) ?? "—", icon: UserCircle, color: "text-purple-400" }] as stat}
+            {#each [{ label: tr("academyView.assigned"), value: s.totalAssigned, icon: Users, color: "text-kitsuden-accent" }, { label: tr("academyView.completed2"), value: s.completedItems, icon: CheckCircle, color: "text-kitsuden-green" }, { label: tr("academyView.inProgress"), value: s.inProgress, icon: TrendingUp, color: "text-kitsuden-amber" }, { label: tr("academyView.notStarted"), value: s.notStarted, icon: AlertCircle, color: "text-kitsuden-accent-2" }, { label: tr("academyView.completionRate2"), value: fmtPct(s.finishRate), icon: BarChart3, color: "text-kitsuden-green" }, { label: tr("academyView.avgProgress2"), value: fmtPct(s.averageProgress), icon: TrendingUp, color: "text-kitsuden-accent" }, { label: tr("academyView.quizPassers"), value: s.passedQuiz, icon: CheckCircle, color: "text-kitsuden-green" }, { label: tr("academyView.avgQuizScore"), value: s.averageQuizScore?.toFixed(1) ?? "—", icon: Star, color: "text-kitsuden-amber" }, { label: tr("academyView.surveys2"), value: s.totalSurveys, icon: Layers, color: "text-kitsuden-accent" }, { label: tr("academyView.satisfaction2"), value: fmtStar(s.averageSatisfaction), icon: Star, color: "text-kitsuden-amber" }, { label: tr("academyView.instructorRating"), value: s.averageExhibitor?.toFixed(1) ?? "—", icon: UserCircle, color: "text-kitsuden-purple" }] as stat}
               <div
                 class="bg-kitsuden-bg border border-kitsuden-border rounded-lg p-3 flex items-center gap-3"
               >
@@ -1109,7 +1110,7 @@
           >
           <input
             id="assignuserids"
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
             placeholder={tr("academyView.user1User2")}
             bind:value={assignUserIds}
           />
@@ -1120,7 +1121,7 @@
           >
           <input
             id="assigngroupids"
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
+            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
             placeholder={tr("academyView.group1Group2")}
             bind:value={assignGroupIds}
           />
@@ -1151,7 +1152,7 @@
     @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
   }
   .btn-primary {
-    @apply px-4 py-2 bg-kitsuden-accent text-black rounded-lg font-medium hover:bg-kitsuden-accent-hover transition-colors disabled:opacity-50;
+    @apply px-4 py-2 bg-kitsuden-accent text-kitsuden-on-accent rounded-lg font-medium hover:bg-kitsuden-accent-hover transition-colors disabled:opacity-50;
   }
   .btn-secondary {
     @apply px-3 py-1.5 bg-kitsuden-surface border border-kitsuden-border rounded-lg text-kitsuden-text hover:border-kitsuden-accent/50 transition-colors;

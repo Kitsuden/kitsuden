@@ -63,20 +63,24 @@
 
 <div class="space-y-4" data-testid="agent-promotion">
   <div>
-    <h3 class="text-sm font-semibold text-zinc-300">{t("agentPromotion.title")}</h3>
-    <p class="text-xs text-zinc-500">{t("agentPromotion.help")}</p>
+    <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentPromotion.title")}</h3>
+    <p class="text-xs text-kitsuden-subtle">{t("agentPromotion.help")}</p>
   </div>
 
   {#if loading}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else}
     {#if !canPropose}
       <p
-        class="text-xs text-zinc-400 bg-zinc-800/40 border border-zinc-800 rounded-sm px-3 py-2"
+        class="text-xs text-kitsuden-text-dim bg-kitsuden-border/40 border border-kitsuden-border rounded-sm px-3 py-2"
         data-testid="no-scope-note"
       >
         {t("agentPromotion.noScope")}
@@ -84,7 +88,7 @@
     {/if}
     {#if mode === "turbo" && !turboGlobal}
       <p
-        class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-sm px-3 py-2"
+        class="text-xs text-kitsuden-amber bg-kitsuden-amber/10 border border-kitsuden-amber/20 rounded-sm px-3 py-2"
         data-testid="turbo-capped-note"
       >
         {t("agentPromotion.turboCapped")}
@@ -95,14 +99,16 @@
       {#each MODES as m}
         <label
           class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer {mode === m
-            ? 'border-indigo-500/60 bg-indigo-500/5'
-            : 'border-zinc-800'}"
+            ? 'border-kitsuden-accent/60 bg-kitsuden-accent/5'
+            : 'border-kitsuden-border'}"
           data-testid="promotion-mode-{m}"
         >
           <input type="radio" name="promotion-mode" value={m} bind:group={mode} class="mt-1" />
           <span>
-            <span class="block text-sm text-zinc-200">{t(`promotion.mode_${m}`)}</span>
-            <span class="block text-xs text-zinc-500">{t(`agentPromotion.modeHelp_${m}`)}</span>
+            <span class="block text-sm text-kitsuden-text">{t(`promotion.mode_${m}`)}</span>
+            <span class="block text-xs text-kitsuden-subtle"
+              >{t(`agentPromotion.modeHelp_${m}`)}</span
+            >
           </span>
         </label>
       {/each}
@@ -119,9 +125,9 @@
           <Save size={14} class="mr-1" />{t("agentPromotion.save")}
         </Button>
       {:else}
-        <p class="text-xs text-amber-300/80">{t("approvals.readOnly")}</p>
+        <p class="text-xs text-kitsuden-amber">{t("approvals.readOnly")}</p>
       {/if}
-      <a href="/approvals?tab=promotion" class="text-xs text-indigo-300 hover:underline"
+      <a href="/approvals?tab=promotion" class="text-xs text-kitsuden-accent hover:underline"
         >{t("agentPromotion.pipelineLink")}</a
       >
     </div>

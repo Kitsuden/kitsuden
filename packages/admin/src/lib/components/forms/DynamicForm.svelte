@@ -1,16 +1,49 @@
 <script lang="ts">
-  import { t } from "$lib/i18n";
   /**
-   * DynamicForm.svelte — Runtime form generator from Dataset schema
-   * Reads FieldDefinition[], generates validation, renders form
+   * DynamicForm.svelte — the entry form generated from a dataset's schema.
+   *
+   * It renders a control for EVERY field type the schema builder offers (the shared
+   * registry: text, long text, number, boolean, date, date & time, image, file, URL, email,
+   * select, multi-select, JSON, rich text, relation, KPI, repeater). A type it does not know
+   * gets a visible "cannot be edited here" row: before, such a field was dropped from the
+   * form without a word, and the entry was saved without it.
+   *
+   * The rules (which control, starting values, validation, what is submitted) live in
+   * `dynamic-form.ts`; the controls are tallao's.
    */
-  import { Save, Loader2, Upload, X, ImageIcon } from "lucide-svelte";
+  import {
+    Save,
+    Loader2,
+    Upload,
+    X,
+    ImageIcon,
+    Paperclip,
+    Plus,
+    Trash2,
+    Calculator,
+    CircleSlash,
+  } from "lucide-svelte";
+  import { toast } from "svelte-sonner";
 
   import MediaPicker from "$lib/components/media/MediaPicker.svelte";
+  import { t } from "$lib/i18n";
   import { uploadMedia } from "$lib/media/upload";
+  import { Button, Checkbox, Input, NumberInput, Select, Switch, Textarea } from "$lib/tallao";
 
   import type { FieldDefinition } from "../../../types/datasets";
 
+  import {
+    cleanValues,
+    controlFor,
+    emptyRow,
+    fileNameOf,
+    fromDatetimeLocal,
+    initialValues,
+    toDateInput,
+    toDatetimeLocal,
+    validateFields,
+    type FormField,
+  } from "./dynamic-form";
   import RelationshipField from "./RelationshipField.svelte";
 
   // ─── Props ──────────────────────────────────────────
@@ -30,6 +63,8 @@
     onCancel,
   }: Props = $props();
 
+  const uid = $props.id();
+
   // ─── State ──────────────────────────────────────────
   let formData = $state<Record<string, any>>({});
   let fieldErrors = $state<Record<string, string>>({});
@@ -37,400 +72,273 @@
   const uploadingStates = $state<Record<string, boolean>>({});
 
   /**
-   * Which field expects an image. The KEY and not a boolean: a dataset can have
-   * several image fields, and with a boolean the chosen one would go to the first.
+   * Which field expects an image from the library: its path and its setter. Not a boolean:
+   * a dataset can have several image fields (and a repeater, one per row), and with a
+   * boolean the chosen one would go to the first.
    */
-  let fieldChoosing = $state<string | null>(null);
-
-  // Initialize form data with defaults
-  function initFormData() {
-    const data: Record<string, any> = {};
-    for (const field of fields) {
-      if (initialData[field.key] !== undefined) {
-        data[field.key] = initialData[field.key];
-      } else if (field.defaultValue !== undefined && field.defaultValue !== "") {
-        if (field.type === "number") data[field.key] = Number(field.defaultValue) || 0;
-        else if (field.type === "boolean") data[field.key] = field.defaultValue === "true";
-        else data[field.key] = field.defaultValue;
-      } else if (field.type === "boolean") {
-        data[field.key] = false;
-      } else if (field.type === "relation" && field.relation?.type !== "one-to-one") {
-        data[field.key] = [];
-      } else {
-        data[field.key] = null;
-      }
-    }
-    formData = data;
-  }
+  let choosing = $state<{ path: string; set: (v: unknown) => void } | null>(null);
 
   // Initialize on mount
   $effect(() => {
-    initFormData();
+    formData = initialValues(fields as FormField[], initialData);
   });
 
   // ─── Computed ───────────────────────────────────────
-  const visibleFields = $derived([...fields].sort((a, b) => a.order - b.order));
+  const visibleFields = $derived(
+    [...(fields as FormField[])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  );
+  const errorCount = $derived(Object.keys(fieldErrors).length);
 
-  // ─── Field setters ──────────────────────────────────
-  function setField(key: string, value: any) {
-    formData[key] = value;
-    if (fieldErrors[key]) delete fieldErrors[key];
+  function clearError(path: string) {
+    if (fieldErrors[path]) delete fieldErrors[path];
   }
 
-  function setJsonField(key: string, raw: string) {
+  function setJson(path: string, set: (v: unknown) => void, raw: string) {
     try {
-      formData[key] = JSON.parse(raw);
-      if (fieldErrors[key]) delete fieldErrors[key];
+      set(JSON.parse(raw));
     } catch {
-      formData[key] = raw;
+      // Not valid yet: keep the text, validation reports it on submit.
+      set(raw);
     }
+    clearError(path);
   }
 
-  // ─── Image Upload Handler ───────────────────────────
   /**
-   * Uploads an image to a form field.
-   *
-   * ─────────────────────────────────────────────────────────────────────────
-   * THIS WAS BROKEN IN TWO WAYS AT ONCE, AND NOBODY SAW IT
-   *
-   *   · It sent the file as `file`, and the endpoint reads `files` (plural).
-   *     The upload died before starting with «No files provided».
-   *   · It read `data.url`, which NEVER existed in that response. Even if the upload
-   *     had worked, the field would have been saved with `undefined`.
-   *
-   * Now it uses `uploadMedia`, the same function as the blog editor, so
-   * the two paths cannot diverge again.
-   * ─────────────────────────────────────────────────────────────────────────
+   * Uploads a file to a field through `uploadMedia`, the same function as the blog editor,
+   * so the two paths cannot diverge. The reason the server gave is shown: "could not
+   * upload" alone does not tell a 20 MB file from a full disk.
    */
-  async function handleImageUpload(fieldKey: string, file: File) {
-    uploadingStates[fieldKey] = true;
-
+  async function upload(path: string, set: (v: unknown) => void, file: File) {
+    uploadingStates[path] = true;
     try {
-      const { uploaded, errors: errorsValue } = await uploadMedia([file]);
+      const { uploaded, errors } = await uploadMedia([file]);
       if (uploaded[0]) {
-        setField(fieldKey, uploaded[0].url);
+        set(uploaded[0].url);
+        clearError(path);
       } else {
-        // The specific reason the server returned is stated: «Failed to
-        // upload» on its own does not distinguish a 20 MB file from a full disk.
-        alert(errorsValue.join(" · ") || t("dynamicForm.couldNotUploadThe"));
+        toast.error(errors.join(" · ") || t("dynamicForm.couldNotUploadThe"));
       }
     } catch (err: any) {
-      alert(err?.message || t("dynamicForm.couldNotUploadThe"));
+      toast.error(err?.message || t("dynamicForm.couldNotUploadThe"));
     } finally {
-      uploadingStates[fieldKey] = false;
+      uploadingStates[path] = false;
     }
   }
 
-  // ─── Validation Engine ──────────────────────────────
-  function validate(): boolean {
-    const errors: Record<string, string> = {};
+  function pickFile(path: string, set: (v: unknown) => void, accept?: string) {
+    const input = document.createElement("input");
+    input.type = "file";
+    if (accept) input.accept = accept;
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) await upload(path, set, file);
+    };
+    input.click();
+  }
 
-    for (const field of fields) {
-      const val = formData[field.key];
-
-      // Required check
-      if (field.isRequired) {
-        if (val === null || val === undefined || val === "") {
-          errors[field.key] = `${field.label} is required`;
-          continue;
-        }
-        if (Array.isArray(val) && val.length === 0) {
-          errors[field.key] = `${field.label} requires at least one selection`;
-          continue;
-        }
-      }
-
-      if (val === null || val === undefined || val === "") continue;
-
-      // Type-specific validation
-      switch (field.type) {
-        case "number": {
-          const num = Number(val);
-          if (isNaN(num)) {
-            errors[field.key] = t("dynamicForm.mustBeAValidNumber");
-          } else {
-            if (field.minValue !== undefined && num < field.minValue) {
-              errors[field.key] = t("dynamicForm.minimumValueIs", { minValue: field.minValue });
-            }
-            if (field.maxValue !== undefined && num > field.maxValue) {
-              errors[field.key] = t("dynamicForm.maximumValueIs", { maxValue: field.maxValue });
-            }
-          }
-          break;
-        }
-
-        case "text":
-        case "richtext": {
-          const str = String(val);
-          if (field.minLength && str.length < field.minLength) {
-            errors[field.key] = t("dynamicForm.minimumCharacters", { minLength: field.minLength });
-          }
-          if (field.maxLength && str.length > field.maxLength) {
-            errors[field.key] = t("dynamicForm.maximumCharacters", { maxLength: field.maxLength });
-          }
-          if (field.validationRegex) {
-            try {
-              if (!new RegExp(field.validationRegex).test(str)) {
-                errors[field.key] = t("dynamicForm.doesNotMatchPattern", {
-                  validationRegex: field.validationRegex,
-                });
-              }
-            } catch {}
-          }
-          break;
-        }
-
-        case "email": {
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val))) {
-            errors[field.key] = t("dynamicForm.invalidEmailAddress");
-          }
-          break;
-        }
-
-        case "url": {
-          try {
-            new URL(String(val));
-          } catch {
-            errors[field.key] = t("dynamicForm.invalidUrl");
-          }
-          break;
-        }
-
-        case "json": {
-          if (typeof val === "string") {
-            try {
-              JSON.parse(val);
-            } catch {
-              errors[field.key] = t("dynamicForm.invalidJson");
-            }
-          }
-          break;
-        }
-
-        case "select": {
-          const validValues = (field.options || []).map((o) => o.value);
-          if (!validValues.includes(String(val))) {
-            errors[field.key] = t("dynamicForm.invalidSelection");
-          }
-          break;
-        }
-      }
-    }
-
-    fieldErrors = errors;
-    return Object.keys(errors).length === 0;
+  function toggleOption(current: unknown, value: string, on: boolean): string[] {
+    const list = Array.isArray(current) ? current.map(String) : [];
+    return on ? [...new Set([...list, value])] : list.filter((v) => v !== value);
   }
 
   // ─── Submit ─────────────────────────────────────────
   function handleSubmit() {
-    if (!validate()) return;
+    fieldErrors = validateFields(fields as FormField[], formData);
+    if (Object.keys(fieldErrors).length > 0) return;
 
     submitting = true;
-
-    const cleanData: Record<string, any> = {};
-    for (const field of fields) {
-      let val = formData[field.key];
-      if (field.type === "number" && val !== null && val !== undefined) {
-        val = Number(val);
-      }
-      if (field.type === "json" && typeof val === "string") {
-        try {
-          val = JSON.parse(val);
-        } catch {}
-      }
-      cleanData[field.key] = val;
-    }
-
-    onSubmit?.(cleanData);
-
+    onSubmit?.(cleanValues(fields as FormField[], formData));
     setTimeout(() => {
       submitting = false;
     }, 500);
   }
 </script>
 
-<form
-  onsubmit={(e) => {
-    e.preventDefault();
-    handleSubmit();
+<!--
+  One field: label, control, help and error. `path` is the field's key, or
+  `key.<row>.<subKey>` inside a repeater, and names its error and its upload state.
+-->
+{#snippet fieldRow(field: FormField, value: any, set: (v: unknown) => void, path: string)}
+  {@const kind = controlFor(field.type)}
+  {@const id = `${uid}-${path}`}
+  {@const error = fieldErrors[path]}
+  {@const describedBy = error ? `${id}-error` : field.helpText ? `${id}-help` : undefined}
+  {@const update = (v: unknown) => {
+    set(v);
+    clearError(path);
   }}
-  class="space-y-5"
->
-  {#each visibleFields as field}
-    <div class="space-y-1.5">
-      <!-- ── Text ── -->
-      {#if field.type === "text"}
-        <label class="label block">
-          {field.label}
-          {#if field.isRequired}<span class="text-kitsuden-accent-2">*</span>{/if}
-        </label>
-        <input
-          value={formData[field.key] || ""}
-          oninput={(e) => setField(field.key, e.currentTarget.value)}
-          type="text"
-          placeholder={field.helpText || t("dynamicForm.enter", { v: field.label.toLowerCase() })}
-          class="input {fieldErrors[field.key]
-            ? 'border-kitsuden-accent-2-50 focus:ring-kitsuden-accent-2-30'
-            : ''}"
-        />
-      {/if}
 
-      <!-- ── Number ── -->
-      {#if field.type === "number"}
-        <label class="label block">
-          {field.label}
-          {#if field.isRequired}<span class="text-kitsuden-accent-2">*</span>{/if}
-        </label>
-        <input
-          value={formData[field.key] || ""}
-          oninput={(e) => setField(field.key, Number(e.currentTarget.value) || null)}
-          type="number"
+  <div class="space-y-1.5" data-field={path} data-control={kind}>
+    {#if kind === "relation" && field.relation}
+      <RelationshipField
+        {value}
+        onChange={(val) => update(val)}
+        target={field.relation.target}
+        targetDatasetId={field.relation.targetDatasetId}
+        relationType={field.relation.type}
+        displayField={field.relation.displayField}
+        label={field.label}
+        helpText={field.helpText}
+        required={field.isRequired}
+        {error}
+      />
+    {:else if kind === "boolean"}
+      <div class="flex items-center justify-between gap-4 py-1">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-kitsuden-text" id="{id}-label">
+            {field.label}
+            {#if field.isRequired}<span class="text-kitsuden-danger" aria-hidden="true">*</span
+              >{/if}
+          </p>
+          {#if field.helpText}
+            <p class="text-xs text-kitsuden-subtle" id="{id}-help">{field.helpText}</p>
+          {/if}
+        </div>
+        <Switch checked={!!value} ariaLabel={field.label} onchange={(on) => update(on)} />
+      </div>
+    {:else}
+      <label class="block text-sm font-medium text-kitsuden-text" for={id} id="{id}-label">
+        {field.label}
+        {#if field.isRequired}<span class="text-kitsuden-danger" aria-hidden="true">*</span>{/if}
+      </label>
+
+      {#if kind === "text" || kind === "url" || kind === "email"}
+        <Input
+          {id}
+          type={kind === "text" ? "text" : kind}
+          value={value ?? ""}
+          oninput={(e: Event) => update((e.currentTarget as HTMLInputElement).value)}
+          placeholder={kind === "url"
+            ? "https://"
+            : kind === "email"
+              ? t("dynamicForm.emailExampleCom")
+              : t("dynamicForm.enter", { v: field.label.toLowerCase() })}
+          required={field.isRequired}
+          aria-invalid={error ? "true" : undefined}
+          aria-describedby={describedBy}
+        />
+      {:else if kind === "textarea" || kind === "richtext"}
+        <Textarea
+          {id}
+          value={value ?? ""}
+          oninput={(e: Event) => update((e.currentTarget as HTMLTextAreaElement).value)}
+          rows={kind === "richtext" ? 6 : 4}
+          placeholder={kind === "richtext"
+            ? t("dynamicForm.enterContentMarkdownSupported")
+            : t("dynamicForm.enter", { v: field.label.toLowerCase() })}
+          required={field.isRequired}
+          aria-invalid={error ? "true" : undefined}
+          aria-describedby={describedBy}
+        />
+      {:else if kind === "number"}
+        <NumberInput
+          {id}
+          value={value === null || value === undefined || value === "" ? null : Number(value)}
           min={field.minValue}
           max={field.maxValue}
-          placeholder={field.helpText || "0"}
-          class="input {fieldErrors[field.key]
-            ? 'border-kitsuden-accent-2-50 focus:ring-kitsuden-accent-2-30'
-            : ''}"
+          step={1}
+          clamp={false}
+          placeholder="0"
+          onchange={(n) => update(n)}
+          aria-invalid={error ? "true" : undefined}
+          aria-describedby={describedBy}
         />
-      {/if}
-
-      <!-- ── Boolean ── -->
-      {#if field.type === "boolean"}
-        <div class="flex items-center justify-between py-1">
-          <div>
-            <label class="text-sm font-medium text-kitsuden-text">
-              {field.label}
-              {#if field.isRequired}<span class="text-kitsuden-accent-2">*</span>{/if}
-            </label>
-            {#if field.helpText}
-              <p class="text-[10px] text-kitsuden-subtle">{field.helpText}</p>
-            {/if}
-          </div>
-          <button
-            type="button"
-            onclick={() => setField(field.key, !formData[field.key])}
-            class="relative w-10 h-6 rounded-full transition-colors {formData[field.key]
-              ? 'bg-kitsuden-accent'
-              : 'bg-kitsuden-border'}"
-          >
-            <span
-              class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-xs transition-transform {formData[
-                field.key
-              ]
-                ? 'translate-x-[18px]'
-                : 'translate-x-[2px]'}"
-            ></span>
-          </button>
-        </div>
-      {/if}
-
-      <!-- ── Date ── -->
-      {#if field.type === "date"}
-        <label class="label block">
-          {field.label}
-          {#if field.isRequired}<span class="text-kitsuden-accent-2">*</span>{/if}
-        </label>
-        <input
-          value={formData[field.key] || ""}
-          oninput={(e) => setField(field.key, e.currentTarget.value)}
+      {:else if kind === "date"}
+        <Input
+          {id}
           type="date"
-          class="input {fieldErrors[field.key]
-            ? 'border-kitsuden-accent-2-50 focus:ring-kitsuden-accent-2-30'
-            : ''}"
+          value={toDateInput(value)}
+          oninput={(e: Event) => update((e.currentTarget as HTMLInputElement).value || null)}
+          required={field.isRequired}
+          aria-invalid={error ? "true" : undefined}
+          aria-describedby={describedBy}
         />
-      {/if}
-
-      <!-- ── URL ── -->
-      {#if field.type === "url"}
-        <label class="label block">
-          {field.label}
-          {#if field.isRequired}<span class="text-kitsuden-accent-2">*</span>{/if}
-        </label>
-        <input
-          value={formData[field.key] || ""}
-          oninput={(e) => setField(field.key, e.currentTarget.value)}
-          type="url"
-          placeholder="https://"
-          class="input {fieldErrors[field.key]
-            ? 'border-kitsuden-accent-2-50 focus:ring-kitsuden-accent-2-30'
-            : ''}"
+      {:else if kind === "datetime"}
+        <Input
+          {id}
+          type="datetime-local"
+          value={toDatetimeLocal(value)}
+          oninput={(e: Event) =>
+            update(fromDatetimeLocal((e.currentTarget as HTMLInputElement).value))}
+          required={field.isRequired}
+          aria-invalid={error ? "true" : undefined}
+          aria-describedby={describedBy}
         />
-      {/if}
-
-      <!-- ── Email ── -->
-      {#if field.type === "email"}
-        <label class="label block">
-          {field.label}
-          {#if field.isRequired}<span class="text-kitsuden-accent-2">*</span>{/if}
-        </label>
-        <input
-          value={formData[field.key] || ""}
-          oninput={(e) => setField(field.key, e.currentTarget.value)}
-          type="email"
-          placeholder={field.helpText || t("dynamicForm.emailExampleCom")}
-          class="input {fieldErrors[field.key]
-            ? 'border-kitsuden-accent-2-50 focus:ring-kitsuden-accent-2-30'
-            : ''}"
+      {:else if kind === "select"}
+        <Select
+          {id}
+          value={value ?? ""}
+          onchange={(e: Event) => update((e.currentTarget as HTMLSelectElement).value || null)}
+          placeholder={t("common.select")}
+          options={(field.options || []).map((o) => ({ value: o.value, label: o.label }))}
+          required={field.isRequired}
+          aria-invalid={error ? "true" : undefined}
+          aria-describedby={describedBy}
         />
-      {/if}
-
-      <!-- ── Image / Media Picker ── -->
-      {#if field.type === "image"}
-        {@const uploadingKey = field.key + "_uploading"}
-        <label class="label block">
-          {field.label}
-          {#if field.isRequired}<span class="text-kitsuden-accent-2">*</span>{/if}
-        </label>
-
-        {#if formData[field.key]}
-          <!-- Preview Mode -->
+      {:else if kind === "multiselect"}
+        <div
+          {id}
+          role="group"
+          aria-labelledby="{id}-label"
+          aria-describedby={describedBy}
+          class="flex flex-wrap gap-x-5 gap-y-2 rounded-lg border border-kitsuden-input bg-kitsuden-bg px-3 py-2.5"
+        >
+          {#each field.options || [] as opt (opt.value)}
+            <Checkbox
+              checked={Array.isArray(value) && value.map(String).includes(opt.value)}
+              label={opt.label}
+              onchange={(e: Event) =>
+                update(
+                  toggleOption(value, opt.value, (e.currentTarget as HTMLInputElement).checked)
+                )}
+            />
+          {:else}
+            <p class="text-sm text-kitsuden-subtle">{t("dynamicForm.noOptions")}</p>
+          {/each}
+        </div>
+      {:else if kind === "json"}
+        <Textarea
+          {id}
+          mono
+          value={value === null || value === undefined
+            ? ""
+            : typeof value === "string"
+              ? value
+              : JSON.stringify(value, null, 2)}
+          oninput={(e: Event) => setJson(path, set, (e.currentTarget as HTMLTextAreaElement).value)}
+          rows={4}
+          placeholder={'{ "key": "value" }'}
+          aria-invalid={error ? "true" : undefined}
+          aria-describedby={describedBy}
+        />
+      {:else if kind === "image"}
+        {#if value}
           <div class="relative group">
             <div
               class="relative w-full h-40 rounded-xl border border-kitsuden-border overflow-hidden bg-kitsuden-bg"
             >
-              <!-- Checkerboard background for transparency -->
+              <img src={value} alt={field.label} class="w-full h-full object-contain p-4" />
+              <!-- Shown on keyboard focus too, not only on hover. -->
               <div
-                class="absolute inset-0 opacity-[0.03]"
-                style="background-image: linear-gradient(45deg, #fff 25%, transparent 25%), linear-gradient(-45deg, #fff 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #fff 75%), linear-gradient(-45deg, transparent 75%, #fff 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px;"
-              ></div>
-
-              <img
-                src={formData[field.key]}
-                alt={field.label}
-                class="w-full h-full object-contain p-4"
-              />
-
-              <!-- Overlay actions -->
-              <div
-                class="absolute inset-x-0 bottom-0 p-3 bg-linear-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between"
+                class="absolute inset-x-0 bottom-0 p-3 bg-linear-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-between"
               >
-                <span class="text-xs text-kitsuden-text truncate max-w-[200px]"
-                  >{formData[field.key].split("/").pop()}</span
-                >
+                <span class="text-xs text-white truncate max-w-[200px]">{fileNameOf(value)}</span>
                 <div class="flex items-center gap-2">
                   <button
                     type="button"
-                    class="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-kitsuden-text transition-colors"
-                    onclick={() => {
-                      const input = document.createElement("input");
-                      input.type = "file";
-                      input.accept = "image/*";
-                      input.onchange = async (e) => {
-                        const file = (e.target as HTMLInputElement).files?.[0];
-                        if (!file) return;
-                        await handleImageUpload(field.key, file);
-                      };
-                      input.click();
-                    }}
+                    class="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                    onclick={() => pickFile(path, update, "image/*")}
                     title={t("dynamicForm.replaceImage")}
+                    aria-label={t("dynamicForm.replaceImage")}
                   >
                     <Upload class="w-4 h-4" />
                   </button>
                   <button
                     type="button"
-                    class="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
-                    onclick={() => setField(field.key, null)}
+                    class="p-1.5 rounded-lg bg-black/40 hover:bg-black/60 text-white transition-colors"
+                    onclick={() => update(null)}
                     title={t("dynamicForm.removeImage")}
+                    aria-label={t("dynamicForm.removeImage")}
                   >
                     <X class="w-4 h-4" />
                   </button>
@@ -438,184 +346,214 @@
               </div>
             </div>
           </div>
-        {:else if uploadingStates[field.key]}
-          <!-- Uploading State -->
+        {:else if uploadingStates[path]}
           <div
             class="w-full h-40 rounded-xl border-2 border-dashed border-kitsuden-accent/30 bg-kitsuden-accent/5 flex flex-col items-center justify-center gap-3"
+            role="status"
           >
             <Loader2 class="w-8 h-8 text-kitsuden-accent animate-spin" />
             <span class="text-sm text-kitsuden-accent">{t("dynamicForm.uploading")}</span>
           </div>
         {:else}
-          <!-- Upload Zone -->
           <button
             type="button"
-            class="w-full h-40 rounded-xl border-2 border-dashed border-kitsuden-border bg-kitsuden-bg hover:border-kitsuden-accent/50 hover:bg-kitsuden-accent/5 transition-all flex flex-col items-center justify-center gap-3 group"
-            onclick={() => {
-              const input = document.createElement("input");
-              input.type = "file";
-              input.accept = "image/*";
-              input.onchange = async (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
-                if (!file) return;
-                await handleImageUpload(field.key, file);
-              };
-              input.click();
-            }}
+            {id}
+            class="w-full h-40 rounded-xl border-2 border-dashed border-kitsuden-input bg-kitsuden-bg hover:border-kitsuden-accent/50 hover:bg-kitsuden-accent/5 transition-all flex flex-col items-center justify-center gap-3 group"
+            onclick={() => pickFile(path, update, "image/*")}
           >
-            <div
+            <span
               class="w-12 h-12 rounded-full bg-kitsuden-surface group-hover:bg-kitsuden-accent/10 flex items-center justify-center transition-colors"
             >
               <ImageIcon
                 class="w-6 h-6 text-kitsuden-subtle group-hover:text-kitsuden-accent transition-colors"
               />
-            </div>
-            <div class="text-center">
-              <p class="text-sm text-kitsuden-text font-medium">
+            </span>
+            <span class="text-center">
+              <span class="block text-sm text-kitsuden-text font-medium">
                 {t("dynamicForm.clickToUploadImage")}
-              </p>
-              <p class="text-xs text-kitsuden-subtle mt-1">{t("dynamicForm.pngJpgGifUpTo")}</p>
-            </div>
+              </span>
+              <span class="block text-xs text-kitsuden-subtle mt-1"
+                >{t("dynamicForm.pngJpgGifUpTo")}</span
+              >
+            </span>
           </button>
-
-          <!--
-            Choose one that is ALREADY uploaded.
-
-            Without this, the only way out was uploading the same image again every
-            time it was used in another entry — and the library filled up with
-            copies of the same logo with different names.
-          -->
-          <button
-            type="button"
-            class="btn-ghost btn-sm mt-2 w-full gap-1.5"
-            onclick={() => (fieldChoosing = field.key)}
+          <!-- Choose one that is ALREADY uploaded, instead of uploading the same logo again. -->
+          <Button
+            variant="ghost"
+            size="sm"
+            class="w-full"
+            onclick={() => (choosing = { path, set: update })}
           >
             <ImageIcon class="h-4 w-4" />
             {t("dynamicForm.chooseFromLibrary")}
-          </button>
+          </Button>
         {/if}
-
-        <!-- Hidden URL input for form validation -->
-        <input type="hidden" value={formData[field.key] || ""} />
-      {/if}
-
-      <!-- ── Select ── -->
-      {#if field.type === "select"}
-        <label class="label block">
-          {field.label}
-          {#if field.isRequired}<span class="text-kitsuden-accent-2">*</span>{/if}
-        </label>
-        <select
-          value={formData[field.key] || ""}
-          onchange={(e) => setField(field.key, e.currentTarget.value)}
-          class="select {fieldErrors[field.key]
-            ? 'border-kitsuden-accent-2-50 focus:ring-kitsuden-accent-2-30'
-            : ''}"
+      {:else if kind === "media"}
+        {#if uploadingStates[path]}
+          <div
+            class="flex items-center gap-3 rounded-lg border border-dashed border-kitsuden-accent/30 bg-kitsuden-accent/5 px-3 py-3 text-sm text-kitsuden-accent"
+            role="status"
+          >
+            <Loader2 class="w-4 h-4 animate-spin" />
+            {t("dynamicForm.uploading")}
+          </div>
+        {:else if value}
+          <div
+            class="flex items-center gap-3 rounded-lg border border-kitsuden-input bg-kitsuden-bg px-3 py-2"
+          >
+            <Paperclip class="w-4 h-4 shrink-0 text-kitsuden-subtle" />
+            <a
+              href={String(value)}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="min-w-0 flex-1 truncate text-sm text-kitsuden-accent hover:underline"
+              >{fileNameOf(value)}</a
+            >
+            <Button variant="ghost" size="sm" {id} onclick={() => pickFile(path, update)}>
+              <Upload class="w-3.5 h-3.5" />
+              {t("dynamicForm.replaceFile")}
+            </Button>
+            <Button
+              variant="danger-ghost"
+              size="icon"
+              ariaLabel={t("dynamicForm.removeFile")}
+              title={t("dynamicForm.removeFile")}
+              onclick={() => update(null)}
+            >
+              <X class="w-4 h-4" />
+            </Button>
+          </div>
+        {:else}
+          <Button variant="outline" class="w-full" {id} onclick={() => pickFile(path, update)}>
+            <Upload class="w-4 h-4" />
+            {t("dynamicForm.uploadFile")}
+          </Button>
+        {/if}
+      {:else if kind === "kpi"}
+        <!-- Calculated by the server from the other fields: shown, never typed. -->
+        <div
+          {id}
+          class="flex items-center gap-2 rounded-lg border border-dashed border-kitsuden-border bg-kitsuden-card px-3 py-2 text-sm"
+          role="note"
         >
-          <option value="">{t("common.select")}</option>
-          {#each field.options || [] as opt}
-            <option value={opt.value}>{opt.label}</option>
+          <Calculator class="w-4 h-4 shrink-0 text-kitsuden-subtle" />
+          {#if value !== null && value !== undefined && value !== ""}
+            <span class="font-mono text-kitsuden-text">{value}</span>
+          {/if}
+          <span class="text-kitsuden-subtle">{t("dynamicForm.calculated")}</span>
+        </div>
+      {:else if kind === "repeater"}
+        {@const rows = Array.isArray(value) ? value : []}
+        <div class="space-y-3" {id} role="group" aria-labelledby="{id}-label">
+          {#each rows as row, i (i)}
+            <fieldset class="rounded-lg border border-kitsuden-border bg-kitsuden-card p-3">
+              <legend class="sr-only">{t("dynamicForm.rowN", { n: i + 1 })}</legend>
+              <div class="mb-2 flex items-center justify-between">
+                <span class="text-xs font-medium text-kitsuden-subtle" aria-hidden="true"
+                  >{t("dynamicForm.rowN", { n: i + 1 })}</span
+                >
+                <Button
+                  variant="danger-ghost"
+                  size="icon"
+                  ariaLabel={t("dynamicForm.removeRow", { n: i + 1 })}
+                  title={t("dynamicForm.removeRow", { n: i + 1 })}
+                  onclick={() => update(rows.filter((_: unknown, j: number) => j !== i))}
+                >
+                  <Trash2 class="w-3.5 h-3.5" />
+                </Button>
+              </div>
+              <div class="space-y-3">
+                {#each field.subFields ?? [] as sub (sub.id ?? sub.key)}
+                  {@render fieldRow(
+                    sub,
+                    row?.[sub.key],
+                    (v) =>
+                      set(
+                        rows.map((r: Record<string, unknown>, j: number) =>
+                          j === i ? { ...r, [sub.key]: v } : r
+                        )
+                      ),
+                    `${path}.${i}.${sub.key}`
+                  )}
+                {/each}
+              </div>
+            </fieldset>
+          {:else}
+            <p class="text-sm text-kitsuden-subtle">{t("dynamicForm.noRows")}</p>
           {/each}
-        </select>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!!field.maxLength && rows.length >= field.maxLength}
+            onclick={() => update([...rows, emptyRow(field)])}
+          >
+            <Plus class="w-3.5 h-3.5" />
+            {t("dynamicForm.addRow")}
+          </Button>
+        </div>
+      {:else}
+        <!-- A type this form does not know: say so instead of dropping the field. -->
+        <div
+          {id}
+          class="flex items-start gap-2 rounded-lg border border-dashed border-kitsuden-amber/40 bg-kitsuden-amber/5 px-3 py-2 text-sm text-kitsuden-text-dim"
+          role="note"
+          data-testid="field-unsupported"
+        >
+          <CircleSlash class="mt-0.5 w-4 h-4 shrink-0 text-kitsuden-amber" />
+          <span>{t("common.fieldTypeNotEditable", { type: field.type })}</span>
+        </div>
       {/if}
 
-      <!-- ── JSON ── -->
-      {#if field.type === "json"}
-        <label class="label block">
-          {field.label}
-          {#if field.isRequired}<span class="text-kitsuden-accent-2">*</span>{/if}
-        </label>
-        <textarea
-          value={typeof formData[field.key] === "string"
-            ? formData[field.key]
-            : JSON.stringify(formData[field.key], null, 2)}
-          oninput={(e) => setJsonField(field.key, e.currentTarget.value)}
-          rows="4"
-          placeholder={'{ "key": "value" }'}
-          class="textarea font-mono text-xs {fieldErrors[field.key]
-            ? 'border-kitsuden-accent-2-50 focus:ring-kitsuden-accent-2-30'
-            : ''}"></textarea>
+      {#if error}
+        <p class="text-xs text-kitsuden-danger" id="{id}-error" role="alert">{error}</p>
+      {:else if field.helpText}
+        <p class="text-xs text-kitsuden-subtle" id="{id}-help">{field.helpText}</p>
       {/if}
+    {/if}
+  </div>
+{/snippet}
 
-      <!-- ── Rich Text ── -->
-      {#if field.type === "richtext"}
-        <label class="label block">
-          {field.label}
-          {#if field.isRequired}<span class="text-kitsuden-accent-2">*</span>{/if}
-        </label>
-        <textarea
-          value={formData[field.key] || ""}
-          oninput={(e) => setField(field.key, e.currentTarget.value)}
-          rows="5"
-          placeholder={field.helpText || t("dynamicForm.enterContentMarkdownSupported")}
-          class="textarea {fieldErrors[field.key]
-            ? 'border-kitsuden-accent-2-50 focus:ring-kitsuden-accent-2-30'
-            : ''}"></textarea>
-      {/if}
-
-      <!-- ── Relation ── -->
-      {#if field.type === "relation" && field.relation}
-        <RelationshipField
-          value={formData[field.key]}
-          onChange={(val) => setField(field.key, val)}
-          target={field.relation.target}
-          targetDatasetId={field.relation.targetDatasetId}
-          relationType={field.relation.type}
-          displayField={field.relation.displayField}
-          label={field.label}
-          helpText={field.helpText}
-          required={field.isRequired}
-          error={fieldErrors[field.key]}
-        />
-      {/if}
-
-      <!-- Error display (non-relation fields) -->
-      {#if field.type !== "relation" && field.type !== "boolean"}
-        {#if field.helpText && !fieldErrors[field.key]}
-          <p class="text-[10px] text-kitsuden-subtle">{field.helpText}</p>
-        {/if}
-        {#if fieldErrors[field.key]}
-          <p class="text-[10px] text-kitsuden-accent-2">{fieldErrors[field.key]}</p>
-        {/if}
-      {/if}
-    </div>
+<form
+  onsubmit={(e) => {
+    e.preventDefault();
+    handleSubmit();
+  }}
+  novalidate
+  class="space-y-5"
+>
+  {#each visibleFields as field (field.id ?? field.key)}
+    {@render fieldRow(field, formData[field.key], (v) => (formData[field.key] = v), field.key)}
   {/each}
 
   <!-- ── Actions ── -->
   <div class="flex items-center justify-between pt-4 border-t border-kitsuden-border">
     <div>
-      {#if Object.keys(fieldErrors).length > 0}
-        <p class="text-xs text-kitsuden-accent-2">
-          {t("dynamicForm.fieldSNeedAttention", { count: Object.keys(fieldErrors).length })}
+      {#if errorCount > 0}
+        <p class="text-xs text-kitsuden-danger" role="status">
+          {t("dynamicForm.fieldSNeedAttention", { count: errorCount })}
         </p>
       {/if}
     </div>
     <div class="flex items-center gap-3">
-      <button type="button" onclick={onCancel} class="btn-ghost">{t("common.cancel")}</button>
-      <button type="submit" disabled={submitting} class="btn-primary">
+      <Button variant="ghost" onclick={onCancel}>{t("common.cancel")}</Button>
+      <Button type="submit" disabled={submitting}>
         {#if submitting}
           <Loader2 class="w-4 h-4 animate-spin" />
         {:else}
           <Save class="w-4 h-4" />
         {/if}
         {submitLabel}
-      </button>
+      </Button>
     </div>
   </div>
 </form>
 
 <MediaPicker
-  open={fieldChoosing !== null}
+  open={choosing !== null}
   title={t("dynamicForm.chooseImage")}
   onSelect={(media) => {
-    if (fieldChoosing) setField(fieldChoosing, media.url);
-    fieldChoosing = null;
+    choosing?.set(media.url);
+    choosing = null;
   }}
-  onClose={() => (fieldChoosing = null)}
+  onClose={() => (choosing = null)}
 />
-
-<style>
-  .border-kitsuden-accent-2-50 {
-    border-color: rgb(255 45 111 / 0.5);
-  }
-</style>

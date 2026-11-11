@@ -25,6 +25,7 @@
   />
 -->
 <script lang="ts">
+  import { toast } from "svelte-sonner";
   import { t, localeFormat } from "$lib/i18n";
   import {
     MessageCircle,
@@ -218,7 +219,7 @@
       }
     } catch (err) {
       console.error("Failed to export image:", err);
-      alert(t("socialPreview.errorExportingMakeSure"));
+      toast.error(t("socialPreview.errorExportingMakeSure"));
     } finally {
       isExporting = false;
     }

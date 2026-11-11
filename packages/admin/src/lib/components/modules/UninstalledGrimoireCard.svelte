@@ -39,7 +39,7 @@
       <div class="flex items-center gap-2 flex-wrap">
         <p class="font-semibold text-kitsuden-text text-sm opacity-80">{kon.name}</p>
         <span
-          class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-kitsuden-subtle/20 text-kitsuden-subtle border border-kitsuden-border/50 flex items-center gap-1"
+          class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-kitsuden-subtle/20 text-kitsuden-subtle border border-kitsuden-border/50 flex items-center gap-1"
         >
           <Archive class="w-2.5 h-2.5" />
           {t("uninstalledGrimoireCard.uninstalled")}
@@ -60,14 +60,14 @@
           <div class="mt-1.5 flex flex-wrap gap-1">
             {#each kon.dataSummary.tables.slice(0, 3) as table}
               <span
-                class="text-[10px] px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border/50 text-kitsuden-subtle font-mono"
+                class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border/50 text-kitsuden-subtle font-mono"
               >
                 {table.name}: {formatNumber(table.rows)}
               </span>
             {/each}
             {#if kon.dataSummary.tables.length > 3}
               <span
-                class="text-[10px] px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border/50 text-kitsuden-subtle"
+                class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border/50 text-kitsuden-subtle"
               >
                 {t("common.more", { v: kon.dataSummary.tables.length - 3 })}
               </span>

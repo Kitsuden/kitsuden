@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t as tr, localeFormat } from "$lib/i18n";
   /**
    * BlogPostEditor.svelte — Complete Blog Post Editor with SEO
@@ -927,7 +928,7 @@
   }
 
   async function handleDelete() {
-    if (!confirm(tr("blogPostEditor.areYouSureYouWant"))) return;
+    if (!(await confirmDialog(tr("blogPostEditor.areYouSureYouWant")))) return;
 
     try {
       await api.deletePost(postId!);
@@ -1026,7 +1027,7 @@
             class={seoScore >= 80
               ? "text-kitsuden-green"
               : seoScore >= 50
-                ? "text-amber-400"
+                ? "text-kitsuden-amber"
                 : "text-kitsuden-accent-2"}
           >
             {tr("blogPostEditor.score", { seoScore })}
@@ -1083,9 +1084,9 @@
       exactly the class of loss this comes to prevent.
     -->
     <div
-      class="flex items-center justify-between gap-4 px-6 py-3 border-b border-amber-400/30 bg-amber-400/10 shrink-0"
+      class="flex items-center justify-between gap-4 px-6 py-3 border-b border-kitsuden-amber/30 bg-kitsuden-amber/10 shrink-0"
     >
-      <div class="flex items-center gap-2 text-sm text-amber-200">
+      <div class="flex items-center gap-2 text-sm text-kitsuden-amber">
         <History class="w-4 h-4 shrink-0" />
         <span>
           {tr("blogPostEditor.hasUnsavedChangesOf")}
@@ -1207,11 +1208,11 @@
                   placeholder={tr("blogPostEditor.enterAnEngagingTitle")}
                 />
                 <div class="flex justify-between mt-1.5">
-                  <span class="text-[10px] text-kitsuden-subtle">
+                  <span class="text-xs text-kitsuden-subtle">
                     {tr("blogPostEditor.characters", { titleCount: title.length })}
                   </span>
                   <span
-                    class="text-[10px] {title.length >= 30 && title.length <= 60
+                    class="text-xs {title.length >= 30 && title.length <= 60
                       ? 'text-kitsuden-green'
                       : 'text-kitsuden-accent-2'}"
                   >
@@ -1329,7 +1330,7 @@
                         {tr("blogPostEditor.uploadingImage")}
                       </span>
                     {:else}
-                      <span class="flex items-center gap-1.5 text-red-400">
+                      <span class="flex items-center gap-1.5 text-kitsuden-danger">
                         <AlertTriangle class="h-3.5 w-3.5 shrink-0" />
                         {uploadError}
                       </span>
@@ -1381,7 +1382,7 @@
                     <span class="text-sm text-kitsuden-subtle"
                       >{tr("blogPostEditor.clickToSelectFeaturedImage")}</span
                     >
-                    <span class="text-[10px] text-kitsuden-subtle/60"
+                    <span class="text-xs text-kitsuden-subtle"
                       >{tr("blogPostEditor.recommended1200x630px")}</span
                     >
                   </Button>
@@ -1404,13 +1405,13 @@
                   placeholder={tr("blogPostEditor.briefSummaryOfYourPost")}
                 />
                 <div class="flex justify-between mt-1.5">
-                  <span class="text-[10px] text-kitsuden-subtle">
+                  <span class="text-xs text-kitsuden-subtle">
                     {tr("blogPostEditor.characters2", { excerptCount: excerpt.length })}
                   </span>
                   <span
-                    class="text-[10px] {excerpt.length >= 120 && excerpt.length <= 160
+                    class="text-xs {excerpt.length >= 120 && excerpt.length <= 160
                       ? 'text-kitsuden-green'
-                      : 'text-amber-400'}"
+                      : 'text-kitsuden-amber'}"
                   >
                     {tr("blogPostEditor.optimal120160Chars")}
                   </span>
@@ -1456,7 +1457,7 @@
                     <Checkbox bind:checked={commentsEnabled} class="text-xs!"
                       >{tr("blogPostEditor.allowComments")}</Checkbox
                     >
-                    <p class="text-xs opacity-60 mt-1">
+                    <p class="text-xs text-kitsuden-subtle mt-1">
                       {commentsEnabled
                         ? tr("blogPostEditor.readersCanCommentAnd")
                         : tr("blogPostEditor.closedThreadAlreadyWritten")}
@@ -1480,7 +1481,7 @@
                         <option value={language.code}>{language.name}</option>
                       {/each}
                     </Select>
-                    <p class="text-xs opacity-60 mt-1">
+                    <p class="text-xs text-kitsuden-subtle mt-1">
                       {tr("blogPostEditor.theWebShowsAVersion")}
                     </p>
                   </div>
@@ -1496,7 +1497,7 @@
                       bind:value={translationGroupId}
                       placeholder={tr("blogPostEditor.emptyLooseArticle")}
                     />
-                    <p class="text-xs opacity-60 mt-1">
+                    <p class="text-xs text-kitsuden-subtle mt-1">
                       {tr("blogPostEditor.pasteHereTheGroupOf")}
                     </p>
                     {#if postId}
@@ -1520,7 +1521,7 @@
                       <option value="article">{tr("blogPostEditor.article")}</option>
                       <option value="tips">{tr("blogPostEditor.tipsNumberedListWithIndex")}</option>
                     </Select>
-                    <p class="text-xs opacity-60 mt-1">
+                    <p class="text-xs text-kitsuden-subtle mt-1">
                       {layout === "tips"
                         ? tr("blogPostEditor.eachH2TitleOfContent")
                         : tr("blogPostEditor.theUsualArticleTo")}
@@ -1589,7 +1590,7 @@
                           type="checkbox"
                           checked={categoryIds.includes(cat.id)}
                           onchange={() => toggleCategory(cat.id)}
-                          class="rounded-sm border-kitsuden-border"
+                          class="rounded-sm border-kitsuden-input"
                         />
                         <span>{cat.name}</span>
                         {#if cat.postCount}
@@ -1636,13 +1637,13 @@
                           type="checkbox"
                           checked={gameIds.includes(game.id)}
                           onchange={() => toggleGame(game.id)}
-                          class="rounded-sm border-kitsuden-border"
+                          class="rounded-sm border-kitsuden-input"
                         />
                         <span>{game.title}</span>
                       </label>
                     {/each}
                   </div>
-                  <p class="text-xs opacity-60 mt-2">
+                  <p class="text-xs text-kitsuden-subtle mt-2">
                     {tr("blogPostEditor.inHomeTheCard")}
                   </p>
                 {/if}
@@ -1700,7 +1701,7 @@
                       class={seoScore >= 80
                         ? "text-kitsuden-green"
                         : seoScore >= 50
-                          ? "text-amber-400"
+                          ? "text-kitsuden-amber"
                           : "text-kitsuden-accent-2"}
                     >
                       {seoScore}%
@@ -1711,7 +1712,7 @@
                       class="h-full rounded-full transition-all {seoScore >= 80
                         ? 'bg-kitsuden-green'
                         : seoScore >= 50
-                          ? 'bg-amber-400'
+                          ? 'bg-kitsuden-amber'
                           : 'bg-kitsuden-accent-2'}"
                       style="width: {seoScore}%"
                     ></div>
@@ -1771,7 +1772,7 @@
                 <div class="flex items-center justify-between mb-2">
                   <label class="label text-xs uppercase">{tr("blogPostEditor.metaTitle")}</label>
                   <span
-                    class="text-[10px] {(seoOverrides.metaTitle || title).length <= 60
+                    class="text-xs {(seoOverrides.metaTitle || title).length <= 60
                       ? 'text-kitsuden-green'
                       : 'text-kitsuden-accent-2'}"
                   >
@@ -1779,7 +1780,7 @@
                   </span>
                 </div>
                 <Input type="text" bind:value={seoOverrides.metaTitle} placeholder={title} />
-                <p class="text-[10px] text-kitsuden-subtle mt-1">
+                <p class="text-xs text-kitsuden-subtle mt-1">
                   {tr("blogPostEditor.leaveEmptyToUsePost")}
                 </p>
               </div>
@@ -1791,7 +1792,7 @@
                     >{tr("blogPostEditor.metaDescription")}</label
                   >
                   <span
-                    class="text-[10px] {(seoOverrides.metaDescription || excerpt).length <= 160
+                    class="text-xs {(seoOverrides.metaDescription || excerpt).length <= 160
                       ? 'text-kitsuden-green'
                       : 'text-kitsuden-accent-2'}"
                   >
@@ -1918,7 +1919,7 @@
                     <img src={mediaUrl(featuredImageUrl)} alt="" class="w-full h-48 object-cover" />
                   {:else}
                     <div class="w-full h-48 bg-kitsuden-border flex items-center justify-center">
-                      <Image class="w-12 h-12 text-kitsuden-subtle/50" />
+                      <Image class="w-12 h-12 text-kitsuden-subtle" />
                     </div>
                   {/if}
                   <div class="p-3">
@@ -1934,7 +1935,7 @@
                         excerpt ||
                         tr("blogPostEditor.noDescriptionProvided")}
                     </p>
-                    <p class="text-kitsuden-subtle/60 text-[10px] mt-2 uppercase tracking-wider">
+                    <p class="text-kitsuden-subtle text-xs mt-2 uppercase tracking-wider">
                       {tr("blogPostEditor.yoursiteCom")}
                     </p>
                   </div>
@@ -2018,7 +2019,7 @@
                   <Checkbox bind:checked={commentsEnabled} class="text-xs!"
                     >{tr("blogPostEditor.allowComments")}</Checkbox
                   >
-                  <p class="text-xs opacity-60 mt-1">
+                  <p class="text-xs text-kitsuden-subtle mt-1">
                     {commentsEnabled
                       ? tr("blogPostEditor.readersCanCommentAnd")
                       : tr("blogPostEditor.closedThreadAlreadyWritten")}
@@ -2102,7 +2103,7 @@
                   {/if}
                 </div>
               </div>
-              <p class="text-xs opacity-60">
+              <p class="text-xs text-kitsuden-subtle">
                 {tr("blogPostEditor.emptyTheGeneralGroupOf")}
               </p>
             </div>

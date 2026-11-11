@@ -28,7 +28,7 @@
         {#if currentTheme() === theme.id}
           <div class="absolute top-2 right-2">
             <span
-              class="px-2 py-1 text-[10px] font-medium bg-kitsuden-accent/10 text-kitsuden-accent rounded-full"
+              class="px-2 py-1 text-xs font-medium bg-kitsuden-accent/10 text-kitsuden-accent rounded-full"
             >
               {t("common.active")}
             </span>

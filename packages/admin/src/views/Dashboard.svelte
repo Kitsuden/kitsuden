@@ -364,10 +364,10 @@
   function getBorderHoverClass(color: string): string {
     const map: Record<string, string> = {
       cyan: "hover:border-kitsuden-accent/30",
-      green: "hover:border-green-500/30",
-      amber: "hover:border-amber-500/30",
-      purple: "hover:border-purple-500/30",
-      pink: "hover:border-pink-500/30",
+      green: "hover:border-kitsuden-green/30",
+      amber: "hover:border-kitsuden-amber/30",
+      purple: "hover:border-kitsuden-purple/30",
+      pink: "hover:border-kitsuden-accent-2/30",
     };
     return map[color] || "";
   }
@@ -492,7 +492,7 @@
                   {stat.value}
                 </p>
                 {#if !stat.hasData}
-                  <p class="text-xs text-kitsuden-subtle/60 mt-1">{t("dashboard.noData")}</p>
+                  <p class="text-xs text-kitsuden-subtle mt-1">{t("dashboard.noData")}</p>
                 {/if}
               </div>
               <div
@@ -733,19 +733,19 @@
     border-color: rgba(6, 182, 212, 0.3);
   }
 
-  .hover\:border-green-500\/30:hover {
+  .hover\:border-kitsuden-green\/30:hover {
     border-color: rgba(34, 197, 94, 0.3);
   }
 
-  .hover\:border-amber-500\/30:hover {
+  .hover\:border-kitsuden-amber\/30:hover {
     border-color: rgba(245, 158, 11, 0.3);
   }
 
-  .hover\:border-purple-500\/30:hover {
+  .hover\:border-kitsuden-purple\/30:hover {
     border-color: rgba(168, 85, 247, 0.3);
   }
 
-  .hover\:border-pink-500\/30:hover {
+  .hover\:border-kitsuden-accent-2\/30:hover {
     border-color: rgba(236, 72, 153, 0.3);
   }
 </style>

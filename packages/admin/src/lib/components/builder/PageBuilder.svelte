@@ -196,7 +196,7 @@
         <span class="text-xs font-semibold text-kitsuden-text"
           >{t("pageBuilder.layoutBuilder")}</span
         >
-        <span class="badge-cyan text-[9px]">{blocks.length} {t("pageBuilder.blocks")}</span>
+        <span class="badge-cyan text-xs">{blocks.length} {t("pageBuilder.blocks")}</span>
       </div>
       <button
         onclick={() => (panelMode = panelMode === "picker" ? null : "picker")}
@@ -206,7 +206,7 @@
 
     {#if blocks.length === 0}
       <div class="flex flex-col items-center justify-center py-24 text-kitsuden-subtle">
-        <LayoutGrid class="w-14 h-14 mb-5 text-kitsuden-muted" />
+        <LayoutGrid class="w-14 h-14 mb-5 text-kitsuden-subtle" />
         <p class="text-sm font-medium mb-1">{t("pageBuilder.noBlocksYet")}</p>
         <p class="text-xs mb-6">{t("pageBuilder.clickAddBlockOrDrag")}</p>
         <button onclick={() => (panelMode = "picker")} class="btn-primary btn-sm"
@@ -243,7 +243,7 @@
           >
             <div class="flex items-center gap-3 px-4 py-3">
               <GripVertical
-                class="w-4 h-4 text-kitsuden-muted shrink-0 opacity-0 group-hover:opacity-60 cursor-grab transition-opacity"
+                class="w-4 h-4 text-kitsuden-subtle shrink-0 opacity-0 group-hover:opacity-60 cursor-grab transition-opacity"
               />
               {#if true}
                 {@const BlockIcon = getBlockIcon(block.type)}
@@ -258,10 +258,10 @@
               {/if}
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-kitsuden-text">{getBlockLabel(block.type)}</p>
-                <p class="text-[10px] text-kitsuden-subtle truncate">{getBlockPreview(block)}</p>
+                <p class="text-xs text-kitsuden-subtle truncate">{getBlockPreview(block)}</p>
               </div>
               <span
-                class="text-[9px] font-mono text-kitsuden-subtle bg-kitsuden-bg rounded-sm px-1.5 py-0.5 shrink-0"
+                class="text-xs font-mono text-kitsuden-subtle bg-kitsuden-bg rounded-sm px-1.5 py-0.5 shrink-0"
                 >{idx + 1}</span
               >
               <div
@@ -324,14 +324,14 @@
             {:else if block.type === "callout"}
               <div
                 class="mx-4 mb-3 rounded-lg px-3 py-2 text-xs {block.data.variant === 'info'
-                  ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
+                  ? 'bg-kitsuden-info/10 border border-kitsuden-info/20 text-kitsuden-info'
                   : block.data.variant === 'warning'
-                    ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'
+                    ? 'bg-kitsuden-amber/10 border border-kitsuden-amber/20 text-kitsuden-amber'
                     : block.data.variant === 'success'
-                      ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+                      ? 'bg-kitsuden-green/10 border border-kitsuden-green/20 text-kitsuden-green'
                       : block.data.variant === 'danger'
-                        ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                        : 'bg-purple-500/10 border border-purple-500/20 text-purple-400'}"
+                        ? 'bg-kitsuden-danger/10 border border-kitsuden-danger/20 text-kitsuden-danger'
+                        : 'bg-kitsuden-purple/10 border border-kitsuden-purple/20 text-kitsuden-purple'}"
               >
                 {block.data.content?.slice(0, 80) || t("pageBuilder.emptyCallout")}{block.data
                   .content?.length > 80

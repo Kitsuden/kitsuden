@@ -59,7 +59,7 @@
 
 <div class="space-y-4" data-testid="queue-status">
   <div class="flex items-center gap-3">
-    <p class="text-xs text-zinc-500 flex-1">{t("systemQueue.help")}</p>
+    <p class="text-xs text-kitsuden-subtle flex-1">{t("systemQueue.help")}</p>
     <Button variant="ghost" size="sm" onclick={load}>
       <RefreshCw size={14} class="mr-1" />{t("systemTraces.refresh")}
     </Button>
@@ -67,44 +67,50 @@
 
   {#if loading && !status}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if status}
     <div class="flex flex-wrap gap-3 text-xs">
-      <span class="px-2 py-1 rounded-sm bg-zinc-900 border border-zinc-800 text-zinc-300"
+      <span
+        class="px-2 py-1 rounded-sm bg-kitsuden-card border border-kitsuden-border text-kitsuden-text"
         >{t("systemQueue.worker")}: {workerTag(status.worker)}</span
       >
-      <span class="px-2 py-1 rounded-sm bg-zinc-900 border border-zinc-800 text-zinc-300"
+      <span
+        class="px-2 py-1 rounded-sm bg-kitsuden-card border border-kitsuden-border text-kitsuden-text"
         >{t("systemQueue.listen")}: {status.listens
           ? t("systemQueue.yes")
           : t("systemQueue.no")}</span
       >
       {#each STATUSES as e}
         <span
-          class="px-2 py-1 rounded bg-zinc-900 border border-zinc-800 {e === 'dead' &&
+          class="px-2 py-1 rounded bg-kitsuden-card border border-kitsuden-border {e === 'dead' &&
           (status.totals.dead ?? 0) > 0
-            ? 'text-red-300'
-            : 'text-zinc-300'}">{statusLabel[e]()}: {status.totals[e] ?? 0}</span
+            ? 'text-kitsuden-danger'
+            : 'text-kitsuden-text'}">{statusLabel[e]()}: {status.totals[e] ?? 0}</span
         >
       {/each}
     </div>
 
     {#if Object.keys(status.byQueue).length > 0}
-      <div class="overflow-x-auto border border-zinc-800 rounded-lg">
+      <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
         <table class="w-full text-xs">
-          <thead class="text-zinc-500">
+          <thead class="text-kitsuden-subtle">
             <tr>
               <th class="text-left px-3 py-2">{t("systemQueue.colQueue")}</th>
               {#each STATUSES as e}<th class="text-right px-3 py-2">{statusLabel[e]()}</th>{/each}
             </tr>
           </thead>
-          <tbody class="divide-y divide-zinc-800/70">
+          <tbody class="divide-y divide-kitsuden-border/70">
             {#each Object.entries(status.byQueue) as [queue, account] (queue)}
               <tr>
-                <td class="px-3 py-1.5 font-mono text-zinc-200">{queue}</td>
-                {#each STATUSES as e}<td class="px-3 py-1.5 text-right text-zinc-400"
+                <td class="px-3 py-1.5 font-mono text-kitsuden-text">{queue}</td>
+                {#each STATUSES as e}<td class="px-3 py-1.5 text-right text-kitsuden-text-dim"
                     >{account[e] ?? 0}</td
                   >{/each}
               </tr>
@@ -114,13 +120,13 @@
       </div>
     {/if}
 
-    <h3 class="text-sm font-medium text-zinc-200">{t("systemQueue.deadTitle")}</h3>
+    <h3 class="text-sm font-medium text-kitsuden-text">{t("systemQueue.deadTitle")}</h3>
     {#if status.dead.length === 0}
-      <p class="text-sm text-zinc-500">{t("systemQueue.noDead")}</p>
+      <p class="text-sm text-kitsuden-subtle">{t("systemQueue.noDead")}</p>
     {:else}
-      <div class="overflow-x-auto border border-zinc-800 rounded-lg">
+      <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
         <table class="w-full text-xs">
-          <thead class="text-zinc-500">
+          <thead class="text-kitsuden-subtle">
             <tr>
               <th class="text-left px-3 py-2">{t("systemQueue.colQueue")}</th>
               <th class="text-left px-3 py-2">{t("systemQueue.colJob")}</th>
@@ -130,16 +136,21 @@
               <th class="px-3 py-2"></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-zinc-800/70">
+          <tbody class="divide-y divide-kitsuden-border/70">
             {#each status.dead as j (j.id)}
               <tr data-testid="dead-job">
-                <td class="px-3 py-1.5 font-mono text-zinc-300">{j.queue}</td>
-                <td class="px-3 py-1.5 font-mono text-zinc-300">{j.name}</td>
-                <td class="px-3 py-1.5 text-right text-zinc-400">{j.attempts}/{j.max_attempts}</td>
-                <td class="px-3 py-1.5 text-red-300 max-w-md truncate" title={j.last_error ?? ""}
-                  >{j.last_error ?? "—"}</td
+                <td class="px-3 py-1.5 font-mono text-kitsuden-text">{j.queue}</td>
+                <td class="px-3 py-1.5 font-mono text-kitsuden-text">{j.name}</td>
+                <td class="px-3 py-1.5 text-right text-kitsuden-text-dim"
+                  >{j.attempts}/{j.max_attempts}</td
                 >
-                <td class="px-3 py-1.5 whitespace-nowrap text-zinc-400">{date(j.finished_at)}</td>
+                <td
+                  class="px-3 py-1.5 text-kitsuden-danger max-w-md truncate"
+                  title={j.last_error ?? ""}>{j.last_error ?? "—"}</td
+                >
+                <td class="px-3 py-1.5 whitespace-nowrap text-kitsuden-text-dim"
+                  >{date(j.finished_at)}</td
+                >
                 <td class="px-3 py-1.5 whitespace-nowrap text-right">
                   <Button
                     variant="ghost"

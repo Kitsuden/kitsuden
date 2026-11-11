@@ -4,6 +4,9 @@
   import {
     Sword,
     Gamepad2,
+    LayoutDashboard,
+    Table2,
+    Boxes,
     Tv,
     FileText,
     Settings,
@@ -12,7 +15,6 @@
     ImageIcon,
     LogOut,
     Blocks,
-    BookOpen,
     Book,
     Castle,
     Trophy,
@@ -41,6 +43,9 @@
   import { moduleStore } from "$lib/states/modules.svelte";
   import { Alert, Avatar, Button, Sidebar, type SidebarGroup, type SidebarItem } from "$lib/tallao";
 
+  import { pageTitle } from "$lib/page";
+  import { navItemMatches, routeTitleKey } from "$lib/route-title";
+
   import GlobalSearch from "./GlobalSearch.svelte";
   import CurrentUser from "./CurrentUser.svelte";
 
@@ -66,6 +71,8 @@
     category?: "core" | "optional" | "grimoire"; // For grouping
     /** An editor sees it too (the API opens it to the team). */
     staff?: boolean;
+    /** Other paths that belong to this entry (`/dashboard`, `/datasets/…`). */
+    aliases?: string[];
   }
 
   // Navigation items organized by category and order
@@ -91,13 +98,15 @@
 
   const allNavItems: NavItem[] = [
     // ═══ DASHBOARD (Always first) ═══
-    { path: "/", label: t("common.dashboard"), icon: BookOpen },
+    { path: "/", label: t("common.dashboard"), icon: LayoutDashboard, aliases: ["/dashboard"] },
 
     // ═══ CORE KONS (Always shown first, can be toggled) ═══
     {
       path: "/g/kon-datasets",
       label: t("sidebarLayout.datasets"),
-      icon: Database,
+      icon: Table2,
+      // The dataset screens live outside /g: the list, the creator and each dataset's pages.
+      aliases: ["/datasets"],
       moduleKey: "kon-datasets",
       order: 0,
       category: "core",
@@ -223,7 +232,7 @@
     // External MCP servers: tool fingerprints and their human review (admin only)
     { path: "/mcp-servers", label: t("sidebarLayout.externalMcpServers"), icon: ServerCog },
     // Views generated from models (defineModel)
-    { path: "/models", label: t("sidebarLayout.models"), icon: Database, staff: true },
+    { path: "/models", label: t("sidebarLayout.models"), icon: Boxes, staff: true },
     // The «glass box» of requests and the Postgres queue (admin only)
     { path: "/traces", label: t("sidebarLayout.systemTraces"), icon: Workflow },
     { path: "/settings", label: t("common.settings"), icon: Settings },
@@ -329,10 +338,7 @@
     window.location.href = "/";
   }
 
-  function isActive(path: string): boolean {
-    if (path === "/") return currentPath === "/";
-    return currentPath.startsWith(path);
-  }
+  const isActive = (item: NavItem): boolean => navItemMatches(item, currentPath);
 
   /** Every visible entry by its path (the Sidebar item's id), to draw its icon. */
   const NAV_BY_PATH = $derived(
@@ -345,7 +351,7 @@
    */
   const currentNavPath = $derived(
     [...visibleNavItems, ...visibleBottomItems]
-      .filter((n) => isActive(n.path))
+      .filter((n) => isActive(n))
       .sort((a, b) => b.path.length - a.path.length)[0]?.path
   );
 
@@ -403,9 +409,29 @@
     }
   });
 
+  /**
+   * The document title: "<Page> · Kitsuden". The name comes from the route; a kon's page
+   * (/g/<kon>) takes the label of its menu entry. A detail page that knows a better name
+   * (an agent, a dataset) sets its own <title>, which wins because it renders later.
+   */
+  const routeName = $derived.by(() => {
+    const key = routeTitleKey(currentPath);
+    if (key) return t(key);
+    const entry = currentNavPath ? NAV_BY_PATH.get(currentNavPath) : undefined;
+    if (entry) return entry.label;
+    const kon = currentPath.startsWith("/g/") ? currentPath.split("/")[2] : "";
+    return kon ? kon.replace(/^kon-/, "") : "";
+  });
+
   // Slot content
   const { children }: { children?: import("svelte").Snippet } = $props();
 </script>
+
+<svelte:head>
+  <title>{pageTitle(routeName)}</title>
+</svelte:head>
+
+<a class="kitsuden-skip-link" href="#main-content">{t("sidebarLayout.skipToContent")}</a>
 
 <CommandPalette navItems={visibleNavItems} bottomNavItems={visibleBottomItems} />
 
@@ -448,7 +474,7 @@
         -->
         {#if isAdmin && moduleStore.error}
           <div
-            class="mb-2 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-kitsuden-text {isCollapsed
+            class="mb-2 rounded-lg border border-kitsuden-amber/30 bg-kitsuden-amber/10 text-xs text-kitsuden-text {isCollapsed
               ? 'p-1 flex justify-center'
               : 'px-3 py-2'}"
             role="alert"
@@ -463,13 +489,11 @@
               onclick={() => moduleStore.fetchModules()}
               disabled={moduleStore.loading}
               title={isCollapsed ? t("sidebarLayout.unloadedModules") : undefined}
-              ariaLabel={isCollapsed ? t("sidebarLayout.reintentar") : undefined}
+              ariaLabel={isCollapsed ? t("common.retry") : undefined}
             >
               <RefreshCw class="w-3.5 h-3.5 {moduleStore.loading ? 'animate-spin' : ''}" />
               {#if !isCollapsed}
-                {moduleStore.loading
-                  ? t("sidebarLayout.reintentando")
-                  : t("sidebarLayout.reintentar")}
+                {moduleStore.loading ? t("common.retrying") : t("common.retry")}
               {/if}
             </Button>
           </div>
@@ -489,7 +513,7 @@
             {#if !isCollapsed}
               <div class="flex-1 min-w-0">
                 <p class="text-xs font-medium text-kitsuden-text truncate">{user.name}</p>
-                <p class="text-[10px] text-kitsuden-subtle truncate">{user.email}</p>
+                <p class="text-xs text-kitsuden-subtle truncate">{user.email}</p>
               </div>
               <Button
                 variant="danger-ghost"
@@ -517,8 +541,11 @@
     {/if}
   {/snippet}
 
-  <!-- Main Content -->
-  <main class="flex-1 overflow-y-auto bg-kitsuden-bg">
+  <!--
+    The scroller holds the top bar and the page: the bar is a banner landmark, sibling of
+    <main> (it used to sit inside it), and stays sticky over the content.
+  -->
+  <div class="flex-1 min-w-0 overflow-y-auto bg-kitsuden-bg" data-testid="page-scroller">
     <!-- Top bar -->
     <header
       class="sticky top-0 z-30 flex items-center justify-between h-14 px-6 border-b border-kitsuden-border"
@@ -531,9 +558,10 @@
       -->
       <div class="blur-topbar" aria-hidden="true"><span></span><span></span><span></span></div>
       <div class="flex items-center gap-4 flex-1 min-w-0">
-        <h1 class="text-sm font-semibold text-kitsuden-text shrink-0">
+        <!-- Not a heading: each page owns the only <h1>. -->
+        <p class="text-sm font-semibold text-kitsuden-text shrink-0 hidden sm:block">
           {t("sidebarLayout.panel")}
-        </h1>
+        </p>
         <GlobalSearch
           navItems={visibleNavItems}
           bottomNavItems={visibleBottomItems}
@@ -560,7 +588,8 @@
       </div>
     </header>
 
-    <!--
+    <main id="main-content" tabindex="-1" class="outline-hidden">
+      <!--
       Pending restart notice.
 
       Enabling a kon creates its tables on the fly, but its API routes are
@@ -571,23 +600,24 @@
       It goes in the layout and not next to the switch because whoever enables a kon
       usually navigates right afterwards; there the notice would have been lost.
     -->
-    {#if moduleStore.restartWarning}
-      <div class="mx-6 mt-6">
-        <Alert
-          variant="warning"
-          onDismiss={() => (moduleStore.restartWarning = null)}
-          dismissLabel={t("sidebarLayout.closeNotification")}
-        >
-          {moduleStore.restartWarning}
-        </Alert>
-      </div>
-    {/if}
+      {#if moduleStore.restartWarning}
+        <div class="mx-6 mt-6">
+          <Alert
+            variant="warning"
+            onDismiss={() => (moduleStore.restartWarning = null)}
+            dismissLabel={t("sidebarLayout.closeNotification")}
+          >
+            {moduleStore.restartWarning}
+          </Alert>
+        </div>
+      {/if}
 
-    <!-- Page content -->
-    <div class="p-6">
-      {@render children?.()}
-    </div>
-  </main>
+      <!-- Page content -->
+      <div class="p-6">
+        {@render children?.()}
+      </div>
+    </main>
+  </div>
 </div>
 
 <style>

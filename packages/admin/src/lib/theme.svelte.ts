@@ -34,7 +34,11 @@ export const themes: ThemeConfig[] = [
       "--kitsuden-surface": "30 30 46",
       "--kitsuden-border": "49 50 68",
       "--kitsuden-muted": "69 71 90",
-      "--kitsuden-subtle": "88 91 112",
+      "--kitsuden-subtle": "152 158 182",
+      "--kitsuden-input": "108 112 134",
+      "--kitsuden-on-accent": "17 17 27",
+      "--kitsuden-on-status": "17 17 27",
+      "--kitsuden-info": "137 180 250",
       "--kitsuden-text": "205 214 244",
       "--kitsuden-text-dim": "166 173 200",
       "--kitsuden-green": "166 227 161",
@@ -51,26 +55,35 @@ export const themes: ThemeConfig[] = [
     description: tr("theme.warmSoothingLightMode"),
     preview: "linear-gradient(135deg, #eff1f5, #8839ef)",
     cssVars: {
-      "--kitsuden-primary": "30 102 245",
-      "--kitsuden-accent": "30 102 245",
-      "--kitsuden-secondary": "210 15 57",
-      "--kitsuden-accent-2": "210 15 57",
-      "--kitsuden-purple": "136 57 239",
+      // The tones that colour text are darker than Catppuccin Latte's: the originals are
+      // 2.7–4.3:1 on this background, and a status chip puts the colour on its own 10–20%
+      // tint, which needs more still. These hold 4.5:1 there.
+      "--kitsuden-primary": "25 80 192",
+      "--kitsuden-accent": "25 80 192",
+      "--kitsuden-secondary": "171 15 44",
+      "--kitsuden-accent-2": "171 15 44",
+      "--kitsuden-purple": "112 45 201",
 
       "--kitsuden-bg": "239 241 245",
       "--kitsuden-card": "255 255 255",
       "--kitsuden-surface": "230 233 239",
-      "--kitsuden-border": "188 192 204",
+      "--kitsuden-border": "204 208 218",
       "--kitsuden-muted": "172 176 190",
-      "--kitsuden-subtle": "140 143 161",
+      "--kitsuden-subtle": "88 91 110",
+      "--kitsuden-input": "124 127 147",
+      "--kitsuden-on-accent": "255 255 255",
+      "--kitsuden-on-status": "255 255 255",
+      "--kitsuden-info": "25 80 192",
       "--kitsuden-text": "76 79 105",
-      "--kitsuden-text-dim": "92 95 119",
-      "--kitsuden-green": "64 160 43",
-      "--kitsuden-amber": "223 142 29",
-      "--kitsuden-yellow": "228 147 40",
-      "--kitsuden-danger": "210 15 57",
+      "--kitsuden-text-dim": "84 87 108",
+      "--kitsuden-green": "30 102 33",
+      "--kitsuden-amber": "126 79 0",
+      "--kitsuden-yellow": "126 79 0",
+      "--kitsuden-danger": "171 15 44",
       "--kitsuden-accent-dim": "47 87 183",
-      "--kitsuden-accent-hover": "90 140 220",
+      // Darker than the accent, not lighter: on this theme the hover of a filled button
+      // carries a white label, and hovered accent text sits on a light page.
+      "--kitsuden-accent-hover": "20 66 160",
     },
   },
 ];
@@ -136,6 +149,9 @@ function applyTheme(theme: Partial<ThemeConfig>) {
   if (theme.primary) {
     root.style.setProperty("--kitsuden-primary", theme.primary);
     root.style.setProperty("--kitsuden-accent", theme.primary);
+    if (/^[\d\s]+$/.test(theme.primary)) {
+      root.style.setProperty("--kitsuden-on-accent", onColorFor(theme.primary));
+    }
   }
 
   if (theme.secondary) {
@@ -199,6 +215,36 @@ function shade(triplet: string, factor: number): string {
     .join(" ");
 }
 
+/** WCAG relative luminance of an "r g b" triplet. */
+export function luminance(triplet: string): number {
+  const [r, g, b] = triplet
+    .trim()
+    .split(/\s+/)
+    .map((n) => {
+      const v = Number(n) / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** WCAG contrast ratio between two "r g b" triplets (1 to 21). */
+export function contrastRatio(a: string, b: string): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+const ON_LIGHT = "255 255 255";
+const ON_DARK = "9 9 11";
+
+/**
+ * The text colour for a solid fill of `triplet`: white or near-black, whichever reads
+ * better. A grimoire picks any accent; the label of a primary button has to follow it.
+ */
+export function onColorFor(triplet: string): string {
+  return contrastRatio(triplet, ON_LIGHT) >= contrastRatio(triplet, ON_DARK) ? ON_LIGHT : ON_DARK;
+}
+
 const SAFE_VAR_KEY = /^--kitsuden-[a-z0-9-]+$/;
 const SAFE_VAR_VALUE = /^(#[0-9a-fA-F]{3,8}|[\d\s.%]+)$/;
 
@@ -239,6 +285,7 @@ export async function applyGrimoireTheme(): Promise<void> {
       root.style.setProperty("--kitsuden-accent", primary);
       root.style.setProperty("--kitsuden-accent-dim", shade(primary, 0.82));
       root.style.setProperty("--kitsuden-accent-hover", shade(primary, 1.18));
+      root.style.setProperty("--kitsuden-on-accent", onColorFor(primary));
       if (theme.primary_color) {
         root.style.setProperty("--kitsuden-color-primary", theme.primary_color);
       }
@@ -275,6 +322,7 @@ export function resetGrimoireTheme(): void {
     "--kitsuden-accent",
     "--kitsuden-accent-dim",
     "--kitsuden-accent-hover",
+    "--kitsuden-on-accent",
     "--kitsuden-color-primary",
     "--kitsuden-secondary",
     "--kitsuden-accent-2",

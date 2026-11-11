@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t, localeFormat } from "$lib/i18n";
   import { History, Trash2, RotateCcw } from "lucide-svelte";
 
@@ -19,8 +20,8 @@
     onRestore?.();
   }
 
-  function handleDeleteAll() {
-    if (confirm(t("versionHistory.deleteAllAutosavedVersionsFor"))) {
+  async function handleDeleteAll() {
+    if (await confirmDialog(t("versionHistory.deleteAllAutosavedVersionsFor"))) {
       autosaveStore.deleteAllVersions();
     }
   }
@@ -34,7 +35,7 @@
     </h3>
     {#if autosaveStore.versions.length > 0}
       <button
-        class="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors"
+        class="text-xs text-kitsuden-danger hover:text-kitsuden-danger flex items-center gap-1 transition-colors"
         onclick={handleDeleteAll}
       >
         <Trash2 class="w-3 h-3" />
@@ -57,7 +58,7 @@
             <p class="text-xs font-medium text-kitsuden-text">
               {t("versionHistory.version", { i: autosaveStore.versions.length - i })}
             </p>
-            <p class="text-[10px] text-kitsuden-text-dim truncate">
+            <p class="text-xs text-kitsuden-text-dim truncate">
               {formatTime(version.timestamp)}
             </p>
           </div>

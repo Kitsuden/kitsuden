@@ -112,7 +112,7 @@
 <div class="space-y-4">
   <div class="flex items-center justify-between">
     <div>
-      <h2 class="text-xl font-bold text-kitsuden-text">{t("blocksView.pages")}</h2>
+      <h1 class="text-xl font-bold text-kitsuden-text">{t("blocksView.pages")}</h1>
       <p class="text-sm text-kitsuden-text-dim mt-0.5">
         {t("blocksView.manageYourLandingPagesAnd")}
       </p>

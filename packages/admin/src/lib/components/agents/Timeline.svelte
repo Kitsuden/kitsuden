@@ -76,22 +76,22 @@
   const stepConfig: Record<Step["stepType"], { icon: any; color: string; label: string }> = {
     llm_call: {
       icon: MessageSquare,
-      color: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+      color: "text-kitsuden-info bg-kitsuden-info/10 border-kitsuden-info/20",
       label: t("timeline.llmCall"),
     },
     tool_call: {
       icon: Wrench,
-      color: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+      color: "text-kitsuden-amber bg-kitsuden-amber/10 border-kitsuden-amber/20",
       label: t("timeline.toolCall"),
     },
     tool_result: {
       icon: Wrench,
-      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      color: "text-kitsuden-green bg-kitsuden-green/10 border-kitsuden-green/20",
       label: t("timeline.toolResult"),
     },
     thinking: {
       icon: Brain,
-      color: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+      color: "text-kitsuden-purple bg-kitsuden-purple/10 border-kitsuden-purple/20",
       label: t("timeline.thinking"),
     },
     retrieval: {
@@ -101,27 +101,27 @@
     },
     memory_read: {
       icon: Brain,
-      color: "text-pink-400 bg-pink-500/10 border-pink-500/20",
+      color: "text-kitsuden-accent-2 bg-kitsuden-accent-2/10 border-kitsuden-accent-2/20",
       label: t("timeline.memoryRead"),
     },
     memory_write: {
       icon: Brain,
-      color: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+      color: "text-kitsuden-danger bg-kitsuden-danger/10 border-kitsuden-danger/20",
       label: t("timeline.memoryWrite"),
     },
     user_input: {
       icon: MessageSquare,
-      color: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20",
+      color: "text-kitsuden-text-dim bg-kitsuden-subtle/10 border-kitsuden-subtle/20",
       label: t("timeline.userInput"),
     },
     system: {
       icon: Brain,
-      color: "text-slate-400 bg-slate-500/10 border-slate-500/20",
+      color: "text-kitsuden-text-dim bg-kitsuden-subtle/10 border-kitsuden-subtle/20",
       label: t("common.system"),
     },
     error: {
       icon: AlertCircle,
-      color: "text-red-400 bg-red-500/10 border-red-500/20",
+      color: "text-kitsuden-danger bg-kitsuden-danger/10 border-kitsuden-danger/20",
       label: t("common.error"),
     },
   };
@@ -136,14 +136,14 @@
     <div class="relative">
       <!-- Connector line -->
       {#if i < steps.length - 1}
-        <div class="absolute left-5 top-10 bottom-[-12px] w-px bg-zinc-800"></div>
+        <div class="absolute left-5 top-10 bottom-[-12px] w-px bg-kitsuden-border"></div>
       {/if}
 
       <!-- Step card -->
       <div
         class={cn(
           "rounded-lg border transition-all duration-200",
-          "bg-zinc-900/50 hover:bg-zinc-900",
+          "bg-kitsuden-card/50 hover:bg-kitsuden-card",
           config.color,
           isExpanded && "ring-1 ring-current"
         )}
@@ -159,12 +159,12 @@
 
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
-              <span class="font-medium text-zinc-100">{config.label}</span>
+              <span class="font-medium text-kitsuden-text">{config.label}</span>
               {#if step.toolName}
                 <Badge variant="default" size="sm">{step.toolName}</Badge>
               {/if}
             </div>
-            <div class="flex items-center gap-3 mt-0.5 text-xs text-zinc-500">
+            <div class="flex items-center gap-3 mt-0.5 text-xs text-kitsuden-subtle">
               <span>{t("timeline.step")} {step.stepOrder + 1}</span>
               {#if step.durationMs}
                 <span>• {formatDuration(step.durationMs)}</span>
@@ -175,7 +175,7 @@
             </div>
           </div>
 
-          <div class="text-zinc-500">
+          <div class="text-kitsuden-subtle">
             {#if isExpanded}
               <ChevronDown size={18} />
             {:else}
@@ -191,30 +191,32 @@
               <!-- Content/Reasoning -->
               {#if step.content}
                 <div>
-                  <span class="text-xs font-medium text-zinc-500 uppercase"
+                  <span class="text-xs font-medium text-kitsuden-subtle uppercase"
                     >{t("common.content")}</span
                   >
-                  <p class="mt-1 text-sm text-zinc-300 whitespace-pre-wrap">{step.content}</p>
+                  <p class="mt-1 text-sm text-kitsuden-text whitespace-pre-wrap">{step.content}</p>
                 </div>
               {/if}
 
               {#if step.reasoning}
                 <div>
-                  <span class="text-xs font-medium text-zinc-500 uppercase"
+                  <span class="text-xs font-medium text-kitsuden-subtle uppercase"
                     >{t("timeline.reasoning")}</span
                   >
-                  <p class="mt-1 text-sm text-zinc-300 whitespace-pre-wrap">{step.reasoning}</p>
+                  <p class="mt-1 text-sm text-kitsuden-text whitespace-pre-wrap">
+                    {step.reasoning}
+                  </p>
                 </div>
               {/if}
 
               <!-- Tool Input -->
               {#if step.toolInput}
                 <div>
-                  <span class="text-xs font-medium text-zinc-500 uppercase"
+                  <span class="text-xs font-medium text-kitsuden-subtle uppercase"
                     >{t("timeline.toolInput")}</span
                   >
                   <pre
-                    class="mt-1 p-2 bg-zinc-950 rounded-lg text-xs text-zinc-300 overflow-x-auto">{JSON.stringify(
+                    class="mt-1 p-2 bg-kitsuden-bg rounded-lg text-xs text-kitsuden-text overflow-x-auto">{JSON.stringify(
                       step.toolInput,
                       null,
                       2
@@ -225,11 +227,11 @@
               <!-- Tool Output -->
               {#if step.toolOutput}
                 <div>
-                  <span class="text-xs font-medium text-zinc-500 uppercase"
+                  <span class="text-xs font-medium text-kitsuden-subtle uppercase"
                     >{t("timeline.toolOutput")}</span
                   >
                   <pre
-                    class="mt-1 p-2 bg-zinc-950 rounded-lg text-xs text-zinc-300 overflow-x-auto">{JSON.stringify(
+                    class="mt-1 p-2 bg-kitsuden-bg rounded-lg text-xs text-kitsuden-text overflow-x-auto">{JSON.stringify(
                       step.toolOutput,
                       null,
                       2
@@ -240,9 +242,10 @@
               <!-- Error -->
               {#if step.errorMessage}
                 <div>
-                  <span class="text-xs font-medium text-red-500 uppercase">{t("common.error")}</span
+                  <span class="text-xs font-medium text-kitsuden-danger uppercase"
+                    >{t("common.error")}</span
                   >
-                  <p class="mt-1 text-sm text-red-400">{step.errorMessage}</p>
+                  <p class="mt-1 text-sm text-kitsuden-danger">{step.errorMessage}</p>
                 </div>
               {/if}
             </div>

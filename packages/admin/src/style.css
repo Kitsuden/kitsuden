@@ -10,6 +10,10 @@ layer(base);
   --color-kitsuden-border: rgb(var(--kitsuden-border));
   --color-kitsuden-muted: rgb(var(--kitsuden-muted));
   --color-kitsuden-subtle: rgb(var(--kitsuden-subtle));
+  --color-kitsuden-input: rgb(var(--kitsuden-input));
+  --color-kitsuden-on-accent: rgb(var(--kitsuden-on-accent));
+  --color-kitsuden-on-status: rgb(var(--kitsuden-on-status));
+  --color-kitsuden-info: rgb(var(--kitsuden-info));
   --color-kitsuden-text: rgb(var(--kitsuden-text));
   --color-kitsuden-text-dim: rgb(var(--kitsuden-text-dim));
   --color-kitsuden-accent: rgb(var(--kitsuden-accent));
@@ -102,7 +106,14 @@ layer(base);
     --kitsuden-surface: 30 30 46;
     --kitsuden-border: 39 39 42;
     --kitsuden-muted: 63 63 70;
-    --kitsuden-subtle: 82 82 91;
+    /* Secondary text and placeholders: 4.5:1 on bg, card and the hover tone (WCAG 1.4.3). */
+    --kitsuden-subtle: 144 144 154;
+    /* The boundary of a form control: 3:1 against bg and card (WCAG 1.4.11). */
+    --kitsuden-input: 104 104 114;
+    /* Text on a solid accent / status fill. Dark here: white on this violet is 3.9:1. */
+    --kitsuden-on-accent: 9 9 11;
+    --kitsuden-on-status: 9 9 11;
+    --kitsuden-info: 96 165 250;
     --kitsuden-text: 250 250 250;
     --kitsuden-text-dim: 161 161 170;
     --kitsuden-accent: 168 85 247;
@@ -114,7 +125,8 @@ layer(base);
     --kitsuden-amber: 255 171 0;
     --kitsuden-yellow: 255 214 0;
     --kitsuden-purple: 179 136 255;
-    --kitsuden-danger: 255 45 111;
+    /* Lighter than accent-2 (the brand crimson): as text on its own tint that one is 4.0:1. */
+    --kitsuden-danger: 255 96 147;
     --kitsuden-font-sans: "Inter", system-ui, sans-serif;
     --kitsuden-font-mono: "JetBrains Mono", "Fira Code", monospace;
   }
@@ -131,19 +143,24 @@ layer(base);
   :root {
     --ta-accent: var(--kitsuden-accent);
     --ta-accent-hover: var(--kitsuden-accent-hover);
-    --ta-on-accent: 255 255 255;
+    --ta-on-accent: var(--kitsuden-on-accent);
+    /* tallao darkens its accent fill 12% for a white label. The label here follows the theme
+       (--kitsuden-on-accent), so the fill is the accent itself and the hover its hover tone:
+       the pair the palette test holds to 4.5:1. */
+    --ta-accent-fill: rgb(var(--kitsuden-accent));
+    --ta-accent-fill-hover: rgb(var(--kitsuden-accent-hover));
     --ta-accent-dim: var(--kitsuden-accent-dim);
     --ta-accent-2: var(--kitsuden-accent-2);
     --ta-accent-2-dim: var(--kitsuden-accent-2-dim);
-    --ta-on-accent-2: 255 255 255;
+    --ta-on-accent-2: var(--kitsuden-on-accent);
     --ta-success: var(--kitsuden-green);
     --ta-warning: var(--kitsuden-amber);
-    --ta-info: 96 165 250;
+    --ta-info: var(--kitsuden-info);
     --ta-danger: var(--kitsuden-danger);
-    --ta-on-success: 9 9 11;
-    --ta-on-warning: 9 9 11;
-    --ta-on-info: 9 9 11;
-    --ta-on-danger: 9 9 11;
+    --ta-on-success: var(--kitsuden-on-status);
+    --ta-on-warning: var(--kitsuden-on-status);
+    --ta-on-info: var(--kitsuden-on-status);
+    --ta-on-danger: var(--kitsuden-on-status);
     --ta-bg: var(--kitsuden-bg);
     --ta-surface: var(--kitsuden-card);
     --ta-elevated: var(--kitsuden-border);
@@ -188,7 +205,7 @@ layer(base);
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-[#3f3f4680] rounded-full;
+    @apply bg-kitsuden-muted/50 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -200,4 +217,90 @@ layer(base);
   }
 }
 
-/* Trigger HMR 1 */
+/**
+ * Form controls get the 3:1 boundary token. tallao paints its fields with `--ta-border`
+ * (the card-border tone, 1.3:1), and its copy is not edited by hand, so the rule lives here,
+ * unlayered and one class more specific than tallao's scoped selector. Focus keeps tallao's
+ * accent border.
+ */
+:root .ta-input:not(:focus),
+:root .ta-textarea:not(:focus),
+:root .ta-select:not(:focus),
+:root .ta-number-field:not(:focus),
+:root .ta-switch-track[aria-checked="false"] {
+  border-color: rgb(var(--kitsuden-input));
+}
+
+/* Skip link: the first stop of the page, visible only while focused. */
+.kitsuden-skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -4rem;
+  z-index: 100;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(var(--kitsuden-on-accent));
+  background: rgb(var(--kitsuden-accent));
+}
+.kitsuden-skip-link:focus {
+  top: 0.75rem;
+  outline: 2px solid rgb(var(--kitsuden-text));
+  outline-offset: 2px;
+}
+
+/**
+ * One visible focus ring for the keyboard, everywhere.
+ *
+ * Many controls drew their own (a 15% tint, or nothing after `outline-hidden`), so the
+ * top-bar search, the language select and the dashboard cards gave no sign of focus.
+ * Unlayered and with `:where()`: it wins over the utilities without out-ranking a
+ * component that draws a deliberate ring of its own. tallao's fields reset `outline` in
+ * their scoped styles, so they are named below.
+ */
+:where(
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role="button"],
+  [role="tab"],
+  [role="switch"],
+  [role="menuitem"],
+  [role="option"],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 2px solid rgb(var(--kitsuden-accent));
+  outline-offset: 2px;
+}
+:root .ta-input:focus-visible,
+:root .ta-textarea:focus-visible,
+:root .ta-select:focus-visible,
+:root .ta-number-field:focus-visible {
+  outline: 2px solid rgb(var(--kitsuden-accent));
+  outline-offset: 1px;
+}
+
+/* Placeholders at 4.5:1 wherever a field does not set its own. */
+::placeholder {
+  color: rgb(var(--kitsuden-subtle));
+  opacity: 1;
+}
+
+@layer base {
+  /* A native control without a border colour of its own still gets the 3:1 boundary. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    border-color: rgb(var(--kitsuden-input));
+  }
+}
+
+/* tallao draws avatar initials in white on hsl(tone 45% 40%): 3.8:1 on the green tones.
+   The same tone a step darker holds 4.5:1 on every hue. */
+:root .ta-avatar {
+  background: hsl(var(--ta-avatar-tone) 45% 32%);
+}

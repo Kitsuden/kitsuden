@@ -1,4 +1,6 @@
 <script lang="ts">
+  import StateMessage from "$lib/components/feedback/StateMessage.svelte";
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t as tr } from "$lib/i18n";
   /**
    * KITSUDEN Vault — Dynamic schemas panel (KITSUDEN architecture §3)
@@ -105,9 +107,13 @@
     expanded = next;
   }
 
+  /** The vault could not be read at all: shown instead of "no collections", with Retry. */
+  let loadError = $state<string | null>(null);
+
   async function fetchCollections() {
     loading = true;
     error = null;
+    loadError = null;
     try {
       const res = await fetch(`${API_URL}/api/admin/vault`, { credentials: "include" });
       if (res.status === 503) {
@@ -119,7 +125,7 @@
       vaultDisabled = false;
       collections = data.collections ?? [];
     } catch (e) {
-      error = tr("vaultView.couldNotLoadVault", { v: (e as Error).message });
+      loadError = (e as Error).message;
     } finally {
       loading = false;
     }
@@ -193,7 +199,7 @@
   }
 
   async function dropColumn(collection: string, column: string) {
-    if (!confirm(tr("vaultView.removeVaultColumn", { column, collection }))) return;
+    if (!(await confirmDialog(tr("vaultView.removeVaultColumn", { column, collection })))) return;
     error = null;
     try {
       const res = await fetch(
@@ -284,10 +290,17 @@
       <RefreshCw class="w-4 h-4 animate-spin mr-2" />
       {tr("vaultView.loadingVault")}
     </div>
+  {:else if loadError}
+    <StateMessage
+      kind="error"
+      title={tr("vaultView.loadFailed")}
+      description={loadError}
+      onRetry={fetchCollections}
+    />
   {:else if vaultDisabled}
     <!-- Feature flag off: discovery screen -->
     <div class="rounded-xl border border-dashed border-kitsuden-border p-8 text-center space-y-3">
-      <Archive class="w-10 h-10 text-kitsuden-muted mx-auto" />
+      <Archive class="w-10 h-10 text-kitsuden-subtle mx-auto" />
       <h2 class="text-kitsuden-text font-medium">{tr("vaultView.kitsudenVaultIsDisabled")}</h2>
       <p class="text-sm text-kitsuden-subtle max-w-lg mx-auto">
         {tr("vaultView.vaultCreatesPostgresqlTables")} <strong>{tr("vaultView.real")}</strong>
@@ -312,7 +325,7 @@
             id="vault-name"
             class="w-full md:w-72 px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border {newCollection ===
               '' || NAME_RE.test(newCollection)
-              ? 'border-kitsuden-border'
+              ? 'border-kitsuden-input'
               : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
             placeholder={tr("vaultView.exampleCollection")}
             bind:value={newCollection}
@@ -323,20 +336,20 @@
           <div class="text-xs text-kitsuden-subtle flex items-center gap-2">
             <Columns3 class="w-4 h-4" />
             {tr("vaultView.columns")}
-            <span class="text-kitsuden-muted">{tr("vaultView.idOwnerIdCreatedAt")}</span>
+            <span class="text-kitsuden-subtle">{tr("vaultView.idOwnerIdCreatedAt")}</span>
           </div>
           {#each draftColumns as col, i (i)}
             <div class="flex flex-wrap items-center gap-2">
               <input
                 class="w-44 px-3 py-1.5 text-sm rounded-lg bg-kitsuden-bg border {col.name === '' ||
                 (NAME_RE.test(col.name) && !RESERVED.has(col.name))
-                  ? 'border-kitsuden-border'
+                  ? 'border-kitsuden-input'
                   : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
                 placeholder={tr("vaultView.exampleColumn")}
                 bind:value={col.name}
               />
               <select
-                class="px-2 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
+                class="px-2 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
                 bind:value={col.type}
               >
                 {#each COLUMN_TYPES as t (t)}
@@ -397,7 +410,7 @@
       <div
         class="flex flex-col items-center justify-center py-12 rounded-xl border border-dashed border-kitsuden-border text-center"
       >
-        <Archive class="w-8 h-8 text-kitsuden-muted mb-3" />
+        <Archive class="w-8 h-8 text-kitsuden-subtle mb-3" />
         <p class="text-sm text-kitsuden-text font-medium">
           {tr("vaultView.withoutVaultCollections")}
         </p>
@@ -512,12 +525,12 @@
                 {#if addColTarget === col.collection}
                   <div class="flex flex-wrap items-center gap-2">
                     <input
-                      class="w-44 px-3 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
+                      class="w-44 px-3 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
                       placeholder={tr("vaultView.exampleNewColumn")}
                       bind:value={addColDraft.name}
                     />
                     <select
-                      class="px-2 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text outline-hidden"
+                      class="px-2 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text outline-hidden"
                       bind:value={addColDraft.type}
                     >
                       {#each COLUMN_TYPES as t (t)}

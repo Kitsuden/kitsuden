@@ -243,7 +243,7 @@
           </button>
         {:else}
           <p class="text-kitsuden-subtle">{t("mediaPicker.noImagesYet")}</p>
-          <p class="mt-1 text-xs text-kitsuden-subtle/60">
+          <p class="mt-1 text-xs text-kitsuden-subtle">
             {t("mediaPicker.useUploadHereNotAbove")}
           </p>
         {/if}
@@ -270,7 +270,7 @@
                 no way to know which ones you have without closing and looking again.
               -->
               <span
-                class="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-kitsuden-accent text-[10px] font-bold text-black"
+                class="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-kitsuden-accent text-xs font-bold text-kitsuden-on-accent"
               >
                 {selectedIds.indexOf(media.id) + 1}
               </span>

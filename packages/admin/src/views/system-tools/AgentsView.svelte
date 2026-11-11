@@ -1,4 +1,5 @@
 <script lang="ts">
+  import StateMessage from "$lib/components/feedback/StateMessage.svelte";
   import { t, localeFormat } from "$lib/i18n";
   import { Plus, Bot, Play, Activity, Trash2, Key, Settings } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -43,13 +44,17 @@
     await loadAgents();
   });
 
+  /** The list could not be loaded: shown instead of "no agents", with Retry. */
+  let loadError = $state<string | null>(null);
+
   async function loadAgents() {
     try {
       loading = true;
       error = null;
+      loadError = null;
       agents = await listAgents();
     } catch (e) {
-      error = e instanceof Error ? e.message : t("agentsView.errorLoadingAgents");
+      loadError = e instanceof Error ? e.message : t("agentsView.errorLoadingAgents");
     } finally {
       loading = false;
     }
@@ -90,13 +95,13 @@
   function getStatusColor(status: string): string {
     switch (status) {
       case "active":
-        return "bg-emerald-500";
+        return "bg-kitsuden-green";
       case "paused":
-        return "bg-amber-500";
+        return "bg-kitsuden-amber";
       case "error":
-        return "bg-red-500";
+        return "bg-kitsuden-danger";
       default:
-        return "bg-zinc-500";
+        return "bg-kitsuden-subtle";
     }
   }
 </script>
@@ -105,8 +110,8 @@
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-zinc-100">{t("agentsView.agents")}</h1>
-      <p class="text-zinc-500 mt-1">{t("agentsView.manageYourAiAgentsAnd")}</p>
+      <h1 class="text-2xl font-bold text-kitsuden-text">{t("agentsView.agents")}</h1>
+      <p class="text-kitsuden-subtle mt-1">{t("agentsView.manageYourAiAgentsAnd")}</p>
     </div>
     <Button variant="primary" onclick={() => (showCreateModal = true)}>
       <Plus size={18} class="mr-2" />
@@ -124,11 +129,18 @@
     <div class="flex items-center justify-center h-64">
       <Spinner size="lg" class="text-kitsuden-accent" />
     </div>
+  {:else if loadError && agents.length === 0}
+    <StateMessage
+      kind="error"
+      title={t("agentsView.errorLoadingAgents")}
+      description={loadError}
+      onRetry={loadAgents}
+    />
   {:else if agents.length === 0}
     <Card class="p-12 text-center">
-      <Bot size={48} class="mx-auto text-zinc-600 mb-4" />
-      <h3 class="text-lg font-medium text-zinc-300">{t("agentsView.noAgents")}</h3>
-      <p class="text-zinc-500 mt-2 mb-6">{t("agentsView.createsYourFirstAgentFor")}</p>
+      <Bot size={48} class="mx-auto text-kitsuden-subtle mb-4" />
+      <h2 class="text-lg font-medium text-kitsuden-text">{t("agentsView.noAgents")}</h2>
+      <p class="text-kitsuden-subtle mt-2 mb-6">{t("agentsView.createsYourFirstAgentFor")}</p>
       <Button variant="primary" onclick={() => (showCreateModal = true)}>
         <Plus size={18} class="mr-2" />
         {t("agentsView.createAgent")}
@@ -137,16 +149,18 @@
   {:else}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {#each agents as agent}
-        <Card class="p-5 min-w-0 hover:border-indigo-500/30 transition-colors group">
+        <Card class="p-5 min-w-0 hover:border-kitsuden-accent/30 transition-colors group">
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-3 min-w-0">
-              <div class="p-2 bg-indigo-500/10 rounded-lg shrink-0">
-                <Bot size={20} class="text-indigo-400" />
+              <div class="p-2 bg-kitsuden-accent/10 rounded-lg shrink-0">
+                <Bot size={20} class="text-kitsuden-accent" />
               </div>
               <div class="min-w-0">
-                <h3 class="font-medium text-zinc-100 truncate" title={agent.name}>{agent.name}</h3>
+                <h3 class="font-medium text-kitsuden-text truncate" title={agent.name}>
+                  {agent.name}
+                </h3>
                 {#if agent.model ?? agent.type}
-                  <p class="text-xs text-zinc-500 truncate">{agent.model ?? agent.type}</p>
+                  <p class="text-xs text-kitsuden-subtle truncate">{agent.model ?? agent.type}</p>
                 {/if}
               </div>
             </div>
@@ -154,20 +168,22 @@
               <!-- The state in words too: a dot told it by colour alone. -->
               <span class="w-2 h-2 rounded-full {getStatusColor(agent.status)}" aria-hidden="true"
               ></span>
-              <span class="text-xs text-zinc-400" data-testid="agent-status">
+              <span class="text-xs text-kitsuden-text-dim" data-testid="agent-status">
                 {t(`agentsView.status_${agent.status}`)}
               </span>
             </div>
           </div>
 
           {#if agent.description}
-            <p class="mt-3 text-sm text-zinc-400 line-clamp-2">{agent.description}</p>
+            <p class="mt-3 text-sm text-kitsuden-text-dim line-clamp-2">{agent.description}</p>
           {/if}
 
           <!-- The list endpoint sends no totals: they are shown only when they come,
                instead of a "0 traces" that was never counted. -->
           {#if agent.totalTraces !== undefined || agent.totalTokens !== undefined}
-            <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
+            <div
+              class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-kitsuden-subtle"
+            >
               {#if agent.totalTraces !== undefined}
                 <span class="flex items-center gap-1">
                   <Activity size={14} />
@@ -191,7 +207,7 @@
             always inside, stuck to the right (`ml-auto`, `shrink-0`).
           -->
           <div
-            class="mt-4 pt-4 border-t border-zinc-800 flex flex-wrap items-center gap-2 min-w-0"
+            class="mt-4 pt-4 border-t border-kitsuden-border flex flex-wrap items-center gap-2 min-w-0"
             data-testid="agent-card-actions"
           >
             <Button variant="ghost" size="sm" href="/agents/{agent.id}">

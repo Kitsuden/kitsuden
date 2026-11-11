@@ -12,6 +12,7 @@ import { field, defineModel, modelDescriptor } from "@kitsuden/shared";
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import * as confirmModule from "$lib/confirm.svelte";
 import { setLocale } from "$lib/i18n";
 
 import ModelView from "./ModelView.svelte";
@@ -142,7 +143,8 @@ describe("ModelView", () => {
 
   it("deleting asks for confirmation and calls DELETE (204 with no body)", async () => {
     setLocale("en");
-    vi.stubGlobal("confirm", () => true);
+    // The confirmation is the panel dialog ($lib/confirm.svelte), not the browser confirm().
+    const asked = vi.spyOn(confirmModule, "confirmDialog").mockResolvedValue(true);
     const calls = mockApi({
       [`GET ${BASE}`]: () => json({ data: [ROW], total: 1, limit: 20, offset: 0 }),
       [`DELETE ${BASE}/${ROW.id}`]: () => new Response(null, { status: 204 }),
@@ -151,6 +153,7 @@ describe("ModelView", () => {
     await screen.findByTestId("model-table");
     await fireEvent.click(screen.getByText("Delete"));
     await waitFor(() => expect(calls.some((l) => l.method === "DELETE")).toBe(true));
+    expect(asked).toHaveBeenCalledTimes(1);
     await screen.findByText("Deleted");
   });
 });

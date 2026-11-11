@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { pageTitle } from "$lib/page";
   import { t } from "$lib/i18n";
   import type { DatasetDefinition } from "@kitsuden/shared";
   import { ArrowLeft, Loader2, AlertCircle } from "lucide-svelte";
@@ -80,12 +81,22 @@
   }
 </script>
 
+<svelte:head>
+  <title
+    >{pageTitle(
+      dataset ? t("editEditPage.editDataset", { name: dataset.name }) : t("titles.editDataset")
+    )}</title
+  >
+</svelte:head>
+
 <div class="space-y-6 animate-fade-in pb-20">
   <!-- Header -->
   <div class="flex items-center gap-4">
     <button
       class="btn-icon p-2 hover:bg-kitsuden-surface rounded-lg transition-colors text-kitsuden-subtle"
       onclick={goBack}
+      aria-label={t("editEditPage.backToDatasets")}
+      title={t("editEditPage.backToDatasets")}
     >
       <ArrowLeft class="w-5 h-5" />
     </button>
@@ -108,7 +119,7 @@
   <!-- Error Message -->
   {#if error}
     <div
-      class="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3"
+      class="p-4 rounded-lg bg-kitsuden-danger/10 border border-kitsuden-danger/20 text-kitsuden-danger text-sm flex items-center gap-3"
     >
       <AlertCircle class="w-5 h-5" />
       {error}
@@ -123,7 +134,6 @@
     </div>
   {:else if !dataset}
     <div class="card p-12 text-center">
-      <div class="text-4xl mb-3">😕</div>
       <p class="text-kitsuden-text-dim">{t("editEditPage.datasetNotFound")}</p>
       <button onclick={goBack} class="btn-primary mt-4">
         {t("editEditPage.backToDatasets")}
@@ -145,7 +155,7 @@
   @reference "../../../../style.css";
 
   .btn-primary {
-    @apply px-4 py-2 bg-kitsuden-accent text-black rounded-lg font-medium 
+    @apply px-4 py-2 bg-kitsuden-accent text-kitsuden-on-accent rounded-lg font-medium 
            hover:bg-kitsuden-accent-hover transition-colors;
   }
 

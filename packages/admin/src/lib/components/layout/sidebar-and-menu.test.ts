@@ -161,6 +161,6 @@ describe("fetchModules retries transient failures", () => {
     const layout = read("lib", "components", "layout", "SidebarLayout.svelte");
     expect(layout).toMatch(/\{#if isAdmin && moduleStore\.error\}/);
     expect(layout).toMatch(/onclick=\{\(\) => moduleStore\.fetchModules\(\)\}/);
-    expect(layout).toContain('t("sidebarLayout.reintentar")');
+    expect(layout).toContain('t("common.retry")');
   });
 });

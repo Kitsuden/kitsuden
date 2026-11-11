@@ -217,28 +217,28 @@
 
   function getStageColor(stage: string, index: number): string {
     const palette = [
-      "border-gray-500/30",
-      "border-blue-500/30",
-      "border-yellow-500/30",
-      "border-orange-500/30",
-      "border-green-500/30",
-      "border-red-500/30",
-      "border-purple-500/30",
-      "border-pink-500/30",
+      "border-kitsuden-subtle/30",
+      "border-kitsuden-info/30",
+      "border-kitsuden-amber/30",
+      "border-kitsuden-amber/30",
+      "border-kitsuden-green/30",
+      "border-kitsuden-danger/30",
+      "border-kitsuden-purple/30",
+      "border-kitsuden-accent-2/30",
     ];
     return palette[index % palette.length];
   }
 
   function getStageHeaderColor(stage: string, index: number): string {
     const palette = [
-      "bg-gray-500/10 text-gray-400",
-      "bg-blue-500/10 text-blue-400",
-      "bg-yellow-500/10 text-yellow-400",
-      "bg-orange-500/10 text-orange-400",
-      "bg-green-500/10 text-green-400",
-      "bg-red-500/10 text-red-400",
-      "bg-purple-500/10 text-purple-400",
-      "bg-pink-500/10 text-pink-400",
+      "bg-kitsuden-subtle/10 text-kitsuden-text-dim",
+      "bg-kitsuden-info/10 text-kitsuden-info",
+      "bg-kitsuden-amber/10 text-kitsuden-amber",
+      "bg-kitsuden-amber/10 text-kitsuden-amber",
+      "bg-kitsuden-green/10 text-kitsuden-green",
+      "bg-kitsuden-danger/10 text-kitsuden-danger",
+      "bg-kitsuden-purple/10 text-kitsuden-purple",
+      "bg-kitsuden-accent-2/10 text-kitsuden-accent-2",
     ];
     return palette[index % palette.length];
   }
@@ -326,7 +326,7 @@
                       {item[cardFields[0]] || item.title || item.name || item.id}
                     </p>
                     {#if isRelationColumn(view.groupBy)}
-                      <span class="text-[10px] text-kitsuden-subtle">
+                      <span class="text-xs text-kitsuden-subtle">
                         {resolveGroupDisplay(item[view.groupBy])}
                       </span>
                     {/if}

@@ -34,3 +34,27 @@ export function explorerEndpoint(endpoint: string | undefined, table: string): s
   if (!isApiBase(endpoint)) return endpoint;
   return `${endpoint.replace(/\/+$/, "")}/${resourceForTable(endpoint, table)}`;
 }
+
+/**
+ * The sort of a list request, in the dialect of the endpoint that answers it.
+ *
+ * The generic explorer (`/api/explorer/<table>`) reads `sort` as ONE column name and the
+ * direction from `dir`. The panel sent `sort=-name` for a descending sort: "-name" is not
+ * a column, so on a registry table the order was silently dropped and "Z→A" showed the
+ * rows unsorted. A kon's own routes (and the items API) take the `-column` list, which
+ * also carries a multi-column sort; they keep it, with `dir` for the ones that read it.
+ */
+export function sortParams(
+  endpoint: string,
+  stack: Array<{ column: string; direction: "asc" | "desc" }>
+): Record<string, string> {
+  if (stack.length === 0) return {};
+  const first = stack[0]!;
+  if (endpoint.startsWith("/api/explorer/")) {
+    return { sort: first.column, dir: first.direction };
+  }
+  return {
+    sort: stack.map((s) => `${s.direction === "desc" ? "-" : ""}${s.column}`).join(","),
+    dir: first.direction,
+  };
+}

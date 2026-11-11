@@ -71,16 +71,20 @@
 
 <div class="space-y-4" data-testid="agent-mcp-settings">
   <div>
-    <h3 class="text-sm font-semibold text-zinc-300">{t("agentMcpSettings.title")}</h3>
-    <p class="text-xs text-zinc-500">{t("agentMcpSettings.help")}</p>
+    <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentMcpSettings.title")}</h3>
+    <p class="text-xs text-kitsuden-subtle">{t("agentMcpSettings.help")}</p>
   </div>
 
   {#if loading}
     <div class="flex items-center justify-center h-16">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if settings}
     <form
       class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end"
@@ -90,7 +94,7 @@
       }}
     >
       <div class="min-w-0">
-        <label for="mcp-toolset" class="block text-sm text-zinc-300 mb-1.5"
+        <label for="mcp-toolset" class="block text-sm text-kitsuden-text mb-1.5"
           >{t("agentMcpSettings.toolset")}</label
         >
         <input
@@ -99,29 +103,29 @@
           list="mcp-toolsets"
           bind:value={toolset}
           placeholder={t("agentMcpSettings.toolsetAll")}
-          class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+          class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
         />
         <datalist id="mcp-toolsets">
           {#each [...settings.options.toolsets, ...settings.options.kons] as option (option)}
             <option value={option}></option>
           {/each}
         </datalist>
-        <p class="text-[11px] text-zinc-500 mt-1">{t("agentMcpSettings.toolsetHelp")}</p>
+        <p class="text-[11px] text-kitsuden-subtle mt-1">{t("agentMcpSettings.toolsetHelp")}</p>
       </div>
       <div class="min-w-0">
-        <label for="mcp-wrap" class="block text-sm text-zinc-300 mb-1.5"
+        <label for="mcp-wrap" class="block text-sm text-kitsuden-text mb-1.5"
           >{t("agentMcpSettings.wrap")}</label
         >
         <select
           id="mcp-wrap"
           bind:value={wrapper}
-          class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+          class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
         >
           {#each settings.options.untrustedWrap as mode (mode)}
             <option value={mode}>{WRAPPER_TAG[mode]?.() ?? mode}</option>
           {/each}
         </select>
-        <p class="text-[11px] text-zinc-500 mt-1">{t("agentMcpSettings.wrapHelp")}</p>
+        <p class="text-[11px] text-kitsuden-subtle mt-1">{t("agentMcpSettings.wrapHelp")}</p>
       </div>
       <div class="md:col-span-2 flex justify-end">
         <Button type="submit" variant="primary" size="sm" loading={saving}>

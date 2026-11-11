@@ -6,6 +6,7 @@
   and the scope they need (lib/external-mcp-bridge.ts in the API).
 -->
 <script lang="ts">
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t, localeFormat } from "$lib/i18n";
   import { RefreshCw, ServerCog, ShieldCheck, Trash2 } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -100,7 +101,7 @@
   }
 
   async function remove(s: McpServer) {
-    if (!confirm(t("mcpServers.confirmDelete", { name: s.name }))) return;
+    if (!(await confirmDialog(t("mcpServers.confirmDelete", { name: s.name })))) return;
     await run(`delete:${s.id}`, () => deleteServer(s.id), t("mcpServers.deleted"));
   }
 
@@ -127,42 +128,44 @@
 
 <div class="p-6 space-y-6" data-testid="mcp-servers">
   <div class="flex items-start gap-3">
-    <div class="p-2 rounded-lg bg-indigo-500/10 text-indigo-300"><ServerCog size={20} /></div>
+    <div class="p-2 rounded-lg bg-kitsuden-accent/10 text-kitsuden-accent">
+      <ServerCog size={20} />
+    </div>
     <div>
-      <h1 class="text-xl font-semibold text-zinc-100">{t("mcpServers.title")}</h1>
-      <p class="text-sm text-zinc-400">{t("mcpServers.help")}</p>
+      <h1 class="text-xl font-semibold text-kitsuden-text">{t("mcpServers.title")}</h1>
+      <p class="text-sm text-kitsuden-text-dim">{t("mcpServers.help")}</p>
     </div>
   </div>
 
   <form class="grid gap-2 md:grid-cols-5 items-end" onsubmit={add}>
-    <label class="text-xs text-zinc-400"
+    <label class="text-xs text-kitsuden-text-dim"
       >{t("mcpServers.name")}
       <input
-        class="mt-1 w-full rounded-sm bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
+        class="mt-1 w-full rounded-sm bg-kitsuden-card border border-kitsuden-input px-2 py-1 text-sm text-kitsuden-text"
         bind:value={form.name}
         required
       />
     </label>
-    <label class="text-xs text-zinc-400 md:col-span-2"
+    <label class="text-xs text-kitsuden-text-dim md:col-span-2"
       >{t("mcpServers.url")}
       <input
-        class="mt-1 w-full rounded-sm bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
+        class="mt-1 w-full rounded-sm bg-kitsuden-card border border-kitsuden-input px-2 py-1 text-sm text-kitsuden-text"
         type="url"
         bind:value={form.url}
         required
       />
     </label>
-    <label class="text-xs text-zinc-400"
+    <label class="text-xs text-kitsuden-text-dim"
       >{t("mcpServers.authHeaderName")}
       <input
-        class="mt-1 w-full rounded-sm bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
+        class="mt-1 w-full rounded-sm bg-kitsuden-card border border-kitsuden-input px-2 py-1 text-sm text-kitsuden-text"
         bind:value={form.authHeaderName}
       />
     </label>
-    <label class="text-xs text-zinc-400"
+    <label class="text-xs text-kitsuden-text-dim"
       >{t("mcpServers.authHeaderValue")}
       <input
-        class="mt-1 w-full rounded-sm bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm text-zinc-100"
+        class="mt-1 w-full rounded-sm bg-kitsuden-card border border-kitsuden-input px-2 py-1 text-sm text-kitsuden-text"
         type="password"
         autocomplete="off"
         bind:value={form.authHeaderValue}
@@ -175,38 +178,47 @@
 
   {#if loading && servers.length === 0}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if servers.length === 0}
-    <p class="text-sm text-zinc-500" data-testid="mcp-servers-empty">{t("mcpServers.empty")}</p>
+    <p class="text-sm text-kitsuden-subtle" data-testid="mcp-servers-empty">
+      {t("mcpServers.empty")}
+    </p>
   {:else}
     <div class="space-y-3">
       {#each servers as s (s.id)}
-        <div class="rounded-lg border border-zinc-800 p-3" data-testid="mcp-server-row">
+        <div class="rounded-lg border border-kitsuden-border p-3" data-testid="mcp-server-row">
           <div class="flex flex-wrap items-center gap-3 justify-between">
             <div>
-              <button class="text-zinc-100 font-medium hover:underline" onclick={() => toggle(s)}
-                >{s.name}</button
+              <button
+                class="text-kitsuden-text font-medium hover:underline"
+                onclick={() => toggle(s)}>{s.name}</button
               >
-              <span class="block text-xs text-zinc-500 break-all">{s.url}</span>
-              <span class="block text-xs text-zinc-500">
+              <span class="block text-xs text-kitsuden-subtle break-all">{s.url}</span>
+              <span class="block text-xs text-kitsuden-subtle">
                 {t("mcpServers.summary", {
                   tools: s.tools,
                   review: s.needsReview,
                   date: date(s.lastRefreshedAt),
                 })}
               </span>
-              {#if s.lastError}<span class="block text-xs text-red-400">{s.lastError}</span>{/if}
+              {#if s.lastError}<span class="block text-xs text-kitsuden-danger">{s.lastError}</span
+                >{/if}
             </div>
             <div class="flex items-center gap-2">
               {#if s.needsReview > 0}
-                <span class="text-xs rounded-sm px-2 py-0.5 bg-amber-500/10 text-amber-300"
+                <span
+                  class="text-xs rounded-sm px-2 py-0.5 bg-kitsuden-amber/10 text-kitsuden-amber"
                   >{t("mcpServers.needsReview", { count: s.needsReview })}</span
                 >
               {/if}
-              <label class="flex items-center gap-1 text-xs text-zinc-400">
+              <label class="flex items-center gap-1 text-xs text-kitsuden-text-dim">
                 <input
                   type="checkbox"
                   checked={s.enabled}
@@ -225,7 +237,7 @@
               <Button
                 variant="ghost"
                 size="sm"
-                class="text-red-400"
+                class="text-kitsuden-danger"
                 loading={busy === `delete:${s.id}`}
                 onclick={() => remove(s)}
               >
@@ -236,10 +248,10 @@
 
           {#if open === s.id}
             {#if (tools[s.id] ?? []).length === 0}
-              <p class="mt-3 text-sm text-zinc-500">{t("mcpServers.noTools")}</p>
+              <p class="mt-3 text-sm text-kitsuden-subtle">{t("mcpServers.noTools")}</p>
             {:else}
               <table class="mt-3 w-full text-sm">
-                <thead class="text-left text-xs text-zinc-500">
+                <thead class="text-left text-xs text-kitsuden-subtle">
                   <tr>
                     <th class="py-2 pr-3">{t("mcpServers.tool")}</th>
                     <th class="py-2 pr-3">{t("mcpServers.status")}</th>
@@ -249,15 +261,18 @@
                 </thead>
                 <tbody>
                   {#each tools[s.id] ?? [] as tool (tool.name)}
-                    <tr class="border-t border-zinc-800 align-top" data-testid="mcp-tool-row">
-                      <td class="py-2 pr-3 text-zinc-100">
+                    <tr
+                      class="border-t border-kitsuden-border align-top"
+                      data-testid="mcp-tool-row"
+                    >
+                      <td class="py-2 pr-3 text-kitsuden-text">
                         {tool.name}
-                        <details class="text-xs text-zinc-400">
+                        <details class="text-xs text-kitsuden-text-dim">
                           <summary class="cursor-pointer">{t("mcpServers.details")}</summary>
                           <p class="whitespace-pre-wrap wrap-break-word mt-1">
                             {tool.description ?? ""}
                           </p>
-                          <pre class="mt-1 overflow-x-auto text-zinc-500">{JSON.stringify(
+                          <pre class="mt-1 overflow-x-auto text-kitsuden-subtle">{JSON.stringify(
                               tool.inputSchema,
                               null,
                               2
@@ -266,32 +281,35 @@
                       </td>
                       <td class="py-2 pr-3">
                         {#if tool.status === "approved"}
-                          <span class="text-xs text-emerald-300"
+                          <span class="text-xs text-kitsuden-green"
                             >{t("mcpServers.statusApproved")}</span
                           >
                           {#if tool.agentTool}
-                            <span class="block text-xs text-zinc-400" data-testid="mcp-tool-agent">
+                            <span
+                              class="block text-xs text-kitsuden-text-dim"
+                              data-testid="mcp-tool-agent"
+                            >
                               {t("mcpServers.agentName")}
-                              <code class="text-zinc-300">{tool.agentTool.name}</code>
+                              <code class="text-kitsuden-text">{tool.agentTool.name}</code>
                               · {t("mcpServers.agentScope")}
-                              <code class="text-zinc-300">{tool.agentTool.scope}</code>
+                              <code class="text-kitsuden-text">{tool.agentTool.scope}</code>
                             </span>
                             {#if !tool.agentTool.offered}
-                              <span class="block text-xs text-amber-300"
+                              <span class="block text-xs text-kitsuden-amber"
                                 >{t("mcpServers.notOffered")}</span
                               >
                             {/if}
                           {/if}
                         {:else}
-                          <span class="text-xs text-amber-300"
+                          <span class="text-xs text-kitsuden-amber"
                             >{t("mcpServers.statusReview")} · {changeLabel(tool.change)}</span
                           >
                         {/if}
                       </td>
                       <td class="py-2 pr-3">
-                        <code class="text-xs text-zinc-300">{short(tool.fingerprint)}</code>
+                        <code class="text-xs text-kitsuden-text">{short(tool.fingerprint)}</code>
                         {#if tool.approvedFingerprint && tool.approvedFingerprint !== tool.fingerprint}
-                          <span class="block text-xs text-zinc-500"
+                          <span class="block text-xs text-kitsuden-subtle"
                             >{t("mcpServers.approvedWas", {
                               fp: short(tool.approvedFingerprint),
                             })}</span

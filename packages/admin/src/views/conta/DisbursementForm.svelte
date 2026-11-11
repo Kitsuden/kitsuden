@@ -118,14 +118,14 @@
 
   {#if loading}
     <div class="flex items-center justify-center h-48">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else}
     {#if disbursement}
       {@const sb = statusBadge(disbursement.status)}
       <div class="flex items-center gap-3">
         <Badge variant={sb.variant}>{sb.label}</Badge>
-        <span class="text-sm text-zinc-400"
+        <span class="text-sm text-kitsuden-text-dim"
           >{disbursement.matterNumber ||
             matters.find((m) => m.id === disbursement.matterId)?.matterNumber ||
             disbursement.matterId}</span
@@ -139,7 +139,7 @@
         <select
           bind:value={matterId}
           disabled={!!disbursement}
-          class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+          class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm disabled:opacity-50"
         >
           <option value="">{t("common.select")}</option>
           {#each matters as m}
@@ -152,7 +152,7 @@
         <select
           bind:value={paidFromAccountId}
           disabled={!!disbursement}
-          class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+          class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm disabled:opacity-50"
         >
           <option value="">{t("common.select")}</option>
           {#each accounts as a}
@@ -181,7 +181,7 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-between pt-4 border-t border-zinc-800">
+    <div class="flex items-center justify-between pt-4 border-t border-kitsuden-border">
       <Button variant="outline" onclick={onBack} disabled={saving}>{t("common.back")}</Button>
       {#if disbursement}
         <div class="flex items-center gap-2">

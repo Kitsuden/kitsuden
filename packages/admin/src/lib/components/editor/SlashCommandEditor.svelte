@@ -480,8 +480,7 @@
 
     <div class="flex-1"></div>
 
-    <span class="text-[10px] text-kitsuden-subtle px-2"
-      >{t("slashCommandEditor.typeForCommands2")}</span
+    <span class="text-xs text-kitsuden-subtle px-2">{t("slashCommandEditor.typeForCommands2")}</span
     >
   </div>
 
@@ -499,7 +498,7 @@
       {placeholder}
       class="w-full min-h-[300px] p-4 rounded-xl border bg-kitsuden-card text-kitsuden-text placeholder:text-kitsuden-subtle resize-y focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/20 focus:border-kitsuden-accent/50 font-mono text-sm leading-relaxed {dragging
         ? 'border-kitsuden-accent border-dashed'
-        : 'border-kitsuden-border'}"
+        : 'border-kitsuden-input'}"
       spellcheck="false"></textarea>
 
     <!-- Slash Command Menu -->
@@ -509,7 +508,7 @@
         style="top: {slashMenuPosition.top}px; left: {slashMenuPosition.left}px;"
       >
         <div
-          class="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-kitsuden-subtle border-b border-kitsuden-border"
+          class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle border-b border-kitsuden-border"
         >
           {t("slashCommandEditor.basicBlocks")}
         </div>
@@ -541,7 +540,7 @@
           {/each}
         </div>
         <div
-          class="px-3 py-2 border-t border-kitsuden-border bg-kitsuden-bg/50 text-[10px] text-kitsuden-subtle"
+          class="px-3 py-2 border-t border-kitsuden-border bg-kitsuden-bg/50 text-xs text-kitsuden-subtle"
         >
           {t("slashCommandEditor.toNavigateEnterToSelect")}
         </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Switch } from "$lib/tallao";
   import { t } from "$lib/i18n";
   /**
    * BlockEditor.svelte — Edit form for a single block's data
@@ -255,7 +256,7 @@
           <h3 class="text-sm font-semibold text-kitsuden-text">
             {blockDef?.label || t("blockEditor.block")}
           </h3>
-          <p class="text-[10px] text-kitsuden-subtle font-mono">{block.type}</p>
+          <p class="text-xs text-kitsuden-subtle font-mono">{block.type}</p>
         </div>
       </div>
       <button onclick={onClose} class="btn-icon p-1"><X class="w-4 h-4" /></button>
@@ -410,20 +411,11 @@
         {#if field.type === "boolean"}
           <div class="flex items-center justify-between py-1">
             <label class="text-sm text-kitsuden-text">{field.label}</label>
-            <button
-              type="button"
-              onclick={() => updateField(field.key, !block.data[field.key])}
-              class="relative w-10 h-6 rounded-full transition-colors {block.data[field.key]
-                ? 'bg-kitsuden-accent'
-                : 'bg-kitsuden-border'}"
-            >
-              <span
-                class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-xs transition-transform {block
-                  .data[field.key]
-                  ? 'translate-x-[18px]'
-                  : 'translate-x-[2px]'}"
-              ></span>
-            </button>
+            <Switch
+              checked={!!block.data[field.key]}
+              ariaLabel={field.label}
+              onchange={() => updateField(field.key, !block.data[field.key])}
+            />
           </div>
         {/if}
 
@@ -534,14 +526,14 @@
             rows="5"
             placeholder={field.helpText}
             class="textarea font-mono text-xs"></textarea>
-          {#if jsonErrors[field.key]}<p class="text-[10px] text-kitsuden-accent-2">
+          {#if jsonErrors[field.key]}<p class="text-xs text-kitsuden-accent-2">
               {jsonErrors[field.key]}
             </p>{/if}
         {/if}
 
         <!-- Help text -->
         {#if field.helpText && field.type !== "json"}
-          <p class="text-[10px] text-kitsuden-subtle">{field.helpText}</p>
+          <p class="text-xs text-kitsuden-subtle">{field.helpText}</p>
         {/if}
       </div>
     {/each}

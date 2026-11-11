@@ -651,10 +651,10 @@
                     </p>
                   {/if}
                   <div class="flex items-center gap-3 mt-2">
-                    <span class="text-xs text-kitsuden-subtle/60">
+                    <span class="text-xs text-kitsuden-subtle">
                       {tr("promoteFromDataset.entries2", { v: dataset.entryCount || 0 })}
                     </span>
-                    <span class="text-xs text-kitsuden-subtle/60">
+                    <span class="text-xs text-kitsuden-subtle">
                       {tr("promoteFromDataset.updated", { v: formatDate(dataset.updatedAt) })}
                     </span>
                   </div>
@@ -707,7 +707,7 @@
                         {entry.status}
                       </span>
                     {/if}
-                    <span class="text-xs text-kitsuden-subtle/60">
+                    <span class="text-xs text-kitsuden-subtle">
                       {formatDate(entry.updatedAt)}
                     </span>
                   </div>

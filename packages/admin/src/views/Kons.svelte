@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { disableKonPrompt } from "$lib/kon-disable";
+  import { confirmDialog } from "$lib/confirm.svelte";
+  import { toast } from "svelte-sonner";
   import { t } from "$lib/i18n";
   import KonIcon from "$lib/components/KonIcon.svelte";
   import {
@@ -92,9 +95,16 @@
 
   async function toggleModule(mod: ModuleInfo) {
     if (!mod.canToggle) return;
+    // Disabling asks first and names what goes away; enabling is harmless and does not.
+    const wasEnabled = mod.enabled;
+    if (wasEnabled && !(await confirmDialog(disableKonPrompt(mod, moduleStore.modules)))) return;
     toggling = mod.key;
-    await moduleStore.toggleModule(mod.key);
+    const ok = await moduleStore.toggleModule(mod.key);
     toggling = null;
+    // The store reports a failure itself (it knows the missing tables and the hint).
+    if (ok) {
+      toast.success(t(wasEnabled ? "kons.disabledToast" : "kons.enabledToast", { name: mod.name }));
+    }
   }
 
   function openUninstallModal(mod: ModuleInfo) {
@@ -174,9 +184,7 @@
           <h2 class="text-sm font-semibold uppercase tracking-wider text-kitsuden-subtle">
             {getCategoryLabel(category)}
           </h2>
-          <span
-            class="text-[10px] px-2 py-0.5 rounded-full bg-kitsuden-surface text-kitsuden-text-dim"
-          >
+          <span class="text-xs px-2 py-0.5 rounded-full bg-kitsuden-surface text-kitsuden-text-dim">
             {mods.length}
           </span>
         </div>
@@ -202,17 +210,15 @@
                   </div>
                   <div>
                     <h3 class="font-semibold text-kitsuden-text">{mod.name}</h3>
-                    <p
-                      class="text-[10px] font-medium uppercase tracking-wider text-kitsuden-subtle"
-                    >
+                    <p class="text-xs font-medium uppercase tracking-wider text-kitsuden-subtle">
                       {getCategoryLabel(mod.category)}
                     </p>
                     {#if mod.maturity && mod.maturity !== "stable"}
                       <span
-                        class="text-[9px] px-1.5 py-0.5 rounded-full border mt-1 mr-1 inline-block {mod.maturity ===
+                        class="text-xs px-1.5 py-0.5 rounded-full border mt-1 mr-1 inline-block {mod.maturity ===
                         'experimental'
-                          ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}"
+                          ? 'bg-kitsuden-danger/10 text-kitsuden-danger border-kitsuden-danger/20'
+                          : 'bg-kitsuden-amber/10 text-kitsuden-amber border-kitsuden-amber/20'}"
                         title={mod.maturity === "experimental"
                           ? t("kons.experimentalNotUsedEndTo")
                           : t("kons.betaUsedButWithGaps")}
@@ -222,7 +228,7 @@
                     {/if}
                     {#if mod.enabledByGrimoire}
                       <span
-                        class="text-[9px] px-1.5 py-0.5 rounded-full bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/20 mt-1 inline-block"
+                        class="text-xs px-1.5 py-0.5 rounded-full bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/20 mt-1 inline-block"
                       >
                         {t("kons.activeByGrimoire")}
                       </span>
@@ -291,9 +297,7 @@
           <h2 class="text-sm font-semibold uppercase tracking-wider text-kitsuden-subtle">
             {t("kons.uninstalledKonsDataPreserved")}
           </h2>
-          <span
-            class="text-[10px] px-2 py-0.5 rounded-full bg-kitsuden-surface text-kitsuden-text-dim"
-          >
+          <span class="text-xs px-2 py-0.5 rounded-full bg-kitsuden-surface text-kitsuden-text-dim">
             {moduleStore.uninstalled.length}
           </span>
         </div>
@@ -345,13 +349,13 @@
             <div class="flex flex-wrap gap-1">
               {#each selectedModule.tables.slice(0, 5) as table}
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim font-mono"
+                  class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim font-mono"
                   >{table}</span
                 >
               {/each}
               {#if selectedModule.tables.length > 5}
                 <span
-                  class="text-[10px] px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
+                  class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
                   >{t("common.more", { v: selectedModule.tables.length - 5 })}</span
                 >
               {/if}
@@ -431,7 +435,7 @@
           id="deleteconfirmtext"
           type="text"
           bind:value={deleteConfirmText}
-          class="w-full px-3 py-2 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-sm focus:outline-hidden focus:border-kitsuden-accent-2"
+          class="w-full px-3 py-2 rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text text-sm focus:outline-hidden focus:border-kitsuden-accent-2"
           placeholder={selectedModule.key.replace(/^grimoire-/, "")}
         />
       </div>

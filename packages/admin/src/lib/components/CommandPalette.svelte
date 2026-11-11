@@ -278,7 +278,7 @@
           class="flex-1 bg-transparent text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden"
         />
         <kbd
-          class="hidden items-center gap-1 rounded-sm border border-kitsuden-border bg-kitsuden-bg px-2 py-1 font-mono text-[10px] text-kitsuden-text-dim sm:inline-flex"
+          class="hidden items-center gap-1 rounded-sm border border-kitsuden-border bg-kitsuden-bg px-2 py-1 font-mono text-xs text-kitsuden-text-dim sm:inline-flex"
         >
           ESC
         </kbd>
@@ -308,12 +308,12 @@
               <span class="flex-1 truncate">{item.label}</span>
               {#if item.shortcut}
                 <kbd
-                  class="rounded-sm border border-kitsuden-border bg-kitsuden-bg px-1.5 py-0.5 font-mono text-[10px] text-kitsuden-text-dim"
+                  class="rounded-sm border border-kitsuden-border bg-kitsuden-bg px-1.5 py-0.5 font-mono text-xs text-kitsuden-text-dim"
                 >
                   {item.shortcut}
                 </kbd>
               {/if}
-              <span class="text-[10px] text-kitsuden-subtle">{typeLabel(item.type)}</span>
+              <span class="text-xs text-kitsuden-subtle">{typeLabel(item.type)}</span>
             </button>
           {/each}
         {/if}
@@ -323,7 +323,7 @@
       <div
         class="flex items-center justify-between border-t border-kitsuden-border bg-kitsuden-bg/50 px-4 py-2"
       >
-        <div class="flex items-center gap-3 text-[10px] text-kitsuden-subtle">
+        <div class="flex items-center gap-3 text-xs text-kitsuden-subtle">
           <span class="flex items-center gap-1">
             <kbd
               class="rounded-sm border border-kitsuden-border bg-kitsuden-bg px-1 py-0.5 font-mono"
@@ -343,7 +343,7 @@
             <span>{t("commandPalette.toSelect")}</span>
           </span>
         </div>
-        <div class="text-[10px] text-kitsuden-subtle">
+        <div class="text-xs text-kitsuden-subtle">
           {t("commandPalette.result", {
             filteredItemsCount: filteredItems.length,
           })}{filteredItems.length === 1 ? "" : "s"}

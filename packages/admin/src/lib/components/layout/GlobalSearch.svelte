@@ -396,8 +396,9 @@
     <input
       bind:this={searchInput}
       type="text"
+      aria-label={tr("globalSearch.label")}
       placeholder={tr("common.search")}
-      class="w-full h-9 pl-10 pr-4 text-sm rounded-lg border border-kitsuden-border bg-kitsuden-card text-kitsuden-text placeholder:text-kitsuden-text-dim/60 focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/30 focus:border-kitsuden-accent/50 transition-all"
+      class="w-full h-9 pl-10 pr-4 text-sm rounded-lg border border-kitsuden-input bg-kitsuden-card text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/30 focus:border-kitsuden-accent/50 transition-all"
       bind:value={query}
       onfocus={handleInputFocus}
       onblur={handleBlur}
@@ -436,7 +437,7 @@
         {#each categories as cat}
           {#if cat.items.length > 0}
             <div
-              class="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-kitsuden-subtle bg-kitsuden-bg/50 border-b border-kitsuden-border/50"
+              class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle bg-kitsuden-bg/50 border-b border-kitsuden-border/50"
             >
               {getCategoryLabel(cat.key)}
             </div>
@@ -478,7 +479,7 @@
         {/each}
 
         <div
-          class="px-3 py-1.5 text-[10px] text-kitsuden-subtle bg-kitsuden-bg/30 border-t border-kitsuden-border/50 flex items-center justify-between"
+          class="px-3 py-1.5 text-xs text-kitsuden-subtle bg-kitsuden-bg/30 border-t border-kitsuden-border/50 flex items-center justify-between"
         >
           <span
             >{flatResults.length}

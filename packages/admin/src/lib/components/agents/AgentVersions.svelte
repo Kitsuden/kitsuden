@@ -82,39 +82,44 @@
 
 <div class="space-y-4" data-testid="agent-versions">
   <div>
-    <h3 class="text-sm font-semibold text-zinc-300">
+    <h3 class="text-sm font-semibold text-kitsuden-text">
       <History size={14} class="inline mr-1" />{t("agentVersions.title")}
     </h3>
-    <p class="text-xs text-zinc-500">{t("agentVersions.help")}</p>
+    <p class="text-xs text-kitsuden-subtle">{t("agentVersions.help")}</p>
   </div>
 
   {#if loading}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if versions.length === 0}
-    <p class="text-sm text-zinc-500">{t("agentVersions.empty")}</p>
+    <p class="text-sm text-kitsuden-subtle">{t("agentVersions.empty")}</p>
   {:else}
     <ol class="space-y-2">
       {#each versions as v (v.id)}
         {@const detail = open[v.version]}
-        <li class="p-3 rounded-lg border border-zinc-800" data-testid="version-{v.version}">
+        <li class="p-3 rounded-lg border border-kitsuden-border" data-testid="version-{v.version}">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="text-sm text-zinc-200 font-medium"
+            <span class="text-sm text-kitsuden-text font-medium"
               >{t("agentVersions.version", { n: v.version })}</span
             >
             {#if v.version === current}
               <span
-                class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300"
+                class="text-xs px-1.5 py-0.5 rounded-full bg-kitsuden-green/20 text-kitsuden-green"
                 >{t("agentVersions.current")}</span
               >
             {/if}
-            <span class="text-xs text-zinc-500">{t(`agentVersions.source_${v.source}`)}</span>
-            {#if v.note}<span class="text-xs text-zinc-500">· {v.note}</span>{/if}
-            <span class="text-xs text-zinc-500">· {date(v.createdAt)}</span>
-            {#if v.createdBy}<span class="text-xs text-zinc-500"
+            <span class="text-xs text-kitsuden-subtle">{t(`agentVersions.source_${v.source}`)}</span
+            >
+            {#if v.note}<span class="text-xs text-kitsuden-subtle">· {v.note}</span>{/if}
+            <span class="text-xs text-kitsuden-subtle">· {date(v.createdAt)}</span>
+            {#if v.createdBy}<span class="text-xs text-kitsuden-subtle"
                 >· {t("agentVersions.by", { who: v.createdBy })}</span
               >{/if}
             <div class="flex-1"></div>
@@ -132,16 +137,16 @@
               </Button>
             {/if}
           </div>
-          <p class="text-xs text-zinc-500 mt-1">
+          <p class="text-xs text-kitsuden-subtle mt-1">
             {t("agentVersions.promptChars", { n: v.promptLength })} ·
             {v.config.allowedTools?.length
               ? t("agentVersions.tools", { list: v.config.allowedTools.join(", ") })
               : t("agentVersions.noTools")}
-            · <code class="text-zinc-600">{v.hash.slice(0, 12)}</code>
+            · <code class="text-kitsuden-subtle">{v.hash.slice(0, 12)}</code>
           </p>
           {#if detail}
             <pre
-              class="mt-2 p-2 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-300 whitespace-pre-wrap">{detail.systemPrompt ??
+              class="mt-2 p-2 bg-kitsuden-bg border border-kitsuden-border rounded-sm text-xs text-kitsuden-text whitespace-pre-wrap">{detail.systemPrompt ??
                 t("agentVersions.noPrompt")}</pre>
           {/if}
         </li>

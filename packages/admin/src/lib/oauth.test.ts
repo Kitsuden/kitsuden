@@ -10,6 +10,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as confirmModule from "$lib/confirm.svelte";
 import { setLocale } from "$lib/i18n";
 import { inputScopes } from "$lib/services/oauth";
 
@@ -165,7 +166,8 @@ describe("OAuth connections", () => {
   beforeEach(() => setLocale("en", { reload: false }));
 
   it("lists and revokes", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+    // Revoking asks through the panel dialog ($lib/confirm.svelte), not the browser confirm().
+    const asked = vi.spyOn(confirmModule, "confirmDialog").mockResolvedValue(true);
     const calls: string[] = [];
     let revoked = false;
     global.fetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
@@ -203,6 +205,7 @@ describe("OAuth connections", () => {
     expect(screen.getByText("mcp:connect mcp:read")).toBeTruthy();
     await fireEvent.click(screen.getByText("Revoke"));
     await screen.findByTestId("oauth-connections-empty");
+    expect(asked).toHaveBeenCalledTimes(1);
     expect(calls).toEqual([`GET ${BASE}/grants`, `DELETE ${BASE}/grants/g1`, `GET ${BASE}/grants`]);
   });
 });

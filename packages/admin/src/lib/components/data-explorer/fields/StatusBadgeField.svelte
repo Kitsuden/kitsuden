@@ -5,14 +5,14 @@
 
   // Default colors for common states
   const defaultColors: Record<string, string> = {
-    draft: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-    published: "bg-green-500/10 text-green-500 border-green-500/20",
-    archived: "bg-gray-500/10 text-gray-400 border-gray-500/20",
-    active: "bg-green-500/10 text-green-500 border-green-500/20",
-    inactive: "bg-gray-500/10 text-gray-400 border-gray-500/20",
-    pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-    approved: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-    rejected: "bg-red-500/10 text-red-500 border-red-500/20",
+    draft: "bg-kitsuden-amber/10 text-kitsuden-amber border-kitsuden-amber/20",
+    published: "bg-kitsuden-green/10 text-kitsuden-green border-kitsuden-green/20",
+    archived: "bg-kitsuden-subtle/10 text-kitsuden-text-dim border-kitsuden-subtle/20",
+    active: "bg-kitsuden-green/10 text-kitsuden-green border-kitsuden-green/20",
+    inactive: "bg-kitsuden-subtle/10 text-kitsuden-text-dim border-kitsuden-subtle/20",
+    pending: "bg-kitsuden-amber/10 text-kitsuden-amber border-kitsuden-amber/20",
+    approved: "bg-kitsuden-green/10 text-kitsuden-green border-kitsuden-green/20",
+    rejected: "bg-kitsuden-danger/10 text-kitsuden-danger border-kitsuden-danger/20",
   };
 
   const statusColors = $derived({ ...defaultColors, ...config.options?.colors });

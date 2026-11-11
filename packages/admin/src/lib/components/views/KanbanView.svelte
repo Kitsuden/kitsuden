@@ -87,7 +87,7 @@
           <h3 class="font-semibold text-kitsuden-text text-sm uppercase tracking-wide">
             {group.label}
           </h3>
-          <span class="bg-kitsuden-border text-[10px] px-1.5 rounded-full text-kitsuden-text-dim">
+          <span class="bg-kitsuden-border text-xs px-1.5 rounded-full text-kitsuden-text-dim">
             {group.entries.length}
           </span>
         </div>
@@ -130,8 +130,8 @@
             <!-- Fields Preview -->
             <div class="space-y-1">
               {#each previewFields as field (field.key)}
-                <div class="text-[10px] text-kitsuden-text-dim flex justify-between">
-                  <span class="opacity-70">{field.label}:</span>
+                <div class="text-xs text-kitsuden-text-dim flex justify-between">
+                  <span class="text-kitsuden-subtle">{field.label}:</span>
                   <span class="truncate ml-2 max-w-[120px]">{entry.data[field.key]}</span>
                 </div>
               {/each}
@@ -155,7 +155,7 @@
         <!-- Empty state for column -->
         {#if group.entries.length === 0}
           <div
-            class="h-24 border-2 border-dashed border-kitsuden-border/50 rounded-lg flex items-center justify-center text-xs text-kitsuden-text-dim/50"
+            class="h-24 border-2 border-dashed border-kitsuden-border/50 rounded-lg flex items-center justify-center text-xs text-kitsuden-text-dim"
           >
             {t("kanbanView.empty")}
           </div>
@@ -171,7 +171,7 @@
         <h3 class="font-semibold text-kitsuden-text-dim text-sm uppercase tracking-wide">
           {t("kanbanView.unassigned")}
         </h3>
-        <span class="bg-kitsuden-border text-[10px] px-1.5 rounded-full text-kitsuden-text-dim"
+        <span class="bg-kitsuden-border text-xs px-1.5 rounded-full text-kitsuden-text-dim"
           >{ungroupedEntries.length}</span
         >
       </div>

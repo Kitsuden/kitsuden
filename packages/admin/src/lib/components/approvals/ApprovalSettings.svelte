@@ -6,6 +6,8 @@
   routes. Only an admin changes anything; an editor sees it read-only.
 -->
 <script lang="ts">
+  import { Switch } from "$lib/tallao";
+  import { confirmDialog } from "$lib/confirm.svelte";
   import { t, localeFormat } from "$lib/i18n";
   import { Plus, Save, Trash2 } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -72,13 +74,13 @@
     (settings?.agents ?? []).filter((x) => x.mode === "propose").map((x) => x.name)
   );
 
-  function changeGlobal() {
+  async function changeGlobal() {
     if (!settings) return;
     const turnOff = settings.config.enabled;
     if (
       turnOff &&
       watched.length > 0 &&
-      !confirm(t("approvals.confirmTurnOff", { names: watched.join(", ") }))
+      !(await confirmDialog(t("approvals.confirmTurnOff", { names: watched.join(", ") })))
     )
       return;
     save({ enabled: !turnOff });
@@ -115,45 +117,41 @@
 <div class="space-y-6" data-testid="approvals-settings">
   {#if loading}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{error}</div>
+    <div
+      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
+    >
+      {error}
+    </div>
   {:else if settings}
     {@const a = settings}
-    <p class="text-xs text-zinc-500">{t("approvals.settingsHelp")}</p>
+    <p class="text-xs text-kitsuden-subtle">{t("approvals.settingsHelp")}</p>
     {#if !editable}
-      <p class="text-xs text-amber-300/80">{t("approvals.readOnly")}</p>
+      <p class="text-xs text-kitsuden-amber">{t("approvals.readOnly")}</p>
     {/if}
 
     <!-- Global -->
-    <section class="border border-zinc-800 rounded-lg p-4 space-y-4">
+    <section class="border border-kitsuden-border rounded-lg p-4 space-y-4">
       <div class="flex flex-wrap items-center gap-3">
         <div class="min-w-0 flex-1">
-          <h3 class="text-sm font-semibold text-zinc-200">{t("approvals.globalTitle")}</h3>
-          <p class="text-xs text-zinc-500">{t("approvals.globalHelp")}</p>
+          <h3 class="text-sm font-semibold text-kitsuden-text">{t("approvals.globalTitle")}</h3>
+          <p class="text-xs text-kitsuden-subtle">{t("approvals.globalHelp")}</p>
         </div>
-        <button
-          role="switch"
-          aria-checked={a.config.enabled}
-          aria-label={t("approvals.globalTitle")}
-          disabled={!editable || saving}
-          onclick={changeGlobal}
-          class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 {a
-            .config.enabled
-            ? 'bg-emerald-500'
-            : 'bg-zinc-700'}"
-          data-testid="global-switch"
-        >
-          <span
-            class="inline-block h-5 w-5 transform rounded-full bg-white transition-transform {a
-              .config.enabled
-              ? 'translate-x-5'
-              : 'translate-x-0.5'}"
-          ></span>
-        </button>
+        <!--
+          Controlled: the getter is the saved setting, so a cancelled confirmation (or a
+          failed save) leaves the switch where it was instead of where the click put it.
+        -->
+        <span data-testid="global-switch">
+          <Switch
+            bind:checked={() => a.config.enabled, () => void changeGlobal()}
+            ariaLabel={t("approvals.globalTitle")}
+            disabled={!editable || saving}
+          />
+        </span>
         <span
-          class="text-sm {a.config.enabled ? 'text-emerald-300' : 'text-zinc-400'}"
+          class="text-sm {a.config.enabled ? 'text-kitsuden-green' : 'text-kitsuden-text-dim'}"
           data-testid="global-state"
         >
           {a.config.enabled ? t("approvals.globalOn") : t("approvals.globalOff")}
@@ -161,14 +159,14 @@
       </div>
       {#if !a.config.enabled && watched.length > 0}
         <p
-          class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-sm px-3 py-2"
+          class="text-xs text-kitsuden-amber bg-kitsuden-amber/10 border border-kitsuden-amber/20 rounded-sm px-3 py-2"
           data-testid="global-off-warning"
         >
           {t("approvals.globalOffWarning", { names: watched.join(", ") })}
         </p>
       {/if}
       <fieldset class="space-y-1.5" disabled={!editable || saving} data-testid="propose-retention">
-        <legend class="text-xs text-zinc-400 mb-1">{t("approvals.retentionTitle")}</legend>
+        <legend class="text-xs text-kitsuden-text-dim mb-1">{t("approvals.retentionTitle")}</legend>
         {#each retentions as r}
           <label class="flex items-start gap-2 text-xs cursor-pointer">
             <input
@@ -180,12 +178,12 @@
               class="mt-0.5"
             />
             <span>
-              <span class="text-zinc-200">{t(`approvals.retention_${r}`)}</span>
-              <span class="block text-zinc-500">{t(`approvals.retentionHelp_${r}`)}</span>
+              <span class="text-kitsuden-text">{t(`approvals.retention_${r}`)}</span>
+              <span class="block text-kitsuden-subtle">{t(`approvals.retentionHelp_${r}`)}</span>
             </span>
           </label>
         {/each}
-        <p class="text-[11px] text-zinc-500">{t("approvals.retentionHelp")}</p>
+        <p class="text-[11px] text-kitsuden-subtle">{t("approvals.retentionHelp")}</p>
       </fieldset>
       <form
         class="flex flex-wrap items-end gap-3"
@@ -195,7 +193,9 @@
         }}
       >
         <div>
-          <label for="ttl" class="block text-xs text-zinc-400 mb-1">{t("approvals.ttl")}</label>
+          <label for="ttl" class="block text-xs text-kitsuden-text-dim mb-1"
+            >{t("approvals.ttl")}</label
+          >
           <input
             id="ttl"
             type="number"
@@ -203,7 +203,7 @@
             max="720"
             bind:value={ttl}
             disabled={!editable}
-            class="w-32 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+            class="w-32 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
           />
         </div>
         {#if editable}
@@ -211,10 +211,10 @@
             <Save size={14} class="mr-1" />{t("approvals.save")}
           </Button>
         {/if}
-        <p class="text-[11px] text-zinc-500 basis-full">{t("approvals.ttlHelp")}</p>
+        <p class="text-[11px] text-kitsuden-subtle basis-full">{t("approvals.ttlHelp")}</p>
       </form>
       {#if a.updatedAt}
-        <p class="text-[11px] text-zinc-500" data-testid="last-change">
+        <p class="text-[11px] text-kitsuden-subtle" data-testid="last-change">
           {t("approvals.lastChange", {
             name: a.updatedByName ?? a.updatedBy ?? "—",
             date: date(a.updatedAt),
@@ -224,20 +224,20 @@
     </section>
 
     <!-- Agents -->
-    <section class="border border-zinc-800 rounded-lg p-4 space-y-3">
+    <section class="border border-kitsuden-border rounded-lg p-4 space-y-3">
       <div>
-        <h3 class="text-sm font-semibold text-zinc-200">{t("approvals.agentsTitle")}</h3>
-        <p class="text-xs text-zinc-500">{t("approvals.agentsHelp")}</p>
+        <h3 class="text-sm font-semibold text-kitsuden-text">{t("approvals.agentsTitle")}</h3>
+        <p class="text-xs text-kitsuden-subtle">{t("approvals.agentsHelp")}</p>
       </div>
       {#if a.agents.length === 0}
-        <p class="text-xs text-zinc-500">{t("approvals.noAgents")}</p>
+        <p class="text-xs text-kitsuden-subtle">{t("approvals.noAgents")}</p>
       {:else}
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
-            <tbody class="divide-y divide-zinc-800/70">
+            <tbody class="divide-y divide-kitsuden-border/70">
               {#each a.agents as ag (ag.id)}
                 <tr data-testid="agent-mode-row">
-                  <td class="py-1.5 pr-3 text-zinc-200 min-w-0">
+                  <td class="py-1.5 pr-3 text-kitsuden-text min-w-0">
                     <a href="/agents/{ag.id}?tab=approval" class="hover:underline">{ag.name}</a>
                   </td>
                   <td class="py-1.5 w-48">
@@ -251,7 +251,7 @@
                           ag.name,
                           (e.currentTarget as HTMLSelectElement).value as ApprovalMode
                         )}
-                      class="w-full px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
+                      class="w-full px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
                     >
                       {#each a.modes as m}
                         <option value={m}>{t(`approvals.mode_${m}`)}</option>
@@ -267,46 +267,48 @@
     </section>
 
     <!-- SDK operations -->
-    <section class="border border-zinc-800 rounded-lg p-4 space-y-3">
+    <section class="border border-kitsuden-border rounded-lg p-4 space-y-3">
       <div class="flex flex-wrap items-end gap-3">
         <div class="min-w-0 flex-1">
-          <h3 class="text-sm font-semibold text-zinc-200">{t("approvals.operationsTitle")}</h3>
-          <p class="text-xs text-zinc-500">{t("approvals.operationsHelp")}</p>
+          <h3 class="text-sm font-semibold text-kitsuden-text">{t("approvals.operationsTitle")}</h3>
+          <p class="text-xs text-kitsuden-subtle">{t("approvals.operationsHelp")}</p>
         </div>
         <input
           type="search"
           bind:value={opsFilter}
           placeholder={t("approvals.filterOps")}
           aria-label={t("approvals.filterOps")}
-          class="w-56 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100"
+          class="w-56 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
         />
       </div>
-      <div class="overflow-x-auto max-h-96 overflow-y-auto border border-zinc-800 rounded-sm">
+      <div
+        class="overflow-x-auto max-h-96 overflow-y-auto border border-kitsuden-border rounded-sm"
+      >
         <table class="w-full text-xs">
-          <thead class="text-zinc-500 sticky top-0 bg-zinc-900">
+          <thead class="text-kitsuden-subtle sticky top-0 bg-kitsuden-card">
             <tr>
               <th class="text-left px-2 py-1.5">{t("approvals.colOperation")}</th>
               <th class="text-left px-2 py-1.5">{t("approvals.colDefault")}</th>
               <th class="text-left px-2 py-1.5">{t("approvals.colSetting")}</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-zinc-800/70">
+          <tbody class="divide-y divide-kitsuden-border/70">
             {#each filteredOperations as o (o.key)}
               <tr data-testid="operation-row" data-key={o.key}>
                 <td class="px-2 py-1.5 min-w-0">
-                  <code class="text-zinc-200 break-all">{o.method} {o.path}</code>
-                  <div class="text-zinc-500 break-all">{o.key}</div>
+                  <code class="text-kitsuden-text break-all">{o.method} {o.path}</code>
+                  <div class="text-kitsuden-subtle break-all">{o.key}</div>
                   {#if o.readOnly && o.method !== "GET"}
                     <span
-                      class="inline-block mt-0.5 px-1.5 rounded-sm bg-sky-500/10 text-sky-300 text-[10px]"
+                      class="inline-block mt-0.5 px-1.5 rounded-sm bg-kitsuden-info/10 text-kitsuden-info text-xs"
                       data-testid="read-only-post">{t("approvals.readOnlyPost")}</span
                     >
                   {/if}
                 </td>
                 <td
                   class="px-2 py-1.5 whitespace-nowrap {o.default
-                    ? 'text-amber-300'
-                    : 'text-zinc-400'}"
+                    ? 'text-kitsuden-amber'
+                    : 'text-kitsuden-text-dim'}"
                 >
                   {o.default ? t("approvals.sensitive") : t("approvals.notSensitive")}
                 </td>
@@ -321,10 +323,10 @@
                           [o.key]: fromValue((e.currentTarget as HTMLSelectElement).value),
                         },
                       })}
-                    class="w-full px-2 py-1 bg-zinc-950 border rounded text-xs text-zinc-100 {o.override ===
+                    class="w-full px-2 py-1 bg-kitsuden-bg border rounded text-xs text-kitsuden-text {o.override ===
                     null
-                      ? 'border-zinc-800'
-                      : 'border-indigo-500/60'}"
+                      ? 'border-kitsuden-input'
+                      : 'border-kitsuden-accent/60'}"
                   >
                     <option value="default">{t("approvals.useDefault")}</option>
                     <option value="true">{t("approvals.sensitive")}</option>
@@ -339,24 +341,24 @@
     </section>
 
     <!-- Core MCP tools -->
-    <section class="border border-zinc-800 rounded-lg p-4 space-y-3">
+    <section class="border border-kitsuden-border rounded-lg p-4 space-y-3">
       <div>
-        <h3 class="text-sm font-semibold text-zinc-200">{t("approvals.toolsTitle")}</h3>
-        <p class="text-xs text-zinc-500">{t("approvals.toolsHelp")}</p>
+        <h3 class="text-sm font-semibold text-kitsuden-text">{t("approvals.toolsTitle")}</h3>
+        <p class="text-xs text-kitsuden-subtle">{t("approvals.toolsHelp")}</p>
       </div>
-      <div class="overflow-x-auto border border-zinc-800 rounded-sm">
+      <div class="overflow-x-auto border border-kitsuden-border rounded-sm">
         <table class="w-full text-xs">
-          <tbody class="divide-y divide-zinc-800/70">
+          <tbody class="divide-y divide-kitsuden-border/70">
             {#each a.mcpTools as h (h.key)}
               <tr>
-                <td class="px-2 py-1.5"><code class="text-zinc-200">{h.name}</code></td>
-                <td class="px-2 py-1.5 text-zinc-500"
+                <td class="px-2 py-1.5"><code class="text-kitsuden-text">{h.name}</code></td>
+                <td class="px-2 py-1.5 text-kitsuden-subtle"
                   >{h.write ? t("approvals.writes") : t("approvals.reads")}</td
                 >
                 <td
                   class="px-2 py-1.5 whitespace-nowrap {h.default
-                    ? 'text-amber-300'
-                    : 'text-zinc-400'}"
+                    ? 'text-kitsuden-amber'
+                    : 'text-kitsuden-text-dim'}"
                 >
                   {h.default ? t("approvals.sensitive") : t("approvals.notSensitive")}
                 </td>
@@ -371,10 +373,10 @@
                           [h.key]: fromValue((e.currentTarget as HTMLSelectElement).value),
                         },
                       })}
-                    class="w-full px-2 py-1 bg-zinc-950 border rounded text-xs text-zinc-100 {h.override ===
+                    class="w-full px-2 py-1 bg-kitsuden-bg border rounded text-xs text-kitsuden-text {h.override ===
                     null
-                      ? 'border-zinc-800'
-                      : 'border-indigo-500/60'}"
+                      ? 'border-kitsuden-input'
+                      : 'border-kitsuden-accent/60'}"
                   >
                     <option value="default">{t("approvals.useDefault")}</option>
                     <option value="true">{t("approvals.sensitive")}</option>
@@ -389,13 +391,13 @@
     </section>
 
     <!-- Legacy routes -->
-    <section class="border border-zinc-800 rounded-lg p-4 space-y-3">
+    <section class="border border-kitsuden-border rounded-lg p-4 space-y-3">
       <div>
-        <h3 class="text-sm font-semibold text-zinc-200">{t("approvals.legacyTitle")}</h3>
-        <p class="text-xs text-zinc-500">{t("approvals.legacyHelp")}</p>
+        <h3 class="text-sm font-semibold text-kitsuden-text">{t("approvals.legacyTitle")}</h3>
+        <p class="text-xs text-kitsuden-subtle">{t("approvals.legacyHelp")}</p>
       </div>
       {#if rules.length === 0}
-        <p class="text-xs text-zinc-500">{t("approvals.noRules")}</p>
+        <p class="text-xs text-kitsuden-subtle">{t("approvals.noRules")}</p>
       {/if}
       {#each rules as rule, i}
         <div class="flex flex-wrap items-center gap-2" data-testid="legacy-rule">
@@ -403,7 +405,7 @@
             bind:value={rule.method}
             disabled={!editable}
             aria-label={t("approvals.method")}
-            class="w-28 px-2 py-1.5 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100"
+            class="w-28 px-2 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
           >
             {#each ["*", "GET", "POST", "PUT", "PATCH", "DELETE"] as m}
               <option value={m}>{m}</option>
@@ -413,13 +415,13 @@
             bind:value={rule.path}
             disabled={!editable}
             aria-label={t("approvals.path")}
-            class="flex-1 min-w-48 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-sm text-xs text-zinc-100 font-mono"
+            class="flex-1 min-w-48 px-3 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text font-mono"
           />
           {#if editable}
             <Button
               variant="ghost"
               size="sm"
-              class="text-red-400"
+              class="text-kitsuden-danger"
               onclick={() => (rules = rules.filter((_, j) => j !== i))}
             >
               <Trash2 size={14} class="mr-1" />{t("approvals.removeRule")}

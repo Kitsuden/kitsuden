@@ -33,7 +33,7 @@
   <input
     type="date"
     value={inputValue}
-    class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
+    class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
     oninput={(e) => {
       const date = e.currentTarget.valueAsDate;
       onChange?.(date ? date.toISOString() : null);
