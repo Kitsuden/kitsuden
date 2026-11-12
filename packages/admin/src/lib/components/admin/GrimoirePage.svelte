@@ -357,7 +357,11 @@
       tabId: `kon-view-tab-${view.id}`,
     }))
   );
-  const konName = $derived(grimoireConfig?.name ?? grimoireId.replace(/^kon-/, ""));
+  const konName = $derived(
+    grimoireConfig?.name ??
+      moduleStore.modules.find((m) => m.key === grimoireId)?.name ??
+      grimoireId.replace(/^kon-/, "")
+  );
   const viewBase = $derived(`/g/${grimoireId}/${activeViewId || explorerView?.id || "default"}`);
   const manyViews = $derived((grimoireConfig?.views.length ?? 0) > 1);
   const activeViewLabel = $derived.by(() => {
@@ -412,22 +416,16 @@
     crumbs={[{ label: activeViewLabel || source.label, href: viewBase }]}
   />
 {:else if explorerView || (grimoireConfig && grimoireConfig.views.length > 0)}
-  <Page title={konName} crumbs={manyViews && activeViewLabel ? [{ label: activeViewLabel }] : []}>
-    {#snippet meta()}
-      {#if isGrid && total !== null}
-        {total === 1
-          ? tr("list.countOne")
-          : tr("list.count", { n: total.toLocaleString(localeFormat()) })}
-      {/if}
-    {/snippet}
-    {#snippet actions()}
-      {#if isGrid && source && source.formFields.length > 0}
-        <Button variant="secondary" onclick={() => (quickAdd = true)}>
-          {tr("list.quickAdd")}
-        </Button>
-        <Button href={`${viewBase}/new`}>{tr("list.newOne", { name: source.singular })}</Button>
-      {/if}
-    {/snippet}
+  <!--
+    The count and the add buttons belong to a list: a custom view (a form, reports) gets
+    neither, and no empty meta / actions box that pushed its tabs down on a phone.
+  -->
+  <Page
+    title={konName}
+    crumbs={manyViews && activeViewLabel ? [{ label: activeViewLabel }] : []}
+    meta={isGrid && total !== null ? listMeta : undefined}
+    actions={isGrid && source && source.formFields.length > 0 ? listActions : undefined}
+  >
     {#snippet tabs()}
       {#if manyViews}
         <Tabs
@@ -501,3 +499,18 @@
     />
   </Page>
 {/if}
+
+{#snippet listMeta()}
+  {total === 1
+    ? tr("list.countOne")
+    : tr("list.count", { n: (total ?? 0).toLocaleString(localeFormat()) })}
+{/snippet}
+
+{#snippet listActions()}
+  {#if source}
+    <Button variant="secondary" onclick={() => (quickAdd = true)}>
+      {tr("list.quickAdd")}
+    </Button>
+    <Button href={`${viewBase}/new`}>{tr("list.newOne", { name: source.singular })}</Button>
+  {/if}
+{/snippet}

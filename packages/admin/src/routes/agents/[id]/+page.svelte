@@ -693,7 +693,9 @@
     flex-direction: column;
     gap: 1rem;
   }
+  /* The chat fills the sheet: the message box sits at the bottom of the window. */
   .agent-chat {
-    height: min(70vh, 40rem);
+    height: 100%;
+    min-height: 20rem;
   }
 </style>

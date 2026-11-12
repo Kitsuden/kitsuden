@@ -30,7 +30,8 @@
     end: ISODate | null;
   }
 
-  export type DateRangePreset = { label: string; days: number } | { label: string; start: ISODate; end: ISODate };
+  export type DateRangePreset =
+    { label: string; days: number } | { label: string; start: ISODate; end: ISODate };
 </script>
 
 <script lang="ts">
@@ -120,7 +121,8 @@
   const outOfRange = (iso: ISODate) => (min != null && iso < min) || (max != null && iso > max);
 
   function set(next: DateRange) {
-    const ordered = next.start && next.end && next.start > next.end ? { start: next.end, end: next.start } : next;
+    const ordered =
+      next.start && next.end && next.start > next.end ? { start: next.end, end: next.start } : next;
     if (ordered.start === value.start && ordered.end === value.end) return;
     value = ordered;
     onchange?.(ordered);
@@ -142,10 +144,14 @@
     if ("start" in preset) set({ start: preset.start, end: preset.end });
     else {
       const today = todayISO();
-      set({ start: preset.days > 0 ? addDays(today, -(preset.days - 1)) : `${today.slice(0, 7)}-01`, end: today });
+      set({
+        start: preset.days > 0 ? addDays(today, -(preset.days - 1)) : `${today.slice(0, 7)}-01`,
+        end: today,
+      });
     }
   }
-  const isCurrent = (preset: DateRangePreset) => "start" in preset && preset.start === value.start && preset.end === value.end;
+  const isCurrent = (preset: DateRangePreset) =>
+    "start" in preset && preset.start === value.start && preset.end === value.end;
 
   $effect(() => {
     const p = panel;
@@ -171,26 +177,52 @@
   {#if quick.length}
     <div class="ta-daterange-presets" role="group" aria-label={buttonLabel}>
       {#each quick as preset (preset.label)}
-        <button type="button" class="ta-daterange-preset" aria-pressed={isCurrent(preset) || undefined} onclick={() => apply(preset)}>{preset.label}</button>
+        <button
+          type="button"
+          class="ta-daterange-preset"
+          aria-pressed={isCurrent(preset) || undefined}
+          onclick={() => apply(preset)}>{preset.label}</button
+        >
       {/each}
     </div>
   {/if}
   <div class="ta-daterange-months">
     <div role="group" aria-label={startLabel}>
       <p class="ta-daterange-caption" aria-hidden="true">{startLabel}</p>
-      <Calendar value={value.start} {min} max={value.end ?? max} {locale} {weekStartsOn} onselect={(iso) => set({ ...value, start: iso })} />
+      <Calendar
+        value={value.start}
+        {min}
+        max={value.end ?? max}
+        {locale}
+        {weekStartsOn}
+        onselect={(iso) => set({ ...value, start: iso })}
+      />
     </div>
     <div role="group" aria-label={endLabel}>
       <p class="ta-daterange-caption" aria-hidden="true">{endLabel}</p>
-      <Calendar value={value.end} min={value.start ?? min} {max} {locale} {weekStartsOn} onselect={(iso) => set({ ...value, end: iso })} />
+      <Calendar
+        value={value.end}
+        min={value.start ?? min}
+        {max}
+        {locale}
+        {weekStartsOn}
+        onselect={(iso) => set({ ...value, end: iso })}
+      />
     </div>
   </div>
 {/snippet}
 
 {#if inline}
-  <div class={cn("ta-daterange-panel ta-daterange-panel--inline", className)}>{@render content()}</div>
+  <div class={cn("ta-daterange-panel ta-daterange-panel--inline", className)}>
+    {@render content()}
+  </div>
 {:else}
-  <div class={cn("ta-daterange", className)} bind:this={wrapper} role="group" aria-label={ariaLabel}>
+  <div
+    class={cn("ta-daterange", className)}
+    bind:this={wrapper}
+    role="group"
+    aria-label={ariaLabel}
+  >
     {#each ["start", "end"] as const as side (side)}
       {#if side === "end"}<span class="ta-daterange-dash" aria-hidden="true">–</span>{/if}
       <input
@@ -227,7 +259,15 @@
       <Icon name="calendar" size={16} />
     </button>
     {#if open}
-      <div bind:this={panel} id={`${id}-panel`} role="dialog" aria-label={buttonLabel} popover="manual" class="ta-daterange-panel ta-daterange-panel--floating" out:scaleIn={{ duration: "fast", from: 0.98 }}>
+      <div
+        bind:this={panel}
+        id={`${id}-panel`}
+        role="dialog"
+        aria-label={buttonLabel}
+        popover="manual"
+        class="ta-daterange-panel ta-daterange-panel--floating"
+        out:scaleIn={{ duration: "fast", from: 0.98 }}
+      >
         {@render content()}
       </div>
     {/if}
@@ -246,7 +286,10 @@
     border: 1px solid rgb(var(--ta-border));
     border-radius: var(--ta-radius);
   }
-  .ta-daterange:focus-within { border-color: rgb(var(--ta-accent) / 0.5); box-shadow: 0 0 0 2px rgb(var(--ta-accent) / 0.15); }
+  .ta-daterange:focus-within {
+    border-color: rgb(var(--ta-accent) / 0.5);
+    box-shadow: 0 0 0 2px rgb(var(--ta-accent) / 0.15);
+  }
 
   .ta-daterange-field {
     flex: 1 1 0;
@@ -261,10 +304,19 @@
     border-radius: var(--ta-radius);
     outline: none;
   }
-  .ta-daterange-field::placeholder { color: rgb(var(--ta-text-dim)); }
-  .ta-daterange-field:focus-visible { box-shadow: inset 0 0 0 2px rgb(var(--ta-accent) / 0.45); }
-  .ta-daterange-field[aria-invalid="true"] { box-shadow: inset 0 0 0 1px rgb(var(--ta-danger) / 0.8); }
-  .ta-daterange-dash { align-self: center; color: rgb(var(--ta-text-dim)); }
+  .ta-daterange-field::placeholder {
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-daterange-field:focus-visible {
+    box-shadow: inset 0 0 0 2px rgb(var(--ta-accent) / 0.45);
+  }
+  .ta-daterange-field[aria-invalid="true"] {
+    box-shadow: inset 0 0 0 1px rgb(var(--ta-danger) / 0.8);
+  }
+  .ta-daterange-dash {
+    align-self: center;
+    color: rgb(var(--ta-text-dim));
+  }
 
   .ta-daterange-button {
     display: flex;
@@ -277,12 +329,24 @@
     border-radius: 0 var(--ta-radius) var(--ta-radius) 0;
     cursor: pointer;
   }
-  .ta-daterange-button:hover:not(:disabled) { color: rgb(var(--ta-text)); }
-  .ta-daterange-button:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; }
+  .ta-daterange-button:hover:not(:disabled) {
+    color: rgb(var(--ta-text));
+  }
+  .ta-daterange-button:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+  }
   .ta-daterange-button:disabled,
-  .ta-daterange-field:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ta-daterange-field:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
-  .ta-daterange-panel { display: flex; gap: 0.75rem; color: rgb(var(--ta-text)); }
+  .ta-daterange-panel {
+    display: flex;
+    gap: 0.75rem;
+    color: rgb(var(--ta-text));
+  }
   .ta-daterange-panel--floating {
     position: fixed;
     inset: auto;
@@ -300,11 +364,23 @@
     animation: ta-daterange-enter var(--ta-duration-fast, 120ms) var(--ta-ease-out, ease-out);
   }
   @keyframes ta-daterange-enter {
-    from { opacity: 0; transform: translateY(-2px) scale(0.98); }
-    to { opacity: 1; transform: none; }
+    from {
+      opacity: 0;
+      transform: translateY(-2px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
-  .ta-daterange-presets { display: flex; flex: 0 0 auto; flex-direction: column; gap: 0.125rem; min-width: 8rem; }
+  .ta-daterange-presets {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 8rem;
+  }
   .ta-daterange-preset {
     padding: 0.375rem 0.625rem;
     font: inherit;
@@ -316,11 +392,26 @@
     border-radius: var(--ta-radius-sm);
     cursor: pointer;
   }
-  .ta-daterange-preset:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated)); }
-  .ta-daterange-preset:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
-  .ta-daterange-preset[aria-pressed="true"] { color: rgb(var(--ta-text)); border-color: rgb(var(--ta-accent) / 0.45); background: rgb(var(--ta-accent) / 0.1); }
+  .ta-daterange-preset:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated));
+  }
+  .ta-daterange-preset:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
+  .ta-daterange-preset[aria-pressed="true"] {
+    color: rgb(var(--ta-text));
+    border-color: rgb(var(--ta-accent) / 0.45);
+    background: rgb(var(--ta-accent) / 0.1);
+  }
 
-  .ta-daterange-months { display: flex; flex-wrap: wrap; gap: 0.75rem; min-width: 0; }
+  .ta-daterange-months {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    min-width: 0;
+  }
   .ta-daterange-caption {
     margin: 0 0 0.25rem;
     font-size: 0.6875rem;
@@ -332,17 +423,33 @@
 
   /* A phone: the quick ranges become a row over the calendars, which stack. */
   @media (max-width: 640px) {
-    .ta-daterange-panel { flex-direction: column; }
-    .ta-daterange-presets { flex-direction: row; flex-wrap: wrap; min-width: 0; }
+    .ta-daterange-panel {
+      flex-direction: column;
+    }
+    .ta-daterange-presets {
+      flex-direction: row;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
   }
 
   @media (pointer: coarse) {
-    .ta-daterange-field { font-size: 1rem; min-height: 2.75rem; }
-    .ta-daterange-button { min-width: 2.75rem; justify-content: center; }
-    .ta-daterange-preset { min-height: 2.75rem; }
+    .ta-daterange-field {
+      font-size: 1rem;
+      min-height: 2.75rem;
+    }
+    .ta-daterange-button {
+      min-width: 2.75rem;
+      justify-content: center;
+    }
+    .ta-daterange-preset {
+      min-height: 2.75rem;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-daterange-panel--floating { animation: none; }
+    .ta-daterange-panel--floating {
+      animation: none;
+    }
   }
 </style>

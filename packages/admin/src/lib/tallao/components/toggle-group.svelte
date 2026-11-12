@@ -119,15 +119,28 @@
   aria-labelledby={label ? `${id}-label` : undefined}
   aria-label={label ? undefined : ariaLabel}
 >
-  {#if label}<span id={`${id}-label`} class={hideLabel ? "ta-toggle-group-hidden" : "ta-toggle-group-label"}>{label}</span>{/if}
+  {#if label}<span
+      id={`${id}-label`}
+      class={hideLabel ? "ta-toggle-group-hidden" : "ta-toggle-group-label"}>{label}</span
+    >{/if}
   {#if name}
-    {#each type === "multiple" ? values : value ? [value] : [] as v (v)}<input type="hidden" {name} value={v} />{/each}
+    {#each type === "multiple" ? values : value ? [value] : [] as v (v)}<input
+        type="hidden"
+        {name}
+        value={v}
+      />{/each}
   {/if}
   {#each options as o (o.value)}
     {@const active = isPressed(o.value)}
     <button
       type="button"
-      class={cn("ta-toggle-group-button", `ta-toggle-group-button--${size}`, tone === "solid" && "ta-toggle-group-button--solid", itemClass, o.class)}
+      class={cn(
+        "ta-toggle-group-button",
+        `ta-toggle-group-button--${size}`,
+        tone === "solid" && "ta-toggle-group-button--solid",
+        itemClass,
+        o.class
+      )}
       style={styleOf(o)}
       aria-pressed={active}
       aria-label={o.ariaLabel}
@@ -135,15 +148,37 @@
       disabled={disabled || o.disabled}
       onclick={() => press(o.value)}
     >
-      {#if item}{@render item(o, active)}{:else}{o.label}{#if o.count != null}<span class="ta-toggle-group-count">{o.count}</span>{/if}{/if}
+      {#if item}{@render item(o, active)}{:else}{o.label}{#if o.count != null}<span
+            class="ta-toggle-group-count">{o.count}</span
+          >{/if}{/if}
     </button>
   {/each}
 </div>
 
 <style>
-  .ta-toggle-group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; }
-  .ta-toggle-group-label { margin-right: 0.25rem; font-size: 0.75rem; font-weight: 500; color: rgb(var(--ta-text-dim)); }
-  .ta-toggle-group-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .ta-toggle-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .ta-toggle-group-label {
+    margin-right: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-toggle-group-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
 
   .ta-toggle-group-button {
     display: inline-flex;
@@ -159,10 +194,19 @@
     border: 1px solid rgb(var(--ta-border));
     border-radius: 999px;
     cursor: pointer;
-    transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+    transition:
+      color 0.15s,
+      background-color 0.15s,
+      border-color 0.15s;
   }
-  .ta-toggle-group-button--sm { padding: 0.25rem 0.625rem; font-size: 0.75rem; }
-  .ta-toggle-group-button:hover:not(:disabled) { color: rgb(var(--ta-text)); border-color: rgb(var(--ta-muted)); }
+  .ta-toggle-group-button--sm {
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+  }
+  .ta-toggle-group-button:hover:not(:disabled) {
+    color: rgb(var(--ta-text));
+    border-color: rgb(var(--ta-muted));
+  }
   .ta-toggle-group-button[aria-pressed="true"] {
     color: rgb(var(--ta-text));
     background: rgb(var(--ta-accent) / 0.18);
@@ -171,12 +215,26 @@
   /* With a custom color (the option or the page sets --ta-toggle-accent), the same tint in that color. */
   @supports (color: color-mix(in srgb, red, blue)) {
     .ta-toggle-group-button[aria-pressed="true"] {
-      background: color-mix(in srgb, var(--ta-toggle-accent, rgb(var(--ta-accent))) 18%, transparent);
-      border-color: color-mix(in srgb, var(--ta-toggle-accent, rgb(var(--ta-accent))) 70%, transparent);
+      background: color-mix(
+        in srgb,
+        var(--ta-toggle-accent, rgb(var(--ta-accent))) 18%,
+        transparent
+      );
+      border-color: color-mix(
+        in srgb,
+        var(--ta-toggle-accent, rgb(var(--ta-accent))) 70%,
+        transparent
+      );
     }
   }
-  .ta-toggle-group-button:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; }
-  .ta-toggle-group-button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .ta-toggle-group-button:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+  }
+  .ta-toggle-group-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
   .ta-toggle-group--segmented {
     flex-wrap: nowrap;
     gap: 0;
@@ -198,14 +256,28 @@
   }
   @supports (color: color-mix(in srgb, red, blue)) {
     .ta-toggle-group--segmented .ta-toggle-group-button[aria-pressed="true"] {
-      background: color-mix(in srgb, var(--ta-toggle-accent, rgb(var(--ta-accent))) 18%, transparent);
-      border-color: color-mix(in srgb, var(--ta-toggle-accent, rgb(var(--ta-accent))) 50%, transparent);
+      background: color-mix(
+        in srgb,
+        var(--ta-toggle-accent, rgb(var(--ta-accent))) 18%,
+        transparent
+      );
+      border-color: color-mix(
+        in srgb,
+        var(--ta-toggle-accent, rgb(var(--ta-accent))) 50%,
+        transparent
+      );
     }
   }
   .ta-toggle-group .ta-toggle-group-button--solid[aria-pressed="true"] {
     color: var(--ta-toggle-on-accent, rgb(var(--ta-on-accent)));
-    background: var(--ta-toggle-accent, var(--ta-accent-fill, color-mix(in srgb, rgb(var(--ta-accent)) 88%, black)));
-    border-color: var(--ta-toggle-accent, var(--ta-accent-fill, color-mix(in srgb, rgb(var(--ta-accent)) 88%, black)));
+    background: var(
+      --ta-toggle-accent,
+      var(--ta-accent-fill, color-mix(in srgb, rgb(var(--ta-accent)) 88%, black))
+    );
+    border-color: var(
+      --ta-toggle-accent,
+      var(--ta-accent-fill, color-mix(in srgb, rgb(var(--ta-accent)) 88%, black))
+    );
   }
 
   /* bare: the button is its content (an icon), no frame or background; when pressed, a ring. */
@@ -214,10 +286,18 @@
     color: rgb(var(--ta-text));
     background: transparent;
     border-color: transparent;
-    transition: opacity 0.15s, box-shadow 0.15s, transform 0.15s;
+    transition:
+      opacity 0.15s,
+      box-shadow 0.15s,
+      transform 0.15s;
   }
-  .ta-toggle-group--bare .ta-toggle-group-button--sm { padding: 0.0625rem; }
-  .ta-toggle-group--bare .ta-toggle-group-button:hover:not(:disabled) { border-color: transparent; transform: scale(1.05); }
+  .ta-toggle-group--bare .ta-toggle-group-button--sm {
+    padding: 0.0625rem;
+  }
+  .ta-toggle-group--bare .ta-toggle-group-button:hover:not(:disabled) {
+    border-color: transparent;
+    transform: scale(1.05);
+  }
   .ta-toggle-group.ta-toggle-group--bare .ta-toggle-group-button[aria-pressed="true"] {
     background: transparent;
     border-color: transparent;
@@ -225,15 +305,28 @@
       0 0 0 2px var(--ta-toggle-ring-offset, rgb(var(--ta-surface))),
       0 0 0 4px var(--ta-toggle-accent, rgb(var(--ta-accent)));
   }
-  .ta-toggle-group--dimmed .ta-toggle-group-button[aria-pressed="false"]:not(:hover):not(:focus-visible) { opacity: var(--ta-toggle-dim, 0.4); }
-  @media (prefers-reduced-motion: reduce) {
-    .ta-toggle-group--bare .ta-toggle-group-button:hover:not(:disabled) { transform: none; }
+  .ta-toggle-group--dimmed
+    .ta-toggle-group-button[aria-pressed="false"]:not(:hover):not(:focus-visible) {
+    opacity: var(--ta-toggle-dim, 0.4);
   }
-  .ta-toggle-group-button--solid[aria-pressed="true"] .ta-toggle-group-count { color: inherit; }
-  .ta-toggle-group-count { font-size: 0.6875rem; font-variant-numeric: tabular-nums; color: rgb(var(--ta-text-dim)); }
+  @media (prefers-reduced-motion: reduce) {
+    .ta-toggle-group--bare .ta-toggle-group-button:hover:not(:disabled) {
+      transform: none;
+    }
+  }
+  .ta-toggle-group-button--solid[aria-pressed="true"] .ta-toggle-group-count {
+    color: inherit;
+  }
+  .ta-toggle-group-count {
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--ta-text-dim));
+  }
 
   /* On touch screens: 16px so iOS does not zoom the page on focus, and 44px of height for the finger. */
   @media (pointer: coarse) {
-    .ta-toggle-group-button { min-height: 2.75rem; }
+    .ta-toggle-group-button {
+      min-height: 2.75rem;
+    }
   }
 </style>

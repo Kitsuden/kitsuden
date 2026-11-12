@@ -249,7 +249,8 @@
   function matches(row: T, col: DataColumn<T>, value: unknown): boolean {
     if (col.filterFn) return col.filterFn(row, value);
     const v = valueOf(row, col);
-    if (col.filter === "text") return normalizeText(String(v ?? "")).includes(normalizeText(String(value)));
+    if (col.filter === "text")
+      return normalizeText(String(v ?? "")).includes(normalizeText(String(value)));
     if (col.filter === "select") return String(v ?? "") === String(value);
     if (col.filter === "range") {
       const { min, max } = value as DataRange;
@@ -305,7 +306,8 @@
 
   const filterLabel = (col: DataColumn<T>) => L.filterColumn.replace("{column}", col.header);
   const rangeOf = (col: DataColumn<T>) => (filters[col.key] ?? {}) as DataRange;
-  const toNumber = (text: string) => (text.trim() === "" || Number.isNaN(Number(text)) ? null : Number(text));
+  const toNumber = (text: string) =>
+    text.trim() === "" || Number.isNaN(Number(text)) ? null : Number(text);
 
   const sorted = $derived.by(() => {
     if (manual || !sort) return filtered;
@@ -316,7 +318,9 @@
   });
 
   const pageCount = $derived(
-    pageSize ? Math.max(1, Math.ceil((manual ? (total ?? rows.length) : filtered.length) / pageSize)) : 1
+    pageSize
+      ? Math.max(1, Math.ceil((manual ? (total ?? rows.length) : filtered.length) / pageSize))
+      : 1
   );
   const visible = $derived(
     !pageSize || manual ? sorted : sorted.slice((page - 1) * pageSize, page * pageSize)
@@ -366,7 +370,11 @@
   }
 
   function toggleAll() {
-    setSelected(allChecked ? selected.filter((k) => !visibleKeys.includes(k)) : [...new Set([...selected, ...visibleKeys])]);
+    setSelected(
+      allChecked
+        ? selected.filter((k) => !visibleKeys.includes(k))
+        : [...new Set([...selected, ...visibleKeys])]
+    );
   }
 
   function toggle(k: string) {
@@ -375,14 +383,18 @@
 
   // ——— Columns shown, density ———
   const shownColumns = $derived(
-    visibleColumns ? columns.filter((c) => c.hideable === false || visibleColumns!.includes(c.key)) : columns
+    visibleColumns
+      ? columns.filter((c) => c.hideable === false || visibleColumns!.includes(c.key))
+      : columns
   );
   const linkKey = $derived(linkColumn ?? shownColumns[0]?.key);
 
   function toggleColumn(key: string) {
     const all = columns.map((c) => c.key);
     const current = visibleColumns ?? all;
-    const next = current.includes(key) ? current.filter((k) => k !== key) : all.filter((k) => k === key || current.includes(k));
+    const next = current.includes(key)
+      ? current.filter((k) => k !== key)
+      : all.filter((k) => k === key || current.includes(k));
     // A table with no columns is not a table: the last one stays.
     if (!columns.some((c) => c.hideable === false || next.includes(c.key))) return;
     visibleColumns = next;
@@ -397,19 +409,32 @@
   const SKELETON_WIDTHS = ["70%", "45%", "60%", "35%", "55%"];
   const skeletonRows = $derived(loadingRows ?? Math.min(pageSize ?? 5, 5));
 
-  const totalColumns = $derived(shownColumns.length + (selectable ? 1 : 0) + (actions ? 1 : 0) + (rowActions ? 1 : 0));
+  const totalColumns = $derived(
+    shownColumns.length + (selectable ? 1 : 0) + (actions ? 1 : 0) + (rowActions ? 1 : 0)
+  );
   const styleOf = (col: DataColumn<T>) =>
-    [col.width ? `width: ${col.width}` : "", col.align ? `text-align: ${col.align}` : ""].filter(Boolean).join("; ") || undefined;
+    [col.width ? `width: ${col.width}` : "", col.align ? `text-align: ${col.align}` : ""]
+      .filter(Boolean)
+      .join("; ") || undefined;
 </script>
 
-<div class={cn("ta-datatable", density === "compact" && "ta-datatable--compact", className)} aria-busy={loading || undefined} data-density={density}>
+<div
+  class={cn("ta-datatable", density === "compact" && "ta-datatable--compact", className)}
+  aria-busy={loading || undefined}
+  data-density={density}
+>
   {#if toolbar || densityToggle || columnChooser}
     <div class="ta-datatable-toolbar">
       <div class="ta-datatable-toolbar-start">{@render toolbar?.()}</div>
       {#if densityToggle || columnChooser}
         <div class="ta-datatable-tools">
           {#if densityToggle}
-            <button type="button" class="ta-datatable-tool" aria-pressed={density === "compact"} onclick={toggleDensity}>
+            <button
+              type="button"
+              class="ta-datatable-tool"
+              aria-pressed={density === "compact"}
+              onclick={toggleDensity}
+            >
               <Icon name="menu" size={14} />{compactLabel}
             </button>
           {/if}
@@ -425,8 +450,8 @@
                   checked={shownColumns.includes(col)}
                   disabled={col.hideable === false}
                   closeOnSelect={false}
-                  onSelect={() => toggleColumn(col.key)}
-                >{col.header}</MenuItem>
+                  onSelect={() => toggleColumn(col.key)}>{col.header}</MenuItem
+                >
               {/each}
             </DropdownMenu>
           {/if}
@@ -468,7 +493,9 @@
           </TableHead>
         {/each}
         {#if actions}<TableHead><span class="ta-hidden">{L.actions}</span></TableHead>{/if}
-        {#if rowActions}<TableHead class="ta-datatable-pin"><span class="ta-hidden">{L.actions}</span></TableHead>{/if}
+        {#if rowActions}<TableHead class="ta-datatable-pin"
+            ><span class="ta-hidden">{L.actions}</span></TableHead
+          >{/if}
       </TableRow>
       {#if filterable.length}
         <TableRow class="ta-datatable-filters">
@@ -477,7 +504,12 @@
             {@const custom = typeof col.filter === "function" ? col.filter : null}
             <TableCell class="ta-datatable-filter">
               {#if custom}
-                {@render custom({ column: col, value: filters[col.key], set: (v) => setFilter(col.key, v), label: filterLabel(col) })}
+                {@render custom({
+                  column: col,
+                  value: filters[col.key],
+                  set: (v) => setFilter(col.key, v),
+                  label: filterLabel(col),
+                })}
               {:else if col.filter === "text"}
                 <input
                   type="search"
@@ -494,7 +526,8 @@
                   onchange={(e) => setFilter(col.key, e.currentTarget.value)}
                 >
                   <option value="">{L.allValues}</option>
-                  {#each optionsOf(col) as o (o.value)}<option value={o.value}>{o.label}</option>{/each}
+                  {#each optionsOf(col) as o (o.value)}<option value={o.value}>{o.label}</option
+                    >{/each}
                 </select>
               {:else if col.filter === "range"}
                 <div class="ta-datatable-range">
@@ -505,7 +538,8 @@
                     aria-label={`${filterLabel(col)}: ${L.minimum}`}
                     placeholder={L.minimum}
                     value={rangeOf(col).min ?? ""}
-                    oninput={(e) => setFilter(col.key, { ...rangeOf(col), min: toNumber(e.currentTarget.value) })}
+                    oninput={(e) =>
+                      setFilter(col.key, { ...rangeOf(col), min: toNumber(e.currentTarget.value) })}
                   />
                   <input
                     type="number"
@@ -514,7 +548,8 @@
                     aria-label={`${filterLabel(col)}: ${L.maximum}`}
                     placeholder={L.maximum}
                     value={rangeOf(col).max ?? ""}
-                    oninput={(e) => setFilter(col.key, { ...rangeOf(col), max: toNumber(e.currentTarget.value) })}
+                    oninput={(e) =>
+                      setFilter(col.key, { ...rangeOf(col), max: toNumber(e.currentTarget.value) })}
                   />
                 </div>
               {/if}
@@ -529,15 +564,30 @@
       {#if error}
         <TableRow class="ta-datatable-state">
           <TableCell colspan={totalColumns}>
-            {#if errorState}{@render errorState(error)}{:else}<EmptyState variant="error" size="sm" level={null} description={error} {onRetry} retrying={loading} />{/if}
+            {#if errorState}{@render errorState(error)}{:else}<EmptyState
+                variant="error"
+                size="sm"
+                level={null}
+                description={error}
+                {onRetry}
+                retrying={loading}
+              />{/if}
           </TableCell>
         </TableRow>
       {:else if loading && visible.length === 0}
         {#each Array.from({ length: skeletonRows }) as _, i (i)}
           <TableRow class="ta-datatable-loading">
-            {#if selectable}<TableCell class="ta-datatable-check"><Skeleton width="1rem" height="1rem" /></TableCell>{/if}
+            {#if selectable}<TableCell class="ta-datatable-check"
+                ><Skeleton width="1rem" height="1rem" /></TableCell
+              >{/if}
             {#each shownColumns as col, c (col.key)}
-              <TableCell><Skeleton height="0.875rem" width={SKELETON_WIDTHS[(i + c) % SKELETON_WIDTHS.length]} class={col.align === "right" ? "ta-datatable-skeleton-end" : ""} /></TableCell>
+              <TableCell
+                ><Skeleton
+                  height="0.875rem"
+                  width={SKELETON_WIDTHS[(i + c) % SKELETON_WIDTHS.length]}
+                  class={col.align === "right" ? "ta-datatable-skeleton-end" : ""}
+                /></TableCell
+              >
             {/each}
             {#if actions}<TableCell></TableCell>{/if}
             {#if rowActions}<TableCell class="ta-datatable-pin"></TableCell>{/if}
@@ -560,14 +610,21 @@
             {/if}
             {#each shownColumns as col (col.key)}
               {@const href = rowHref && col.key === linkKey ? rowHref(row) : undefined}
-              <TableCell class={href ? "ta-datatable-linkcell" : ""} style={col.align ? `text-align: ${col.align}` : undefined}>
+              <TableCell
+                class={href ? "ta-datatable-linkcell" : ""}
+                style={col.align ? `text-align: ${col.align}` : undefined}
+              >
                 {#if href}
-                  <a class="ta-datatable-link" {href}>{#if cell}{@render cell(row, col)}{:else}{valueOf(row, col) ?? "—"}{/if}</a>
+                  <a class="ta-datatable-link" {href}
+                    >{#if cell}{@render cell(row, col)}{:else}{valueOf(row, col) ?? "—"}{/if}</a
+                  >
                 {:else if cell}{@render cell(row, col)}{:else}{valueOf(row, col) ?? "—"}{/if}
               </TableCell>
             {/each}
-            {#if actions}<TableCell class="ta-datatable-actions">{@render actions(row)}</TableCell>{/if}
-            {#if rowActions}<TableCell class="ta-datatable-pin">{@render rowActions(row)}</TableCell>{/if}
+            {#if actions}<TableCell class="ta-datatable-actions">{@render actions(row)}</TableCell
+              >{/if}
+            {#if rowActions}<TableCell class="ta-datatable-pin">{@render rowActions(row)}</TableCell
+              >{/if}
           </TableRow>
         {:else}
           <TableRow class="ta-datatable-state">
@@ -575,7 +632,13 @@
               {#if empty}
                 {@render empty({ filtered: anyActive, clear: clearFilters })}
               {:else}
-                <EmptyState variant={anyActive ? "no-results" : "empty"} size="sm" level={null} icon={false} title={anyActive ? noMatchesText : emptyText} />
+                <EmptyState
+                  variant={anyActive ? "no-results" : "empty"}
+                  size="sm"
+                  level={null}
+                  icon={false}
+                  title={anyActive ? noMatchesText : emptyText}
+                />
               {/if}
             </TableCell>
           </TableRow>
@@ -587,10 +650,17 @@
   {#if (pageSize && pageCount > 1) || anyActive}
     <div class="ta-datatable-footer">
       {#if anyActive}
-        <Button variant="ghost" size="sm" class="ta-datatable-clear" onclick={clearFilters}>{L.clearFilters}</Button>
+        <Button variant="ghost" size="sm" class="ta-datatable-clear" onclick={clearFilters}
+          >{L.clearFilters}</Button
+        >
       {/if}
       {#if pageSize && pageCount > 1}
-        <Pagination bind:page {pageCount} onchange={(p) => onPageChange?.(p)} ariaLabel={caption ? `${L.pagination}: ${caption}` : undefined} />
+        <Pagination
+          bind:page
+          {pageCount}
+          onchange={(p) => onPageChange?.(p)}
+          ariaLabel={caption ? `${L.pagination}: ${caption}` : undefined}
+        />
       {/if}
     </div>
   {/if}
@@ -599,9 +669,17 @@
 
 <style>
   /* A size container: the state rows below measure the visible width, not the table's. */
-  .ta-datatable { container-type: inline-size; display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
+  .ta-datatable {
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+  }
 
-  .ta-datatable :global(.ta-datatable-check) { width: 2.5rem; }
+  .ta-datatable :global(.ta-datatable-check) {
+    width: 2.5rem;
+  }
 
   .ta-datatable-checkbox {
     width: 1rem;
@@ -610,7 +688,10 @@
     accent-color: rgb(var(--ta-accent));
     cursor: pointer;
   }
-  .ta-datatable-checkbox:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; }
+  .ta-datatable-checkbox:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+  }
 
   .ta-datatable-sort {
     display: inline-flex;
@@ -627,30 +708,52 @@
     border: none;
     cursor: pointer;
   }
-  .ta-datatable-sort:hover { color: rgb(var(--ta-text)); }
-  .ta-datatable-sort:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; border-radius: var(--ta-radius-sm); }
+  .ta-datatable-sort:hover {
+    color: rgb(var(--ta-text));
+  }
+  .ta-datatable-sort:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+    border-radius: var(--ta-radius-sm);
+  }
 
-  .ta-datatable-arrow { font-size: 0.625rem; opacity: 0.7; }
+  .ta-datatable-arrow {
+    font-size: 0.625rem;
+    opacity: 0.7;
+  }
 
-  .ta-datatable :global(tr[data-selected]) { background: rgb(var(--ta-accent) / 0.08); }
+  .ta-datatable :global(tr[data-selected]) {
+    background: rgb(var(--ta-accent) / 0.08);
+  }
 
-  .ta-datatable :global(.ta-datatable-actions) { text-align: right; white-space: nowrap; }
+  .ta-datatable :global(.ta-datatable-actions) {
+    text-align: right;
+    white-space: nowrap;
+  }
 
   /* A row that appears (a new record, another page) fades in; it is usable at once. */
   .ta-datatable :global(tbody > tr) {
-    transition: opacity var(--ta-duration-base, 180ms) ease-out, background-color 0.15s;
+    transition:
+      opacity var(--ta-duration-base, 180ms) ease-out,
+      background-color 0.15s;
     @starting-style {
       opacity: 0;
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ta-datatable :global(tbody > tr) { transition: background-color 0.15s; }
+    .ta-datatable :global(tbody > tr) {
+      transition: background-color 0.15s;
+    }
   }
 
   /* The state rows (empty, error, loading) are not data: no hover tint. */
   .ta-datatable :global(.ta-datatable-state:hover),
-  .ta-datatable :global(.ta-datatable-loading:hover) { background: none; }
-  .ta-datatable :global(.ta-datatable-skeleton-end) { margin-left: auto; }
+  .ta-datatable :global(.ta-datatable-loading:hover) {
+    background: none;
+  }
+  .ta-datatable :global(.ta-datatable-skeleton-end) {
+    margin-left: auto;
+  }
   /* When the table is wider than its box, the empty and error states stay in view, centred
      in the visible part, instead of being cut at the edge. */
   .ta-datatable :global(.ta-datatable-state > td > *) {
@@ -662,9 +765,28 @@
   }
 
   /* — Toolbar — */
-  .ta-datatable-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem 0.75rem; min-width: 0; }
-  .ta-datatable-toolbar-start { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; min-width: 0; flex: 1 1 auto; }
-  .ta-datatable-tools { display: flex; align-items: center; gap: 0.25rem; margin-left: auto; }
+  .ta-datatable-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    min-width: 0;
+  }
+  .ta-datatable-toolbar-start {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .ta-datatable-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: auto;
+  }
   .ta-datatable-tool {
     display: inline-flex;
     align-items: center;
@@ -679,8 +801,14 @@
     border-radius: var(--ta-radius);
     cursor: pointer;
   }
-  .ta-datatable-tool:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated) / 0.5); }
-  .ta-datatable-tool:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
+  .ta-datatable-tool:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated) / 0.5);
+  }
+  .ta-datatable-tool:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
   /* Pressed: a frame and a tint (the state is also in aria-pressed). */
   .ta-datatable-tool[aria-pressed="true"] {
     color: rgb(var(--ta-text));
@@ -689,12 +817,21 @@
   }
 
   /* — Density — */
-  .ta-datatable--compact :global(.ta-table-td) { padding-top: 0.3125rem; padding-bottom: 0.3125rem; font-size: 0.8125rem; }
-  .ta-datatable--compact :global(.ta-table-th) { padding-top: 0.4375rem; padding-bottom: 0.4375rem; }
+  .ta-datatable--compact :global(.ta-table-td) {
+    padding-top: 0.3125rem;
+    padding-bottom: 0.3125rem;
+    font-size: 0.8125rem;
+  }
+  .ta-datatable--compact :global(.ta-table-th) {
+    padding-top: 0.4375rem;
+    padding-bottom: 0.4375rem;
+  }
 
   /* — The row's link — */
   /* The column that names the row keeps a readable width when the table is squeezed. */
-  .ta-datatable :global(.ta-datatable-linkcell) { min-width: 11rem; }
+  .ta-datatable :global(.ta-datatable-linkcell) {
+    min-width: 11rem;
+  }
   .ta-datatable-link {
     position: relative;
     font-weight: 500;
@@ -702,8 +839,15 @@
     text-decoration: none;
     border-radius: var(--ta-radius-sm);
   }
-  .ta-datatable-link:hover { text-decoration: underline; text-decoration-color: rgb(var(--ta-accent)); text-underline-offset: 3px; }
-  .ta-datatable-link:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; }
+  .ta-datatable-link:hover {
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--ta-accent));
+    text-underline-offset: 3px;
+  }
+  .ta-datatable-link:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+  }
 
   /* — Pinned actions column: stays at the right edge while the table scrolls sideways.
      The cell is opaque, so the header, hover and selection tints are repeated on it. — */
@@ -735,8 +879,16 @@
       var(--ta-table-sticky-bg, rgb(var(--ta-bg)));
   }
 
-  .ta-datatable-footer { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; flex-wrap: wrap; }
-  .ta-datatable-footer :global(.ta-datatable-clear) { margin-right: auto; }
+  .ta-datatable-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .ta-datatable-footer :global(.ta-datatable-clear) {
+    margin-right: auto;
+  }
 
   /* Filter row: the controls sit under their headers, on the header background. */
   .ta-datatable :global(.ta-datatable-filters td) {
@@ -745,7 +897,10 @@
     background: rgb(var(--ta-surface));
     vertical-align: top;
   }
-  .ta-datatable-range { display: flex; gap: 0.25rem; }
+  .ta-datatable-range {
+    display: flex;
+    gap: 0.25rem;
+  }
   .ta-datatable-field {
     width: 100%;
     min-width: 4rem;
@@ -758,17 +913,32 @@
     border-radius: var(--ta-radius-sm);
     outline: none;
   }
-  .ta-datatable-field::placeholder { color: rgb(var(--ta-text-dim)); }
+  .ta-datatable-field::placeholder {
+    color: rgb(var(--ta-text-dim));
+  }
   .ta-datatable-field:focus {
     border-color: rgb(var(--ta-accent) / 0.5);
     box-shadow: 0 0 0 2px rgb(var(--ta-accent) / 0.15);
   }
 
   @media (pointer: coarse) {
-    .ta-datatable-field { font-size: 1rem; min-height: 2.75rem; }
-    .ta-datatable-tool { min-height: 2.75rem; }
+    .ta-datatable-field {
+      font-size: 1rem;
+      min-height: 2.75rem;
+    }
+    .ta-datatable-tool {
+      min-height: 2.75rem;
+    }
     /* The link's hit area grows to 44px without changing the row height. */
-    .ta-datatable-link::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2.75rem; transform: translateY(-50%); }
+    .ta-datatable-link::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 2.75rem;
+      transform: translateY(-50%);
+    }
   }
 
   .ta-hidden {

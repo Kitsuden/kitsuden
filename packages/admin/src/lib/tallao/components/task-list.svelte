@@ -80,20 +80,30 @@
   }: Props = $props();
 
   const id = $props.id();
-  const words = $derived<Record<TaskStatus, string>>({ pending: L.pending, running: L.running, done: L.done, failed: L.failed, ...labels });
+  const words = $derived<Record<TaskStatus, string>>({
+    pending: L.pending,
+    running: L.running,
+    done: L.done,
+    failed: L.failed,
+    ...labels,
+  });
   const statusOf = (task: TaskItem): TaskStatus => task.status ?? "pending";
   const finished = $derived(tasks.filter((t) => statusOf(t) === "done").length);
   const running = $derived(tasks.find((t) => statusOf(t) === "running"));
   const failed = $derived(tasks.some((t) => statusOf(t) === "failed"));
-  const summary = $derived(L.tasksDone.replace("{done}", String(finished)).replace("{total}", String(tasks.length)));
-  const share = (done: number, total: number) => (total > 0 ? Math.min(1, Math.max(0, done / total)) : 0);
+  const summary = $derived(
+    L.tasksDone.replace("{done}", String(finished)).replace("{total}", String(tasks.length))
+  );
+  const share = (done: number, total: number) =>
+    total > 0 ? Math.min(1, Math.max(0, done / total)) : 0;
 
   const R = 6.5;
   const C = 2 * Math.PI * R;
 
   const canOpen = (task: TaskItem) => !!details || !!task.detail;
   const isOpen = (task: TaskItem) => expanded.includes(task.id);
-  const toggleRow = (task: TaskItem) => (expanded = isOpen(task) ? expanded.filter((k) => k !== task.id) : [...expanded, task.id]);
+  const toggleRow = (task: TaskItem) =>
+    (expanded = isOpen(task) ? expanded.filter((k) => k !== task.id) : [...expanded, task.id]);
 </script>
 
 {#snippet ring(value: number | null, name: string | undefined, tone: string)}
@@ -110,7 +120,14 @@
     aria-hidden={name ? undefined : "true"}
   >
     <circle class="ta-tasks-ring-track" cx="8" cy="8" r={R} />
-    <circle class="ta-tasks-ring-bar" cx="8" cy="8" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - (value ?? 0.28))} />
+    <circle
+      class="ta-tasks-ring-bar"
+      cx="8"
+      cy="8"
+      r={R}
+      stroke-dasharray={C}
+      stroke-dashoffset={C * (1 - (value ?? 0.28))}
+    />
   </svg>
 {/snippet}
 
@@ -118,7 +135,11 @@
   {@const status = statusOf(task)}
   <span class={cn("ta-tasks-mark", `ta-tasks-mark--${status}`)}>
     {#if status === "running"}
-      {@render ring(task.total ? share(task.done ?? 0, task.total) : null, task.total ? task.title : undefined, "accent")}
+      {@render ring(
+        task.total ? share(task.done ?? 0, task.total) : null,
+        task.total ? task.title : undefined,
+        "accent"
+      )}
     {:else if status === "done"}
       <Icon name="check" size={12} strokeWidth={3} />
     {:else if status === "failed"}
@@ -144,11 +165,24 @@
   <ol class="ta-tasks-list" id={`${id}-list`} aria-label={label}>
     {#each tasks as task (task.id)}
       {@const status = statusOf(task)}
-      <li class={cn("ta-tasks-item", `ta-tasks-item--${status}`)} aria-current={status === "running" ? "step" : undefined}>
+      <li
+        class={cn("ta-tasks-item", `ta-tasks-item--${status}`)}
+        aria-current={status === "running" ? "step" : undefined}
+      >
         {#if canOpen(task)}
-          <button type="button" class="ta-tasks-row" aria-expanded={isOpen(task)} aria-controls={`${id}-${task.id}`} onclick={() => toggleRow(task)}>
+          <button
+            type="button"
+            class="ta-tasks-row"
+            aria-expanded={isOpen(task)}
+            aria-controls={`${id}-${task.id}`}
+            onclick={() => toggleRow(task)}
+          >
             {@render row(task)}
-            <Icon name="chevron-down" size={12} class={cn("ta-tasks-caret", isOpen(task) && "ta-tasks-caret--open")} />
+            <Icon
+              name="chevron-down"
+              size={12}
+              class={cn("ta-tasks-caret", isOpen(task) && "ta-tasks-caret--open")}
+            />
           </button>
           {#if isOpen(task)}
             <div class="ta-tasks-detail" id={`${id}-${task.id}`} transition:collapse>
@@ -165,17 +199,31 @@
 
 <div {...rest} class={cn("ta-tasks", `ta-tasks--${variant}`, className)} aria-busy={!!running}>
   {#if variant === "capsule"}
-    <button type="button" class="ta-tasks-capsule" aria-expanded={open} aria-controls={`${id}-list`} onclick={() => (open = !open)}>
+    <button
+      type="button"
+      class="ta-tasks-capsule"
+      aria-expanded={open}
+      aria-controls={`${id}-list`}
+      onclick={() => (open = !open)}
+    >
       {#if failed && !running}
-        <span class="ta-tasks-mark ta-tasks-mark--failed"><Icon name="x" size={12} strokeWidth={3} /></span>
+        <span class="ta-tasks-mark ta-tasks-mark--failed"
+          ><Icon name="x" size={12} strokeWidth={3} /></span
+        >
       {:else if finished === tasks.length && tasks.length > 0}
-        <span class="ta-tasks-mark ta-tasks-mark--done"><Icon name="check" size={12} strokeWidth={3} /></span>
+        <span class="ta-tasks-mark ta-tasks-mark--done"
+          ><Icon name="check" size={12} strokeWidth={3} /></span
+        >
       {:else}
         {@render ring(share(finished, tasks.length), undefined, running ? "accent" : "idle")}
       {/if}
       <span class="ta-tasks-summary">{summary}</span>
       {#if running}<span class="ta-tasks-now">{running.title}</span>{/if}
-      <Icon name="chevron-down" size={12} class={cn("ta-tasks-caret", open && "ta-tasks-caret--open")} />
+      <Icon
+        name="chevron-down"
+        size={12}
+        class={cn("ta-tasks-caret", open && "ta-tasks-caret--open")}
+      />
     </button>
     {#if open}
       <div class="ta-tasks-panel" transition:collapse>{@render list()}</div>
@@ -186,9 +234,20 @@
 </div>
 
 <style>
-  .ta-tasks { min-width: 0; font-size: 0.8125rem; color: rgb(var(--ta-text-dim)); }
+  .ta-tasks {
+    min-width: 0;
+    font-size: 0.8125rem;
+    color: rgb(var(--ta-text-dim));
+  }
 
-  .ta-tasks-list { display: flex; flex-direction: column; gap: 0.125rem; margin: 0; padding: 0; list-style: none; }
+  .ta-tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
 
   .ta-tasks-row {
     display: flex;
@@ -204,10 +263,18 @@
     border: none;
     border-radius: var(--ta-radius);
   }
-  button.ta-tasks-row { cursor: pointer; transition: background-color var(--ta-duration-fast, 120ms); }
-  button.ta-tasks-row:hover { background: rgb(var(--ta-elevated) / 0.5); }
+  button.ta-tasks-row {
+    cursor: pointer;
+    transition: background-color var(--ta-duration-fast, 120ms);
+  }
+  button.ta-tasks-row:hover {
+    background: rgb(var(--ta-elevated) / 0.5);
+  }
   button.ta-tasks-row:focus-visible,
-  .ta-tasks-capsule:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
+  .ta-tasks-capsule:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
 
   .ta-tasks-mark {
     display: inline-flex;
@@ -218,36 +285,98 @@
     height: 1rem;
     border-radius: 50%;
   }
-  .ta-tasks-mark--done { color: rgb(var(--ta-on-success)); background: rgb(var(--ta-success)); }
-  .ta-tasks-mark--failed { color: rgb(var(--ta-on-danger)); background: rgb(var(--ta-danger)); }
-  .ta-tasks-dot { width: 0.75rem; height: 0.75rem; border: 1.5px dashed rgb(var(--ta-muted)); border-radius: 50%; }
-
-  .ta-tasks-ring { flex-shrink: 0; transform: rotate(-90deg); }
-  .ta-tasks-ring circle { fill: none; stroke-width: 2; }
-  .ta-tasks-ring-track { stroke: rgb(var(--ta-muted) / 0.7); }
-  .ta-tasks-ring-bar { stroke: rgb(var(--ta-accent)); stroke-linecap: round; transition: stroke-dashoffset var(--ta-duration-slow, 240ms) var(--ta-ease-out, ease-out); }
-  .ta-tasks-ring--idle .ta-tasks-ring-bar { stroke: rgb(var(--ta-text-dim)); }
-  .ta-tasks-ring--spin { animation: ta-tasks-spin 0.9s linear infinite; }
-  @keyframes ta-tasks-spin {
-    from { transform: rotate(-90deg); }
-    to { transform: rotate(270deg); }
+  .ta-tasks-mark--done {
+    color: rgb(var(--ta-on-success));
+    background: rgb(var(--ta-success));
+  }
+  .ta-tasks-mark--failed {
+    color: rgb(var(--ta-on-danger));
+    background: rgb(var(--ta-danger));
+  }
+  .ta-tasks-dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 1.5px dashed rgb(var(--ta-muted));
+    border-radius: 50%;
   }
 
-  .ta-tasks-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ta-tasks-item--running .ta-tasks-title { color: rgb(var(--ta-text)); font-weight: 500; }
-  .ta-tasks-item--done .ta-tasks-title { color: rgb(var(--ta-text-dim)); }
-  .ta-tasks-item--failed .ta-tasks-title { color: rgb(var(--ta-text)); }
+  .ta-tasks-ring {
+    flex-shrink: 0;
+    transform: rotate(-90deg);
+  }
+  .ta-tasks-ring circle {
+    fill: none;
+    stroke-width: 2;
+  }
+  .ta-tasks-ring-track {
+    stroke: rgb(var(--ta-muted) / 0.7);
+  }
+  .ta-tasks-ring-bar {
+    stroke: rgb(var(--ta-accent));
+    stroke-linecap: round;
+    transition: stroke-dashoffset var(--ta-duration-slow, 240ms) var(--ta-ease-out, ease-out);
+  }
+  .ta-tasks-ring--idle .ta-tasks-ring-bar {
+    stroke: rgb(var(--ta-text-dim));
+  }
+  .ta-tasks-ring--spin {
+    animation: ta-tasks-spin 0.9s linear infinite;
+  }
+  @keyframes ta-tasks-spin {
+    from {
+      transform: rotate(-90deg);
+    }
+    to {
+      transform: rotate(270deg);
+    }
+  }
+
+  .ta-tasks-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ta-tasks-item--running .ta-tasks-title {
+    color: rgb(var(--ta-text));
+    font-weight: 500;
+  }
+  .ta-tasks-item--done .ta-tasks-title {
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-tasks-item--failed .ta-tasks-title {
+    color: rgb(var(--ta-text));
+  }
 
   .ta-tasks-count,
-  .ta-tasks-meta { flex-shrink: 0; margin-left: auto; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
-  .ta-tasks-count { color: rgb(var(--ta-text)); }
-  .ta-tasks-count + .ta-tasks-meta { margin-left: 0; }
-  .ta-tasks-row > :global(.ta-tasks-caret) { margin-left: auto; }
+  .ta-tasks-meta {
+    flex-shrink: 0;
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .ta-tasks-count {
+    color: rgb(var(--ta-text));
+  }
+  .ta-tasks-count + .ta-tasks-meta {
+    margin-left: 0;
+  }
+  .ta-tasks-row > :global(.ta-tasks-caret) {
+    margin-left: auto;
+  }
   .ta-tasks-count ~ :global(.ta-tasks-caret),
-  .ta-tasks-meta ~ :global(.ta-tasks-caret) { margin-left: 0; }
+  .ta-tasks-meta ~ :global(.ta-tasks-caret) {
+    margin-left: 0;
+  }
 
-  .ta-tasks :global(.ta-tasks-caret) { flex-shrink: 0; opacity: 0.7; transition: transform var(--ta-duration-base, 180ms) var(--ta-ease-out, ease-out); }
-  .ta-tasks :global(.ta-tasks-caret--open) { transform: rotate(180deg); }
+  .ta-tasks :global(.ta-tasks-caret) {
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: transform var(--ta-duration-base, 180ms) var(--ta-ease-out, ease-out);
+  }
+  .ta-tasks :global(.ta-tasks-caret--open) {
+    transform: rotate(180deg);
+  }
 
   .ta-tasks-detail {
     margin: 0.125rem 0 0.375rem 0.8125rem;
@@ -272,12 +401,32 @@
     border: 1px solid rgb(var(--ta-border));
     border-radius: 9999px;
     cursor: pointer;
-    transition: border-color var(--ta-duration-fast, 120ms), background-color var(--ta-duration-fast, 120ms);
+    transition:
+      border-color var(--ta-duration-fast, 120ms),
+      background-color var(--ta-duration-fast, 120ms);
   }
-  .ta-tasks-capsule:hover { border-color: rgb(var(--ta-muted)); background: rgb(var(--ta-elevated) / 0.6); }
-  .ta-tasks-summary { flex-shrink: 0; font-weight: 500; color: rgb(var(--ta-text)); white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .ta-tasks-now { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ta-tasks-now::before { content: "·"; margin-right: 0.5rem; opacity: 0.6; }
+  .ta-tasks-capsule:hover {
+    border-color: rgb(var(--ta-muted));
+    background: rgb(var(--ta-elevated) / 0.6);
+  }
+  .ta-tasks-summary {
+    flex-shrink: 0;
+    font-weight: 500;
+    color: rgb(var(--ta-text));
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .ta-tasks-now {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ta-tasks-now::before {
+    content: "·";
+    margin-right: 0.5rem;
+    opacity: 0.6;
+  }
   .ta-tasks-panel {
     margin-top: 0.375rem;
     padding: 0.375rem;
@@ -300,13 +449,22 @@
 
   @media (pointer: coarse) {
     button.ta-tasks-row,
-    .ta-tasks-capsule { min-height: 2.75rem; }
+    .ta-tasks-capsule {
+      min-height: 2.75rem;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-tasks-ring--spin { animation: none; }
-    .ta-tasks-ring--spin .ta-tasks-ring-bar { stroke-dasharray: 3 3; stroke-dashoffset: 0; }
+    .ta-tasks-ring--spin {
+      animation: none;
+    }
+    .ta-tasks-ring--spin .ta-tasks-ring-bar {
+      stroke-dasharray: 3 3;
+      stroke-dashoffset: 0;
+    }
     .ta-tasks-ring-bar,
-    .ta-tasks :global(.ta-tasks-caret) { transition: none; }
+    .ta-tasks :global(.ta-tasks-caret) {
+      transition: none;
+    }
   }
 </style>

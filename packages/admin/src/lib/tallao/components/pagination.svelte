@@ -62,8 +62,14 @@
 <nav class={cn("ta-pagination", className)} aria-label={ariaLabel}>
   <ul>
     <li>
-      <button type="button" class="ta-pagination-button" disabled={page <= 1} onclick={() => goTo(page - 1)}>
-        <span aria-hidden="true">‹</span> {previousLabel}
+      <button
+        type="button"
+        class="ta-pagination-button"
+        disabled={page <= 1}
+        onclick={() => goTo(page - 1)}
+      >
+        <span aria-hidden="true">‹</span>
+        {previousLabel}
       </button>
     </li>
     {#each range as t, i (`${t}-${i}`)}
@@ -82,7 +88,12 @@
       </li>
     {/each}
     <li>
-      <button type="button" class="ta-pagination-button" disabled={page >= pages} onclick={() => goTo(page + 1)}>
+      <button
+        type="button"
+        class="ta-pagination-button"
+        disabled={page >= pages}
+        onclick={() => goTo(page + 1)}
+      >
         {nextLabel} <span aria-hidden="true">›</span>
       </button>
     </li>
@@ -111,9 +122,17 @@
     border-radius: var(--ta-radius);
     cursor: pointer;
   }
-  .ta-pagination-button:hover:not(:disabled) { background: rgb(var(--ta-elevated)); }
-  .ta-pagination-button:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
-  .ta-pagination-button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .ta-pagination-button:hover:not(:disabled) {
+    background: rgb(var(--ta-elevated));
+  }
+  .ta-pagination-button:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
+  .ta-pagination-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
 
   .ta-pagination-number[aria-current="page"] {
     color: rgb(var(--ta-on-accent));
@@ -128,6 +147,9 @@
 
   /* On touch screens: 44 × 44px buttons, per WCAG 2.5.5. */
   @media (pointer: coarse) {
-    .ta-pagination-button { min-height: 2.75rem; min-width: 2.75rem; }
+    .ta-pagination-button {
+      min-height: 2.75rem;
+      min-width: 2.75rem;
+    }
   }
 </style>

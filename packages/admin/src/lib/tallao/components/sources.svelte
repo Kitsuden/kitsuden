@@ -45,7 +45,15 @@
   };
 
   /** Stable color per domain (same idea as Avatar). */
-  const COLORS = ["--ta-accent", "--ta-accent-2", "--ta-series-1", "--ta-series-3", "--ta-series-4", "--ta-series-5", "--ta-series-7"];
+  const COLORS = [
+    "--ta-accent",
+    "--ta-accent-2",
+    "--ta-series-1",
+    "--ta-series-3",
+    "--ta-series-4",
+    "--ta-series-5",
+    "--ta-series-7",
+  ];
   const colorOf = (domain: string) => {
     let h = 0;
     for (const c of domain) h = (h * 31 + c.charCodeAt(0)) >>> 0;
@@ -54,7 +62,11 @@
 </script>
 
 {#if sources.length}
-  <ul {...rest} class={cn("ta-sources", compact && "ta-sources--compact", className)} aria-label={label}>
+  <ul
+    {...rest}
+    class={cn("ta-sources", compact && "ta-sources--compact", className)}
+    aria-label={label}
+  >
     {#each sources as f (f.url)}
       {@const domain = domainOf(f)}
       <li>
@@ -66,8 +78,8 @@
               class="ta-sources-initial"
               style:background="rgb(var({colorOf(domain)}) / 0.15)"
               style:color="rgb(var({colorOf(domain)}))"
-              aria-hidden="true"
-            >{domain.charAt(0).toUpperCase()}</span>
+              aria-hidden="true">{domain.charAt(0).toUpperCase()}</span
+            >
           {/if}
           <span class="ta-sources-text">
             <span class="ta-sources-title">{f.title}</span>
@@ -99,7 +111,9 @@
     background: rgb(var(--ta-surface));
     text-decoration: none;
     color: inherit;
-    transition: border-color 0.15s, background-color 0.15s;
+    transition:
+      border-color 0.15s,
+      background-color 0.15s;
   }
 
   .ta-sources-card:hover {
@@ -178,8 +192,20 @@
     font-size: 0.625rem;
   }
   @media (pointer: coarse) {
-    .ta-sources-card { min-height: 2.75rem; }
-    .ta-sources--compact .ta-sources-card { position: relative; }
-    .ta-sources--compact .ta-sources-card::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 2.75rem); height: max(100%, 2.75rem); transform: translate(-50%, -50%); }
+    .ta-sources-card {
+      min-height: 2.75rem;
+    }
+    .ta-sources--compact .ta-sources-card {
+      position: relative;
+    }
+    .ta-sources--compact .ta-sources-card::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 2.75rem);
+      height: max(100%, 2.75rem);
+      transform: translate(-50%, -50%);
+    }
   }
 </style>

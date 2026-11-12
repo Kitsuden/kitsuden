@@ -19,7 +19,9 @@ export const useMenu = () => getContext<MenuContext | undefined>(KEY);
 
 /** Selectable menu items, in order. */
 export function menuItems(list: HTMLElement | undefined): HTMLElement[] {
-  return list ? [...list.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([aria-disabled="true"])')] : [];
+  return list
+    ? [...list.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([aria-disabled="true"])')]
+    : [];
 }
 
 export function focusItem(list: HTMLElement | undefined, index: number) {

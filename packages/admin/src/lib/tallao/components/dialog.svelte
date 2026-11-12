@@ -4,7 +4,8 @@
   the rest of the page inert (Tab does not leave the dialog), puts it in the top
   layer (no z-index fights, also inside a Shadow DOM) and Escape closes only the
   topmost one. tallao adds scroll locking, closing on the backdrop, initial
-  focus and returning focus on close.
+  focus and returning focus on close. With no content (only a title, a
+  description and a footer, as a confirmation) it draws no body.
 -->
 <script lang="ts">
   import { untrack } from "svelte";
@@ -77,12 +78,19 @@
   }
 
   // Leaving: a dialog shrinks back, a sheet slides out to its edge (nothing under reduced motion).
-  const exit = (node: Element) => (placement === "center" ? scaleIn(node, { duration: "fast" }) : slide(node, { from: placement, duration: "base" }));
+  const exit = (node: Element) =>
+    placement === "center"
+      ? scaleIn(node, { duration: "fast" })
+      : slide(node, { from: placement, duration: "base" });
 
   /** `autofocus` if there is one; otherwise the first control in the content; otherwise the panel. */
   function focusInitial(d: HTMLDialogElement) {
     const marked = d.querySelector<HTMLElement>("[autofocus]");
-    const target = marked ?? (bodyEl && tabbables(bodyEl)[0]) ?? tabbables(d)[0] ?? d.querySelector<HTMLElement>(".ta-dialog");
+    const target =
+      marked ??
+      (bodyEl && tabbables(bodyEl)[0]) ??
+      tabbables(d)[0] ??
+      d.querySelector<HTMLElement>(".ta-dialog");
     target?.focus({ preventScroll: true });
   }
 
@@ -140,29 +148,59 @@
       out:exit
     >
       {#if !title && showClose && showCloseAlone}
-        <button type="button" class="ta-dialog-close ta-dialog-close--floating" onclick={close} aria-label={closeLabel}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        <button
+          type="button"
+          class="ta-dialog-close ta-dialog-close--floating"
+          onclick={close}
+          aria-label={closeLabel}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg
+          >
         </button>
       {/if}
       {#if title}
         <div class="ta-dialog-header">
           <div>
-            <svelte:element this={`h${titleLevel}`} class="ta-dialog-title" id={`${id}-title`}>{title}</svelte:element>
+            <svelte:element this={`h${titleLevel}`} class="ta-dialog-title" id={`${id}-title`}
+              >{title}</svelte:element
+            >
             {#if description}
               <p class="ta-dialog-description" id={`${id}-description`}>{description}</p>
             {/if}
           </div>
           {#if showClose}
             <button type="button" class="ta-dialog-close" onclick={close} aria-label={closeLabel}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg
+              >
             </button>
           {/if}
         </div>
       {/if}
 
-      <div class="ta-dialog-body" bind:this={bodyEl}>
-        {@render children?.()}
-      </div>
+      <!-- No content, no body: an empty padded body was a blank band above the footer. -->
+      {#if children}
+        <div class="ta-dialog-body" bind:this={bodyEl}>
+          {@render children()}
+        </div>
+      {/if}
 
       {#if footer}
         <div class="ta-dialog-footer">
@@ -197,10 +235,16 @@
       display var(--ta-duration-base, 180ms) allow-discrete,
       overlay var(--ta-duration-base, 180ms) allow-discrete;
   }
-  .ta-dialog-overlay[open] { opacity: 1; }
-  .ta-dialog-overlay:not([open]) { pointer-events: none; }
+  .ta-dialog-overlay[open] {
+    opacity: 1;
+  }
+  .ta-dialog-overlay:not([open]) {
+    pointer-events: none;
+  }
   @starting-style {
-    .ta-dialog-overlay[open] { opacity: 0; }
+    .ta-dialog-overlay[open] {
+      opacity: 0;
+    }
   }
   .ta-dialog-overlay::backdrop {
     opacity: 0;
@@ -209,7 +253,9 @@
       display var(--ta-duration-base, 180ms) allow-discrete,
       overlay var(--ta-duration-base, 180ms) allow-discrete;
   }
-  .ta-dialog-overlay[open]::backdrop { opacity: 1; }
+  .ta-dialog-overlay[open]::backdrop {
+    opacity: 1;
+  }
 
   .ta-dialog-overlay[open] {
     display: flex;
@@ -217,10 +263,22 @@
     justify-content: center;
   }
 
-  .ta-dialog-overlay[open][data-placement="left"] { justify-content: flex-start; padding: 0; }
-  .ta-dialog-overlay[open][data-placement="right"] { justify-content: flex-end; padding: 0; }
-  .ta-dialog-overlay[open][data-placement="top"] { align-items: flex-start; padding: 0; }
-  .ta-dialog-overlay[open][data-placement="bottom"] { align-items: flex-end; padding: 0; }
+  .ta-dialog-overlay[open][data-placement="left"] {
+    justify-content: flex-start;
+    padding: 0;
+  }
+  .ta-dialog-overlay[open][data-placement="right"] {
+    justify-content: flex-end;
+    padding: 0;
+  }
+  .ta-dialog-overlay[open][data-placement="top"] {
+    align-items: flex-start;
+    padding: 0;
+  }
+  .ta-dialog-overlay[open][data-placement="bottom"] {
+    align-items: flex-end;
+    padding: 0;
+  }
 
   /* Attached to an edge: takes the full height (or width) with no corners on that side. */
   [data-placement="left"] .ta-dialog,
@@ -235,28 +293,83 @@
     max-height: 85dvh;
     border-radius: 0;
   }
-  [data-placement="left"] .ta-dialog { animation-name: ta-dialog-left; border-left: none; }
-  [data-placement="right"] .ta-dialog { animation-name: ta-dialog-right; border-right: none; }
-  [data-placement="top"] .ta-dialog { animation-name: ta-dialog-top; border-top: none; }
-  [data-placement="bottom"] .ta-dialog { animation-name: ta-dialog-bottom; border-bottom: none; }
+  [data-placement="left"] .ta-dialog {
+    animation-name: ta-dialog-left;
+    border-left: none;
+  }
+  [data-placement="right"] .ta-dialog {
+    animation-name: ta-dialog-right;
+    border-right: none;
+  }
+  [data-placement="top"] .ta-dialog {
+    animation-name: ta-dialog-top;
+    border-top: none;
+  }
+  [data-placement="bottom"] .ta-dialog {
+    animation-name: ta-dialog-bottom;
+    border-bottom: none;
+  }
   [data-placement="left"] .ta-dialog-body,
-  [data-placement="right"] .ta-dialog-body { flex: 1; }
+  [data-placement="right"] .ta-dialog-body {
+    flex: 1;
+  }
+  /* With no body, the footer still sits at the bottom of a sheet. */
+  [data-placement="left"] .ta-dialog-footer,
+  [data-placement="right"] .ta-dialog-footer {
+    margin-top: auto;
+  }
 
-  @keyframes ta-dialog-left { from { transform: translateX(-100%); } to { transform: none; } }
-  @keyframes ta-dialog-right { from { transform: translateX(100%); } to { transform: none; } }
-  @keyframes ta-dialog-top { from { transform: translateY(-100%); } to { transform: none; } }
-  @keyframes ta-dialog-bottom { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes ta-dialog-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+  @keyframes ta-dialog-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+  @keyframes ta-dialog-top {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+  @keyframes ta-dialog-bottom {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: none;
+    }
+  }
 
   /* A sheet travels further than a dialog grows: it gets the slow duration. */
   [data-placement="left"] .ta-dialog,
   [data-placement="right"] .ta-dialog,
   [data-placement="top"] .ta-dialog,
-  [data-placement="bottom"] .ta-dialog { animation-duration: var(--ta-duration-slow, 240ms); }
+  [data-placement="bottom"] .ta-dialog {
+    animation-duration: var(--ta-duration-slow, 240ms);
+  }
 
-  .ta-dialog-overlay[open]::backdrop { animation: ta-dialog-backdrop var(--ta-duration-base, 180ms) ease-out; }
+  .ta-dialog-overlay[open]::backdrop {
+    animation: ta-dialog-backdrop var(--ta-duration-base, 180ms) ease-out;
+  }
   @keyframes ta-dialog-backdrop {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   .ta-dialog-overlay::backdrop {
@@ -282,15 +395,27 @@
   }
 
   @keyframes ta-dialog-enter {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-dialog { animation: none; }
-    .ta-dialog-overlay[open]::backdrop { animation: none; }
+    .ta-dialog {
+      animation: none;
+    }
+    .ta-dialog-overlay[open]::backdrop {
+      animation: none;
+    }
     .ta-dialog-overlay,
-    .ta-dialog-overlay::backdrop { transition: none; }
+    .ta-dialog-overlay::backdrop {
+      transition: none;
+    }
   }
 
   .ta-dialog-header {
@@ -325,15 +450,36 @@
     border-radius: var(--ta-radius-sm);
     transition: color 0.2s;
   }
-  .ta-dialog-close:hover { color: rgb(var(--ta-text)); }
+  .ta-dialog-close:hover {
+    color: rgb(var(--ta-text));
+  }
   /* Without a title, the X sits alone in the corner, over the content. */
-  .ta-dialog-close--floating { position: absolute; top: 0.75rem; right: 0.75rem; z-index: 1; background: rgb(var(--ta-surface) / 0.85); }
+  .ta-dialog-close--floating {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 1;
+    background: rgb(var(--ta-surface) / 0.85);
+  }
   /* Panel with no frame or padding, for content that brings its own (a certificate, an image). */
-  .ta-dialog--bare { padding: 0; background: transparent; border: none; box-shadow: none; }
-  .ta-dialog--bare :global(.ta-dialog-body) { padding: 0; }
-  .ta-dialog-close:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; }
+  .ta-dialog--bare {
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  .ta-dialog--bare :global(.ta-dialog-body) {
+    padding: 0;
+  }
+  .ta-dialog-close:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+  }
 
-  .ta-dialog-body { padding: 1rem 1.5rem; overflow-y: auto; }
+  .ta-dialog-body {
+    padding: 1rem 1.5rem;
+    overflow-y: auto;
+  }
 
   .ta-dialog-footer {
     display: flex;
@@ -345,16 +491,36 @@
   }
   /* Phones: less padding, a footer that wraps, the panel never wider than the screen. */
   @media (max-width: 480px) {
-    .ta-dialog-overlay { padding: 0.5rem; }
-    .ta-dialog { max-width: 100%; }
+    .ta-dialog-overlay {
+      padding: 0.5rem;
+    }
+    .ta-dialog {
+      max-width: 100%;
+    }
     .ta-dialog-header,
     .ta-dialog-body,
-    .ta-dialog-footer { padding-left: 1rem; padding-right: 1rem; }
-    .ta-dialog-footer { flex-wrap: wrap; }
+    .ta-dialog-footer {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    .ta-dialog-footer {
+      flex-wrap: wrap;
+    }
   }
 
   @media (pointer: coarse) {
-    .ta-dialog-close { display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; margin: -0.5rem -0.5rem -0.5rem 0; }
-    .ta-dialog-close--floating { margin: 0; top: 0.25rem; right: 0.25rem; }
+    .ta-dialog-close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+      margin: -0.5rem -0.5rem -0.5rem 0;
+    }
+    .ta-dialog-close--floating {
+      margin: 0;
+      top: 0.25rem;
+      right: 0.25rem;
+    }
   }
 </style>

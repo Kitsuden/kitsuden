@@ -34,23 +34,48 @@
 </div>
 
 <style>
-  .ta-dash { container-type: inline-size; min-width: 0; }
-  .ta-dash-grid { display: grid; grid-template-columns: repeat(var(--ta-dash-columns, 4), minmax(0, 1fr)); align-items: stretch; }
+  .ta-dash {
+    container-type: inline-size;
+    min-width: 0;
+  }
+  .ta-dash-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--ta-dash-columns, 4), minmax(0, 1fr));
+    align-items: stretch;
+  }
 
-  .ta-dash-grid > :global(*) { min-width: 0; }
-  .ta-dash-grid > :global([data-ta-span="2"]) { grid-column: span 2; }
-  .ta-dash-grid > :global([data-ta-span="3"]) { grid-column: span 3; }
-  .ta-dash-grid > :global([data-ta-span="4"]) { grid-column: span 4; }
-  .ta-dash-grid > :global([data-ta-span="full"]) { grid-column: 1 / -1; }
+  .ta-dash-grid > :global(*) {
+    min-width: 0;
+  }
+  .ta-dash-grid > :global([data-ta-span="2"]) {
+    grid-column: span 2;
+  }
+  .ta-dash-grid > :global([data-ta-span="3"]) {
+    grid-column: span 3;
+  }
+  .ta-dash-grid > :global([data-ta-span="4"]) {
+    grid-column: span 4;
+  }
+  .ta-dash-grid > :global([data-ta-span="full"]) {
+    grid-column: 1 / -1;
+  }
 
   @container (max-width: 56rem) {
-    .ta-dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ta-dash-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .ta-dash-grid > :global([data-ta-span="2"]),
     .ta-dash-grid > :global([data-ta-span="3"]),
-    .ta-dash-grid > :global([data-ta-span="4"]) { grid-column: 1 / -1; }
+    .ta-dash-grid > :global([data-ta-span="4"]) {
+      grid-column: 1 / -1;
+    }
   }
   @container (max-width: 34rem) {
-    .ta-dash-grid { grid-template-columns: minmax(0, 1fr); }
-    .ta-dash-grid > :global([data-ta-span]) { grid-column: 1 / -1; }
+    .ta-dash-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .ta-dash-grid > :global([data-ta-span]) {
+      grid-column: 1 / -1;
+    }
   }
 </style>

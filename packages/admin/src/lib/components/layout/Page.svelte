@@ -54,8 +54,9 @@
   $effect(() => {
     const path = $page.url.pathname;
     const next = crumbs;
+    const name = title;
     own = path;
-    untrack(() => pageMeta.set(path, next));
+    untrack(() => pageMeta.set(path, next, name));
   });
   onDestroy(() => pageMeta.clear(own));
 </script>

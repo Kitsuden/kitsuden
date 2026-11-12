@@ -76,18 +76,39 @@
       onclick={copy}
     >
       {#if copied}
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg
+        >
       {:else}
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          ><rect width="14" height="14" x="8" y="8" rx="2" /><path
+            d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+          /></svg
+        >
       {/if}
       <span class="ta-code-copy-text">{copied ? copiedLabel : copyLabel}</span>
     </button>
   </figcaption>
-  <pre
-    class="ta-code-body"
-    class:ta-code-body--wrap={wrap}
-    style:max-height={maxHeight}
-  ><code>{code}</code></pre>
+  <pre class="ta-code-body" class:ta-code-body--wrap={wrap} style:max-height={maxHeight}><code
+      >{code}</code
+    ></pre>
 </figure>
 
 <style>
@@ -139,7 +160,9 @@
     border: none;
     border-radius: var(--ta-radius-sm);
     cursor: pointer;
-    transition: color 0.15s, background-color 0.15s;
+    transition:
+      color 0.15s,
+      background-color 0.15s;
   }
 
   .ta-code-copy:hover {
@@ -176,7 +199,17 @@
     overflow-wrap: anywhere;
   }
   @media (pointer: coarse) {
-    .ta-code-copy { position: relative; }
-    .ta-code-copy::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 2.75rem); height: max(100%, 2.75rem); transform: translate(-50%, -50%); }
+    .ta-code-copy {
+      position: relative;
+    }
+    .ta-code-copy::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 2.75rem);
+      height: max(100%, 2.75rem);
+      transform: translate(-50%, -50%);
+    }
   }
 </style>

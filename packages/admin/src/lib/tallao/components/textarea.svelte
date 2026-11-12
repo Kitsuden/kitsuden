@@ -26,7 +26,13 @@
   } = $props();
 </script>
 
-<textarea bind:this={ref} bind:value {rows} {disabled} class={cn("ta-textarea", mono && "ta-textarea--mono", className)} {...rest}></textarea>
+<textarea
+  bind:this={ref}
+  bind:value
+  {rows}
+  {disabled}
+  class={cn("ta-textarea", mono && "ta-textarea--mono", className)}
+  {...rest}></textarea>
 
 <style>
   .ta-textarea {
@@ -41,7 +47,9 @@
     border-radius: var(--ta-radius);
     outline: none;
     resize: vertical;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
 
   .ta-textarea::placeholder {
@@ -58,11 +66,17 @@
     cursor: not-allowed;
   }
 
-  .ta-textarea--mono { font-family: var(--ta-font-mono); font-size: 0.75rem; line-height: 1.625; }
+  .ta-textarea--mono {
+    font-family: var(--ta-font-mono);
+    font-size: 0.75rem;
+    line-height: 1.625;
+  }
 
   /* On touch screens: 16px so iOS does not zoom the page on focus, and 44px of height for the finger. */
   @media (pointer: coarse) {
-    .ta-textarea { font-size: 1rem; min-height: 2.75rem; }
+    .ta-textarea {
+      font-size: 1rem;
+      min-height: 2.75rem;
+    }
   }
-
 </style>

@@ -5,7 +5,8 @@
 -->
 <script lang="ts">
   import { Alert, Badge, Button, EmptyState, Select, Skeleton } from "$lib/tallao";
-  import { t, localeFormat } from "$lib/i18n";
+  import { t } from "$lib/i18n";
+  import { formatDateTime } from "$lib/utils";
   import { RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
   import { toast } from "$lib/tallao";
@@ -48,7 +49,8 @@
     }
   }
 
-  const date = (v: string | null) => (v ? new Date(v).toLocaleString(localeFormat()) : "—");
+  // The panel's one way of writing a moment (see $lib/utils).
+  const date = formatDateTime;
   const label = (f: Filter) =>
     f === "all" ? t("approvals.reviewFilter_all") : t(`approvals.reviewStatus_${f}`);
 </script>

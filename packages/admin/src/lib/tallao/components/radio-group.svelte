@@ -64,7 +64,9 @@
       />
       <span class="ta-radio-text">
         <label for={`${id}-${o.value}`}>{o.label}</label>
-        {#if o.description}<span class="ta-radio-description" id={`${id}-${o.value}-detail`}>{o.description}</span>{/if}
+        {#if o.description}<span class="ta-radio-description" id={`${id}-${o.value}-detail`}
+            >{o.description}</span
+          >{/if}
       </span>
     </div>
   {/each}
@@ -80,8 +82,13 @@
     min-width: 0;
   }
 
-  .ta-radio--vertical { flex-direction: column; }
-  .ta-radio--horizontal { flex-direction: row; flex-wrap: wrap; }
+  .ta-radio--vertical {
+    flex-direction: column;
+  }
+  .ta-radio--horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
 
   .ta-radio-legend {
     padding: 0;
@@ -149,6 +156,9 @@
 
   /* On touch screens: each option is 44px tall for the finger. */
   @media (pointer: coarse) {
-    .ta-radio-option { min-height: 2.75rem; align-items: center; }
+    .ta-radio-option {
+      min-height: 2.75rem;
+      align-items: center;
+    }
   }
 </style>

@@ -59,9 +59,23 @@
   }
 
   const L = useLabels();
-  const { items, label = L.context, layout = "row", removeLabel = L.removeItem, class: className = "", onRemove, ...rest }: Props = $props();
+  const {
+    items,
+    label = L.context,
+    layout = "row",
+    removeLabel = L.removeItem,
+    class: className = "",
+    onRemove,
+    ...rest
+  }: Props = $props();
 
-  const ICON: Record<NonNullable<ContextItem["type"]>, IconName> = { file: "file", record: "database", link: "link", image: "image", text: "text" };
+  const ICON: Record<NonNullable<ContextItem["type"]>, IconName> = {
+    file: "file",
+    record: "database",
+    link: "link",
+    image: "image",
+    text: "text",
+  };
   let list: HTMLElement | undefined = $state();
 
   async function remove(item: ContextItem, index: number) {
@@ -72,10 +86,17 @@
   }
 </script>
 
-<ul {...rest} bind:this={list} class={cn("ta-context", `ta-context--${layout}`, className)} aria-label={label}>
+<ul
+  {...rest}
+  bind:this={list}
+  class={cn("ta-context", `ta-context--${layout}`, className)}
+  aria-label={label}
+>
   {#each items as item, i (item.id)}
     <li class="ta-context-card">
-      <span class="ta-context-icon" aria-hidden="true"><Icon name={item.icon ?? ICON[item.type ?? "file"]} size={14} /></span>
+      <span class="ta-context-icon" aria-hidden="true"
+        ><Icon name={item.icon ?? ICON[item.type ?? "file"]} size={14} /></span
+      >
       <span class="ta-context-main">
         <span class="ta-context-line">
           {#if item.href}
@@ -88,7 +109,12 @@
         {#if item.excerpt}<span class="ta-context-excerpt">{item.excerpt}</span>{/if}
       </span>
       {#if onRemove}
-        <button type="button" class="ta-context-remove" aria-label={removeLabel.replace("{item}", item.title)} onclick={() => remove(item, i)}>
+        <button
+          type="button"
+          class="ta-context-remove"
+          aria-label={removeLabel.replace("{item}", item.title)}
+          onclick={() => remove(item, i)}
+        >
           <Icon name="x" size={12} />
         </button>
       {/if}
@@ -97,8 +123,19 @@
 </ul>
 
 <style>
-  .ta-context { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0; padding: 0; list-style: none; min-width: 0; }
-  .ta-context--stack { flex-direction: column; flex-wrap: nowrap; }
+  .ta-context {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    min-width: 0;
+  }
+  .ta-context--stack {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
 
   .ta-context-card {
     display: inline-flex;
@@ -114,8 +151,13 @@
     border-radius: var(--ta-radius);
     transition: border-color var(--ta-duration-fast, 120ms);
   }
-  .ta-context-card:hover { border-color: rgb(var(--ta-muted)); }
-  .ta-context--stack .ta-context-card { display: flex; max-width: 100%; }
+  .ta-context-card:hover {
+    border-color: rgb(var(--ta-muted));
+  }
+  .ta-context--stack .ta-context-card {
+    display: flex;
+    max-width: 100%;
+  }
 
   .ta-context-icon {
     display: inline-flex;
@@ -129,8 +171,20 @@
     border-radius: var(--ta-radius-sm);
   }
 
-  .ta-context-main { display: flex; flex: 1 1 auto; flex-direction: column; gap: 0.125rem; min-width: 0; }
-  .ta-context-line { display: flex; align-items: baseline; gap: 0.5rem; min-width: 0; min-height: 1.375rem; }
+  .ta-context-main {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+  .ta-context-line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    min-height: 1.375rem;
+  }
   .ta-context-title {
     position: relative;
     min-width: 0;
@@ -142,10 +196,21 @@
     text-decoration: none;
     border-radius: var(--ta-radius-sm);
   }
-  a.ta-context-title:hover { text-decoration: underline; text-underline-offset: 2px; }
+  a.ta-context-title:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
   a.ta-context-title:focus-visible,
-  .ta-context-remove:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
-  .ta-context-meta { flex-shrink: 0; font-size: 0.75rem; color: rgb(var(--ta-text-dim)); font-variant-numeric: tabular-nums; }
+  .ta-context-remove:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
+  .ta-context-meta {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+    font-variant-numeric: tabular-nums;
+  }
   .ta-context-excerpt {
     display: -webkit-box;
     -webkit-box-orient: vertical;
@@ -172,16 +237,32 @@
     border-radius: var(--ta-radius-sm);
     cursor: pointer;
   }
-  .ta-context-remove:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated)); }
+  .ta-context-remove:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated));
+  }
 
   /* The hit areas grow to 44px without changing the card. */
   @media (pointer: coarse) {
-    .ta-context-card { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+    .ta-context-card {
+      padding-top: 0.625rem;
+      padding-bottom: 0.625rem;
+    }
     .ta-context-remove::after,
-    a.ta-context-title::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 2.75rem); height: 2.75rem; transform: translate(-50%, -50%); }
+    a.ta-context-title::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 2.75rem);
+      height: 2.75rem;
+      transform: translate(-50%, -50%);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-context-card { transition: none; }
+    .ta-context-card {
+      transition: none;
+    }
   }
 </style>

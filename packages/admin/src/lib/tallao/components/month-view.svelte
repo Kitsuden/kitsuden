@@ -33,7 +33,17 @@
 
   import { useLabels } from "../i18n";
   import { cn } from "../utils";
-  import { addMonths, formatDate, capitalizeFirst, monthGrid, parseISO, sameMonth, todayISO, toISO, weekday } from "../internal/dates";
+  import {
+    addMonths,
+    formatDate,
+    capitalizeFirst,
+    monthGrid,
+    parseISO,
+    sameMonth,
+    todayISO,
+    toISO,
+    weekday,
+  } from "../internal/dates";
 
   const L = useLabels();
   let {
@@ -91,14 +101,17 @@
 
   const weeks = $derived(monthGrid(shown, weekStartsOn));
   // Only the first letter: CSS capitalize gave "Noviembre De 2026"
-  const title = $derived(capitalizeFirst(formatDate(shown, locale, { month: "long", year: "numeric" })));
+  const title = $derived(
+    capitalizeFirst(formatDate(shown, locale, { month: "long", year: "numeric" }))
+  );
   const headers = $derived(
     weeks[0].map((d) => ({
       short: formatDate(d, locale, { weekday: "short" }),
       long: formatDate(d, locale, { weekday: "long" }),
     }))
   );
-  const dayLabel = (iso: ISODate) => formatDate(iso, locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const dayLabel = (iso: ISODate) =>
+    formatDate(iso, locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const dayData = (iso: ISODate): MonthViewDay => ({
     date: iso,
     day: parseISO(iso)!.d,
@@ -128,9 +141,26 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div {...rest} class={cn("ta-monthview", className)} bind:this={root} onkeydown={onKey}>
   <div class="ta-monthview-header">
-    <button type="button" class="ta-monthview-month" aria-label={previousLabel} bind:this={prevButton} onclick={() => shiftMonth(-1)}>‹</button>
-    <svelte:element this={`h${headingLevel}`} class="ta-monthview-title" id={`${id}-title`} aria-live="polite">{title}</svelte:element>
-    <button type="button" class="ta-monthview-month" aria-label={nextLabel} bind:this={nextButton} onclick={() => shiftMonth(1)}>›</button>
+    <button
+      type="button"
+      class="ta-monthview-month"
+      aria-label={previousLabel}
+      bind:this={prevButton}
+      onclick={() => shiftMonth(-1)}>‹</button
+    >
+    <svelte:element
+      this={`h${headingLevel}`}
+      class="ta-monthview-title"
+      id={`${id}-title`}
+      aria-live="polite">{title}</svelte:element
+    >
+    <button
+      type="button"
+      class="ta-monthview-month"
+      aria-label={nextLabel}
+      bind:this={nextButton}
+      onclick={() => shiftMonth(1)}>›</button
+    >
   </div>
   <table class="ta-monthview-grid" aria-labelledby={`${id}-title`}>
     <thead>
@@ -198,8 +228,14 @@
     border-radius: var(--ta-radius-sm);
     cursor: pointer;
   }
-  .ta-monthview-month:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated)); }
-  .ta-monthview-month:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.7); outline-offset: 1px; }
+  .ta-monthview-month:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated));
+  }
+  .ta-monthview-month:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.7);
+    outline-offset: 1px;
+  }
 
   .ta-monthview-grid {
     width: 100%;
@@ -226,7 +262,9 @@
     border-radius: var(--ta-radius);
     transition: background-color 0.15s;
   }
-  .ta-monthview-day:hover { background: rgb(var(--ta-elevated) / 0.35); }
+  .ta-monthview-day:hover {
+    background: rgb(var(--ta-elevated) / 0.35);
+  }
 
   .ta-monthview-number {
     display: inline-flex;
@@ -244,7 +282,9 @@
     background: var(--ta-accent-fill, color-mix(in srgb, rgb(var(--ta-accent)) 88%, black));
     font-weight: 600;
   }
-  .ta-monthview-outside { opacity: 0.55; }
+  .ta-monthview-outside {
+    opacity: 0.55;
+  }
 
   .ta-monthview-content {
     display: flex;
@@ -266,6 +306,9 @@
     border: 0;
   }
   @media (pointer: coarse) {
-    .ta-monthview-month { width: 2.75rem; height: 2.75rem; }
+    .ta-monthview-month {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
   }
 </style>

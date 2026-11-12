@@ -18,7 +18,8 @@
     TableHead,
     TableCell,
   } from "$lib/tallao";
-  import { t, localeFormat } from "$lib/i18n";
+  import { t } from "$lib/i18n";
+  import { formatDateTime } from "$lib/utils";
   import { RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
   import { listAgentDecisions, type AgentDecision } from "$lib/services/agents";
@@ -52,7 +53,8 @@
     }
   }
 
-  const date = (v: string) => new Date(v).toLocaleString(localeFormat());
+  // The panel's one way of writing a moment (see $lib/utils).
+  const date = formatDateTime;
 </script>
 
 <div class="space-y-4" data-testid="agent-decisions">

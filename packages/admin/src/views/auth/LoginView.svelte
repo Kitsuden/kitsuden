@@ -298,18 +298,23 @@
         <!-- Logo / Brand -->
         <div class="brand">
           <div class="brand-icon">
+            <!-- The Kitsune mark, as on the setup screen. -->
             <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
+              width="34"
+              height="34"
+              viewBox="0 0 32 32"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.5"
+              stroke-width="1.6"
               stroke-linecap="round"
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              <path d="M4 5 L10 11 M28 5 L22 11" />
+              <path d="M4 5 L6 13 M28 5 L26 13" />
+              <path d="M6 13 C6 22, 11 27, 16 29 C21 27, 26 22, 26 13 L22 11 L16 14 L10 11 Z" />
+              <path d="M11.5 18 L13.5 18 M18.5 18 L20.5 18" />
+              <path d="M16 22 L14.5 24 M16 22 L17.5 24" />
             </svg>
           </div>
           <h1 class="brand-name">{t("common.kitsuden")}</h1>

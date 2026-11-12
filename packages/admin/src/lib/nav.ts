@@ -107,6 +107,8 @@ const DATA: NavEntry[] = [
     path: "/g/kon-blocks",
     labelKey: "shell.pages",
     icon: "Blocks",
+    // The page builder is a system view: it still belongs to Pages.
+    aliases: ["/g/system-tools/builder", "/builder"],
     moduleKey: "kon-blocks",
     staff: true,
     jump: "p",

@@ -142,11 +142,19 @@
   }
 
   @keyframes ta-popover-enter {
-    from { opacity: 0; transform: translateY(-2px) scale(0.98); }
-    to { opacity: 1; transform: none; }
+    from {
+      opacity: 0;
+      transform: translateY(-2px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-popover { animation: none; }
+    .ta-popover {
+      animation: none;
+    }
   }
 </style>

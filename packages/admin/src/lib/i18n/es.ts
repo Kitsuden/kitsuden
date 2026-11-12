@@ -231,8 +231,8 @@ const es = {
       'No hay configuración del explorador para la vista "{activeViewId}".',
     thisKonStoresNoData:
       "Este kon no guarda datos propios: amplía el comportamiento de otros. No hay nada que listar ni crear aquí.",
-    noConfiguration: "Sin configuración",
-    thisGrimoireHasNoAdmin: "Este grimoire no tiene configuración de administración.",
+    noConfiguration: "Aún no hay nada que mostrar",
+    thisGrimoireHasNoAdmin: "Este kon no declara pantallas de administración.",
   },
   inlineRelationPanel: {
     relations: "Relaciones",
@@ -287,7 +287,7 @@ const es = {
     toolOutput: "Salida de herramienta",
   },
   tokenDisplay: {
-    generatedAgentToken: "🔐 Token de agente generado",
+    generatedAgentToken: "Token del agente creado",
     thisTokenWillOnlyBeShown: "Este token solo se mostrará una vez. Guárdalo en un lugar seguro.",
     important: "Importante",
     theTokenIsStoredAs:
@@ -1430,10 +1430,10 @@ const es = {
     course: "Curso",
     noStatsAvailable: "No hay estadísticas disponibles.",
     studentDistribution: "Distribución de estudiantes",
-    deleteCourseS: "¿Eliminar curso(s)?",
-    thisWillPermanentlyDeleteCourse:
-      "Se eliminarán permanentemente {deleteTargetIdsCount} curso(s). Esta acción no se puede deshacer.",
-    assignCourseS: "Asignar {assignCursoIdsCount} curso(s)",
+    deleteCourseOne: "¿Eliminar este curso?",
+    deleteCourseMany: "¿Eliminar {n} cursos?",
+    assignCourseOne: "Asignar el curso",
+    assignCourseMany: "Asignar {n} cursos",
     enterCommaSeparatedIds: "Introduce IDs separados por comas",
     userIds: "IDs de usuario",
     user1User2: "user1, user2...",
@@ -1570,7 +1570,7 @@ const es = {
     savePassword: "Guardar contraseña",
     continueWith: "Continuar con",
     theConsoleStillRequiresRole: "La consola sigue exigiendo rol de administrador.",
-    builtWithBetterAuth: "Creado con Better-Auth 🔐",
+    builtWithBetterAuth: "Creado con Better-Auth",
     emailMeALink: "Envíame un enlace para entrar",
     sendSignInLink: "Enviar enlace",
     ifAccountExistsMagic:
@@ -1779,6 +1779,7 @@ const es = {
     crmDashboard: "Panel de CRM",
     manageDealsContactsCompaniesAnd: "Gestiona negocios, contactos, empresas y embudos",
     addDeal: "Nuevo negocio",
+    editDeal: "Editar negocio",
     recentDeals: "Negocios recientes",
     viewAll: "Ver todo",
     noDealsYet: "Aún no hay negocios",
@@ -1995,6 +1996,10 @@ const es = {
     loadFailed: "No se pudieron cargar los datasets",
   },
   dMSView: {
+    columns: "Columnas",
+    deleteManyTitle: "¿Eliminar {n} documentos?",
+    deleteOneFallback: "este documento",
+    actionsOf: "Acciones: {title}",
     failedToLoadDocuments: "No se pudieron cargar los documentos",
     failedToLoadDocument: "No se pudo cargar el documento",
     documentCreated: "Documento creado",
@@ -2144,9 +2149,6 @@ const es = {
     color: "Color",
     parentCategory: "Categoría padre",
     noneRoot: "Ninguna (raíz)",
-    confirmDeletion: "Confirmar eliminación",
-    areYouSureYouWant:
-      "¿Seguro que quieres eliminar {deleteTargetIdsCount} documento(s)? Esta acción no se puede deshacer.",
     createNewVersion: "Nueva versión",
     changeType: "Tipo de cambio",
     changelog: "Registro de cambios",
@@ -4328,7 +4330,11 @@ const es = {
     agentUpdated: "{agent} lo modificó",
     agentDeleted: "{agent} lo borró",
     tagDelete: "Borrado",
-    redacted: "oculto",
+    redacted: "oculto (secreto)",
+    fieldChangedOne: "1 campo cambiado",
+    theSystem: "el sistema",
+    someLeftOut: "algunos campos eran demasiado grandes para guardarlos",
+    agentApprovedProposal: "{agent} cambió esto (propuesta aprobada)",
   },
   datasets: {
     dataset: "dataset",

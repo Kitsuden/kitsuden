@@ -38,9 +38,7 @@
 
   let used = $state(new Set<string>());
 
-  const visible = $derived(
-    singleUse ? suggestions.filter((s) => !used.has(s)) : suggestions
-  );
+  const visible = $derived(singleUse ? suggestions.filter((s) => !used.has(s)) : suggestions);
 
   function choose(s: string) {
     if (disabled) return;
@@ -73,12 +71,7 @@
     onkeydown={onKey}
   >
     {#each visible as s (s)}
-      <button
-        type="button"
-        class="ta-chips-chip"
-        {disabled}
-        onclick={() => choose(s)}
-      >
+      <button type="button" class="ta-chips-chip" {disabled} onclick={() => choose(s)}>
         {s}
       </button>
     {/each}
@@ -101,7 +94,10 @@
     border: 1px solid rgb(var(--ta-border));
     border-radius: 9999px;
     cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+    transition:
+      color 0.15s,
+      border-color 0.15s,
+      background-color 0.15s;
   }
 
   .ta-chips-chip:hover:not(:disabled) {
@@ -120,7 +116,17 @@
     cursor: not-allowed;
   }
   @media (pointer: coarse) {
-    .ta-chips-chip { position: relative; }
-    .ta-chips-chip::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 2.75rem); height: max(100%, 2.75rem); transform: translate(-50%, -50%); }
+    .ta-chips-chip {
+      position: relative;
+    }
+    .ta-chips-chip::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 2.75rem);
+      height: max(100%, 2.75rem);
+      transform: translate(-50%, -50%);
+    }
   }
 </style>

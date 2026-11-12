@@ -70,6 +70,8 @@ if it is missing or points to localhost (`apps/api/src/lib/public-config.ts`).
 | `KITSUDEN_CUSTOMER_DATA_HOSTS`                                                                                                                 | optional (empty)                                                 | Hosts that may receive fields marked as customer or personal data ([egress.md](../agents/egress.md)). Empty: none.                                                                                                                                                                                                                                             |
 | `KITSUDEN_EXTERNAL_MCP_ALLOW_INTERNAL`                                                                                                         | optional (empty)                                                 | `true` lets external MCP servers be internal or plain-http addresses ([external-mcp.md](../agents/external-mcp.md)).                                                                                                                                                                                                                                           |
 | `PAYMENTS_ALLOWED_PLANS`                                                                                                                       | with `kon-payments`                                              | Plan/price ids that can be bought, comma-separated. In production nothing is sold without it.                                                                                                                                                                                                                                                                  |
+| `RECORD_HISTORY_RETENTION_DAYS`                                                                                                                | optional (`365`)                                                 | Days the per-record change history (`record_changes`, [record-history.md](../record-history.md#retention)) is kept; older rows are deleted hourly. `0` = keep it forever.                                                                                                                                                                                      |
+| `AGENT_AUDIT_RETENTION_DAYS`                                                                                                                   | optional (`90`)                                                  | Days the agent audit log (`agent_audit_logs`, [approvals.md](../agents/approvals.md#audit-retention)) is kept; older rows are deleted hourly. `0` = keep it forever.                                                                                                                                                                                           |
 
 A container only sees the variables that `docker-compose.yml` (or an overlay) lists
 under its `environment:`: there is no `env_file`, so a variable that is not listed
@@ -129,7 +131,11 @@ pool exhausted the API answers `503` with `Retry-After`),
 (AI features, each optional), `ENABLE_SWAGGER`, `HEADLESS`,
 `RATE_LIMIT_MAX_REQUESTS`, `RATE_LIMIT_WINDOW_MS`, `AGENT_KEY_DEFAULT_EXPIRY_DAYS`
 (days a new agent key lives when its creator does not say: 90; `0` = never, see
-[permissions.md](../agents/permissions.md#api-reference)).
+[permissions.md](../agents/permissions.md#api-reference)), `RECORD_HISTORY_RETENTION_DAYS`
+(days the per-record change history is kept: 365; `0` = forever, see
+[record-history.md](../record-history.md#retention)), `AGENT_AUDIT_RETENTION_DAYS` (days
+the agent audit log is kept: 90; `0` = forever, see
+[approvals.md](../agents/approvals.md#audit-retention)).
 
 Idempotency of writes (`Idempotency-Key`, see
 [errors-and-retries.md](errors-and-retries.md#idempotency-key)):

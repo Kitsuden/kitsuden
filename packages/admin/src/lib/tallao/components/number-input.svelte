@@ -99,15 +99,23 @@
   }
 </script>
 
-<div class={cn("ta-number", `ta-number--${size}`, width === "auto" && "ta-number--auto", stepper && "ta-number--stepper", className)}>
+<div
+  class={cn(
+    "ta-number",
+    `ta-number--${size}`,
+    width === "auto" && "ta-number--auto",
+    stepper && "ta-number--stepper",
+    className
+  )}
+>
   {#if stepper}
     <button
       type="button"
       class="ta-number-step"
       aria-label={decrementLabel}
       disabled={disabled || (min != null && value != null && value <= min)}
-      onclick={() => stepBy(-1)}
-    ><Icon name="minus" size={14} /></button>
+      onclick={() => stepBy(-1)}><Icon name="minus" size={14} /></button
+    >
   {/if}
   <input
     {...rest}
@@ -132,14 +140,22 @@
       class="ta-number-step"
       aria-label={incrementLabel}
       disabled={disabled || (max != null && value != null && value >= max)}
-      onclick={() => stepBy(1)}
-    ><Icon name="plus" size={14} /></button>
+      onclick={() => stepBy(1)}><Icon name="plus" size={14} /></button
+    >
   {/if}
 </div>
 
 <style>
-  .ta-number { display: flex; align-items: stretch; width: 100%; min-width: 0; }
-  .ta-number--auto { display: inline-flex; width: auto; }
+  .ta-number {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+  }
+  .ta-number--auto {
+    display: inline-flex;
+    width: auto;
+  }
 
   .ta-number-field {
     flex: 1 1 auto;
@@ -154,18 +170,41 @@
     border: 1px solid rgb(var(--ta-border));
     border-radius: var(--ta-radius);
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
     appearance: textfield;
     -moz-appearance: textfield;
   }
-  .ta-number--sm .ta-number-field { padding: 0.3125rem 0.5rem; font-size: 0.8125rem; }
+  .ta-number--sm .ta-number-field {
+    padding: 0.3125rem 0.5rem;
+    font-size: 0.8125rem;
+  }
   /* With width="auto", about 6 digits wide. */
-  .ta-number--auto .ta-number-field { width: 6ch; flex: 0 0 auto; box-sizing: content-box; }
+  .ta-number--auto .ta-number-field {
+    width: 6ch;
+    flex: 0 0 auto;
+    box-sizing: content-box;
+  }
   .ta-number-field::-webkit-inner-spin-button,
-  .ta-number-field::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-  .ta-number-field:focus { border-color: rgb(var(--ta-accent) / 0.5); box-shadow: 0 0 0 2px rgb(var(--ta-accent) / 0.15); position: relative; z-index: 1; }
-  .ta-number-field:disabled { opacity: 0.5; cursor: not-allowed; }
-  .ta-number--stepper .ta-number-field { border-radius: 0; text-align: center; }
+  .ta-number-field::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .ta-number-field:focus {
+    border-color: rgb(var(--ta-accent) / 0.5);
+    box-shadow: 0 0 0 2px rgb(var(--ta-accent) / 0.15);
+    position: relative;
+    z-index: 1;
+  }
+  .ta-number-field:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .ta-number--stepper .ta-number-field {
+    border-radius: 0;
+    text-align: center;
+  }
 
   .ta-number-step {
     display: inline-flex;
@@ -179,16 +218,40 @@
     border: 1px solid rgb(var(--ta-border));
     cursor: pointer;
   }
-  .ta-number--sm .ta-number-step { width: 1.75rem; }
-  .ta-number-step:first-child { border-right: none; border-radius: var(--ta-radius) 0 0 var(--ta-radius); }
-  .ta-number-step:last-child { border-left: none; border-radius: 0 var(--ta-radius) var(--ta-radius) 0; }
-  .ta-number-step:hover:not(:disabled) { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated)); }
-  .ta-number-step:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; position: relative; z-index: 1; }
-  .ta-number-step:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ta-number--sm .ta-number-step {
+    width: 1.75rem;
+  }
+  .ta-number-step:first-child {
+    border-right: none;
+    border-radius: var(--ta-radius) 0 0 var(--ta-radius);
+  }
+  .ta-number-step:last-child {
+    border-left: none;
+    border-radius: 0 var(--ta-radius) var(--ta-radius) 0;
+  }
+  .ta-number-step:hover:not(:disabled) {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated));
+  }
+  .ta-number-step:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+    position: relative;
+    z-index: 1;
+  }
+  .ta-number-step:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 
   /* On touch screens: 16px so iOS does not zoom the page on focus, and 44px tall for a finger. */
   @media (pointer: coarse) {
-    .ta-number-field { font-size: 1rem; min-height: 2.75rem; }
-    .ta-number-step { width: 2.75rem; }
+    .ta-number-field {
+      font-size: 1rem;
+      min-height: 2.75rem;
+    }
+    .ta-number-step {
+      width: 2.75rem;
+    }
   }
 </style>

@@ -18,7 +18,13 @@
 <script lang="ts">
   import ChartFigure from "../internal/chart-figure.svelte";
   import { useLabels } from "../i18n";
-  import { compactNumber, niceScale, seriesColor, valueOf, type ChartSeries } from "../internal/chart";
+  import {
+    compactNumber,
+    niceScale,
+    seriesColor,
+    valueOf,
+    type ChartSeries,
+  } from "../internal/chart";
 
   const L = useLabels();
   const {
@@ -76,28 +82,58 @@
   const lanes = $derived(piles ? 1 : Math.max(1, series.length));
 
   // Horizontal bars keep room on the left for the category names (40% of the width at most).
-  const labelWidth = $derived(Math.min(chartWidth * 0.4, Math.max(40, Math.max(0, ...data.map((_, i) => category(i).length)) * 6.5 + 14)));
-  const M = $derived(horizontal ? { top: 6, right: 20, bottom: 24, left: labelWidth } : { top: 12, right: 8, bottom: 26, left: 48 });
-  const fullHeight = $derived(height ?? (horizontal ? data.length * Math.max(30, lanes * 16 + 12) + 30 : 240));
+  const labelWidth = $derived(
+    Math.min(
+      chartWidth * 0.4,
+      Math.max(40, Math.max(0, ...data.map((_, i) => category(i).length)) * 6.5 + 14)
+    )
+  );
+  const M = $derived(
+    horizontal
+      ? { top: 6, right: 20, bottom: 24, left: labelWidth }
+      : { top: 12, right: 8, bottom: 26, left: 48 }
+  );
+  const fullHeight = $derived(
+    height ?? (horizontal ? data.length * Math.max(30, lanes * 16 + 12) + 30 : 240)
+  );
   const plotWidth = $derived(Math.max(40, chartWidth - M.left - M.right));
   const plotHeight = $derived(Math.max(40, fullHeight - M.top - M.bottom));
 
-  const positive = (row: Record<string, unknown>, key: string) => Math.max(0, valueOf(row, key) ?? 0);
-  const totalOf = (row: Record<string, unknown>) => series.reduce((sum, s) => sum + positive(row, s.key), 0);
-  const maxValue = $derived(Math.max(0, ...data.map((d) => (piles ? totalOf(d) : Math.max(0, ...series.map((s) => positive(d, s.key)))))));
-  const scale = $derived(niceScale(maxValue, horizontal ? Math.max(2, Math.min(4, Math.floor(plotWidth / 70))) : 4));
+  const positive = (row: Record<string, unknown>, key: string) =>
+    Math.max(0, valueOf(row, key) ?? 0);
+  const totalOf = (row: Record<string, unknown>) =>
+    series.reduce((sum, s) => sum + positive(row, s.key), 0);
+  const maxValue = $derived(
+    Math.max(
+      0,
+      ...data.map((d) =>
+        piles ? totalOf(d) : Math.max(0, ...series.map((s) => positive(d, s.key)))
+      )
+    )
+  );
+  const scale = $derived(
+    niceScale(maxValue, horizontal ? Math.max(2, Math.min(4, Math.floor(plotWidth / 70))) : 4)
+  );
 
   /** Position of a value along the value axis (y for columns, x for horizontal bars). */
-  const at = (v: number) => (horizontal ? M.left + (v / scale.max) * plotWidth : M.top + plotHeight - (v / scale.max) * plotHeight);
+  const at = (v: number) =>
+    horizontal
+      ? M.left + (v / scale.max) * plotWidth
+      : M.top + plotHeight - (v / scale.max) * plotHeight;
 
   const band = $derived((horizontal ? plotHeight : plotWidth) / Math.max(1, data.length));
-  const thick = $derived(Math.min(piles ? 32 : horizontal ? 20 : 24, Math.max(2, (band * 0.7 - (lanes - 1) * 2) / lanes)));
+  const thick = $derived(
+    Math.min(piles ? 32 : horizontal ? 20 : 24, Math.max(2, (band * 0.7 - (lanes - 1) * 2) / lanes))
+  );
   const groupSize = $derived(lanes * thick + (lanes - 1) * 2);
   const bandStart = (i: number) => (horizontal ? M.top : M.left) + band * i;
   // With many categories, only one in every `labelStep` is labelled on the axis.
-  const labelStep = $derived(horizontal ? 1 : Math.max(1, Math.ceil(data.length / Math.max(1, Math.floor(plotWidth / 56)))));
+  const labelStep = $derived(
+    horizontal ? 1 : Math.max(1, Math.ceil(data.length / Math.max(1, Math.floor(plotWidth / 56))))
+  );
   const maxChars = $derived(Math.max(3, Math.floor((labelWidth - 14) / 6.5)));
-  const clip = (text: string) => (text.length > maxChars ? `${text.slice(0, maxChars - 1)}…` : text);
+  const clip = (text: string) =>
+    text.length > maxChars ? `${text.slice(0, maxChars - 1)}…` : text;
 
   /** A bar from value `from` to `to`, `lane` px into its band; `cap` rounds the data end. */
   function bar(lane: number, from: number, to: number, cap: boolean) {
@@ -128,7 +164,9 @@
         const v = positive(row, s.key);
         const from = piles ? pile : 0;
         pile += v;
-        return v > 0 ? bar(start + (piles ? 0 : si * (thick + 2)), from, from + v, !piles || si === last) : "";
+        return v > 0
+          ? bar(start + (piles ? 0 : si * (thick + 2)), from, from + v, !piles || si === last)
+          : "";
       });
     })
   );
@@ -141,15 +179,25 @@
   );
 
   const table = $derived({
-    columns: [{ label: xLabel ?? x }, ...series.map((s) => ({ label: s.label, numeric: true })), ...(piles ? [{ label: totalLabel, numeric: true }] : [])],
-    rows: data.map((row, i) => [category(i), ...series.map((s) => fmt(valueOf(row, s.key))), ...(piles ? [format(totalOf(row))] : [])]),
+    columns: [
+      { label: xLabel ?? x },
+      ...series.map((s) => ({ label: s.label, numeric: true })),
+      ...(piles ? [{ label: totalLabel, numeric: true }] : []),
+    ],
+    rows: data.map((row, i) => [
+      category(i),
+      ...series.map((s) => fmt(valueOf(row, s.key))),
+      ...(piles ? [format(totalOf(row))] : []),
+    ]),
   });
 
   // The area that responds to the pointer is each category's whole band, not just the bar.
   function onMove(e: PointerEvent) {
     if (!canvas || data.length === 0) return;
     const r = canvas.getBoundingClientRect();
-    const p = horizontal ? ((e.clientY - r.top) / r.height) * fullHeight - M.top : ((e.clientX - r.left) / r.width) * chartWidth - M.left;
+    const p = horizontal
+      ? ((e.clientY - r.top) / r.height) * fullHeight - M.top
+      : ((e.clientX - r.left) / r.width) * chartWidth - M.left;
     active = Math.min(data.length - 1, Math.max(0, Math.floor(p / band)));
   }
 
@@ -158,7 +206,8 @@
     const next = horizontal ? ["ArrowDown", "ArrowRight"] : ["ArrowRight", "ArrowUp"];
     const previous = horizontal ? ["ArrowUp", "ArrowLeft"] : ["ArrowLeft", "ArrowDown"];
     if (next.includes(e.key)) active = active == null ? 0 : Math.min(data.length - 1, active + 1);
-    else if (previous.includes(e.key)) active = active == null ? data.length - 1 : Math.max(0, active - 1);
+    else if (previous.includes(e.key))
+      active = active == null ? data.length - 1 : Math.max(0, active - 1);
     else if (e.key === "Home") active = 0;
     else if (e.key === "End") active = data.length - 1;
     else if (e.key === "Escape") active = null;
@@ -205,29 +254,72 @@
     onpointermove={onMove}
     onpointerleave={() => (active = null)}
   >
-    <svg width="100%" height={fullHeight} viewBox={`0 0 ${chartWidth} ${fullHeight}`} class="ta-chart-svg" aria-hidden="true">
+    <svg
+      width="100%"
+      height={fullHeight}
+      viewBox={`0 0 ${chartWidth} ${fullHeight}`}
+      class="ta-chart-svg"
+      aria-hidden="true"
+    >
       {#each scale.ticks as t (t)}
         {#if horizontal}
-          <line x1={at(t)} x2={at(t)} y1={M.top} y2={M.top + plotHeight} class={t === 0 ? "ta-chart-base" : "ta-chart-grid"} />
-          <text x={at(t)} y={fullHeight - 8} class="ta-chart-axis" text-anchor="middle">{format(t)}</text>
+          <line
+            x1={at(t)}
+            x2={at(t)}
+            y1={M.top}
+            y2={M.top + plotHeight}
+            class={t === 0 ? "ta-chart-base" : "ta-chart-grid"}
+          />
+          <text x={at(t)} y={fullHeight - 8} class="ta-chart-axis" text-anchor="middle"
+            >{format(t)}</text
+          >
         {:else}
-          <line x1={M.left} x2={M.left + plotWidth} y1={at(t)} y2={at(t)} class={t === 0 ? "ta-chart-base" : "ta-chart-grid"} />
-          <text x={M.left - 8} y={at(t)} class="ta-chart-axis" text-anchor="end" dominant-baseline="middle">{format(t)}</text>
+          <line
+            x1={M.left}
+            x2={M.left + plotWidth}
+            y1={at(t)}
+            y2={at(t)}
+            class={t === 0 ? "ta-chart-base" : "ta-chart-grid"}
+          />
+          <text
+            x={M.left - 8}
+            y={at(t)}
+            class="ta-chart-axis"
+            text-anchor="end"
+            dominant-baseline="middle">{format(t)}</text
+          >
         {/if}
       {/each}
 
       {#each data as _, i (i)}
         <g class="ta-chart-group" class:ta-chart-group--active={active === i}>
           {#if horizontal && active === i}
-            <rect x={M.left} y={bandStart(i)} width={plotWidth} height={band} class="ta-chart-band" />
+            <rect
+              x={M.left}
+              y={bandStart(i)}
+              width={plotWidth}
+              height={band}
+              class="ta-chart-band"
+            />
           {/if}
           {#each series as s, si (s.key)}
             {#if bars[i]?.[si]}<path d={bars[i][si]} fill={seriesColor(si)} />{/if}
           {/each}
           {#if horizontal}
-            <text x={M.left - 8} y={bandStart(i) + band / 2} class="ta-chart-axis ta-chart-category" text-anchor="end" dominant-baseline="middle">{clip(category(i))}</text>
+            <text
+              x={M.left - 8}
+              y={bandStart(i) + band / 2}
+              class="ta-chart-axis ta-chart-category"
+              text-anchor="end"
+              dominant-baseline="middle">{clip(category(i))}</text
+            >
           {:else if i % labelStep === 0}
-            <text x={bandStart(i) + band / 2} y={fullHeight - 8} class="ta-chart-axis" text-anchor="middle">{category(i)}</text>
+            <text
+              x={bandStart(i) + band / 2}
+              y={fullHeight - 8}
+              class="ta-chart-axis"
+              text-anchor="middle">{category(i)}</text
+            >
           {/if}
         </g>
       {/each}
@@ -260,13 +352,26 @@
 </ChartFigure>
 
 <style>
-  .ta-chart-group--active path { filter: brightness(1.15); }
-  .ta-chart-band { fill: rgb(var(--ta-elevated) / 0.6); }
-  .ta-chart-category { fill: rgb(var(--ta-text)); font-size: 12px; }
-  .ta-chart-tooltip-total { margin-top: 0.125rem; padding-top: 0.25rem; border-top: 1px solid rgb(var(--ta-border)); }
+  .ta-chart-group--active path {
+    filter: brightness(1.15);
+  }
+  .ta-chart-band {
+    fill: rgb(var(--ta-elevated) / 0.6);
+  }
+  .ta-chart-category {
+    fill: rgb(var(--ta-text));
+    font-size: 12px;
+  }
+  .ta-chart-tooltip-total {
+    margin-top: 0.125rem;
+    padding-top: 0.25rem;
+    border-top: 1px solid rgb(var(--ta-border));
+  }
 
   @media (pointer: coarse) {
     /* The chart itself is the control: tall enough to step through with a finger. */
-    .ta-chart-canvas { min-height: 2.75rem; }
+    .ta-chart-canvas {
+      min-height: 2.75rem;
+    }
   }
 </style>

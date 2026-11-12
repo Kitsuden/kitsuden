@@ -62,7 +62,10 @@
 
 <form
   class={cn("ta-prompt", className)}
-  onsubmit={(e) => { e.preventDefault(); send(); }}
+  onsubmit={(e) => {
+    e.preventDefault();
+    send();
+  }}
 >
   {#if attachments}
     <button
@@ -72,7 +75,20 @@
       disabled={disabled || loading}
       aria-label={attachLabel}
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        ><path
+          d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"
+        /></svg
+      >
     </button>
   {/if}
 
@@ -83,18 +99,27 @@
     rows="1"
     class="ta-prompt-text"
     aria-label={ariaLabel ?? placeholder}
-    onkeydown={onKey}
-  ></textarea>
+    onkeydown={onKey}></textarea>
 
   <Button
     type="submit"
     variant="primary"
     size="icon"
-    loading={loading}
+    {loading}
     disabled={!canSend}
     ariaLabel={sendLabel}
   >
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg
+    >
   </Button>
 </form>
 
@@ -107,7 +132,9 @@
     background: rgb(var(--ta-bg));
     border: 1px solid rgb(var(--ta-border));
     border-radius: var(--ta-radius-lg);
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
 
   .ta-prompt:focus-within {
@@ -145,7 +172,9 @@
     border-radius: var(--ta-radius);
     color: rgb(var(--ta-text-dim));
     cursor: pointer;
-    transition: color 0.2s, background-color 0.2s;
+    transition:
+      color 0.2s,
+      background-color 0.2s;
   }
   .ta-prompt-attach:hover:not(:disabled) {
     color: rgb(var(--ta-text));
@@ -156,8 +185,13 @@
     cursor: not-allowed;
   }
   @media (pointer: coarse) {
-    .ta-prompt-attach { min-width: 2.75rem; min-height: 2.75rem; }
+    .ta-prompt-attach {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
     /* 16px text: iOS does not zoom the page when the field gets focus. */
-    .ta-prompt-text { font-size: 1rem; }
+    .ta-prompt-text {
+      font-size: 1rem;
+    }
   }
 </style>

@@ -66,7 +66,8 @@
     invalid = false;
   });
 
-  const isOutOfRange = (iso: ISODate) => (min != null && iso < min) || (max != null && iso > max) || !!isDisabled?.(iso);
+  const isOutOfRange = (iso: ISODate) =>
+    (min != null && iso < min) || (max != null && iso > max) || !!isDisabled?.(iso);
 
   function setValue(iso: ISODate | null) {
     value = iso;
@@ -145,11 +146,29 @@
     {disabled}
     onclick={() => (open = !open)}
   >
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      ><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg
+    >
   </button>
 
   {#if open}
-    <div bind:this={panel} id={`${id}-panel`} role="dialog" aria-label={buttonLabel} popover="manual" class="ta-datepicker-panel">
+    <div
+      bind:this={panel}
+      id={`${id}-panel`}
+      role="dialog"
+      aria-label={buttonLabel}
+      popover="manual"
+      class="ta-datepicker-panel"
+    >
       <Calendar {value} {min} {max} {locale} {weekStartsOn} {isDisabled} onselect={onPicked} />
     </div>
   {/if}
@@ -180,7 +199,9 @@
     border-color: rgb(var(--ta-accent) / 0.5);
     box-shadow: 0 0 0 2px rgb(var(--ta-accent) / 0.15);
   }
-  .ta-datepicker-field[aria-invalid="true"] { border-color: rgb(var(--ta-danger) / 0.7); }
+  .ta-datepicker-field[aria-invalid="true"] {
+    border-color: rgb(var(--ta-danger) / 0.7);
+  }
 
   .ta-datepicker-button {
     display: flex;
@@ -192,9 +213,18 @@
     border-radius: 0 var(--ta-radius) var(--ta-radius) 0;
     cursor: pointer;
   }
-  .ta-datepicker-button:hover:not(:disabled) { color: rgb(var(--ta-text)); }
-  .ta-datepicker-button:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; }
-  .ta-datepicker-button:disabled, .ta-datepicker-field:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ta-datepicker-button:hover:not(:disabled) {
+    color: rgb(var(--ta-text));
+  }
+  .ta-datepicker-button:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+  }
+  .ta-datepicker-button:disabled,
+  .ta-datepicker-field:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
   .ta-datepicker-panel {
     position: fixed;
@@ -213,6 +243,8 @@
 
   /* On touch screens: the field button reaches 44px. */
   @media (pointer: coarse) {
-    .ta-datepicker-button { min-height: 2.75rem; }
+    .ta-datepicker-button {
+      min-height: 2.75rem;
+    }
   }
 </style>

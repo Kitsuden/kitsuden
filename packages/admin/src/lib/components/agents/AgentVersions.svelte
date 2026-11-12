@@ -6,7 +6,8 @@
 -->
 <script lang="ts">
   import { Button, Skeleton } from "$lib/tallao";
-  import { t, localeFormat } from "$lib/i18n";
+  import { t } from "$lib/i18n";
+  import { formatDateTime } from "$lib/utils";
   import { History, RotateCcw } from "lucide-svelte";
   import { onMount } from "svelte";
   import { toast } from "$lib/tallao";
@@ -77,7 +78,7 @@
     }
   }
 
-  const date = (v: string) => new Date(v).toLocaleString(localeFormat());
+  const date = formatDateTime;
 </script>
 
 <div class="space-y-4" data-testid="agent-versions">

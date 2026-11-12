@@ -27,7 +27,8 @@
   import { fieldDiffRedacted, readableFieldDiff } from "$lib/approvals-diff";
   import { nextPendingAfter } from "$lib/approvals-next";
   import { confirmDialog } from "$lib/confirm.svelte";
-  import { t, localeFormat } from "$lib/i18n";
+  import { t } from "$lib/i18n";
+  import { formatDateTime } from "$lib/utils";
   import { isTypingTarget } from "$lib/palette";
   import {
     approveProposal,
@@ -390,7 +391,8 @@
     return () => window.removeEventListener("keydown", onKeydown);
   });
 
-  const date = (v: string | null) => (v ? new Date(v).toLocaleString(localeFormat()) : "—");
+  // The panel's one way of writing a moment (see $lib/utils).
+  const date = formatDateTime;
   const json = (v: unknown) => (v === undefined ? "" : JSON.stringify(v, null, 2));
 
   const reasonLabel = (reason: string) =>

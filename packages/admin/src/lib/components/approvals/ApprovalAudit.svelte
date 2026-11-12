@@ -13,7 +13,8 @@
     TableHead,
     TableCell,
   } from "$lib/tallao";
-  import { t, localeFormat } from "$lib/i18n";
+  import { t } from "$lib/i18n";
+  import { formatDateTime } from "$lib/utils";
   import { RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
   import { listApprovalAudit } from "$lib/services/approvals";
@@ -37,7 +38,8 @@
     }
   }
 
-  const date = (v: string) => new Date(v).toLocaleString(localeFormat());
+  // The panel's one way of writing a moment (see $lib/utils).
+  const date = formatDateTime;
 
   /** A readable line of each action's details. */
   function summary(e: ApprovalAuditEvent): string {

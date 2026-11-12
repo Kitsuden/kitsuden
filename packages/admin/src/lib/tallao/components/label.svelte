@@ -42,7 +42,8 @@
 </script>
 
 <label {...rest} for={htmlFor} class={cn("ta-label", disabled && "ta-label--off", className)}>
-  {@render children()}{#if required}<span class="ta-label-required" aria-hidden="true">{" *"}</span><span class="ta-hidden">{` (${requiredLabel})`}</span>{/if}
+  {@render children()}{#if required}<span class="ta-label-required" aria-hidden="true">{" *"}</span
+    ><span class="ta-hidden">{` (${requiredLabel})`}</span>{/if}
 </label>
 
 <style>
@@ -75,6 +76,8 @@
   }
 
   @media (pointer: coarse) {
-    .ta-label { font-size: 0.875rem; }
+    .ta-label {
+      font-size: 0.875rem;
+    }
   }
 </style>

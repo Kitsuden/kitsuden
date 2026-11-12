@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 from urllib.parse import urlencode
 
 import httpx
@@ -60,7 +60,7 @@ def build_request(
     method: str,
     path: str,
     body: Optional[Any] = None,
-    params: Optional[Mapping[str, Any]] = None,
+    params: Optional[Union[Mapping[str, Any], Sequence[Tuple[str, Any]]]] = None,
     override_format: Optional[str] = None,
 ) -> Request:
     """Build the request with the same rules as the TS SDK.
@@ -74,12 +74,12 @@ def build_request(
         # Same as in TS: writes always negotiate JSON.
         active_format = "json"
 
-    query: dict = {}
-    if params:
-        # None means "do not send the parameter", not "send null".
-        query.update({k: v for k, v in params.items() if v is not None})
+    # A list of pairs keeps repeated keys (`filter[price][gte]=10&filter[price][lt]=20`);
+    # a mapping is the common case. None means "do not send the parameter", not "send null".
+    pairs = params.items() if isinstance(params, Mapping) else (params or ())
+    query: list = [(k, v) for k, v in pairs if v is not None]
     if active_format == "toon":
-        query["format"] = "toon"
+        query.append(("format", "toon"))
 
     url = f"{base_url.rstrip('/')}/api{path}"
     if query:

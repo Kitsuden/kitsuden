@@ -9,6 +9,8 @@
   import DOMPurify from "dompurify";
   import { onMount, tick } from "svelte";
 
+  import { currentTheme, luminance } from "$lib/theme.svelte";
+
   // ─── Props ──────────────────────────────────────────
   interface Props {
     value?: string;
@@ -45,6 +47,28 @@
   let previewContainer: HTMLElement;
   let editorContainer: HTMLElement;
   let editorView: any;
+  /**
+   * The editor's colours follow the panel's theme: One Dark on a dark theme, the panel's
+   * own surface and text (with CodeMirror's default highlighting) on a light one. It was
+   * One Dark always, a dark block in the middle of the light theme.
+   */
+  let themeSlot: any;
+  let darkTheme: any;
+  let lightTheme: any;
+  const panelIsDark = () => {
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--ta-bg").trim();
+    return /^\d+\s+\d+\s+\d+$/.test(bg) ? luminance(bg) < 0.2 : true;
+  };
+  const editorTheme = () => (panelIsDark() ? darkTheme : lightTheme);
+  $effect(() => {
+    void currentTheme();
+    // After the theme's variables are applied.
+    queueMicrotask(() => {
+      if (editorView && themeSlot) {
+        editorView.dispatch({ effects: themeSlot.reconfigure(editorTheme()) });
+      }
+    });
+  });
 
   /**
    * Inserts an image at the cursor position.
@@ -91,18 +115,37 @@
     (async () => {
       const [{ basicSetup }] = await Promise.all([import("codemirror")]);
       const { EditorView, keymap } = await import("@codemirror/view");
-      const { EditorState } = await import("@codemirror/state");
+      const { EditorState, Compartment } = await import("@codemirror/state");
       const { markdown } = await import("@codemirror/lang-markdown");
       const { oneDark } = await import("@codemirror/theme-one-dark");
 
       if (destroyed) return;
+
+      themeSlot = new Compartment();
+      darkTheme = oneDark;
+      lightTheme = EditorView.theme({
+        "&": { backgroundColor: "rgb(var(--ta-bg))", color: "rgb(var(--ta-text))" },
+        ".cm-content": { caretColor: "rgb(var(--ta-accent))" },
+        ".cm-cursor, .cm-dropCursor": { borderLeftColor: "rgb(var(--ta-accent))" },
+        ".cm-gutters": {
+          backgroundColor: "rgb(var(--ta-surface))",
+          color: "rgb(var(--ta-text-dim))",
+          borderRight: "1px solid rgb(var(--ta-border))",
+        },
+        ".cm-activeLine, .cm-activeLineGutter": {
+          backgroundColor: "rgb(var(--ta-elevated) / 0.5)",
+        },
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+          backgroundColor: "rgb(var(--ta-accent) / 0.2)",
+        },
+      });
 
       const state = EditorState.create({
         doc: localContent,
         extensions: [
           basicSetup,
           markdown(),
-          oneDark,
+          themeSlot.of(editorTheme()),
           EditorView.updateListener.of((update: any) => {
             if (update.docChanged) {
               localContent = update.state.doc.toString();
@@ -264,7 +307,7 @@
       </h3>
     </div>
     <div
-      class="flex-1 overflow-auto bg-[#282c34] code-wrapper relative"
+      class="flex-1 overflow-auto bg-kitsuden-bg code-wrapper relative"
       bind:this={editorContainer}
     ></div>
   </div>

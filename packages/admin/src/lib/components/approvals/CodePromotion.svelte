@@ -32,7 +32,8 @@
     TableHead,
     TableCell,
   } from "$lib/tallao";
-  import { t, localeFormat } from "$lib/i18n";
+  import { t } from "$lib/i18n";
+  import { formatDateTime } from "$lib/utils";
   import { Check, X, RefreshCw, RotateCcw, Play, GitBranch } from "lucide-svelte";
   import { onMount } from "svelte";
   import { toast } from "$lib/tallao";
@@ -183,7 +184,8 @@
     }
   }
 
-  const date = (v: string | null) => (v ? new Date(v).toLocaleString(localeFormat()) : "—");
+  // The panel's one way of writing a moment (see $lib/utils).
+  const date = formatDateTime;
   const shortOne = (h: string | null) => (h ? h.slice(0, 12) : "—");
   const json = (v: unknown) => JSON.stringify(v, null, 2);
 

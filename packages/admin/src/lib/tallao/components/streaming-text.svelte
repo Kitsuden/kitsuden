@@ -42,7 +42,15 @@
     [key: string]: unknown;
   }
 
-  const { text = "", stream, streaming = false, caret = true, class: className = "", onDone, ...rest }: Props = $props();
+  const {
+    text = "",
+    stream,
+    streaming = false,
+    caret = true,
+    class: className = "",
+    onDone,
+    ...rest
+  }: Props = $props();
 
   let received = $state("");
   let reading = $state(false);
@@ -90,7 +98,9 @@
 
 <div {...rest} class={cn("ta-stream", busy && "ta-stream--busy", className)} aria-busy={busy}>
   <span class="ta-stream-text" aria-hidden="true">
-    {#each words as word, i (i)}<span class={cn("ta-stream-word", i >= initial && "ta-stream-word--new")}>{word}</span>{/each}{#if busy && caret}<span class="ta-stream-caret"></span>{/if}
+    {#each words as word, i (i)}<span
+        class={cn("ta-stream-word", i >= initial && "ta-stream-word--new")}>{word}</span
+      >{/each}{#if busy && caret}<span class="ta-stream-caret"></span>{/if}
   </span>
   <span class="ta-stream-spoken" aria-live="polite" aria-atomic="false" aria-relevant="additions">
     {#each sentences as sentence, i (i)}<span>{sentence} </span>{/each}
@@ -98,14 +108,30 @@
 </div>
 
 <style>
-  .ta-stream { position: relative; min-width: 0; line-height: 1.6; color: rgb(var(--ta-text)); }
+  .ta-stream {
+    position: relative;
+    min-width: 0;
+    line-height: 1.6;
+    color: rgb(var(--ta-text));
+  }
 
-  .ta-stream-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ta-stream-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
 
-  .ta-stream-word--new { animation: ta-stream-in var(--ta-duration-slow, 240ms) var(--ta-ease-out, ease-out) both; }
+  .ta-stream-word--new {
+    animation: ta-stream-in var(--ta-duration-slow, 240ms) var(--ta-ease-out, ease-out) both;
+  }
   @keyframes ta-stream-in {
-    from { opacity: 0; filter: blur(2px); }
-    to { opacity: 1; filter: none; }
+    from {
+      opacity: 0;
+      filter: blur(2px);
+    }
+    to {
+      opacity: 1;
+      filter: none;
+    }
   }
 
   /* An inline box of fixed width: it follows the last word and never changes the line height. */
@@ -120,8 +146,12 @@
     animation: ta-stream-blink 1s steps(2, jump-none) infinite;
   }
   @keyframes ta-stream-blink {
-    from { opacity: 1; }
-    to { opacity: 0.25; }
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0.25;
+    }
   }
 
   .ta-stream-spoken {
@@ -137,7 +167,11 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-stream-word--new { animation: none; }
-    .ta-stream-caret { animation: none; }
+    .ta-stream-word--new {
+      animation: none;
+    }
+    .ta-stream-caret {
+      animation: none;
+    }
   }
 </style>

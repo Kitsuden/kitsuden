@@ -56,6 +56,8 @@
 
   import { api } from "$lib/api";
 
+  import { academyHref } from "./links";
+
   // ─── Types ──────────────────────────────────────────────────────────────
 
   interface Metrics {
@@ -476,7 +478,7 @@
   description={tr("academyView.courseManagementAssignmentsAnalytics")}
 >
   {#snippet actions()}
-    <Button href="/g/kon-academy-lms/grid-courses">
+    <Button href={academyHref("grid-courses", "new")}>
       <Plus class="w-4 h-4" />
       {tr("academyView.newCourse")}
     </Button>
@@ -680,7 +682,7 @@
                         <Button
                           variant="ghost"
                           size="icon"
-                          href="/academy/courses/{r.course.id}/edit"
+                          href={academyHref("grid-courses", r.course.id)}
                           ariaLabel={tr("common.edit")}
                           title={tr("common.edit")}
                           ><Edit2 class="w-4 h-4" aria-hidden="true" /></Button
@@ -784,7 +786,7 @@
                     <Button
                       variant="ghost"
                       size="icon"
-                      href="/academy/learning-paths/{lp.id}/edit"
+                      href={academyHref("grid-learning-paths", lp.id)}
                       ariaLabel={tr("common.edit")}
                       title={tr("common.edit")}><Edit2 class="w-4 h-4" aria-hidden="true" /></Button
                     >
@@ -842,7 +844,7 @@
                     <Button
                       variant="ghost"
                       size="icon"
-                      href="/academy/groups/{g.id}/edit"
+                      href={academyHref("grid-groups", g.id)}
                       ariaLabel={tr("common.edit")}
                       title={tr("common.edit")}><Edit2 class="w-4 h-4" aria-hidden="true" /></Button
                     >
@@ -990,10 +992,10 @@
   <Dialog
     open={showDeleteModal}
     size="sm"
-    title={tr("academyView.deleteCourseS")}
-    description={tr("academyView.thisWillPermanentlyDeleteCourse", {
-      deleteTargetIdsCount: deleteTargetIds.length,
-    })}
+    title={deleteTargetIds.length === 1
+      ? tr("academyView.deleteCourseOne")
+      : tr("academyView.deleteCourseMany", { n: deleteTargetIds.length })}
+    description={tr("list.deleteDescription")}
     onClose={() => (showDeleteModal = false)}
   >
     {#snippet footer()}
@@ -1011,7 +1013,9 @@
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <Dialog
     open={showAssignModal}
-    title={tr("academyView.assignCourseS", { assignCursoIdsCount: assignCourseIds.length })}
+    title={assignCourseIds.length === 1
+      ? tr("academyView.assignCourseOne")
+      : tr("academyView.assignCourseMany", { n: assignCourseIds.length })}
     description={tr("academyView.enterCommaSeparatedIds")}
     onClose={() => (showAssignModal = false)}
   >

@@ -25,7 +25,11 @@
 {#if lines > 1}
   <div class={cn("ta-skeleton-lines", className)} aria-hidden="true">
     {#each Array.from({ length: lines }) as _, i (i)}
-      <div class="ta-skeleton ta-skeleton--text" style:width={i === lines - 1 ? "60%" : "100%"} style:height></div>
+      <div
+        class="ta-skeleton ta-skeleton--text"
+        style:width={i === lines - 1 ? "60%" : "100%"}
+        style:height
+      ></div>
     {/each}
   </div>
 {:else}
@@ -39,23 +43,45 @@
 
 <style>
   .ta-skeleton {
-    background: linear-gradient(90deg, rgb(var(--ta-elevated)) 25%, rgb(var(--ta-muted) / 0.6) 50%, rgb(var(--ta-elevated)) 75%);
+    background: linear-gradient(
+      90deg,
+      rgb(var(--ta-elevated)) 25%,
+      rgb(var(--ta-muted) / 0.6) 50%,
+      rgb(var(--ta-elevated)) 75%
+    );
     background-size: 200% 100%;
     animation: ta-skeleton-shimmer 1.4s ease-in-out infinite;
   }
 
-  .ta-skeleton--rect { border-radius: var(--ta-radius); }
-  .ta-skeleton--text { border-radius: var(--ta-radius-sm); }
-  .ta-skeleton--circle { border-radius: 9999px; flex-shrink: 0; }
+  .ta-skeleton--rect {
+    border-radius: var(--ta-radius);
+  }
+  .ta-skeleton--text {
+    border-radius: var(--ta-radius-sm);
+  }
+  .ta-skeleton--circle {
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
 
-  .ta-skeleton-lines { display: flex; flex-direction: column; gap: 0.5rem; }
+  .ta-skeleton-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 
   @keyframes ta-skeleton-shimmer {
-    from { background-position: 200% 0; }
-    to { background-position: -200% 0; }
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-skeleton { animation: none; }
+    .ta-skeleton {
+      animation: none;
+    }
   }
 </style>

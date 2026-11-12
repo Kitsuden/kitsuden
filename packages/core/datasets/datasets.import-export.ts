@@ -316,16 +316,36 @@ export function exportToJSONL(dataset: ExportedDataset): string {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { eq, and, asc, gte, lte } from "drizzle-orm";
-import { messageOf } from "@kitsuden/engine";
+import {
+  messageOf,
+  recordChanges,
+  DATASET_ENTRY_ENTITY,
+  type RecordAction,
+} from "@kitsuden/engine";
+
+/** Who runs an import: its rows are recorded in the history as that actor. */
+export interface ImportActor {
+  /** The request's `user` (a person or an agent); absent = the system. */
+  user?: unknown;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const ENTRY_DIFF = { nested: "data", skip: ["id", "dataSetId", "createdById"] };
 
 /**
- * Imports data into a dataset
+ * Imports data into a dataset.
+ *
+ * Each created or updated entry gets one row in the record history (core
+ * migration 0076), written at the end in batched INSERTs (`recordChanges`,
+ * 100 rows per statement) inside the request's transaction.
  */
 export async function importToDataset(
   ctx: KonContext,
   datasetId: string,
   data: any[],
-  config: ImportConfig
+  config: ImportConfig,
+  actor: ImportActor = {}
 ): Promise<ImportResult> {
   const startTime = Date.now();
   const { db } = ctx;
@@ -364,6 +384,28 @@ export async function importToDataset(
 
   // Prepare operations
   const operations: any[] = [];
+  // What the history records, written once at the end.
+  const history: Array<{
+    action: RecordAction;
+    before: Record<string, unknown> | null;
+    after: Record<string, unknown> | null;
+  }> = [];
+  const remember = async () => {
+    if (history.length === 0) return;
+    await recordChanges(
+      db.instance,
+      history.map((h) => ({
+        entity: DATASET_ENTRY_ENTITY,
+        rowId: (h.after ?? h.before)?.id,
+        action: h.action,
+        before: h.before,
+        after: h.after,
+        user: actor.user,
+        diff: ENTRY_DIFF,
+      })),
+      (err) => ctx.logger.warn("Could not record the import's history", { error: messageOf(err) })
+    );
+  };
 
   for (let i = 0; i < data.length; i++) {
     const record = data[i];
@@ -405,57 +447,48 @@ export async function importToDataset(
       // Determine operation according to strategy
       const existingId = config.idField ? transformedRecord[config.idField] : null;
 
-      if (config.strategy === "upsert" && existingId) {
-        // Try update, if it does not exist create
-        const [existing] = await db.instance
-          .select({ id: dataEntries.id })
-          .from(dataEntries)
-          .where(eq(dataEntries.id, existingId))
-          .limit(1);
-
-        if (existing) {
-          await db.instance
-            .update(dataEntries)
-            .set({
-              ...entry,
-              updatedAt: new Date(),
-            })
-            .where(eq(dataEntries.id, existingId));
-          result.stats.updated++;
-        } else {
-          operations.push({ type: "create", entry: { ...entry, id: existingId } });
-        }
-      } else if (config.strategy === "replace" && existingId) {
-        // Update only
-        await db.instance
-          .update(dataEntries)
-          .set({
-            ...entry,
-            updatedAt: new Date(),
-          })
-          .where(eq(dataEntries.id, existingId));
-        result.stats.updated++;
-      } else if (config.strategy === "merge" && existingId) {
-        // Merge existing data with new
-        const [existing] = await db.instance
+      if (existingId && config.strategy !== "insert") {
+        // The entry this row names, in THIS dataset. An id that is not a uuid, or
+        // that belongs to another dataset, is a row error: updating it would
+        // change (and move into this dataset) an entry of another one, and
+        // creating it again would collide with its primary key.
+        const id = String(existingId);
+        if (!UUID.test(id)) throw new Error(`${config.idField} '${id}' is not a valid entry id`);
+        const [found] = await db.instance
           .select()
           .from(dataEntries)
-          .where(eq(dataEntries.id, existingId))
+          .where(eq(dataEntries.id, id))
           .limit(1);
+        if (found && found.dataSetId !== datasetId) {
+          throw new Error(`Entry ${id} belongs to another dataset; it was not changed`);
+        }
+        const inThisDataset = and(eq(dataEntries.id, id), eq(dataEntries.dataSetId, datasetId));
 
-        if (existing) {
-          const mergedData = { ...(existing.data as any), ...(entry.data as any) };
-          await db.instance
+        if (found) {
+          // upsert and replace overwrite; merge keeps the fields the row does not set.
+          const data =
+            config.strategy === "merge"
+              ? { ...(found.data as any), ...(entry.data as any) }
+              : entry.data;
+          const [updated] = await db.instance
             .update(dataEntries)
-            .set({
-              ...entry,
-              data: mergedData,
-              updatedAt: new Date(),
-            })
-            .where(eq(dataEntries.id, existingId));
-          result.stats.updated++;
+            .set({ ...entry, data, updatedAt: new Date() })
+            .where(inThisDataset)
+            .returning();
+          if (updated) {
+            history.push({ action: "update", before: found, after: updated });
+            result.stats.updated++;
+          }
+        } else if (config.strategy === "replace") {
+          // Replace only updates: an id that does not exist is skipped and reported.
+          result.stats.skipped++;
+          result.errors.push({
+            index: i,
+            record,
+            error: `Entry ${id} not found; replace only updates`,
+          });
         } else {
-          operations.push({ type: "create", entry: { ...entry, id: existingId } });
+          operations.push({ type: "create", entry: { ...entry, id } });
         }
       } else {
         // Insert
@@ -472,6 +505,8 @@ export async function importToDataset(
       if (!config.skipInvalid) {
         result.success = false;
         result.durationMs = Date.now() - startTime;
+        // The updates already made stay (no rollback here): so does their history.
+        await remember();
         return result;
       }
     }
@@ -486,12 +521,14 @@ export async function importToDataset(
       const batchSize = 100;
       for (let i = 0; i < entriesToCreate.length; i += batchSize) {
         const batch = entriesToCreate.slice(i, i + batchSize);
-        await db.instance.insert(dataEntries).values(batch);
+        const created = await db.instance.insert(dataEntries).values(batch).returning();
+        for (const row of created) history.push({ action: "create", before: null, after: row });
         result.stats.created += batch.length;
       }
     }
   }
 
+  await remember();
   result.durationMs = Date.now() - startTime;
 
   ctx.logger.info(
@@ -507,7 +544,8 @@ export async function importToDataset(
 export async function importPackage(
   ctx: KonContext,
   packageData: ExportPackage,
-  config: Omit<ImportConfig, "mapping">
+  config: Omit<ImportConfig, "mapping">,
+  actor: ImportActor = {}
 ): Promise<Record<string, ImportResult>> {
   const { db } = ctx;
   const { dataSets } = await import("./datasets.schema");
@@ -550,10 +588,16 @@ export async function importPackage(
       id: e.id,
     }));
 
-    results[dataset.slug] = await importToDataset(ctx, datasetId, entries, {
-      ...config,
-      idField: "id",
-    });
+    results[dataset.slug] = await importToDataset(
+      ctx,
+      datasetId,
+      entries,
+      {
+        ...config,
+        idField: "id",
+      },
+      actor
+    );
   }
 
   return results;

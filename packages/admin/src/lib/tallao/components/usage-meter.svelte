@@ -46,16 +46,22 @@
   const count = $derived(`${numberFormat.format(used)} / ${numberFormat.format(max)} ${unit}`);
 </script>
 
-<div {...rest} class={cn("ta-usage", `ta-usage--${level}`, compact && "ta-usage--compact", className)}>
+<div
+  {...rest}
+  class={cn("ta-usage", `ta-usage--${level}`, compact && "ta-usage--compact", className)}
+>
   <div class="ta-usage-row">
     <span class="ta-usage-label">{label}</span>
-    <span class="ta-usage-count">{count}{#if cost} · {cost}{/if}</span>
+    <span class="ta-usage-count"
+      >{count}{#if cost}
+        · {cost}{/if}</span
+    >
   </div>
   {#if !compact}
     <meter
       class="ta-usage-bar"
       min="0"
-      max={max}
+      {max}
       value={Math.min(used, max)}
       low={max * (warnAt / 100)}
       high={max * (warnAt / 100)}
@@ -104,26 +110,42 @@
     border: none;
     border-radius: 9999px;
   }
-  .ta-usage-bar::-webkit-meter-inner-element { display: block; }
+  .ta-usage-bar::-webkit-meter-inner-element {
+    display: block;
+  }
   .ta-usage-bar::-webkit-meter-optimum-value,
   .ta-usage-bar::-webkit-meter-suboptimum-value,
   .ta-usage-bar::-webkit-meter-even-less-good-value {
     border-radius: 9999px;
   }
-  .ta-usage-bar::-webkit-meter-optimum-value { background: rgb(var(--ta-accent)); }
-  .ta-usage-bar::-webkit-meter-suboptimum-value { background: rgb(var(--ta-warning)); }
-  .ta-usage-bar::-webkit-meter-even-less-good-value { background: rgb(var(--ta-danger)); }
+  .ta-usage-bar::-webkit-meter-optimum-value {
+    background: rgb(var(--ta-accent));
+  }
+  .ta-usage-bar::-webkit-meter-suboptimum-value {
+    background: rgb(var(--ta-warning));
+  }
+  .ta-usage-bar::-webkit-meter-even-less-good-value {
+    background: rgb(var(--ta-danger));
+  }
 
   .ta-usage-bar::-moz-meter-bar {
     border-radius: 9999px;
     background: rgb(var(--ta-accent));
   }
-  .ta-usage-bar:-moz-meter-sub-optimum::-moz-meter-bar { background: rgb(var(--ta-warning)); }
-  .ta-usage-bar:-moz-meter-sub-sub-optimum::-moz-meter-bar { background: rgb(var(--ta-danger)); }
+  .ta-usage-bar:-moz-meter-sub-optimum::-moz-meter-bar {
+    background: rgb(var(--ta-warning));
+  }
+  .ta-usage-bar:-moz-meter-sub-sub-optimum::-moz-meter-bar {
+    background: rgb(var(--ta-danger));
+  }
 
   /* The number's color follows the bar's (two channels, not just one) */
-  .ta-usage--warning .ta-usage-count { color: rgb(var(--ta-warning)); }
-  .ta-usage--exhausted .ta-usage-count { color: rgb(var(--ta-danger)); }
+  .ta-usage--warning .ta-usage-count {
+    color: rgb(var(--ta-warning));
+  }
+  .ta-usage--exhausted .ta-usage-count {
+    color: rgb(var(--ta-danger));
+  }
 
   .ta-usage--compact {
     min-width: 0;

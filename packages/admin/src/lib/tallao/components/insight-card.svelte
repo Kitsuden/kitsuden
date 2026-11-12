@@ -82,19 +82,48 @@
   const id = $props.id();
 </script>
 
-<article {...rest} class={cn("ta-insight", `ta-insight--${tone}`, className)} aria-labelledby={`${id}-title`}>
+<article
+  {...rest}
+  class={cn("ta-insight", `ta-insight--${tone}`, className)}
+  aria-labelledby={`${id}-title`}
+>
   <div class="ta-insight-head">
-    <span class="ta-insight-mark" aria-hidden="true"><Icon name={tone === "warning" || tone === "negative" ? "alert" : "sparkle"} size={14} /></span>
-    <svelte:element this={`h${level}`} class="ta-insight-title" id={`${id}-title`}>{title}</svelte:element>
+    <span class="ta-insight-mark" aria-hidden="true"
+      ><Icon
+        name={tone === "warning" || tone === "negative" ? "alert" : "sparkle"}
+        size={14}
+      /></span
+    >
+    <svelte:element this={`h${level}`} class="ta-insight-title" id={`${id}-title`}
+      >{title}</svelte:element
+    >
   </div>
   {#if label && value !== undefined}
-    <KpiCard {label} {value} {unit} {delta} {deltaLabel} {goodWhen} {trend} {locale} {format} {deltaFormat} class="ta-insight-figure" />
+    <KpiCard
+      {label}
+      {value}
+      {unit}
+      {delta}
+      {deltaLabel}
+      {goodWhen}
+      {trend}
+      {locale}
+      {format}
+      {deltaFormat}
+      class="ta-insight-figure"
+    />
   {/if}
   {#if text}<p class="ta-insight-text">{text}</p>{/if}
   {@render children?.()}
   {#if actionLabel && (actionHref || onAction)}
     <div class="ta-insight-foot">
-      <Button variant="ghost" size="sm" href={actionHref} onclick={onAction} class="ta-insight-action">{actionLabel}<Icon name="arrow-right" size={13} /></Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        href={actionHref}
+        onclick={onAction}
+        class="ta-insight-action">{actionLabel}<Icon name="arrow-right" size={13} /></Button
+      >
     </div>
   {/if}
 </article>
@@ -112,7 +141,11 @@
     border-radius: var(--ta-radius-lg);
   }
 
-  .ta-insight-head { display: flex; align-items: flex-start; gap: 0.5rem; }
+  .ta-insight-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
   .ta-insight-mark {
     display: inline-flex;
     align-items: center;
@@ -124,16 +157,47 @@
     background: rgb(var(--ta-info) / 0.12);
     border-radius: var(--ta-radius-sm);
   }
-  .ta-insight--positive .ta-insight-mark { color: rgb(var(--ta-success)); background: rgb(var(--ta-success) / 0.12); }
-  .ta-insight--warning .ta-insight-mark { color: rgb(var(--ta-warning)); background: rgb(var(--ta-warning) / 0.12); }
-  .ta-insight--negative .ta-insight-mark { color: rgb(var(--ta-danger)); background: rgb(var(--ta-danger) / 0.12); }
+  .ta-insight--positive .ta-insight-mark {
+    color: rgb(var(--ta-success));
+    background: rgb(var(--ta-success) / 0.12);
+  }
+  .ta-insight--warning .ta-insight-mark {
+    color: rgb(var(--ta-warning));
+    background: rgb(var(--ta-warning) / 0.12);
+  }
+  .ta-insight--negative .ta-insight-mark {
+    color: rgb(var(--ta-danger));
+    background: rgb(var(--ta-danger) / 0.12);
+  }
 
-  .ta-insight-title { margin: 0; min-width: 0; font-size: 0.9375rem; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
-  .ta-insight-text { margin: 0; font-size: 0.8125rem; line-height: 1.5; color: rgb(var(--ta-text-dim)); }
+  .ta-insight-title {
+    margin: 0;
+    min-width: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .ta-insight-text {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: rgb(var(--ta-text-dim));
+  }
 
   /* The KpiCard without its own frame: this card is the frame. */
-  .ta-insight :global(.ta-insight-figure) { padding: 0; background: none; border: none; border-radius: 0; box-shadow: none; }
+  .ta-insight :global(.ta-insight-figure) {
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
 
-  .ta-insight-foot { margin: 0 -0.5rem -0.25rem; }
-  .ta-insight :global(.ta-insight-action) { color: color-mix(in srgb, rgb(var(--ta-accent)) 65%, rgb(var(--ta-text))); }
+  .ta-insight-foot {
+    margin: 0 -0.5rem -0.25rem;
+  }
+  .ta-insight :global(.ta-insight-action) {
+    color: color-mix(in srgb, rgb(var(--ta-accent)) 65%, rgb(var(--ta-text)));
+  }
 </style>

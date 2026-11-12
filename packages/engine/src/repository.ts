@@ -21,6 +21,14 @@
  *   const post = await repo(blogPosts).find(id);
  *   const { docs, total, pages } = await repo(blogPosts).paginate(2, 20);
  *   await repo(blogPosts, { db: tx }).create({ title: "Hello", ... });
+ *
+ * RECORD HISTORY: `create`, `createMany`, `update` and `delete` leave one row per
+ * record in `record_changes` (core migration 0076, ./record-history.ts), as
+ * `table:<name>` with COLUMN names (the address the explorer and `defineModel`
+ * use), with the request's user as the actor. A call that writes more than
+ * `REPOSITORY_HISTORY_CAP` rows records none of them (a bulk job, not an
+ * edit). `repo(table, { history: false })` turns it off for a table written
+ * many times a second (a live score). Recording never fails the write.
  */
 
 import { and, asc, desc, eq, getTableName, sql, type SQL } from "drizzle-orm";
@@ -28,7 +36,8 @@ import { and, asc, desc, eq, getTableName, sql, type SQL } from "drizzle-orm";
 import { db as defaultDb } from "../../../apps/api/src/db";
 
 import { checkLock, type AnnotatedBlocking } from "./glass-box";
-import { resolveExecutor } from "./request-scope";
+import { BULK_HISTORY_CAP, recordChanges, tableChanges, type RecordAction } from "./record-history";
+import { resolveExecutor, useUser } from "./request-scope";
 
 // Executor = Drizzle db or tx (same query builder API).
 type Executor = typeof defaultDb;
@@ -63,7 +72,17 @@ export interface PaginatedResult<R> {
 export interface RepositoryOptions {
   /** Executor: pass the RLS `tx` for safe queries. Default: global db. */
   db?: Executor;
+  /**
+   * Record the writes in the per-record history (default `true`). `false` for a
+   * table written many times a second, whose history nobody reads.
+   */
+  history?: boolean;
 }
+
+/** Rows one repository call may write and still be recorded, one history row each. */
+export const REPOSITORY_HISTORY_CAP = BULK_HISTORY_CAP;
+
+type AnyRow = Record<string, unknown>;
 
 class Repository<T extends TableLike> {
   private conditions: SQL[] = [];
@@ -75,8 +94,25 @@ class Repository<T extends TableLike> {
 
   constructor(
     private readonly table: T,
-    private readonly executor: Executor
+    private readonly executor: Executor,
+    private readonly history = true
   ) {}
+
+  /**
+   * One history row per written record (see the header). Rows are keyed by
+   * COLUMN name; the primary key is the `id` column. Never throws.
+   */
+  private async remember(
+    changes: Array<{ action: RecordAction; before?: AnyRow | null; after?: AnyRow | null }>
+  ): Promise<void> {
+    if (!this.history || changes.length === 0 || changes.length > REPOSITORY_HISTORY_CAP) return;
+    try {
+      if (!this.col("id")) return;
+      await recordChanges(this.executor, tableChanges(this.table, changes, useUser()));
+    } catch {
+      // The history is never a reason for the write to fail.
+    }
+  }
 
   private col(name: string): unknown {
     return (this.table as unknown as Record<string, unknown>)[name];
@@ -228,24 +264,50 @@ class Repository<T extends TableLike> {
     const [row] = (await (this.executor.insert(this.table as never) as any)
       .values(data)
       .returning()) as InferSelect<T>[];
+    if (row) await this.remember([{ action: "create", after: row }]);
     return row;
   }
 
   async createMany(data: InferInsert<T>[]): Promise<InferSelect<T>[]> {
     if (data.length === 0) return [];
-    return (await (this.executor.insert(this.table as never) as any)
+    const rows = (await (this.executor.insert(this.table as never) as any)
       .values(data)
       .returning()) as InferSelect<T>[];
+    await this.remember(rows.map((after) => ({ action: "create" as const, after })));
+    return rows;
   }
 
   /** Updates the rows that match the accumulated filters. */
   async update(data: Partial<InferInsert<T>>): Promise<InferSelect<T>[]> {
     const where = this.whereClause();
+    // The rows as they were, for the history (at most the cap + 1: more is a bulk write).
+    const before = await this.rowsBefore(where);
     let q = (this.executor.update(this.table as never) as any).set(data);
     if (where) q = q.where(where);
     const rows = (await q.returning()) as InferSelect<T>[];
     if (rows.length === 0) await this.annotateIfBlocked("update");
+    if (before) {
+      const byId = new Map(before.map((r) => [String(r.id), r]));
+      await this.remember(
+        rows.map((after) => ({
+          action: "update" as const,
+          before: byId.get(String((after as AnyRow).id)) ?? null,
+          after,
+        }))
+      );
+    }
     return rows;
+  }
+
+  /** The rows a write will touch, or null when history is off or they are over the cap. */
+  private async rowsBefore(where: SQL | undefined): Promise<AnyRow[] | null> {
+    if (!this.history || !this.col("id")) return null;
+    const from = this.executor.select().from(this.table as never) as unknown as {
+      where(c: SQL): { limit(n: number): Promise<AnyRow[]> };
+      limit(n: number): Promise<AnyRow[]>;
+    };
+    const rows = await (where ? from.where(where) : from).limit(REPOSITORY_HISTORY_CAP + 1);
+    return rows.length > REPOSITORY_HISTORY_CAP ? null : rows;
   }
 
   /** Deletes the rows that match the accumulated filters. Returns the count. */
@@ -253,8 +315,9 @@ class Repository<T extends TableLike> {
     const where = this.whereClause();
     let q = this.executor.delete(this.table as never) as any;
     if (where) q = q.where(where);
-    const rows = (await q.returning()) as unknown[];
+    const rows = (await q.returning()) as AnyRow[];
     if (rows.length === 0) await this.annotateIfBlocked("delete");
+    await this.remember(rows.map((before) => ({ action: "delete" as const, before })));
     return rows.length;
   }
 
@@ -322,7 +385,7 @@ export function repo<T extends TableLike>(
   options: RepositoryOptions = {}
 ): Repository<T> {
   const executor = options.db ?? resolveExecutor(defaultDb);
-  return new Repository(table, executor);
+  return new Repository(table, executor, options.history !== false);
 }
 
 export type { Repository };

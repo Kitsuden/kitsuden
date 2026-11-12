@@ -76,7 +76,13 @@
   const id = $props.id();
   let busy = $state(false);
   const bars = $derived(confidence === "high" ? 3 : confidence === "medium" ? 2 : 1);
-  const confidenceText = $derived(confidence === "high" ? L.confidenceHigh : confidence === "medium" ? L.confidenceMedium : L.confidenceLow);
+  const confidenceText = $derived(
+    confidence === "high"
+      ? L.confidenceHigh
+      : confidence === "medium"
+        ? L.confidenceMedium
+        : L.confidenceLow
+  );
 
   async function act() {
     if (busy || !onAction) return;
@@ -94,9 +100,13 @@
 <article {...rest} class={cn("ta-reco", className)} aria-labelledby={`${id}-title`}>
   <div class="ta-reco-head">
     <span class="ta-reco-mark" aria-hidden="true"><Icon name="sparkle" size={14} /></span>
-    <svelte:element this={`h${level}`} class="ta-reco-title" id={`${id}-title`}>{title}</svelte:element>
+    <svelte:element this={`h${level}`} class="ta-reco-title" id={`${id}-title`}
+      >{title}</svelte:element
+    >
     {#if onDismiss}
-      <button type="button" class="ta-reco-close" aria-label={dismissLabel} onclick={onDismiss}><Icon name="x" size={14} /></button>
+      <button type="button" class="ta-reco-close" aria-label={dismissLabel} onclick={onDismiss}
+        ><Icon name="x" size={14} /></button
+      >
     {/if}
   </div>
   {#if description}<p class="ta-reco-text">{description}</p>{/if}
@@ -114,15 +124,25 @@
       {#if confidence}
         <span class={cn("ta-reco-confidence", `ta-reco-confidence--${confidence}`)}>
           <span class="ta-reco-bars" aria-hidden="true">
-            {#each [1, 2, 3] as n (n)}<span class={cn("ta-reco-bar", n <= bars && "ta-reco-bar--on")}></span>{/each}
+            {#each [1, 2, 3] as n (n)}<span
+                class={cn("ta-reco-bar", n <= bars && "ta-reco-bar--on")}
+              ></span>{/each}
           </span>
           {confidenceText}
         </span>
       {/if}
       <span class="ta-reco-actions">
-        {#if secondaryLabel && onSecondary}<Button variant="ghost" size="sm" onclick={onSecondary}>{secondaryLabel}</Button>{/if}
+        {#if secondaryLabel && onSecondary}<Button variant="ghost" size="sm" onclick={onSecondary}
+            >{secondaryLabel}</Button
+          >{/if}
         {#if actionLabel && (onAction || actionHref)}
-          <Button variant="primary" size="sm" href={actionHref} loading={busy} onclick={actionHref ? undefined : act}>{actionLabel}</Button>
+          <Button
+            variant="primary"
+            size="sm"
+            href={actionHref}
+            loading={busy}
+            onclick={actionHref ? undefined : act}>{actionLabel}</Button
+          >
         {/if}
       </span>
     </div>
@@ -144,7 +164,11 @@
     border-radius: var(--ta-radius-lg);
   }
 
-  .ta-reco-head { display: flex; align-items: flex-start; gap: 0.5rem; }
+  .ta-reco-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
   .ta-reco-mark {
     display: inline-flex;
     align-items: center;
@@ -154,7 +178,15 @@
     height: 1.375rem;
     color: color-mix(in srgb, rgb(var(--ta-accent)) 70%, rgb(var(--ta-text)));
   }
-  .ta-reco-title { flex: 1 1 auto; margin: 0; min-width: 0; font-size: 0.9375rem; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+  .ta-reco-title {
+    flex: 1 1 auto;
+    margin: 0;
+    min-width: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
   .ta-reco-close {
     position: relative;
     display: inline-flex;
@@ -171,10 +203,21 @@
     border-radius: var(--ta-radius-sm);
     cursor: pointer;
   }
-  .ta-reco-close:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated)); }
-  .ta-reco-close:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
+  .ta-reco-close:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated));
+  }
+  .ta-reco-close:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
 
-  .ta-reco-text { margin: 0; font-size: 0.875rem; line-height: 1.5; color: rgb(var(--ta-text-dim)); }
+  .ta-reco-text {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: rgb(var(--ta-text-dim));
+  }
 
   .ta-reco-label {
     margin: 0 0 0.25rem;
@@ -184,8 +227,20 @@
     text-transform: uppercase;
     color: rgb(var(--ta-text-dim));
   }
-  .ta-reco-reasons ul { display: flex; flex-direction: column; gap: 0.25rem; margin: 0; padding: 0; list-style: none; font-size: 0.8125rem; }
-  .ta-reco-reasons li { position: relative; padding-left: 0.875rem; line-height: 1.45; }
+  .ta-reco-reasons ul {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.8125rem;
+  }
+  .ta-reco-reasons li {
+    position: relative;
+    padding-left: 0.875rem;
+    line-height: 1.45;
+  }
   .ta-reco-reasons li::before {
     content: "";
     position: absolute;
@@ -197,19 +252,66 @@
     background: rgb(var(--ta-accent) / 0.7);
   }
 
-  .ta-reco-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem 0.75rem; margin-top: 0.25rem; }
-  .ta-reco-confidence { display: inline-flex; align-items: center; gap: 0.4375rem; font-size: 0.75rem; color: rgb(var(--ta-text-dim)); }
-  .ta-reco-bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 0.75rem; }
-  .ta-reco-bar { width: 3px; border-radius: 1px; background: rgb(var(--ta-muted)); }
-  .ta-reco-bar:nth-child(1) { height: 45%; }
-  .ta-reco-bar:nth-child(2) { height: 72%; }
-  .ta-reco-bar:nth-child(3) { height: 100%; }
-  .ta-reco-confidence--high .ta-reco-bar--on { background: rgb(var(--ta-success)); }
-  .ta-reco-confidence--medium .ta-reco-bar--on { background: rgb(var(--ta-warning)); }
-  .ta-reco-confidence--low .ta-reco-bar--on { background: rgb(var(--ta-text-dim)); }
-  .ta-reco-actions { display: inline-flex; align-items: center; gap: 0.5rem; margin-left: auto; }
+  .ta-reco-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.25rem;
+  }
+  .ta-reco-confidence {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4375rem;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-reco-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 0.75rem;
+  }
+  .ta-reco-bar {
+    width: 3px;
+    border-radius: 1px;
+    background: rgb(var(--ta-muted));
+  }
+  .ta-reco-bar:nth-child(1) {
+    height: 45%;
+  }
+  .ta-reco-bar:nth-child(2) {
+    height: 72%;
+  }
+  .ta-reco-bar:nth-child(3) {
+    height: 100%;
+  }
+  .ta-reco-confidence--high .ta-reco-bar--on {
+    background: rgb(var(--ta-success));
+  }
+  .ta-reco-confidence--medium .ta-reco-bar--on {
+    background: rgb(var(--ta-warning));
+  }
+  .ta-reco-confidence--low .ta-reco-bar--on {
+    background: rgb(var(--ta-text-dim));
+  }
+  .ta-reco-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
 
   @media (pointer: coarse) {
-    .ta-reco-close::after { content: ""; position: absolute; top: 50%; left: 50%; width: 2.75rem; height: 2.75rem; transform: translate(-50%, -50%); }
+    .ta-reco-close::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 2.75rem;
+      height: 2.75rem;
+      transform: translate(-50%, -50%);
+    }
   }
 </style>

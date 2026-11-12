@@ -22,7 +22,14 @@
 <script lang="ts">
   import ChartFigure from "../internal/chart-figure.svelte";
   import { useLabels } from "../i18n";
-  import { arcPath, compactNumber, finite, percentOf, seriesColor, MAX_SERIES } from "../internal/chart";
+  import {
+    arcPath,
+    compactNumber,
+    finite,
+    percentOf,
+    seriesColor,
+    MAX_SERIES,
+  } from "../internal/chart";
   import { cn } from "../utils";
 
   import ChartLegend from "./chart-legend.svelte";
@@ -75,7 +82,10 @@
     const limit = Math.max(2, Math.min(MAX_SERIES, maxSlices));
     if (valid.length <= limit) return valid;
     const rest = valid.slice(limit - 1).reduce((sum, d) => sum + d.value, 0);
-    return [...valid.slice(0, limit - 1), { label: otherLabel, value: rest, color: "rgb(var(--ta-subtle))" }];
+    return [
+      ...valid.slice(0, limit - 1),
+      { label: otherLabel, value: rest, color: "rgb(var(--ta-subtle))" },
+    ];
   });
   const total = $derived(slices.reduce((sum, d) => sum + d.value, 0));
   const hole = $derived(Math.min(0.9, Math.max(0, innerRadius)));
@@ -107,8 +117,12 @@
     <svg class="ta-donut-svg" viewBox="0 0 200 200" style:width={`${size}px`} aria-hidden="true">
       {#each arcs as arc, i (i)}<path d={arc.d} fill={arc.color} />{/each}
       {#if hole >= 0.4}
-        <text x="100" y={centerLabel ? 98 : 108} class="ta-donut-value" text-anchor="middle">{centerValue ?? format(total)}</text>
-        {#if centerLabel}<text x="100" y="118" class="ta-donut-label" text-anchor="middle">{centerLabel}</text>{/if}
+        <text x="100" y={centerLabel ? 98 : 108} class="ta-donut-value" text-anchor="middle"
+          >{centerValue ?? format(total)}</text
+        >
+        {#if centerLabel}<text x="100" y="118" class="ta-donut-label" text-anchor="middle"
+            >{centerLabel}</text
+          >{/if}
       {/if}
     </svg>
     <div class={cn("ta-donut-key", legend === "hidden" && "ta-donut-hidden")}>
@@ -119,15 +133,54 @@
 </ChartFigure>
 
 <style>
-  .ta-donut { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; min-width: 0; }
-  .ta-donut--bottom { flex-direction: column; align-items: stretch; }
-  .ta-donut--hidden { justify-content: center; }
-  .ta-donut-svg { flex: 0 1 auto; max-width: 100%; height: auto; aspect-ratio: 1; }
-  .ta-donut--bottom .ta-donut-svg { align-self: center; }
-  .ta-donut-key { flex: 1 1 10rem; min-width: 0; }
+  .ta-donut {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.5rem;
+    min-width: 0;
+  }
+  .ta-donut--bottom {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ta-donut--hidden {
+    justify-content: center;
+  }
+  .ta-donut-svg {
+    flex: 0 1 auto;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .ta-donut--bottom .ta-donut-svg {
+    align-self: center;
+  }
+  .ta-donut-key {
+    flex: 1 1 10rem;
+    min-width: 0;
+  }
 
-  .ta-donut-value { fill: rgb(var(--ta-text)); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .ta-donut-label { fill: rgb(var(--ta-text-dim)); font-size: 12px; }
+  .ta-donut-value {
+    fill: rgb(var(--ta-text));
+    font-size: 30px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .ta-donut-label {
+    fill: rgb(var(--ta-text-dim));
+    font-size: 12px;
+  }
 
-  .ta-donut-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .ta-donut-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
 </style>

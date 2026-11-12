@@ -23,19 +23,35 @@
 
   interface Props {
     journalId?: string | null;
-    onBack: () => void;
-    onSave: () => void;
+    /**
+     * Back and Cancel. A kon mounts the form as a tab of its page and passes nothing: then
+     * there is nowhere to go back to and the buttons are not drawn (they called an undefined
+     * function).
+     */
+    onBack?: () => void;
+    /** After a save; by default the form starts over, ready for the next one. */
+    onSave?: () => void;
   }
   let { journalId = null, onBack, onSave }: Props = $props();
+  function saved() {
+    if (onSave) return onSave();
+    journal = blankJournal();
+    addLine();
+    addLine();
+  }
 
-  let journal = $state<any>({
+  // Every field the form binds starts defined: a bound `undefined` (the counterparty) made
+  // Svelte throw on mount, and the "New journal entry" view never left its skeleton.
+  const blankJournal = () => ({
     date: new Date().toISOString().slice(0, 10),
     description: "",
     reference: "",
     journalType: "standard",
+    counterpartyId: "",
     status: "draft",
-    lines: [],
+    lines: [] as any[],
   });
+  let journal = $state<any>(blankJournal());
   let accounts = $state<any[]>([]);
   let counterparties = $state<any[]>([]);
   let currencies = $state<any[]>([]);
@@ -67,8 +83,15 @@
 
       if (journalId) {
         const jRes = await api.getContaJournal(journalId);
-        journal = jRes.data;
-        if (!journal.lines) journal.lines = [];
+        // A stored journal can leave out what it does not have (no counterparty, no reference).
+        const stored = jRes.data ?? {};
+        journal = {
+          ...blankJournal(),
+          ...Object.fromEntries(
+            Object.entries(stored).filter(([, v]) => v !== undefined && v !== null)
+          ),
+          lines: stored.lines ?? [],
+        };
       } else {
         addLine();
         addLine();
@@ -111,7 +134,7 @@
         journalId = res.data.id;
       }
       toast.success(t("journalForm.journalSaved"));
-      onSave();
+      saved();
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -135,7 +158,7 @@
         await api.postContaJournal(journalId);
       }
       toast.success(t("journalForm.journalPosted"));
-      onSave();
+      saved();
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -148,9 +171,13 @@
 
 <div class="space-y-6 min-w-0">
   <div class="flex flex-wrap items-center justify-between gap-2">
-    <Button variant="ghost" onclick={onBack}
-      ><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button
-    >
+    {#if onBack}
+      <Button variant="ghost" onclick={onBack}
+        ><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button
+      >
+    {:else}
+      <span></span>
+    {/if}
     <div class="flex items-center gap-2">
       {#if isBalanced}
         <Badge variant="success">{t("journalForm.balanced")}</Badge>
@@ -277,7 +304,9 @@
     <div
       class="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-kitsuden-border"
     >
-      <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
+      {#if onBack}
+        <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
+      {/if}
       <div class="flex flex-wrap items-center gap-2">
         <Button variant="secondary" onclick={saveDraft} loading={saving}
           ><Save class="w-4 h-4" /> {t("journalForm.saveDraft")}</Button

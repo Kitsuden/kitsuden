@@ -92,10 +92,16 @@
   });
 </script>
 
-<div {...rest} bind:this={root} class={cn("ta-bignumber", `ta-bignumber--${size}`, `ta-bignumber--${align}`, className)}>
-  <p class="ta-bignumber-figure" style:color={color}>
+<div
+  {...rest}
+  bind:this={root}
+  class={cn("ta-bignumber", `ta-bignumber--${size}`, `ta-bignumber--${align}`, className)}
+>
+  <p class="ta-bignumber-figure" style:color>
     {#if counting != null}
-      <span aria-hidden="true">{prefix}{text(counting)}</span><span class="ta-bignumber-hidden">{prefix}{text(value)}</span>
+      <span aria-hidden="true">{prefix}{text(counting)}</span><span class="ta-bignumber-hidden"
+        >{prefix}{text(value)}</span
+      >
     {:else}
       <span>{prefix}{text(value)}</span>
     {/if}{#if unit}<span class="ta-bignumber-unit">{unit}</span>{/if}
@@ -104,14 +110,56 @@
 </div>
 
 <style>
-  .ta-bignumber { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; color: rgb(var(--ta-text)); }
-  .ta-bignumber--center { align-items: center; text-align: center; }
+  .ta-bignumber {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    color: rgb(var(--ta-text));
+  }
+  .ta-bignumber--center {
+    align-items: center;
+    text-align: center;
+  }
 
-  .ta-bignumber-figure { margin: 0; font-size: 3rem; font-weight: 800; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-  .ta-bignumber--md .ta-bignumber-figure { font-size: 2.25rem; }
-  .ta-bignumber--xl .ta-bignumber-figure { font-size: clamp(3rem, 12vw, 4.5rem); }
-  .ta-bignumber-unit { margin-left: 0.375rem; font-size: 0.35em; font-weight: 600; letter-spacing: 0; color: rgb(var(--ta-text-dim)); }
-  .ta-bignumber-label { margin: 0; max-width: 28ch; font-size: 0.875rem; color: rgb(var(--ta-text-dim)); }
+  .ta-bignumber-figure {
+    margin: 0;
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .ta-bignumber--md .ta-bignumber-figure {
+    font-size: 2.25rem;
+  }
+  .ta-bignumber--xl .ta-bignumber-figure {
+    font-size: clamp(3rem, 12vw, 4.5rem);
+  }
+  .ta-bignumber-unit {
+    margin-left: 0.375rem;
+    font-size: 0.35em;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-bignumber-label {
+    margin: 0;
+    max-width: 28ch;
+    font-size: 0.875rem;
+    color: rgb(var(--ta-text-dim));
+  }
 
-  .ta-bignumber-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .ta-bignumber-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
 </style>

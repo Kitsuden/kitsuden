@@ -47,12 +47,22 @@
       aria-disabled={it.disabled ? "true" : undefined}
       ontoggle={(e) => {
         // A disabled section does not open (details has no `disabled`).
-        if (it.disabled && (e.currentTarget as HTMLDetailsElement).open) (e.currentTarget as HTMLDetailsElement).open = false;
+        if (it.disabled && (e.currentTarget as HTMLDetailsElement).open)
+          (e.currentTarget as HTMLDetailsElement).open = false;
       }}
     >
       <summary class="ta-accordion-title" tabindex={it.disabled ? -1 : undefined}>
         <span>{it.title}</span>
-        <svg class="ta-accordion-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        <svg
+          class="ta-accordion-chevron"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg
+        >
       </summary>
       <div class="ta-accordion-content">
         {#if item}{@render item(it)}{:else}{it.content}{/if}
@@ -84,16 +94,25 @@
     cursor: pointer;
     list-style: none;
   }
-  .ta-accordion-title::-webkit-details-marker { display: none; }
-  .ta-accordion-title:hover { background: rgb(var(--ta-elevated) / 0.4); }
-  .ta-accordion-title:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: -2px; }
+  .ta-accordion-title::-webkit-details-marker {
+    display: none;
+  }
+  .ta-accordion-title:hover {
+    background: rgb(var(--ta-elevated) / 0.4);
+  }
+  .ta-accordion-title:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: -2px;
+  }
 
   .ta-accordion-chevron {
     flex-shrink: 0;
     color: rgb(var(--ta-text-dim));
     transition: transform var(--ta-duration-base, 180ms) var(--ta-ease-out, ease-out);
   }
-  details[open] > .ta-accordion-title .ta-accordion-chevron { transform: rotate(180deg); }
+  details[open] > .ta-accordion-title .ta-accordion-chevron {
+    transform: rotate(180deg);
+  }
 
   .ta-accordion-content {
     padding: 0 1rem 0.875rem;
@@ -102,10 +121,18 @@
   }
 
   /* An opened section's content settles in; closing is the browser's (instant). */
-  details[open] > .ta-accordion-content { animation: ta-accordion-open var(--ta-duration-base, 180ms) var(--ta-ease-out, ease-out); }
+  details[open] > .ta-accordion-content {
+    animation: ta-accordion-open var(--ta-duration-base, 180ms) var(--ta-ease-out, ease-out);
+  }
   @keyframes ta-accordion-open {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: none; }
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   details[aria-disabled="true"] > .ta-accordion-title {
@@ -114,12 +141,18 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-accordion-chevron { transition: none; }
-    details[open] > .ta-accordion-content { animation: none; }
+    .ta-accordion-chevron {
+      transition: none;
+    }
+    details[open] > .ta-accordion-content {
+      animation: none;
+    }
   }
 
   /* On touch screens: a 44px header for the finger. */
   @media (pointer: coarse) {
-    .ta-accordion-title { min-height: 2.75rem; }
+    .ta-accordion-title {
+      min-height: 2.75rem;
+    }
   }
 </style>

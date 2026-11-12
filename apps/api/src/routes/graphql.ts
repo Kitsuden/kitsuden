@@ -12,7 +12,15 @@
  * Playground: GET /api/graphql (returns GraphiQL HTML)
  */
 
-import { resolveExecutor, messageOf } from "@kitsuden/engine";
+import {
+  resolveExecutor,
+  messageOf,
+  recordChange,
+  recordChanges,
+  tableChanges,
+  DATASET_ENTRY_ENTITY,
+  type RecordAction,
+} from "@kitsuden/engine";
 import { eq, desc, asc, ilike, and, sql, count } from "drizzle-orm";
 import {
   GraphQLSchema,
@@ -362,6 +370,56 @@ export function refuseSecretColumns(tableName: string, input: Record<string, unk
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// RECORD HISTORY (core migration 0076)
+// ═══════════════════════════════════════════════════════════════
+
+/** What every resolver gets as its third argument: who is asking. */
+interface GraphQLContext {
+  user?: unknown;
+}
+
+type Row = Record<string, unknown>;
+
+/**
+ * A mutation of a native table, in the record history: `table:<name>` with the
+ * COLUMN names, the address the explorer and `defineModel` use, so a row has
+ * one history whatever wrote it. Never fails the mutation.
+ */
+async function rememberNativeRow(
+  table: unknown,
+  context: GraphQLContext | undefined,
+  action: RecordAction,
+  before: Row | null | undefined,
+  after: Row | null | undefined
+): Promise<void> {
+  await recordChanges(
+    exec(),
+    tableChanges(table, [{ action, before, after }], context?.user),
+    (err) => logger.warn({ error: messageOf(err) }, "GraphQL: could not record a row's history")
+  );
+}
+
+/** A mutation of a dataset entry, recorded as kon-datasets records it. */
+async function rememberEntry(
+  context: GraphQLContext | undefined,
+  action: RecordAction,
+  before: Row | null | undefined,
+  after: Row | null | undefined
+): Promise<void> {
+  await recordChange(exec(), {
+    entity: DATASET_ENTRY_ENTITY,
+    rowId: (after ?? before)?.id,
+    action,
+    before: before ?? null,
+    after: after ?? null,
+    user: context?.user,
+    diff: { nested: "data", skip: ["id", "dataSetId", "createdById"] },
+    onFailure: (err) =>
+      logger.warn({ error: messageOf(err) }, "GraphQL: could not record an entry's history"),
+  });
+}
+
 async function buildNativeTableMutations(
   typeMap: Map<string, TableGraphQLTypes>
 ): Promise<GraphQLFieldConfigMap<any, any>> {
@@ -382,12 +440,13 @@ async function buildNativeTableMutations(
       args: {
         input: { type: new GraphQLNonNull(GraphQLJSON) },
       },
-      async resolve(_: any, args: any) {
+      async resolve(_: any, args: any, context: GraphQLContext) {
         const input = args.input ? { ...args.input } : {};
         delete input.id;
         refuseSecretColumns(tableName, input);
         try {
           const [doc] = await (exec().insert(table).values(input).returning() as Promise<any[]>);
+          if (doc) await rememberNativeRow(table, context, "create", null, doc);
           await invalidateGraphQLCache();
           return doc;
         } catch (err: unknown) {
@@ -406,16 +465,18 @@ async function buildNativeTableMutations(
         id: { type: new GraphQLNonNull(GraphQLString) },
         input: { type: new GraphQLNonNull(GraphQLJSON) },
       },
-      async resolve(_: any, args: any) {
+      async resolve(_: any, args: any, context: GraphQLContext) {
         const input = args.input ? { ...args.input } : {};
         delete input.id;
         refuseSecretColumns(tableName, input);
         try {
+          const [before] = await exec().select().from(table).where(eq(table.id, args.id)).limit(1);
           const [doc] = await exec()
             .update(table)
             .set(input)
             .where(eq(table.id, args.id))
             .returning();
+          if (doc) await rememberNativeRow(table, context, "update", before, doc);
           await invalidateGraphQLCache();
           return doc || null;
         } catch (err: unknown) {
@@ -433,9 +494,13 @@ async function buildNativeTableMutations(
       args: {
         id: { type: new GraphQLNonNull(GraphQLString) },
       },
-      async resolve(_: any, args: any) {
+      async resolve(_: any, args: any, context: GraphQLContext) {
         try {
-          await exec().delete(table).where(eq(table.id, args.id));
+          const gone = (await exec()
+            .delete(table)
+            .where(eq(table.id, args.id))
+            .returning()) as Row[];
+          for (const row of gone) await rememberNativeRow(table, context, "delete", row, null);
           await invalidateGraphQLCache();
           return { success: true, id: args.id };
         } catch (err: unknown) {
@@ -637,12 +702,12 @@ async function buildDatasetMutations(
       args: {
         input: { type: new GraphQLNonNull(GraphQLJSON) },
       },
-      async resolve(_, args) {
+      async resolve(_, args, context: GraphQLContext) {
         try {
           const input = args.input ? { ...args.input } : {};
           delete input.id;
           const title = input.title || input.name || "Untitled";
-          const [doc] = await db
+          const [doc] = await exec()
             .insert(dataEntries)
             .values({
               dataSetId: ds.id,
@@ -651,6 +716,7 @@ async function buildDatasetMutations(
               ownerId: null,
             })
             .returning();
+          if (doc) await rememberEntry(context, "create", null, doc);
           await invalidateGraphQLCache();
           return doc
             ? {
@@ -680,25 +746,26 @@ async function buildDatasetMutations(
         id: { type: new GraphQLNonNull(GraphQLString) },
         input: { type: new GraphQLNonNull(GraphQLJSON) },
       },
-      async resolve(_, args) {
+      async resolve(_, args, context: GraphQLContext) {
         try {
           const input = args.input ? { ...args.input } : {};
           delete input.id;
 
-          const [existing] = await db
+          const [existing] = await exec()
             .select()
             .from(dataEntries)
-            .where(eq(dataEntries.id, args.id))
+            .where(and(eq(dataEntries.id, args.id), eq(dataEntries.dataSetId, ds.id)))
             .limit(1);
 
           const mergedData = existing ? { ...existing.data, ...input } : input;
           const title = input.title || input.name || existing?.title || "Untitled";
 
-          const [doc] = await db
+          const [doc] = await exec()
             .update(dataEntries)
             .set({ data: mergedData, title })
-            .where(eq(dataEntries.id, args.id))
+            .where(and(eq(dataEntries.id, args.id), eq(dataEntries.dataSetId, ds.id)))
             .returning();
+          if (doc) await rememberEntry(context, "update", existing ?? null, doc);
           await invalidateGraphQLCache();
           return doc
             ? {
@@ -727,9 +794,13 @@ async function buildDatasetMutations(
       args: {
         id: { type: new GraphQLNonNull(GraphQLString) },
       },
-      async resolve(_, args) {
+      async resolve(_, args, context: GraphQLContext) {
         try {
-          await exec().delete(dataEntries).where(eq(dataEntries.id, args.id));
+          const gone = await exec()
+            .delete(dataEntries)
+            .where(and(eq(dataEntries.id, args.id), eq(dataEntries.dataSetId, ds.id)))
+            .returning();
+          for (const row of gone) await rememberEntry(context, "delete", row, null);
           await invalidateGraphQLCache();
           return { success: true, id: args.id };
         } catch (err: unknown) {
@@ -972,11 +1043,13 @@ graphqlRoutes.post("/", protectRoute, withTransactionalRLS(), async (c) => {
 
   try {
     const schema = await buildSchema();
+    const context: GraphQLContext = { user: c.get("user" as never) };
     const result = await graphql({
       schema,
       source: queryStr,
       variableValues: variables,
       operationName,
+      contextValue: context,
     });
 
     return c.json(result);

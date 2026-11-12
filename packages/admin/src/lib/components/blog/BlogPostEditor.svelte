@@ -1525,7 +1525,7 @@
 
                     {#if status === "scheduled"}
                       <div>
-                        <Label for="publishedat" class="mb-1.5 flex items-center gap-1">
+                        <Label for="publishedat" class="mb-1.5 flex! items-center gap-1">
                           <Calendar class="w-3 h-3" />
                           {tr("blogPostEditor.publishDate")}
                         </Label>
@@ -1539,7 +1539,7 @@
                     {/if}
 
                     <div>
-                      <Label for="authorid" class="mb-1.5 flex items-center gap-1">
+                      <Label for="authorid" class="mb-1.5 flex! items-center gap-1">
                         <User class="w-3 h-3" />
                         {tr("common.author")}
                       </Label>
@@ -2029,7 +2029,7 @@
 
                   {#if status === "scheduled"}
                     <div>
-                      <Label for="publishedat-2" class="mb-2 flex items-center gap-1">
+                      <Label for="publishedat-2" class="mb-2 flex! items-center gap-1">
                         <Clock class="w-3 h-3" />
                         {tr("blogPostEditor.publishAt")}
                       </Label>

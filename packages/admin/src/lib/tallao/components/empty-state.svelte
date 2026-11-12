@@ -99,10 +99,15 @@
 >
   {#if shownIcon}
     <span class="ta-empty-icon" aria-hidden="true">
-      {#if typeof shownIcon === "function"}{@render shownIcon()}{:else}<Icon name={shownIcon} size={size === "sm" ? 18 : 22} />{/if}
+      {#if typeof shownIcon === "function"}{@render shownIcon()}{:else}<Icon
+          name={shownIcon}
+          size={size === "sm" ? 18 : 22}
+        />{/if}
     </span>
   {/if}
-  <svelte:element this={level ? `h${level}` : "p"} class="ta-empty-title">{title ?? defaults.title}</svelte:element>
+  <svelte:element this={level ? `h${level}` : "p"} class="ta-empty-title"
+    >{title ?? defaults.title}</svelte:element
+  >
   {#if description}<p class="ta-empty-text">{description}</p>{/if}
   {@render children?.()}
   {#if actions}
@@ -110,13 +115,17 @@
   {:else if hasButtons}
     <div class="ta-empty-actions">
       {#if onRetry}
-        <Button variant="secondary" size="sm" loading={retrying} onclick={onRetry}>{retryLabel}</Button>
+        <Button variant="secondary" size="sm" loading={retrying} onclick={onRetry}
+          >{retryLabel}</Button
+        >
       {/if}
       {#if onClearFilters}
         <Button variant="secondary" size="sm" onclick={onClearFilters}>{clearFiltersLabel}</Button>
       {/if}
       {#if hasAction}
-        <Button variant="primary" size="sm" href={actionHref} onclick={onAction}>{actionLabel}</Button>
+        <Button variant="primary" size="sm" href={actionHref} onclick={onAction}
+          >{actionLabel}</Button
+        >
       {/if}
     </div>
   {/if}
@@ -133,7 +142,9 @@
     text-align: center;
     color: rgb(var(--ta-text-dim));
   }
-  .ta-empty--sm { padding: 1.25rem 1rem; }
+  .ta-empty--sm {
+    padding: 1.25rem 1rem;
+  }
 
   .ta-empty-icon {
     display: inline-flex;
@@ -147,13 +158,19 @@
     border: 1px solid rgb(var(--ta-border));
     border-radius: var(--ta-radius-lg);
   }
-  .ta-empty--sm .ta-empty-icon { width: 2.25rem; height: 2.25rem; }
+  .ta-empty--sm .ta-empty-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
   .ta-empty--error .ta-empty-icon {
     color: rgb(var(--ta-danger));
     background: rgb(var(--ta-danger) / 0.1);
     border-color: rgb(var(--ta-danger) / 0.3);
   }
-  .ta-empty-icon > :global(svg) { width: 1.375rem; height: 1.375rem; }
+  .ta-empty-icon > :global(svg) {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
 
   .ta-empty-title {
     margin: 0;
@@ -162,7 +179,9 @@
     line-height: 1.35;
     color: rgb(var(--ta-text));
   }
-  .ta-empty--sm .ta-empty-title { font-size: 0.875rem; }
+  .ta-empty--sm .ta-empty-title {
+    font-size: 0.875rem;
+  }
 
   .ta-empty-text {
     margin: 0;
@@ -170,7 +189,9 @@
     font-size: 0.875rem;
     overflow-wrap: anywhere;
   }
-  .ta-empty--sm .ta-empty-text { font-size: 0.8125rem; }
+  .ta-empty--sm .ta-empty-text {
+    font-size: 0.8125rem;
+  }
 
   .ta-empty-actions {
     display: flex;

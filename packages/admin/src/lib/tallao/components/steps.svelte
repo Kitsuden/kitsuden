@@ -53,11 +53,7 @@
   });
 </script>
 
-<ol
-  {...rest}
-  class={cn("ta-steps", `ta-steps--${orientation}`, className)}
-  aria-label={label}
->
+<ol {...rest} class={cn("ta-steps", `ta-steps--${orientation}`, className)} aria-label={label}>
   {#each steps as step, i (i)}
     {@const status = step.status ?? "pending"}
     <li
@@ -68,11 +64,37 @@
         {#if status === "running"}
           <Spinner size="sm" label={text.running} />
         {:else if status === "done"}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg
+          >
         {:else if status === "failed"}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg
+          >
         {:else if status === "skipped"}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="m14 6 6 6-6 6"/></svg>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"><path d="M4 12h16" /><path d="m14 6 6 6-6 6" /></svg
+          >
         {:else}
           <span class="ta-steps-dot"></span>
         {/if}
@@ -186,9 +208,15 @@
     color: rgb(var(--ta-text-dim));
     padding-top: 0.1875rem;
   }
-  .ta-steps-step--running .ta-steps-status { color: rgb(var(--ta-accent-hover)); }
-  .ta-steps-step--done .ta-steps-status { color: rgb(var(--ta-success)); }
-  .ta-steps-step--failed .ta-steps-status { color: rgb(var(--ta-danger)); }
+  .ta-steps-step--running .ta-steps-status {
+    color: rgb(var(--ta-accent-hover));
+  }
+  .ta-steps-step--done .ta-steps-status {
+    color: rgb(var(--ta-success));
+  }
+  .ta-steps-step--failed .ta-steps-status {
+    color: rgb(var(--ta-danger));
+  }
 
   /* Horizontal: a row that scrolls, no vertical connector */
   .ta-steps--horizontal {
@@ -203,7 +231,13 @@
     min-width: 6rem;
     padding: 0.375rem 0.5rem;
   }
-  .ta-steps--horizontal .ta-steps-body { align-items: center; }
-  .ta-steps--horizontal .ta-steps-status { padding-top: 0; }
-  .ta-steps--horizontal .ta-steps-connector { display: none; }
+  .ta-steps--horizontal .ta-steps-body {
+    align-items: center;
+  }
+  .ta-steps--horizontal .ta-steps-status {
+    padding-top: 0;
+  }
+  .ta-steps--horizontal .ta-steps-connector {
+    display: none;
+  }
 </style>

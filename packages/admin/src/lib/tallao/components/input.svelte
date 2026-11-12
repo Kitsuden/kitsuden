@@ -27,14 +27,7 @@
   } = $props();
 </script>
 
-<input
-  bind:this={ref}
-  bind:value
-  {type}
-  {disabled}
-  class={cn("ta-input", className)}
-  {...rest}
-/>
+<input bind:this={ref} bind:value {type} {disabled} class={cn("ta-input", className)} {...rest} />
 
 <style>
   .ta-input {
@@ -47,7 +40,9 @@
     border: 1px solid rgb(var(--ta-border));
     border-radius: var(--ta-radius);
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
 
   .ta-input::placeholder {
@@ -83,6 +78,9 @@
 
   /* On touch screens: 16px so iOS does not zoom the page on focus, and 44px tall for the finger. */
   @media (pointer: coarse) {
-    .ta-input:not([type="color"]) { font-size: 1rem; min-height: 2.75rem; }
+    .ta-input:not([type="color"]) {
+      font-size: 1rem;
+      min-height: 2.75rem;
+    }
   }
 </style>

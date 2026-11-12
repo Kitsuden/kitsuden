@@ -112,7 +112,8 @@
   let touched = $state<Record<string, boolean>>({});
   let formEl: HTMLFormElement | undefined = $state();
 
-  const read = (path: string[]) => path.reduce<unknown>((o, k) => (o as FormValue | undefined)?.[k], value);
+  const read = (path: string[]) =>
+    path.reduce<unknown>((o, k) => (o as FormValue | undefined)?.[k], value);
   function write(path: string[], v: unknown) {
     let o = value as FormValue;
     for (const k of path.slice(0, -1)) o = (o[k] ??= {}) as FormValue;
@@ -183,7 +184,9 @@
       const box = [...(formEl?.querySelectorAll<HTMLElement>("[data-field]") ?? [])].find(
         (e) => e.dataset.field === first
       );
-      box?.querySelector<HTMLElement>("input:not([type=hidden]), select, textarea, button")?.focus();
+      box
+        ?.querySelector<HTMLElement>("input:not([type=hidden]), select, textarea, button")
+        ?.focus();
     }
     return !first;
   }
@@ -208,7 +211,8 @@
     // If focus goes to the submit button, the submission validates. Validating here would render the error,
     // the button would move down between mousedown and mouseup and the click would be lost.
     const next = e?.relatedTarget;
-    if (next instanceof HTMLElement && next.matches("[type=submit]") && formEl?.contains(next)) return;
+    if (next instanceof HTMLElement && next.matches("[type=submit]") && formEl?.contains(next))
+      return;
     touched[path.join(".")] = true;
     validateField(path);
   };
@@ -231,9 +235,24 @@
   {:else if s.type === "boolean"}
     <div class="ta-schema-field" data-field={key}>
       {#if s["x-widget"] === "checkbox"}
-        <Checkbox id={cid} label={fieldLabel} {disabled} name={nameOf(path)} checked={!!read(path)} aria-describedby={helpId} onchange={(e: Event) => write(path, (e.currentTarget as HTMLInputElement).checked)} />
+        <Checkbox
+          id={cid}
+          label={fieldLabel}
+          {disabled}
+          name={nameOf(path)}
+          checked={!!read(path)}
+          aria-describedby={helpId}
+          onchange={(e: Event) => write(path, (e.currentTarget as HTMLInputElement).checked)}
+        />
       {:else}
-        <Switch label={fieldLabel} {disabled} name={nameOf(path)} value="true" checked={!!read(path)} onchange={(v) => write(path, v)} />
+        <Switch
+          label={fieldLabel}
+          {disabled}
+          name={nameOf(path)}
+          value="true"
+          checked={!!read(path)}
+          onchange={(v) => write(path, v)}
+        />
       {/if}
       {#if helpId}<p class="ta-schema-help" id={helpId}>{s.description}</p>{/if}
     </div>
@@ -298,7 +317,15 @@
             onblur={(e: FocusEvent) => leave(path, e)}
           />
         {:else if s.format === "date"}
-          <DatePicker name={nameOf(path)} value={(read(path) as string) || null} {disabled} onchange={(v) => { write(path, v ?? ""); leave(path); }} />
+          <DatePicker
+            name={nameOf(path)}
+            value={(read(path) as string) || null}
+            {disabled}
+            onchange={(v) => {
+              write(path, v ?? "");
+              leave(path);
+            }}
+          />
         {:else if s["x-widget"] === "textarea"}
           <Textarea
             id={cid}
@@ -331,7 +358,13 @@
   {/if}
 {/snippet}
 
-<form {...rest} class={cn("ta-schema", className)} novalidate onsubmitcapture={handleSubmit} bind:this={formEl}>
+<form
+  {...rest}
+  class={cn("ta-schema", className)}
+  novalidate
+  onsubmitcapture={handleSubmit}
+  bind:this={formEl}
+>
   {#if schema.type === "object"}
     {#each Object.entries(schema.properties ?? {}) as [k, s] (k)}
       {@render field(s, [k], !!schema.required?.includes(k))}
@@ -344,8 +377,16 @@
 </form>
 
 <style>
-  .ta-schema { display: flex; flex-direction: column; gap: 1rem; }
-  .ta-schema-field { display: flex; flex-direction: column; gap: 0.25rem; }
+  .ta-schema {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .ta-schema-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
   .ta-schema-group {
     display: flex;
     flex-direction: column;
@@ -355,8 +396,22 @@
     border: 1px solid rgb(var(--ta-border));
     border-radius: var(--ta-radius-lg);
   }
-  .ta-schema-group legend { padding: 0 0.25rem; font-size: 0.8125rem; font-weight: 600; }
-  .ta-schema-help { margin: 0; font-size: 0.75rem; color: rgb(var(--ta-text-dim)); }
-  .ta-schema-error { font-size: 0.75rem; color: rgb(var(--ta-danger)); }
-  .ta-schema-actions { display: flex; justify-content: flex-end; }
+  .ta-schema-group legend {
+    padding: 0 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  .ta-schema-help {
+    margin: 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-schema-error {
+    font-size: 0.75rem;
+    color: rgb(var(--ta-danger));
+  }
+  .ta-schema-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
 </style>

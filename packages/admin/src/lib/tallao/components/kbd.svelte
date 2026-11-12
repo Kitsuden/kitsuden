@@ -34,13 +34,23 @@
   }
 
   const L = useLabels();
-  const { keys = [], platform = "auto", separator = "+", size = "md", class: className = "", children, ...rest }: Props = $props();
+  const {
+    keys = [],
+    platform = "auto",
+    separator = "+",
+    size = "md",
+    class: className = "",
+    children,
+    ...rest
+  }: Props = $props();
 
   let detected = $state(false);
   $effect(() => {
     if (platform !== "auto") return;
     const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
-    detected = /mac|iphone|ipad|ipod/i.test(nav.userAgentData?.platform ?? nav.platform ?? nav.userAgent ?? "");
+    detected = /mac|iphone|ipad|ipod/i.test(
+      nav.userAgentData?.platform ?? nav.platform ?? nav.userAgent ?? ""
+    );
   });
   const mac = $derived(platform === "mac" || (platform === "auto" && detected));
 
@@ -54,7 +64,8 @@
   function cap(key: string): Cap {
     const k = key.toLowerCase();
     if (mac) {
-      if (k === "mod" || k === "cmd" || k === "command" || k === "meta") return { text: "⌘", name: L.keyCommand };
+      if (k === "mod" || k === "cmd" || k === "command" || k === "meta")
+        return { text: "⌘", name: L.keyCommand };
       if (k === "shift") return { text: "⇧", name: L.keyShift };
       if (k === "alt" || k === "option") return { text: "⌥", name: L.keyOption };
       if (k === "ctrl" || k === "control") return { text: "⌃", name: L.keyControl };
@@ -74,7 +85,9 @@
     {#each caps as c, i (i)}
       {#if i > 0}<span class={cn("ta-kbd-sep", mac && "ta-kbd-hidden")}>{separator}</span>{/if}
       <kbd class="ta-kbd-key">
-        {#if c.name}<span aria-hidden="true">{c.text}</span><span class="ta-kbd-hidden">{c.name}</span>{:else}{c.text}{/if}
+        {#if c.name}<span aria-hidden="true">{c.text}</span><span class="ta-kbd-hidden"
+            >{c.name}</span
+          >{:else}{c.text}{/if}
       </kbd>
     {/each}
   {/if}
@@ -107,9 +120,17 @@
     border-bottom-width: 2px;
     border-radius: var(--ta-radius-sm);
   }
-  .ta-kbd--sm .ta-kbd-key { min-width: 1.125rem; height: 1.125rem; padding: 0 0.25rem; font-size: 0.625rem; }
+  .ta-kbd--sm .ta-kbd-key {
+    min-width: 1.125rem;
+    height: 1.125rem;
+    padding: 0 0.25rem;
+    font-size: 0.625rem;
+  }
 
-  .ta-kbd-sep { font-size: 0.6875rem; color: rgb(var(--ta-text-dim)); }
+  .ta-kbd-sep {
+    font-size: 0.6875rem;
+    color: rgb(var(--ta-text-dim));
+  }
 
   .ta-kbd-hidden {
     position: absolute;

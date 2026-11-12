@@ -64,10 +64,13 @@ type ToastFn = ((message: string, opts?: ToastOptions) => number) & {
   dismiss: (id?: number) => void;
 };
 
-export const toast: ToastFn = Object.assign((message: string, opts?: ToastOptions) => show("default", message, opts), {
-  success: (m: string, o?: ToastOptions) => show("success", m, o),
-  error: (m: string, o?: ToastOptions) => show("error", m, o),
-  warning: (m: string, o?: ToastOptions) => show("warning", m, o),
-  info: (m: string, o?: ToastOptions) => show("info", m, o),
-  dismiss,
-});
+export const toast: ToastFn = Object.assign(
+  (message: string, opts?: ToastOptions) => show("default", message, opts),
+  {
+    success: (m: string, o?: ToastOptions) => show("success", m, o),
+    error: (m: string, o?: ToastOptions) => show("error", m, o),
+    warning: (m: string, o?: ToastOptions) => show("warning", m, o),
+    info: (m: string, o?: ToastOptions) => show("info", m, o),
+    dismiss,
+  }
+);

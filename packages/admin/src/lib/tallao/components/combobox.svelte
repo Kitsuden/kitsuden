@@ -25,7 +25,8 @@
   }
 
   /** Lowercase and without accents, for comparing. */
-  export const normalizeText = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+  export const normalizeText = (s: string) =>
+    s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 </script>
 
 <script lang="ts">
@@ -116,7 +117,9 @@
   });
 
   const labelOf = (v: string) => known[v]?.label ?? options.find((o) => o.value === v)?.label ?? v;
-  const selected = $derived(value == null ? null : (known[value] ?? options.find((o) => o.value === value) ?? null));
+  const selected = $derived(
+    value == null ? null : (known[value] ?? options.find((o) => o.value === value) ?? null)
+  );
   const selectedSet = $derived(new Set(multiple ? values : value == null ? [] : [value]));
   const visible = $derived(
     loadOptions ? remoteOptions : typing && text ? options.filter((o) => filter(o, text)) : options
@@ -179,7 +182,9 @@
     if (o.disabled) return;
     known[o.value] = o;
     if (multiple) {
-      values = values.includes(o.value) ? values.filter((v) => v !== o.value) : [...values, o.value];
+      values = values.includes(o.value)
+        ? values.filter((v) => v !== o.value)
+        : [...values, o.value];
       onValuesChange?.(values);
       text = "";
       typing = false;
@@ -239,7 +244,8 @@
 
   // The active option stays visible even when the list scrolls.
   $effect(() => {
-    if (open && active >= 0) list?.querySelector(`[data-index="${active}"]`)?.scrollIntoView?.({ block: "nearest" });
+    if (open && active >= 0)
+      list?.querySelector(`[data-index="${active}"]`)?.scrollIntoView?.({ block: "nearest" });
   });
 
   $effect(() => {
@@ -306,7 +312,16 @@
       onclick={() => (open ? null : openList())}
     />
   </div>
-  <svg class="ta-combobox-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+  <svg
+    class="ta-combobox-chevron"
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.5"
+    aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg
+  >
 
   {#if open}
     <ul
@@ -334,7 +349,9 @@
           onpointermove={() => !o.disabled && (active = i)}
           onclick={() => choose(o)}
         >
-          {#if multiple}<span class="ta-combobox-check" aria-hidden="true">{selectedSet.has(o.value) ? "✓" : ""}</span>{/if}
+          {#if multiple}<span class="ta-combobox-check" aria-hidden="true"
+              >{selectedSet.has(o.value) ? "✓" : ""}</span
+            >{/if}
           {o.label}
         </li>
       {:else}
@@ -378,7 +395,9 @@
     border: 1px solid rgb(var(--ta-border));
     border-radius: var(--ta-radius);
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
 
   .ta-combobox--multiple .ta-combobox-field {
@@ -421,8 +440,12 @@
     border-radius: 9999px;
     cursor: pointer;
   }
-  .ta-combobox-remove:hover { color: rgb(var(--ta-danger)); }
-  .ta-combobox-remove:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); }
+  .ta-combobox-remove:hover {
+    color: rgb(var(--ta-danger));
+  }
+  .ta-combobox-remove:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+  }
 
   .ta-combobox-chevron {
     position: absolute;
@@ -487,6 +510,8 @@
 
   /* On touch screens: 44px options for the finger. */
   @media (pointer: coarse) {
-    .ta-combobox-option { min-height: 2.75rem; }
+    .ta-combobox-option {
+      min-height: 2.75rem;
+    }
   }
 </style>

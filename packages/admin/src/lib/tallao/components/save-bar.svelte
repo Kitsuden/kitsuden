@@ -119,14 +119,31 @@
   </div>
   <div class="ta-save-bar-actions">
     {#if onCancel || cancelHref}
-      <Button variant="ghost" href={cancelHref} disabled={saving} onclick={onCancel}>{cancelLabel}</Button>
+      <Button variant="ghost" href={cancelHref} disabled={saving} onclick={onCancel}
+        >{cancelLabel}</Button
+      >
     {/if}
     {#each secondaryActions as action (action.id)}
-      <Button variant="secondary" type="submit" {form} name={action.name} value={action.value} disabled={locked} onclick={action.onSelect}>
+      <Button
+        variant="secondary"
+        type="submit"
+        {form}
+        name={action.name}
+        value={action.value}
+        disabled={locked}
+        onclick={action.onSelect}
+      >
         {action.label}
       </Button>
     {/each}
-    <Button variant="primary" type="submit" {form} loading={saving} disabled={locked} onclick={onSave}>{saveLabel}</Button>
+    <Button
+      variant="primary"
+      type="submit"
+      {form}
+      loading={saving}
+      disabled={locked}
+      onclick={onSave}>{saveLabel}</Button
+    >
   </div>
 </div>
 
@@ -150,15 +167,23 @@
   /* The same distance is kept as a bottom margin: at the end of the scroll the bar rests in
      its own slot instead of being pushed up over the last field. */
   .ta-save-bar--sticky {
-    --ta-save-bar-gap: calc(var(--ta-bottom-nav-offset, env(safe-area-inset-bottom, 0px)) + 0.75rem);
+    --ta-save-bar-gap: calc(
+      var(--ta-bottom-nav-offset, env(safe-area-inset-bottom, 0px)) + 0.75rem
+    );
     position: sticky;
     bottom: var(--ta-save-bar-gap);
     margin-bottom: var(--ta-save-bar-gap);
     z-index: 5;
-    box-shadow: 0 -1px 0 rgb(var(--ta-bg)), 0 10px 30px -12px rgb(0 0 0 / 0.45);
+    box-shadow:
+      0 -1px 0 rgb(var(--ta-bg)),
+      0 10px 30px -12px rgb(0 0 0 / 0.45);
   }
-  .ta-save-bar--dirty { border-color: rgb(var(--ta-warning) / 0.5); }
-  .ta-save-bar--error { border-color: rgb(var(--ta-danger) / 0.6); }
+  .ta-save-bar--dirty {
+    border-color: rgb(var(--ta-warning) / 0.5);
+  }
+  .ta-save-bar--error {
+    border-color: rgb(var(--ta-danger) / 0.6);
+  }
 
   .ta-save-bar-state {
     display: flex;
@@ -171,7 +196,10 @@
     color: rgb(var(--ta-text-dim));
   }
   .ta-save-bar--dirty .ta-save-bar-text,
-  .ta-save-bar--error .ta-save-bar-text { color: rgb(var(--ta-text)); font-weight: 500; }
+  .ta-save-bar--error .ta-save-bar-text {
+    color: rgb(var(--ta-text));
+    font-weight: 500;
+  }
 
   .ta-save-bar-dot {
     flex-shrink: 0;
@@ -180,10 +208,19 @@
     border-radius: 50%;
     background: rgb(var(--ta-success));
   }
-  .ta-save-bar-dot--off { display: none; }
+  .ta-save-bar-dot--off {
+    display: none;
+  }
   /* A different shape per state, besides the colour. */
-  .ta-save-bar--dirty .ta-save-bar-dot { background: rgb(var(--ta-warning)); box-shadow: 0 0 0 3px rgb(var(--ta-warning) / 0.25); }
-  .ta-save-bar--error .ta-save-bar-dot { background: rgb(var(--ta-danger)); border-radius: 1px; transform: rotate(45deg); }
+  .ta-save-bar--dirty .ta-save-bar-dot {
+    background: rgb(var(--ta-warning));
+    box-shadow: 0 0 0 3px rgb(var(--ta-warning) / 0.25);
+  }
+  .ta-save-bar--error .ta-save-bar-dot {
+    background: rgb(var(--ta-danger));
+    border-radius: 1px;
+    transform: rotate(45deg);
+  }
   .ta-save-bar--saving .ta-save-bar-dot {
     background: none;
     border: 2px solid rgb(var(--ta-text-dim));
@@ -193,10 +230,15 @@
     animation: ta-save-bar-spin 0.7s linear infinite;
   }
   @keyframes ta-save-bar-spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
-  .ta-save-bar-text { min-width: 0; overflow-wrap: anywhere; }
+  .ta-save-bar-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 
   .ta-save-bar-actions {
     display: flex;
@@ -209,12 +251,20 @@
 
   /* A phone: the buttons take a row of their own and share it. */
   @media (max-width: 480px) {
-    .ta-save-bar { padding: 0.625rem 0.75rem; }
-    .ta-save-bar-actions { width: 100%; }
-    .ta-save-bar-actions > :global(.ta-btn) { flex: 1 1 auto; }
+    .ta-save-bar {
+      padding: 0.625rem 0.75rem;
+    }
+    .ta-save-bar-actions {
+      width: 100%;
+    }
+    .ta-save-bar-actions > :global(.ta-btn) {
+      flex: 1 1 auto;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-save-bar--saving .ta-save-bar-dot { animation: none; }
+    .ta-save-bar--saving .ta-save-bar-dot {
+      animation: none;
+    }
   }
 </style>

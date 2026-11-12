@@ -100,7 +100,9 @@
   }
 
   .ta-btn:focus-visible {
-    box-shadow: 0 0 0 2px rgb(var(--ta-bg)), 0 0 0 4px rgb(var(--ta-accent) / 0.6);
+    box-shadow:
+      0 0 0 2px rgb(var(--ta-bg)),
+      0 0 0 4px rgb(var(--ta-accent) / 0.6);
   }
 
   .ta-btn:disabled,
@@ -110,10 +112,22 @@
   }
 
   /* — Sizes — */
-  .ta-btn--sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; gap: 0.375rem; }
-  .ta-btn--md { padding: 0.5rem 1rem; font-size: 0.875rem; }
-  .ta-btn--lg { padding: 0.75rem 1.5rem; font-size: 1rem; }
-  .ta-btn--icon { padding: 0.5rem; }
+  .ta-btn--sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    gap: 0.375rem;
+  }
+  .ta-btn--md {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+  .ta-btn--lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+  .ta-btn--icon {
+    padding: 0.5rem;
+  }
 
   /* — Variants — */
   /* The accent is light enough to read as text on a dark surface, which leaves it too light
@@ -156,7 +170,9 @@
     background: rgb(var(--ta-danger) / 0.12);
   }
   .ta-btn--danger-ghost:focus-visible {
-    box-shadow: 0 0 0 2px rgb(var(--ta-bg)), 0 0 0 4px rgb(var(--ta-danger) / 0.6);
+    box-shadow:
+      0 0 0 2px rgb(var(--ta-bg)),
+      0 0 0 4px rgb(var(--ta-danger) / 0.6);
   }
 
   .ta-btn--ghost {
@@ -199,18 +215,30 @@
   }
 
   @keyframes ta-spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* Reduced motion: the busy mark stays, still (aria-busy says the rest). */
   @media (prefers-reduced-motion: reduce) {
-    .ta-btn-spinner { animation: none; border-style: dashed; border-right-color: currentColor; }
-    .ta-btn { transition: none; }
+    .ta-btn-spinner {
+      animation: none;
+      border-style: dashed;
+      border-right-color: currentColor;
+    }
+    .ta-btn {
+      transition: none;
+    }
   }
 
   /* On touch screens: sm and md reach the 44px of WCAG 2.5.5 (icon-only, 44×44). */
   @media (pointer: coarse) {
-    .ta-btn { min-height: 2.75rem; }
-    .ta-btn--icon { min-width: 2.75rem; }
+    .ta-btn {
+      min-height: 2.75rem;
+    }
+    .ta-btn--icon {
+      min-width: 2.75rem;
+    }
   }
 </style>

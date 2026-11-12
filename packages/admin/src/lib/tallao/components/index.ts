@@ -55,7 +55,14 @@ export { default as CopyButton } from "./copy-button.svelte";
 export { default as ChatMessage } from "./chat-message.svelte";
 export { default as Pagination } from "./pagination.svelte";
 export { default as DataTable } from "./data-table.svelte";
-export type { DataColumn, DataSort, DataFilters, DataRange, DataFilterControl, DataDensity } from "./data-table.svelte";
+export type {
+  DataColumn,
+  DataSort,
+  DataFilters,
+  DataRange,
+  DataFilterControl,
+  DataDensity,
+} from "./data-table.svelte";
 export { default as Calendar } from "./calendar.svelte";
 export { default as DatePicker } from "./date-picker.svelte";
 export { default as MonthView } from "./month-view.svelte";

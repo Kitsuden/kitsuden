@@ -129,12 +129,17 @@
     <MenuLabel>{emptyText}</MenuLabel>
   {/if}
   {#each views as view (view.name)}
-    <MenuItem checked={view.name === current} checkType="radio" onSelect={() => select(view)}>{view.name}</MenuItem>
+    <MenuItem checked={view.name === current} checkType="radio" onSelect={() => select(view)}
+      >{view.name}</MenuItem
+    >
   {/each}
   {#if onSave || (active && (onRename || onDelete))}<MenuSeparator />{/if}
   {#if onSave}<MenuItem onSelect={() => ask("save")}>{saveLabel}</MenuItem>{/if}
-  {#if active && onRename}<MenuItem onSelect={() => ask("rename")}>{named(renameLabel)}</MenuItem>{/if}
-  {#if active && onDelete}<MenuItem variant="danger" onSelect={() => (confirming = true)}>{named(deleteLabel)}</MenuItem>{/if}
+  {#if active && onRename}<MenuItem onSelect={() => ask("rename")}>{named(renameLabel)}</MenuItem
+    >{/if}
+  {#if active && onDelete}<MenuItem variant="danger" onSelect={() => (confirming = true)}
+      >{named(deleteLabel)}</MenuItem
+    >{/if}
 </DropdownMenu>
 
 <Dialog
@@ -154,4 +159,9 @@
   {/snippet}
 </Dialog>
 
-<ConfirmDialog bind:open={confirming} title={named(deleteConfirmTitle)} confirmLabel={L.delete} onConfirm={remove} />
+<ConfirmDialog
+  bind:open={confirming}
+  title={named(deleteConfirmTitle)}
+  confirmLabel={L.delete}
+  onConfirm={remove}
+/>

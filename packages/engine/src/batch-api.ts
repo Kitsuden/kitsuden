@@ -41,6 +41,14 @@ import { db } from "../../../apps/api/src/db";
 
 import { writeCondition } from "./db-conditions";
 import { messageOf } from "./errors";
+import {
+  BULK_HISTORY_CAP,
+  recordChanges,
+  systemSavepointOn,
+  tableWritesChanges,
+  type TableWrite,
+} from "./record-history";
+import { useUser } from "./request-scope";
 import { validate, type ValidationSchema } from "./validator";
 // import * as schema from "../../../apps/api/src/db/schema";
 
@@ -144,11 +152,24 @@ export interface BatchError {
   details?: any;
 }
 
+/** Enough of a transaction to read rows back (record history). */
+interface HistorySelect {
+  select(): {
+    from(t: PgTable): { where(c: unknown): { limit(n: number): Promise<HistoryRow[]> } };
+  };
+}
+type HistoryRow = Record<string, unknown>;
+
 /** Internal batch state */
 interface BatchState {
   results: Map<string, any>;
   errors: BatchError[];
   operationResults: BatchApiOperationResult[];
+  /**
+   * What the batch wrote, for the record history (core migration 0076): one row
+   * per record, or none once the batch wrote more than `BULK_HISTORY_CAP` rows.
+   */
+  writes: TableWrite[] | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -184,7 +205,44 @@ export class BatchProcessor {
       results: new Map(),
       errors: [],
       operationResults: [],
+      writes: [],
     };
+  }
+
+  private remember(
+    table: PgTable,
+    action: TableWrite["action"],
+    before: HistoryRow | null | undefined,
+    after: HistoryRow | null | undefined
+  ): void {
+    if (!this.state.writes) return;
+    this.state.writes.push({ table, action, before: before ?? null, after: after ?? null });
+    if (this.state.writes.length > BULK_HISTORY_CAP) this.state.writes = null;
+  }
+
+  /** The rows a write by condition is about to touch (null over the cap). */
+  private async rowsBefore(
+    tx: unknown,
+    table: PgTable,
+    condition: unknown
+  ): Promise<HistoryRow[] | null> {
+    if (!this.state.writes) return null;
+    const rows = await (tx as HistorySelect)
+      .select()
+      .from(table)
+      .where(condition)
+      .limit(BULK_HISTORY_CAP + 1);
+    if (rows.length > BULK_HISTORY_CAP) {
+      this.state.writes = null;
+      return null;
+    }
+    return rows;
+  }
+
+  private rememberUpdates(table: PgTable, before: HistoryRow[] | null, after: HistoryRow[]): void {
+    if (!before) return;
+    const byId = new Map(before.map((r) => [String(r.id), r]));
+    for (const row of after) this.remember(table, "update", byId.get(String(row.id)), row);
   }
 
   /**
@@ -227,6 +285,7 @@ export class BatchProcessor {
       results: new Map(),
       errors: [],
       operationResults: [],
+      writes: [],
     };
 
     // Validate operations before the transaction
@@ -290,6 +349,14 @@ export class BatchProcessor {
         if (this.state.errors.length > 0) {
           throw new Error("Batch validation failed");
         }
+
+        // The history, in the batch's transaction: it commits or rolls back with it.
+        await recordChanges(
+          tx as never,
+          tableWritesChanges(this.state.writes ?? [], useUser()),
+          (err) => console.warn("[batch-api] could not record the history:", messageOf(err)),
+          systemSavepointOn(tx as never)
+        );
       });
 
       const finishedAt = new Date().toISOString();
@@ -399,14 +466,18 @@ export class BatchProcessor {
           const insertResult = await tx.insert(table).values(resolvedData).returning();
           result = insertResult[0];
           resultId = result.id;
+          this.remember(table, "create", null, result);
           break;
 
         case "update": {
+          const condition = conditionOf(table, id, where, "Update");
+          const before = await this.rowsBefore(tx, table, condition);
           const updateResult = await tx
             .update(table)
             .set(resolvedData)
-            .where(conditionOf(table, id, where, "Update"))
+            .where(condition)
             .returning();
+          this.rememberUpdates(table, before, updateResult);
           result = updateResult[0];
           resultId = result?.id || id;
           break;
@@ -417,6 +488,7 @@ export class BatchProcessor {
             .delete(table)
             .where(conditionOf(table, id, where, "Delete"))
             .returning();
+          for (const row of deleteResult) this.remember(table, "delete", row, null);
           result = deleteResult[0];
           resultId = id;
           break;
@@ -432,17 +504,21 @@ export class BatchProcessor {
           // silence. And with the call fixed it would still be a trap — a
           // uniqueness violation or a nonexistent field in `where` would end up
           // inserting instead of warning.
+          const condition = conditionOf(table, id, where, "Upsert");
+          const before = await this.rowsBefore(tx, table, condition);
           const upsertResult = await tx
             .update(table)
             .set(resolvedData)
-            .where(conditionOf(table, id, where, "Upsert"))
+            .where(condition)
             .returning();
 
           if (upsertResult.length > 0) {
             result = upsertResult[0];
+            this.rememberUpdates(table, before, upsertResult);
           } else {
             const insertResult = await tx.insert(table).values(resolvedData).returning();
             result = insertResult[0];
+            this.remember(table, "create", null, result);
           }
           resultId = result.id;
           break;
@@ -525,6 +601,7 @@ export class BatchProcessor {
       results: new Map(),
       errors: [],
       operationResults: [],
+      writes: [],
     };
   }
 }

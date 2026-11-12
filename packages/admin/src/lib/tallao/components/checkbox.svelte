@@ -28,7 +28,12 @@
 <label class={cn("ta-checkbox", disabled && "ta-checkbox--off", className)}>
   <span class="ta-checkbox-box">
     <input type="checkbox" bind:checked {disabled} aria-label={ariaLabel} {...rest} />
-    <svg class="ta-checkbox-mark" viewBox="0 0 16 16" aria-hidden="true"><path class="ta-checkbox-check" d="M3.5 8.4l3 3 6-6.6" /><path class="ta-checkbox-dash" d="M4 8h8" /></svg>
+    <svg class="ta-checkbox-mark" viewBox="0 0 16 16" aria-hidden="true"
+      ><path class="ta-checkbox-check" d="M3.5 8.4l3 3 6-6.6" /><path
+        class="ta-checkbox-dash"
+        d="M4 8h8"
+      /></svg
+    >
   </span>
   {#if label}<span>{label}</span>{/if}
   {@render children?.()}
@@ -50,7 +55,13 @@
 
   /* Still a native checkbox (name, value, form, :indeterminate, Space): only its drawing is
      the kit's, so the check can be drawn by its stroke. */
-  .ta-checkbox-box { position: relative; display: inline-flex; flex-shrink: 0; width: 1rem; height: 1rem; }
+  .ta-checkbox-box {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+  }
   .ta-checkbox input {
     appearance: none;
     width: 1rem;
@@ -63,7 +74,9 @@
     transition: transform var(--ta-duration-fast, 120ms) var(--ta-ease-out, ease-out);
   }
   /* Press feedback: the box gives a little under the pointer. */
-  .ta-checkbox input:active:not(:disabled) { transform: scale(0.88); }
+  .ta-checkbox input:active:not(:disabled) {
+    transform: scale(0.88);
+  }
 
   .ta-checkbox input:checked,
   .ta-checkbox input:indeterminate {
@@ -83,14 +96,24 @@
     pointer-events: none;
   }
   .ta-checkbox-check,
-  .ta-checkbox-dash { stroke-dasharray: 16; stroke-dashoffset: 16; transition: stroke-dashoffset var(--ta-duration-base, 180ms) var(--ta-ease-out, ease-out); }
+  .ta-checkbox-dash {
+    stroke-dasharray: 16;
+    stroke-dashoffset: 16;
+    transition: stroke-dashoffset var(--ta-duration-base, 180ms) var(--ta-ease-out, ease-out);
+  }
   .ta-checkbox input:checked:not(:indeterminate) + .ta-checkbox-mark .ta-checkbox-check,
-  .ta-checkbox input:indeterminate + .ta-checkbox-mark .ta-checkbox-dash { stroke-dashoffset: 0; }
+  .ta-checkbox input:indeterminate + .ta-checkbox-mark .ta-checkbox-dash {
+    stroke-dashoffset: 0;
+  }
 
   /* Forced colours: the system draws its own checkbox. */
   @media (forced-colors: active) {
-    .ta-checkbox input { appearance: auto; }
-    .ta-checkbox-mark { display: none; }
+    .ta-checkbox input {
+      appearance: auto;
+    }
+    .ta-checkbox-mark {
+      display: none;
+    }
   }
 
   .ta-checkbox input:focus-visible {
@@ -106,12 +129,19 @@
   @media (prefers-reduced-motion: reduce) {
     .ta-checkbox input,
     .ta-checkbox-check,
-    .ta-checkbox-dash { transition: none; }
-    .ta-checkbox input:active:not(:disabled) { transform: none; }
+    .ta-checkbox-dash {
+      transition: none;
+    }
+    .ta-checkbox input:active:not(:disabled) {
+      transform: none;
+    }
   }
 
   /* On touch screens: the whole label is the 44px hit area; the box stays 16px. */
   @media (pointer: coarse) {
-    .ta-checkbox { min-height: 2.75rem; align-items: center; }
+    .ta-checkbox {
+      min-height: 2.75rem;
+      align-items: center;
+    }
   }
 </style>

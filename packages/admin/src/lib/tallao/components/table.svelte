@@ -19,7 +19,13 @@
     /** Any other attribute (aria-label, aria-describedby, id, style…) goes to the <table>. */
     [key: string]: unknown;
   }
-  const { class: className = "", density = "default", stickyFirstColumn = false, children, ...rest }: Props = $props();
+  const {
+    class: className = "",
+    density = "default",
+    stickyFirstColumn = false,
+    children,
+    ...rest
+  }: Props = $props();
 </script>
 
 <div class="ta-table-container">

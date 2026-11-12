@@ -8,8 +8,14 @@
 
   interface Props {
     templateId?: string | null;
-    onBack: () => void;
-    onSave: () => void;
+    /**
+     * Back and Cancel. A kon mounts the form as a tab of its page and passes nothing: then
+     * there is nowhere to go back to and the buttons are not drawn (they called an undefined
+     * function).
+     */
+    onBack?: () => void;
+    /** After a save; by default the form starts over, ready for the next one. */
+    onSave?: () => void;
   }
   const { templateId = null, onBack, onSave }: Props = $props();
 
@@ -34,7 +40,18 @@
     loading = true;
     try {
       const res = await api.getContaTemplate(templateId);
-      template = res.data;
+      // Missing or null fields stay "" (a bound `undefined` throws on mount).
+      template = {
+        name: "",
+        description: "",
+        templateType: "",
+        rules: [],
+        requiredMetadata: [],
+        isActive: true,
+        ...Object.fromEntries(
+          Object.entries(res.data ?? {}).filter(([, v]) => v !== undefined && v !== null)
+        ),
+      };
       rulesJson = JSON.stringify(template.rules || [], null, 2);
       reqMetaJson = JSON.stringify(template.requiredMetadata || [], null, 2);
     } catch (e: any) {
@@ -66,7 +83,7 @@
         await api.createContaTemplate(payload);
       }
       toast.success(t("templateForm.templateSaved"));
-      onSave();
+      onSave?.();
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -97,7 +114,11 @@
 </script>
 
 <div class="space-y-6 min-w-0">
-  <Button variant="ghost" onclick={onBack}><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button>
+  {#if onBack}
+    <Button variant="ghost" onclick={onBack}
+      ><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button
+    >
+  {/if}
 
   {#if loading}
     <div class="flex items-center justify-center h-48"><Spinner size="lg" /></div>
@@ -174,7 +195,9 @@
     <div
       class="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-kitsuden-border"
     >
-      <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
+      {#if onBack}
+        <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
+      {/if}
       <Button onclick={save} loading={saving}
         ><Save class="w-4 h-4" /> {t("templateForm.saveTemplate")}</Button
       >

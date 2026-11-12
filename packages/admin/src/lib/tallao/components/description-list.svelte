@@ -76,13 +76,18 @@
     ...rest
   }: Props = $props();
 
-  const textOf = (it: DescriptionItem) => (it.value == null || it.value === "" ? "" : String(it.value));
+  const textOf = (it: DescriptionItem) =>
+    it.value == null || it.value === "" ? "" : String(it.value);
 </script>
 
 <div class={cn("ta-desc-box", className)}>
   <dl
     {...rest}
-    class={cn("ta-desc", `ta-desc--${columns > 1 ? "stacked" : layout}`, columns > 1 && `ta-desc--cols-${columns}`)}
+    class={cn(
+      "ta-desc",
+      `ta-desc--${columns > 1 ? "stacked" : layout}`,
+      columns > 1 && `ta-desc--cols-${columns}`
+    )}
     aria-label={ariaLabel}
   >
     {#each items as it, i (i)}
@@ -95,7 +100,13 @@
           {:else if !text}
             <span class="ta-desc-none">{emptyValue}</span>
           {:else if it.copy}
-            <CopyButton text={typeof it.copy === "string" ? it.copy : text} label={text} {copyLabel} {copiedLabel} class="ta-desc-copy" />
+            <CopyButton
+              text={typeof it.copy === "string" ? it.copy : text}
+              label={text}
+              {copyLabel}
+              {copiedLabel}
+              class="ta-desc-copy"
+            />
           {:else if it.href}
             <a class="ta-desc-link" href={it.href}>{text}</a>
           {:else}
@@ -108,7 +119,10 @@
 </div>
 
 <style>
-  .ta-desc-box { container-type: inline-size; min-width: 0; }
+  .ta-desc-box {
+    container-type: inline-size;
+    min-width: 0;
+  }
 
   .ta-desc {
     display: grid;
@@ -126,7 +140,9 @@
     padding: 0.5rem 0;
     border-bottom: 1px solid rgb(var(--ta-border) / 0.7);
   }
-  .ta-desc-pair:last-child { border-bottom: none; }
+  .ta-desc-pair:last-child {
+    border-bottom: none;
+  }
 
   .ta-desc-label {
     font-size: 0.75rem;
@@ -140,8 +156,13 @@
     color: rgb(var(--ta-text));
     overflow-wrap: anywhere;
   }
-  .ta-desc-value--mono { font-family: var(--ta-font-mono); font-size: 0.8125rem; }
-  .ta-desc-none { color: rgb(var(--ta-text-dim)); }
+  .ta-desc-value--mono {
+    font-family: var(--ta-font-mono);
+    font-size: 0.8125rem;
+  }
+  .ta-desc-none {
+    color: rgb(var(--ta-text-dim));
+  }
 
   .ta-desc-link {
     position: relative;
@@ -151,14 +172,26 @@
     text-underline-offset: 2px;
     border-radius: var(--ta-radius-sm);
   }
-  .ta-desc-link:hover { text-decoration-color: currentColor; }
-  .ta-desc-link:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; }
+  .ta-desc-link:hover {
+    text-decoration-color: currentColor;
+  }
+  .ta-desc-link:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+  }
 
-  .ta-desc :global(.ta-desc-copy) { max-width: 100%; }
+  .ta-desc :global(.ta-desc-copy) {
+    max-width: 100%;
+  }
 
   /* Several columns of stacked pairs: no rules, a gap instead. */
-  .ta-desc[class*="ta-desc--cols-"] { gap: 1rem 1.5rem; }
-  .ta-desc[class*="ta-desc--cols-"] .ta-desc-pair { padding: 0; border-bottom: none; }
+  .ta-desc[class*="ta-desc--cols-"] {
+    gap: 1rem 1.5rem;
+  }
+  .ta-desc[class*="ta-desc--cols-"] .ta-desc-pair {
+    padding: 0;
+    border-bottom: none;
+  }
 
   /* Room for label and value side by side. */
   @container (min-width: 26rem) {
@@ -167,12 +200,18 @@
       gap: 1rem;
       align-items: baseline;
     }
-    .ta-desc--auto .ta-desc-label { font-size: 0.8125rem; }
+    .ta-desc--auto .ta-desc-label {
+      font-size: 0.8125rem;
+    }
     .ta-desc--cols-2,
-    .ta-desc--cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ta-desc--cols-3 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
   @container (min-width: 44rem) {
-    .ta-desc--cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .ta-desc--cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 
   /* The link's hit area grows to 44px without moving the text. */

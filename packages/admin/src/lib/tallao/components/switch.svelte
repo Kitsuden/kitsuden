@@ -82,7 +82,9 @@
     border-radius: 9999px;
     background: rgb(var(--ta-muted));
     cursor: pointer;
-    transition: background-color 0.15s, border-color 0.15s;
+    transition:
+      background-color 0.15s,
+      border-color 0.15s;
   }
 
   /* The track is 16–20px tall: its hit area is 24px (WCAG 2.5.8) without changing the drawing. */
@@ -96,8 +98,14 @@
     transform: translateY(-50%);
   }
 
-  .ta-switch--md .ta-switch-track { width: 2.25rem; height: 1.25rem; }
-  .ta-switch--sm .ta-switch-track { width: 1.75rem; height: 1rem; }
+  .ta-switch--md .ta-switch-track {
+    width: 2.25rem;
+    height: 1.25rem;
+  }
+  .ta-switch--sm .ta-switch-track {
+    width: 1.75rem;
+    height: 1rem;
+  }
 
   .ta-switch-track[aria-checked="true"] {
     background: rgb(var(--ta-accent));
@@ -120,11 +128,21 @@
     transition: transform var(--ta-duration-base, 180ms) var(--ta-ease-spring, ease-out);
   }
 
-  .ta-switch--md .ta-switch-thumb { width: 0.875rem; height: 0.875rem; }
-  .ta-switch--sm .ta-switch-thumb { width: 0.625rem; height: 0.625rem; }
+  .ta-switch--md .ta-switch-thumb {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .ta-switch--sm .ta-switch-thumb {
+    width: 0.625rem;
+    height: 0.625rem;
+  }
 
-  .ta-switch--md .ta-switch-track[aria-checked="true"] .ta-switch-thumb { transform: translate(1rem, -50%); }
-  .ta-switch--sm .ta-switch-track[aria-checked="true"] .ta-switch-thumb { transform: translate(0.75rem, -50%); }
+  .ta-switch--md .ta-switch-track[aria-checked="true"] .ta-switch-thumb {
+    transform: translate(1rem, -50%);
+  }
+  .ta-switch--sm .ta-switch-track[aria-checked="true"] .ta-switch-thumb {
+    transform: translate(0.75rem, -50%);
+  }
 
   .ta-switch-label {
     cursor: pointer;
@@ -141,11 +159,15 @@
 
   @media (prefers-reduced-motion: reduce) {
     .ta-switch-track,
-    .ta-switch-thumb { transition: none; }
+    .ta-switch-thumb {
+      transition: none;
+    }
   }
 
   /* On touch screens: the whole label is the 44px hit area; the track keeps its size. */
   @media (pointer: coarse) {
-    .ta-switch { min-height: 2.75rem; }
+    .ta-switch {
+      min-height: 2.75rem;
+    }
   }
 </style>

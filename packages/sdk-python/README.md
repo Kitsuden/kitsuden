@@ -84,6 +84,37 @@ index = client.tree_index(doc_markdown, title="Guide")
 result = client.tree_retrieve(doc_markdown, "how long do I bake the tart?")
 ```
 
+### Search, filters and record history
+
+`list()` sends the explorer's list query. Every condition must hold (AND); an unknown
+operator raises `ValueError` before the request, and an unknown or secret column is a 400
+from the API.
+
+```python
+# Text in any textual column, or only in some of them
+page = client.table("recipes").list(search="lemon", search_fields=["title", "summary"])
+
+# One or more conditions per column: a value (equals) or {operator: value}.
+# Operators: contains, equals, gt, lt, gte, lte. Booleans go as true/false, dates in ISO 8601.
+page = client.table("recipes").list(
+    filters={"status": "published", "minutes": {"gte": 10, "lt": 45}},
+)
+# -> ?filter[status]=published&filter[minutes][gte]=10&filter[minutes][lt]=45
+
+# The same as a list (op defaults to equals)
+page = client.table("recipes").list(
+    filters=[{"field": "minutes", "op": "gte", "value": 10}, {"field": "status", "value": "draft"}],
+)
+
+# The older single filter still works, combined with the rest by AND
+page = client.table("recipes").list(filter_field="title", filter_op="contains", filter_value="tart")
+
+# Who created, changed or deleted a row, when, and which fields (newest first). Admin only.
+changes = client.table("recipes").history(recipe["id"], limit=20, offset=0)
+for change in changes["history"]:
+    print(change["at"], change["action"], [c["field"] for c in change["changes"]])
+```
+
 ## Async
 
 Same contract, with `await` in front. Meant for agents and async-first services:

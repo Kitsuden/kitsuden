@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t } from "$lib/i18n";
+  import { localeFormat, t } from "$lib/i18n";
   import { onMount } from "svelte";
   import {
     toast,
@@ -21,6 +21,13 @@
   } from "$lib/tallao";
 
   import { api } from "$lib/api";
+
+  /** An amount as the panel writes numbers: two decimals, with thousands separators. */
+  const money = new Intl.NumberFormat(localeFormat(), {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const amount = (v: unknown) => money.format(Number(v) || 0);
 
   type Tab = "trial" | "balance" | "pl";
   let activeTab = $state<Tab>("trial");
@@ -136,12 +143,9 @@
             <TableRow>
               <TableCell class="font-mono">{row.account.code}</TableCell>
               <TableCell>{row.account.name}</TableCell>
-              <TableCell class="text-right font-mono">{Number(row.totalDebit).toFixed(2)}</TableCell
-              >
-              <TableCell class="text-right font-mono"
-                >{Number(row.totalCredit).toFixed(2)}</TableCell
-              >
-              <TableCell class="text-right font-mono">{Number(row.balance).toFixed(2)}</TableCell>
+              <TableCell class="text-right font-mono">{amount(row.totalDebit)}</TableCell>
+              <TableCell class="text-right font-mono">{amount(row.totalCredit)}</TableCell>
+              <TableCell class="text-right font-mono">{amount(row.balance)}</TableCell>
             </TableRow>
           {:else}
             <TableRow
@@ -158,20 +162,20 @@
       <Card
         ><CardHeader><CardTitle class="text-sm">{t("reportsView.assets")}</CardTitle></CardHeader
         ><CardContent>
-          <div class="text-2xl font-bold">{Number(balanceData.totalAssets).toFixed(2)}</div>
+          <div class="text-2xl font-bold">{amount(balanceData.totalAssets)}</div>
         </CardContent></Card
       >
       <Card
         ><CardHeader
           ><CardTitle class="text-sm">{t("reportsView.liabilities")}</CardTitle></CardHeader
         ><CardContent>
-          <div class="text-2xl font-bold">{Number(balanceData.totalLiabilities).toFixed(2)}</div>
+          <div class="text-2xl font-bold">{amount(balanceData.totalLiabilities)}</div>
         </CardContent></Card
       >
       <Card
         ><CardHeader><CardTitle class="text-sm">{t("reportsView.equity")}</CardTitle></CardHeader
         ><CardContent>
-          <div class="text-2xl font-bold">{Number(balanceData.totalEquity).toFixed(2)}</div>
+          <div class="text-2xl font-bold">{amount(balanceData.totalEquity)}</div>
         </CardContent></Card
       >
     </div>
@@ -187,17 +191,17 @@
         <TableBody>
           {#each balanceData.assets as a}<TableRow
               ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
-                >{Number(a.balance).toFixed(2)}</TableCell
+                >{amount(a.balance)}</TableCell
               ></TableRow
             >{/each}
           {#each balanceData.liabilities as a}<TableRow
               ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
-                >{Number(a.balance).toFixed(2)}</TableCell
+                >{amount(a.balance)}</TableCell
               ></TableRow
             >{/each}
           {#each balanceData.equity as a}<TableRow
               ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
-                >{Number(a.balance).toFixed(2)}</TableCell
+                >{amount(a.balance)}</TableCell
               ></TableRow
             >{/each}
         </TableBody>
@@ -209,7 +213,7 @@
         ><CardHeader><CardTitle class="text-sm">{t("reportsView.revenue")}</CardTitle></CardHeader
         ><CardContent
           ><div class="text-2xl font-bold text-kitsuden-green">
-            {Number(plData.totalRevenue).toFixed(2)}
+            {amount(plData.totalRevenue)}
           </div></CardContent
         ></Card
       >
@@ -217,14 +221,13 @@
         ><CardHeader><CardTitle class="text-sm">{t("reportsView.expenses")}</CardTitle></CardHeader
         ><CardContent
           ><div class="text-2xl font-bold text-kitsuden-danger">
-            {Number(plData.totalExpenses).toFixed(2)}
+            {amount(plData.totalExpenses)}
           </div></CardContent
         ></Card
       >
       <Card
         ><CardHeader><CardTitle class="text-sm">{t("reportsView.netIncome")}</CardTitle></CardHeader
-        ><CardContent
-          ><div class="text-2xl font-bold">{Number(plData.netIncome).toFixed(2)}</div></CardContent
+        ><CardContent><div class="text-2xl font-bold">{amount(plData.netIncome)}</div></CardContent
         ></Card
       >
     </div>
@@ -240,12 +243,12 @@
         <TableBody>
           {#each plData.revenue as a}<TableRow
               ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
-                >{Number(a.balance).toFixed(2)}</TableCell
+                >{amount(a.balance)}</TableCell
               ></TableRow
             >{/each}
           {#each plData.expenses as a}<TableRow
               ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
-                >{Number(a.balance).toFixed(2)}</TableCell
+                >{amount(a.balance)}</TableCell
               ></TableRow
             >{/each}
         </TableBody>

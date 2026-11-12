@@ -6,11 +6,15 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { diffKind } from "../tallao/components/diff-view.svelte";
+
 import { toCsv } from "./csv";
 import {
   changeFields,
   diffRecords,
+  fieldWords,
   historyLine,
+  historyValue,
   proposalChanges,
   proposalTargets,
   recordHistory,
@@ -36,6 +40,7 @@ import {
   legacyParams,
   memorySource,
   modelParams,
+  singularOf,
   sortRows,
   type ListQuery,
 } from "./source";
@@ -644,7 +649,7 @@ describe("history of a record", () => {
     expect(line.tag).toBe("record.tagAgent");
     expect(line.tone).toBe("success");
     expect(line.date).toBe("2026-11-01");
-    expect(line.description).toBe('record.fieldsChanged {"n":1}');
+    expect(line.description).toBe("record.fieldChangedOne");
 
     const rejected = historyLine(
       { ...event!, status: "rejected", note: "Too high" },
@@ -679,13 +684,66 @@ describe("recorded changes in the history", () => {
   });
 
   it("maps fields: an entry's own field by its key, a secret without its value", () => {
-    expect(changeFields(change(), { price: "Price" }, "hidden")).toEqual([
-      { field: "price", label: "Price", before: 19.5, after: 21 },
-      { field: "api_token", label: undefined, before: "hidden", after: "hidden" },
-    ]);
+    const fields = changeFields(change(), { price: "Price" });
+    expect(fields[0]).toEqual({ field: "price", label: "Price", before: 19.5, after: 21 });
+    expect(fields[1]).toMatchObject({ field: "api_token", redacted: true });
     expect(
       changeFields(change({ action: "create", changes: [{ field: "name", after: "x" }] }))
-    ).toEqual([{ field: "name", label: undefined, before: null, after: "x" }]);
+    ).toEqual([{ field: "name", label: "Name", before: null, after: "x" }]);
+  });
+
+  it("a secret field is listed as changed (not dropped as equal), with no values", () => {
+    const secret = changeFields(change())[1]!;
+    // DiffView left out two equal "hidden" stand-ins as unchanged; `redacted` is a change.
+    expect(diffKind(secret)).toBe("changed");
+    expect(secret).toEqual({ field: "api_token", label: "Api token", redacted: true });
+  });
+
+  it("a value the API cut shows its preview", () => {
+    const cut = { truncated: true, bytes: 5120, preview: "Stone fruit, black tea " };
+    expect(historyValue(cut)).toBe("Stone fruit, black tea…");
+  });
+
+  it("one field is singular; the system and a cut change are said", () => {
+    const [event] = recordHistory({
+      id: "e1",
+      apiPath: "/x/e1",
+      about: {},
+      changes: [
+        change({
+          action: "delete",
+          actor: { type: "system", id: null, name: null },
+          changes: [{ field: "title", before: "A" }],
+          truncated: true,
+        }),
+      ],
+    });
+    const line = historyLine(event!, t, (iso) => iso);
+    expect(line.title).toBe('record.changeDeletedBy {"who":"record.theSystem"}');
+    expect(line.description).toBe("record.fieldChangedOne · record.someLeftOut");
+  });
+
+  it("an agent's approved write names who approved it, or says it was approved", () => {
+    const approved = change({
+      actor: { type: "agent", id: "ag1", name: "Curator" },
+      proposalId: "p9",
+      approvedBy: "u4",
+    });
+    const [named] = recordHistory({
+      id: "e1",
+      apiPath: "/x/e1",
+      about: {},
+      changes: [approved],
+      approvers: { p9: "Helen" },
+    });
+    const line = historyLine(named!, t, (iso) => iso);
+    expect(line.title).toBe('record.agentApproved {"agent":"Curator","who":"Helen"}');
+    expect(line.tone).toBe("success");
+    expect(line.tag).toBe("record.tagAgent");
+    const [unnamed] = recordHistory({ id: "e1", apiPath: "/x/e1", about: {}, changes: [approved] });
+    expect(historyLine(unnamed!, t, (iso) => iso).title).toBe(
+      'record.agentApprovedProposal {"agent":"Curator"}'
+    );
   });
 
   it("merges with the dates: a recorded create replaces the row's own, newest first", () => {
@@ -755,5 +813,20 @@ describe("recorded changes in the history", () => {
       changes: [change({ proposalId: proposal().id })],
     });
     expect(events.map((e) => e.kind)).toEqual(["proposal"]);
+  });
+});
+
+describe("a dataset's name for one record", () => {
+  it("makes the last word singular where that is safe, in English and Spanish", () => {
+    expect(singularOf("Products")).toBe("Product");
+    expect(singularOf("Support Tickets")).toBe("Support Ticket");
+    expect(singularOf("Categories")).toBe("Category");
+    expect(singularOf("Pedidos")).toBe("Pedido");
+  });
+  it("leaves alone what it cannot be sure of", () => {
+    expect(singularOf("Ciudades")).toBe("Ciudades");
+    expect(singularOf("News")).toBe("News");
+    expect(singularOf("Green Coffee")).toBe("Green Coffee");
+    expect(singularOf("Address")).toBe("Address");
   });
 });

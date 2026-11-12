@@ -21,6 +21,20 @@ export function formatDate(
   });
 }
 
+/**
+ * A moment as the panel writes it everywhere ("Nov 12, 2026, 3:06 PM"): medium date and
+ * short time in the panel's language. "—" when there is none.
+ */
+export function formatDateTime(date: string | Date | null | undefined): string {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat(localeFormat(), {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(d);
+}
+
 export function formatNumber(n: number | undefined): string {
   if (n === undefined || n === null) return "—";
   return n.toLocaleString(localeFormat());

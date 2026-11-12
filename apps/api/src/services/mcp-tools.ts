@@ -11,7 +11,13 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import { setRlsContext, messageOf, recordChanges, DATASET_ENTRY_ENTITY } from "@kitsuden/engine";
+import {
+  setRlsContext,
+  messageOf,
+  recordChanges,
+  tableHistoryTarget,
+  DATASET_ENTRY_ENTITY,
+} from "@kitsuden/engine";
 import {
   accessToDataset,
   buildDatasetWhere,
@@ -418,6 +424,49 @@ async function rememberEntries(
     after?: EntryRow | null;
   }>
 ): Promise<void> {
+  await rememberRows(
+    DATASET_ENTRY_ENTITY,
+    { nested: "data", skip: ["id", "dataSetId", "createdById"] },
+    changes
+  );
+}
+
+/**
+ * The same for a row of a native table: `table:<name>` with COLUMN names, the
+ * address the explorer and `defineModel` use, so the row keeps one history.
+ */
+async function rememberNativeRows(
+  table: PgTable,
+  changes: Array<{
+    action: "create" | "update" | "delete";
+    before?: Record<string, unknown> | null;
+    after?: Record<string, unknown> | null;
+  }>
+): Promise<void> {
+  const target = tableHistoryTarget(table);
+  await rememberRows(
+    target.entity,
+    {
+      nested: target.diff.nested ?? undefined,
+      skip: [target.idColumn, ...(target.diff.skip ?? [])],
+    },
+    changes.map((c) => ({
+      action: c.action,
+      before: target.row(c.before),
+      after: target.row(c.after),
+    }))
+  );
+}
+
+async function rememberRows(
+  entity: string,
+  diff: { nested?: string; skip: string[] },
+  changes: Array<{
+    action: "create" | "update" | "delete";
+    before?: Record<string, unknown> | null;
+    after?: Record<string, unknown> | null;
+  }>
+): Promise<void> {
   const who = actor();
   if (!who.id) return;
   // On the system's connection, not the call's: a failed read here must not abort it.
@@ -432,15 +481,15 @@ async function rememberEntries(
   await recordChanges(
     bd(),
     changes.map((c) => ({
-      entity: DATASET_ENTRY_ENTITY,
-      rowId: (c.after ?? c.before)?.id,
+      entity,
+      rowId: (c.after ?? c.before)?.[diff.skip[0] ?? "id"],
       action: c.action,
       before: c.before ?? null,
       after: c.after ?? null,
       user,
-      diff: { nested: "data", skip: ["id", "dataSetId", "createdById"] },
+      diff,
     })),
-    (err) => logger.warn({ err: messageOf(err) }, "[mcp] could not record an entry's history"),
+    (err) => logger.warn({ err: messageOf(err), entity }, "[mcp] could not record a history row"),
     tx
       ? (insert) =>
           tx.transaction(async (sp) => {
@@ -1566,6 +1615,10 @@ async function kitsudenCreateRecord(
     .insert(table as any)
     .values(data)
     .returning()) as any[];
+  await rememberNativeRows(
+    table,
+    result.map((row) => ({ action: "create" as const, after: row }))
+  );
   await callbacks?.onMutate?.();
   return `Created native record: ${result[0]?.id}`;
 }
@@ -1632,11 +1685,19 @@ async function kitsudenUpdateRecord(
   const table = allowedNativeTable("kitsuden_update_record", scopes, collection, "write");
   if (!table) return `Collection not found: ${collection}`;
 
-  const result = (await bd()
-    .update(table)
-    .set(data)
-    .where(eq(columnId(table, "update_record") as never, recordId))
-    .returning()) as Array<{ id?: string }>;
+  const byId = eq(columnId(table, "update_record") as never, recordId);
+  // The row as it was, for the history's `before` (the call's own connection: its RLS).
+  const before = (await bd().select().from(table).where(byId).limit(1)) as Array<
+    Record<string, unknown>
+  >;
+  const result = (await bd().update(table).set(data).where(byId).returning()) as Array<{
+    id?: string;
+  }>;
+  if (result[0]) {
+    await rememberNativeRows(table, [
+      { action: "update", before: before[0] ?? null, after: result[0] as Record<string, unknown> },
+    ]);
+  }
   await callbacks?.onMutate?.();
   return `Updated native record: ${result[0]?.id}`;
 }
@@ -1699,7 +1760,11 @@ async function kitsudenDeleteRecord(
   const result = (await bd()
     .delete(table)
     .where(eq(columnId(table, "delete_record") as never, recordId))
-    .returning({ id: columnId(table, "delete_record") as never })) as Array<{ id?: string }>;
+    .returning()) as Array<{ id?: string }>;
+  await rememberNativeRows(
+    table,
+    result.map((row) => ({ action: "delete" as const, before: row as Record<string, unknown> }))
+  );
   await callbacks?.onMutate?.();
   return `Deleted native record: ${result[0]?.id}`;
 }
@@ -1760,6 +1825,7 @@ async function kitsudenInsertRecord(
       createdById: actor().id || null,
     } as any)
     .returning();
+  await rememberEntries([{ action: "create", after: newRecord as EntryRow }]);
 
   await callbacks?.onMutate?.();
   return `Record created: ${newRecord.id}`;

@@ -459,6 +459,15 @@ Settings changes, new proposals and decisions are audited synchronously: the
 request fails if its audit entry cannot be written. The execution result and
 expiry entries are best-effort (the result itself is always on the proposal).
 
+### Audit retention
+
+The API deletes `agent_audit_logs` rows older than `AGENT_AUDIT_RETENTION_DAYS` days
+every hour (and once when it starts): unset or empty = 90, `0` = keep the log forever, any
+other value that is not a positive number = 90. Before 2026-11-12 the log was never pruned,
+although the comment of core migration 0076 says it was; the first sweep after upgrading
+deletes everything older than the limit. Set `AGENT_AUDIT_RETENTION_DAYS=0` before upgrading
+to keep it all.
+
 ## Configuration changes and cost
 
 Changes apply **without a restart**: the process that saves them drops its

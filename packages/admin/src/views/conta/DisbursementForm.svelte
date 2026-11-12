@@ -8,8 +8,14 @@
 
   interface Props {
     disbursementId?: string | null;
-    onBack: () => void;
-    onSave: () => void;
+    /**
+     * Back and Cancel. A kon mounts the form as a tab of its page and passes nothing: then
+     * there is nowhere to go back to and the buttons are not drawn (they called an undefined
+     * function).
+     */
+    onBack?: () => void;
+    /** After a save; by default the form starts over, ready for the next one. */
+    onSave?: () => void;
   }
   const { disbursementId = null, onBack, onSave }: Props = $props();
 
@@ -62,7 +68,13 @@
         paidFromAccountId,
       });
       toast.success(t("disbursementForm.disbursementCreated"));
-      onSave();
+      if (onSave) onSave();
+      else {
+        matterId = "";
+        description = "";
+        amount = "";
+        paidFromAccountId = "";
+      }
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -107,7 +119,11 @@
 </script>
 
 <div class="space-y-6 min-w-0">
-  <Button variant="ghost" onclick={onBack}><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button>
+  {#if onBack}
+    <Button variant="ghost" onclick={onBack}
+      ><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button
+    >
+  {/if}
 
   {#if loading}
     <div class="flex items-center justify-center h-48"><Spinner size="lg" /></div>
@@ -163,7 +179,9 @@
     <div
       class="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-kitsuden-border"
     >
-      <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.back")}</Button>
+      {#if onBack}
+        <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.back")}</Button>
+      {/if}
       {#if disbursement}
         <div class="flex items-center gap-2">
           {#if disbursement.status === "pending"}

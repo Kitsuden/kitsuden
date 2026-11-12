@@ -36,7 +36,13 @@
     [key: string]: unknown;
   }
 
-  const { items, marker = "square", orientation = "horizontal", class: className = "", ...rest }: Props = $props();
+  const {
+    items,
+    marker = "square",
+    orientation = "horizontal",
+    class: className = "",
+    ...rest
+  }: Props = $props();
 </script>
 
 <ul {...rest} class={cn("ta-legend", `ta-legend--${orientation}`, className)}>
@@ -54,17 +60,63 @@
 </ul>
 
 <style>
-  .ta-legend { display: flex; flex-wrap: wrap; gap: 0.375rem 0.875rem; margin: 0; padding: 0; list-style: none; font-size: 0.75rem; color: rgb(var(--ta-text-dim)); min-width: 0; }
-  .ta-legend--vertical { flex-direction: column; flex-wrap: nowrap; gap: 0.375rem; }
-  .ta-legend-item { display: flex; align-items: center; gap: 0.375rem; min-width: 0; }
-  .ta-legend-label { min-width: 0; overflow-wrap: anywhere; }
-  .ta-legend-value { color: rgb(var(--ta-text)); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .ta-legend--vertical .ta-legend-value { margin-left: auto; padding-left: 0.75rem; }
+  .ta-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem 0.875rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+    min-width: 0;
+  }
+  .ta-legend--vertical {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0.375rem;
+  }
+  .ta-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+  .ta-legend-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .ta-legend-value {
+    color: rgb(var(--ta-text));
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .ta-legend--vertical .ta-legend-value {
+    margin-left: auto;
+    padding-left: 0.75rem;
+  }
 
-  .ta-legend-mark { flex-shrink: 0; width: 0.625rem; height: 0.625rem; border-radius: 2px; }
-  .ta-legend-mark--line { width: 0.875rem; height: 2px; border-radius: 1px; }
+  .ta-legend-mark {
+    flex-shrink: 0;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 2px;
+  }
+  .ta-legend-mark--line {
+    width: 0.875rem;
+    height: 2px;
+    border-radius: 1px;
+  }
   .ta-legend-mark--dot,
-  .ta-legend-mark--circle { border-radius: 9999px; }
-  .ta-legend-mark--triangle { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-  .ta-legend-mark--diamond { border-radius: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+  .ta-legend-mark--circle {
+    border-radius: 9999px;
+  }
+  .ta-legend-mark--triangle {
+    border-radius: 0;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  }
+  .ta-legend-mark--diamond {
+    border-radius: 0;
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  }
 </style>

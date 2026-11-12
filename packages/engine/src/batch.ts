@@ -31,6 +31,14 @@ import { db } from "../../../apps/api/src/db";
 
 import { writeCondition } from "./db-conditions";
 import { messageOf } from "./errors";
+import {
+  BULK_HISTORY_CAP,
+  recordChanges,
+  systemSavepointOn,
+  tableWritesChanges,
+  type TableWrite,
+} from "./record-history";
+import { useUser } from "./request-scope";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES AND CONFIGURATION
@@ -161,8 +169,52 @@ type ResolvedRefs = Map<string, { id: string; data: any }>;
  * }
  * ```
  */
+/** Enough of a transaction to read rows back (record history). */
+interface HistorySelect {
+  select(): {
+    from(t: PgTable): { where(c: unknown): { limit(n: number): Promise<HistoryRow[]> } };
+  };
+}
+type HistoryRow = Record<string, unknown>;
+
 export class BatchProcessor {
   private refs: ResolvedRefs = new Map();
+  /**
+   * What the batch wrote, for the record history (core migration 0076): one row
+   * per record, all in the batch's transaction, or none when the batch wrote
+   * more than `BULK_HISTORY_CAP` rows (`null` from then on).
+   */
+  private writes: TableWrite[] | null = [];
+
+  private remember(
+    table: PgTable,
+    action: TableWrite["action"],
+    before: HistoryRow | null | undefined,
+    after: HistoryRow | null | undefined
+  ): void {
+    if (!this.writes) return;
+    this.writes.push({ table, action, before: before ?? null, after: after ?? null });
+    if (this.writes.length > BULK_HISTORY_CAP) this.writes = null;
+  }
+
+  /** The rows a write by condition is about to touch (null over the cap). */
+  private async rowsBefore(
+    tx: unknown,
+    table: PgTable,
+    condition: SQL
+  ): Promise<HistoryRow[] | null> {
+    if (!this.writes) return null;
+    const rows = await (tx as HistorySelect)
+      .select()
+      .from(table)
+      .where(condition)
+      .limit(BULK_HISTORY_CAP + 1);
+    if (rows.length > BULK_HISTORY_CAP) {
+      this.writes = null;
+      return null;
+    }
+    return rows;
+  }
 
   /**
    * @param connection where the transaction opens. In a request, the request's RLS
@@ -188,6 +240,7 @@ export class BatchProcessor {
 
     try {
       // Run in a transaction
+      this.writes = [];
       await this.connection.transaction(async (tx) => {
         for (let i = 0; i < operations.length; i++) {
           const op = operations[i];
@@ -222,6 +275,13 @@ export class BatchProcessor {
             );
           }
         }
+        // The history, in the batch's transaction: it commits or rolls back with it.
+        await recordChanges(
+          tx as never,
+          tableWritesChanges(this.writes ?? [], useUser()),
+          (err) => console.warn("[batch] could not record the history:", messageOf(err)),
+          systemSavepointOn(tx as never)
+        );
       });
 
       const durationMs = performance.now() - startTime;
@@ -341,6 +401,7 @@ export class BatchProcessor {
   ): Promise<BatchOperationResult> {
     const result = await tx.insert(table).values(data).returning();
     const inserted = result[0];
+    this.remember(table, "create", null, inserted);
 
     return {
       index,
@@ -387,12 +448,14 @@ export class BatchProcessor {
       throw new BatchProcessorError("Update requires data", "INVALID_OPERATION", index);
     }
 
-    const result = await tx
-      .update(table)
-      .set(data)
-      .where(this.condition(table, id, where, "Update", index))
-      .returning();
+    const condition = this.condition(table, id, where, "Update", index);
+    const before = await this.rowsBefore(tx, table, condition);
+    const result = await tx.update(table).set(data).where(condition).returning();
     const updated = result[0];
+    if (before) {
+      const byId = new Map(before.map((r) => [String(r.id), r]));
+      for (const row of result) this.remember(table, "update", byId.get(String(row.id)), row);
+    }
 
     return {
       index,
@@ -415,6 +478,7 @@ export class BatchProcessor {
       .delete(table)
       .where(this.condition(table, id, where, "Delete", index))
       .returning();
+    for (const row of result) this.remember(table, "delete", row, null);
 
     return {
       index,
@@ -443,6 +507,7 @@ export class BatchProcessor {
       if (existing.length > 0) {
         // Update
         const result = await tx.update(table).set(data).where(byId).returning();
+        this.remember(table, "update", existing[0], result[0]);
         return {
           index,
           status: "upserted",
@@ -455,6 +520,7 @@ export class BatchProcessor {
 
     // Create
     const result = await tx.insert(table).values(data).returning();
+    this.remember(table, "create", null, result[0]);
     return {
       index,
       status: "upserted",

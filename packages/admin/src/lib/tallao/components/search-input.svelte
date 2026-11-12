@@ -54,7 +54,9 @@
 </script>
 
 <div class={cn("ta-search", `ta-search--${size}`, disabled && "ta-search--off", className)}>
-  <span class="ta-search-icon" aria-hidden="true"><Icon name="search" size={size === "sm" ? 14 : 16} /></span>
+  <span class="ta-search-icon" aria-hidden="true"
+    ><Icon name="search" size={size === "sm" ? 14 : 16} /></span
+  >
   <input
     {...rest}
     bind:this={ref}
@@ -84,8 +86,15 @@
 </div>
 
 <style>
-  .ta-search { position: relative; display: flex; align-items: center; min-width: 0; }
-  .ta-search--off { opacity: 0.5; }
+  .ta-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .ta-search--off {
+    opacity: 0.5;
+  }
   .ta-search-icon {
     position: absolute;
     left: 0.625rem;
@@ -103,15 +112,32 @@
     border: 1px solid rgb(var(--ta-border));
     border-radius: var(--ta-radius);
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
-  .ta-search--sm .ta-search-field { padding: 0.3125rem 1.75rem 0.3125rem 1.875rem; font-size: 0.8125rem; }
-  .ta-search--sm .ta-search-icon { left: 0.5rem; }
-  .ta-search-field::placeholder { color: rgb(var(--ta-text-dim)); }
-  .ta-search-field:focus { border-color: rgb(var(--ta-accent) / 0.5); box-shadow: 0 0 0 2px rgb(var(--ta-accent) / 0.15); }
-  .ta-search-field:disabled { cursor: not-allowed; }
+  .ta-search--sm .ta-search-field {
+    padding: 0.3125rem 1.75rem 0.3125rem 1.875rem;
+    font-size: 0.8125rem;
+  }
+  .ta-search--sm .ta-search-icon {
+    left: 0.5rem;
+  }
+  .ta-search-field::placeholder {
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-search-field:focus {
+    border-color: rgb(var(--ta-accent) / 0.5);
+    box-shadow: 0 0 0 2px rgb(var(--ta-accent) / 0.15);
+  }
+  .ta-search-field:disabled {
+    cursor: not-allowed;
+  }
   /* The browser's X is redundant: there is a dedicated button. */
-  .ta-search-field::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+  .ta-search-field::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    display: none;
+  }
 
   .ta-search-clear {
     position: absolute;
@@ -128,11 +154,20 @@
     border-radius: var(--ta-radius-sm);
     cursor: pointer;
   }
-  .ta-search-clear:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated)); }
-  .ta-search-clear:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
+  .ta-search-clear:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated));
+  }
+  .ta-search-clear:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
 
   /* On touch screens: 16px so iOS does not zoom the page on focus, and 44px tall for a finger. */
   @media (pointer: coarse) {
-    .ta-search-field { font-size: 1rem; min-height: 2.75rem; }
+    .ta-search-field {
+      font-size: 1rem;
+      min-height: 2.75rem;
+    }
   }
 </style>

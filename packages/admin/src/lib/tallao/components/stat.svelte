@@ -46,7 +46,13 @@
     text-overflow: ellipsis;
   }
 
-  .ta-stat--success .ta-stat-value { color: rgb(var(--ta-success)); }
-  .ta-stat--warning .ta-stat-value { color: rgb(var(--ta-warning)); }
-  .ta-stat--error .ta-stat-value { color: rgb(var(--ta-danger)); }
+  .ta-stat--success .ta-stat-value {
+    color: rgb(var(--ta-success));
+  }
+  .ta-stat--warning .ta-stat-value {
+    color: rgb(var(--ta-warning));
+  }
+  .ta-stat--error .ta-stat-value {
+    color: rgb(var(--ta-danger));
+  }
 </style>

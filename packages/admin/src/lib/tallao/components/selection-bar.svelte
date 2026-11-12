@@ -119,6 +119,8 @@
     flex-wrap: wrap;
   }
   @media (pointer: coarse) {
-    .ta-selection-bar-all { min-height: 2.75rem; }
+    .ta-selection-bar-all {
+      min-height: 2.75rem;
+    }
   }
 </style>

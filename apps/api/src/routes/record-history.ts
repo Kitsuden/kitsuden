@@ -18,14 +18,18 @@
 
 import {
   defineOperation,
+  messageOf,
   operationsRouter,
+  pruneRecordHistory,
   readRecordHistory,
+  recordHistoryRetentionDays,
   type AnyOperation,
 } from "@kitsuden/engine";
 import { z } from "zod";
 
 import { db } from "../db";
 import { registerCoreOperations } from "../lib/core-operations";
+import { logger } from "../lib/logger";
 import { optionalAuth, requireAuth } from "../middleware/auth";
 
 import { explorerHistoryEntity } from "./data-explorer";
@@ -117,6 +121,34 @@ registerCoreOperations({
   description: "The change history of the rows of any explorable table (for the admin panel).",
   operations: recordHistoryOperations,
 });
+
+// ── Retention ───────────────────────────────────────────────────────────────────
+
+/**
+ * Deletes the history rows older than `RECORD_HISTORY_RETENTION_DAYS` (365 by
+ * default, `0` = keep forever). On the global connection: only the system may
+ * delete `record_changes`. Never throws.
+ */
+export async function sweepRecordHistory(): Promise<number> {
+  try {
+    const deleted = await pruneRecordHistory(db, recordHistoryRetentionDays());
+    if (deleted > 0) logger.info({ deleted }, "[record-history] pruned old history rows");
+    return deleted;
+  } catch (err) {
+    logger.warn({ err: messageOf(err) }, "[record-history] prune failed");
+    return 0;
+  }
+}
+
+let sweep: ReturnType<typeof setInterval> | null = null;
+
+/** Prunes once at start and then every hour, the way the OAuth and proposal sweeps run. */
+export function startRecordHistorySweep(): void {
+  if (sweep) return;
+  sweep = setInterval(() => void sweepRecordHistory(), 60 * 60_000);
+  (sweep as { unref?: () => void }).unref?.();
+  void sweepRecordHistory();
+}
 
 const context = { auth: { requireAuth, optionalAuth } } as never;
 export const recordHistoryRoutes = operationsRouter(

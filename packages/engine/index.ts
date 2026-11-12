@@ -488,6 +488,15 @@ export {
   tableEntity,
   DATASET_ENTRY_ENTITY,
   RECORD_HISTORY_LIMITS,
+  pruneRecordHistory,
+  recordHistoryRetentionDays,
+  DEFAULT_RECORD_HISTORY_RETENTION_DAYS,
+  tableHistoryTarget,
+  tableChanges,
+  BULK_HISTORY_CAP,
+  DATASET_ENTRY_DIFF,
+  tableWritesChanges,
+  systemSavepointOn,
 } from "./src/record-history";
 export type {
   FieldChange as RecordFieldChange,
@@ -495,11 +504,12 @@ export type {
   RecordActor,
   RecordChange,
   RecordHistoryPage,
+  TableWrite,
 } from "./src/record-history";
 export { isSecretColumn } from "./src/secret-columns";
 
 // ── ORM sugar: chainable repository over Drizzle (respects RLS) ──
-export { repo, isInvalidInputSyntax } from "./src/repository";
+export { repo, isInvalidInputSyntax, REPOSITORY_HISTORY_CAP } from "./src/repository";
 export type { Repository, RepositoryOptions, PaginatedResult } from "./src/repository";
 
 // ── Interceptors (composable before/after/onError, Nest style) ──

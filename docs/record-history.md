@@ -68,17 +68,65 @@ read the entry itself, and never the history of another table. Only the system w
 
 ### Which writes are recorded
 
-| Write path                                                                                                | Recorded           |
-| --------------------------------------------------------------------------------------------------------- | ------------------ |
-| kon-datasets: create (one or a bulk array), update, delete, restore to a snapshot                         | yes                |
-| Lite API `POST /api/data-sets/:id/entries`                                                                | yes                |
-| Data explorer `POST`, `PATCH`, `DELETE /api/explorer/:collection[/:id]`                                   | yes                |
-| A model's create, update and delete (`defineModel`)                                                       | yes                |
-| Core MCP `kitsuden_create_record`, `kitsuden_update_record`, `kitsuden_delete_record` on a dataset        | yes (as the agent) |
-| Core MCP record tools on a native table, imports, GraphQL mutations, a kon's own hand-written routes, SQL | no                 |
+| Write path                                                                                                                                                                  | Recorded                                         |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| kon-datasets: create (one or a bulk array), update, delete, restore to a snapshot                                                                                           | yes                                              |
+| Lite API `POST /api/data-sets/:id/entries`                                                                                                                                  | yes                                              |
+| Data explorer `POST`, `PATCH`, `DELETE /api/explorer/:collection[/:id]`                                                                                                     | yes                                              |
+| A model's create, update and delete (`defineModel`)                                                                                                                         | yes                                              |
+| Core MCP `kitsuden_create_record`, `kitsuden_update_record`, `kitsuden_delete_record`, on a dataset or a native table, and `kitsuden_insert_record`                         | yes (as the agent)                               |
+| Imports: `POST /api/datasets/import` and `POST /api/datasets/import/package`, every strategy (an id of another dataset's entry is a row error: that entry is never changed) | yes, one row per created or updated entry        |
+| GraphQL mutations `create…`/`update…`/`delete…` of a native table and `createDataset_…`/`updateDataset_…`/`deleteDataset_…`                                                 | yes                                              |
+| A kon's writes through the shared repository `repo(table)`: `create`, `createMany`, `update`, `delete`                                                                      | yes, up to 500 rows per call (below)             |
+| Generic items API `POST`/`PATCH`/`DELETE /api/items/:collection[/:id]`, on a dataset or a native table                                                                      | yes                                              |
+| Batch: `POST /api/datasets/batch` and the engine's two batch processors (`BatchProcessor` of `batch.ts` and `batch-api.ts`)                                                 | yes, up to 500 rows per batch (below)            |
+| The standalone MCP server (`packages/mcp-server`, `standalone.ts`)                                                                                                          | yes: it calls the API routes above, which record |
+| `packages/mcp-server` embedded as a library (`createKitsudenMcpServer` with your own `db`): its `kitsuden_insert_record` writes through that `db`                           | no (nothing in this repository embeds it)        |
+| A kon's hand-written Drizzle (`ctx.db.instance.insert(…)`, `.update(…)`) and raw SQL anywhere                                                                               | no                                               |
+
+What is not recorded is not a rule a kon can rely on either way: a kon that wants its writes
+in the history writes through `defineModel` or `repo(table)`, or calls `recordChange` itself
+(`@kitsuden/engine`).
+
+**A kon with a table updated very often** (a live score, a match clock, a presence or
+heartbeat row, a counter) should write that table with `repo(table, { history: false })`:
+every `update` otherwise adds a history row (and reads the row first), for a history nobody
+reads. Keep the history on for the kon's other tables.
+
+Bulk writes stay bounded:
+
+- an import records every created or updated entry, in batched INSERTs of 100 rows inside
+  the import's own transaction;
+- one `repo(table)` call, or one batch, that writes more than 500 rows (`BULK_HISTORY_CAP`)
+  records none of them: that is a bulk job, not an edit;
+- a repository `update` and a batch `update`/`upsert` read the rows they are about to change
+  first (at most 501), to know their values before;
+- a batch records its rows at the end, in its own transaction (in a savepoint, as the system):
+  they commit or roll back with the batch.
+
+A table row is addressed as `table:<name>` with its column names whichever path wrote it
+(explorer, model, MCP, GraphQL, items, batch, repository): the row has one history. A row of
+`data_entries` is always a dataset entry (`dataset_entry`, fields as `data.<key>`), whichever
+path wrote it.
 
 Changes made before the history existed are not listed: the panel then shows the record's
 own created and updated dates.
+
+### Retention
+
+Rows older than `RECORD_HISTORY_RETENTION_DAYS` days are deleted by the API every hour (and
+once when it starts), at most 200,000 rows per pass in batches of 5,000.
+
+| Value             | Means                    |
+| ----------------- | ------------------------ |
+| unset or empty    | 365 days (the default)   |
+| a positive number | that many days           |
+| `0`               | keep the history forever |
+| anything else     | the default, 365         |
+
+The same convention as `AGENT_KEY_DEFAULT_EXPIRY_DAYS`: empty is the default, `0` is never.
+With Docker, set it in the root `.env`; `docker-compose.yml` passes it to the API.
+A deleted record's history goes too once it is older than the limit.
 
 ## The explorer's list query
 

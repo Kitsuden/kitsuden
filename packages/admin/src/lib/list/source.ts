@@ -630,6 +630,53 @@ export async function explorerSource(input: ExplorerSourceInput): Promise<Record
   return source;
 }
 
+/** Words whose final "s" is not a plural. */
+const NOT_PLURAL = new Set([
+  "news",
+  "status",
+  "series",
+  "species",
+  "analytics",
+  "physics",
+  "gas",
+  "bus",
+  "virus",
+  "campus",
+  "bonus",
+  "focus",
+  "lunes",
+  "martes",
+  "miércoles",
+  "jueves",
+  "viernes",
+  "crisis",
+  "análisis",
+  "tesis",
+  "dosis",
+  "más",
+]);
+
+/**
+ * A dataset's name for one of its records: its name with the last word made singular
+ * where that is safe in English and Spanish ("Products" → "Product", "Support Tickets" →
+ * "Support Ticket", "Pedidos" → "Pedido", "Categories" → "Category"). A word ending in
+ * "-es" ("Ciudades", "Sales") or "-ss" is left as it is: the dataset's own name reads
+ * better than a wrong singular.
+ */
+export function singularOf(name: string): string {
+  const match = /^(.*?)(\S+)$/u.exec(name.trim());
+  if (!match) return name;
+  const [, head, word] = match as unknown as [string, string, string];
+  const lower = word.toLowerCase();
+  if (NOT_PLURAL.has(lower)) return name.trim();
+  let one = word;
+  // "Categories" -> "Category" is English: a Spanish word never ends in a consonant + "ies".
+  if (/[^aeiou]ies$/i.test(word)) one = word.slice(0, -3) + "y";
+  else if (/es$/i.test(word) || /ss$/i.test(word)) one = word;
+  else if (/s$/i.test(word) && word.length > 3) one = word.slice(0, -1);
+  return `${head}${one}`;
+}
+
 export interface DatasetLike {
   id: string;
   name: string;
@@ -660,7 +707,8 @@ export function datasetSource(
   return {
     id: `dataset:${dataset.id}`,
     label: dataset.name,
-    singular: labels.entry,
+    // "New Product", "Quick add: Product": the dataset's own name, not the generic "Entry".
+    singular: dataset.name ? singularOf(dataset.name) : labels.entry,
     fields,
     formFields: schema,
     titleField,

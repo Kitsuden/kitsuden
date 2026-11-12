@@ -12,7 +12,16 @@
   import Button from "./button.svelte";
 
   type Status = "pending" | "executing" | "executed" | "rejected" | "failed";
-  type LabelKey = "approve" | "reject" | "pending" | "running" | "done" | "rejected" | "failed" | "arguments" | "result";
+  type LabelKey =
+    | "approve"
+    | "reject"
+    | "pending"
+    | "running"
+    | "done"
+    | "rejected"
+    | "failed"
+    | "arguments"
+    | "result";
 
   interface Props {
     /** Name of the tool (e.g. "publish_post"). */
@@ -44,7 +53,10 @@
 
   const T = $derived({ ...L, ...labels });
 
-  const statusBadge: Record<Status, { variant: "warning" | "info" | "success" | "default" | "error"; text: LabelKey }> = {
+  const statusBadge: Record<
+    Status,
+    { variant: "warning" | "info" | "success" | "default" | "error"; text: LabelKey }
+  > = {
     pending: { variant: "warning", text: "pending" },
     executing: { variant: "info", text: "running" },
     executed: { variant: "success", text: "done" },
@@ -60,7 +72,19 @@
 <div class={cn("ta-toolcall", `ta-toolcall--${status}`, className)}>
   <div class="ta-toolcall-header">
     <span class="ta-toolcall-icon" aria-hidden="true">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        ><path
+          d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+        /></svg
+      >
     </span>
     <span class="ta-toolcall-name">{name}</span>
     <Badge variant={statusBadge[status].variant}>{T[statusBadge[status].text]}</Badge>
@@ -79,7 +103,9 @@
           <span class="ta-toolcall-more">{argsOpen ? "▾" : "▸"}</span>
         {/if}
       </button>
-      <pre class="ta-toolcall-json" class:ta-toolcall-json--collapsed={!argsOpen && argsLong}>{argsJson}</pre>
+      <pre
+        class="ta-toolcall-json"
+        class:ta-toolcall-json--collapsed={!argsOpen && argsLong}>{argsJson}</pre>
     </div>
   {/if}
 
@@ -199,7 +225,17 @@
     border-top: 1px solid rgb(var(--ta-border));
   }
   @media (pointer: coarse) {
-    .ta-toolcall-collapsible { position: relative; }
-    .ta-toolcall-collapsible::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 2.75rem); height: max(100%, 2.75rem); transform: translate(-50%, -50%); }
+    .ta-toolcall-collapsible {
+      position: relative;
+    }
+    .ta-toolcall-collapsible::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 2.75rem);
+      height: max(100%, 2.75rem);
+      transform: translate(-50%, -50%);
+    }
   }
 </style>

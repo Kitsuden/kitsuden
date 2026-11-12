@@ -59,8 +59,11 @@
 
   const PAD = 4;
   const xOf = (i: number) => PAD + (i / Math.max(1, values.length - 1)) * (width - PAD * 2);
-  const yOf = (v: number) => (max === min ? height / 2 : height - PAD - ((v - min) / (max - min)) * (height - PAD * 2));
-  const line = $derived(values.map((v, i) => `${i ? "L" : "M"}${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`).join(""));
+  const yOf = (v: number) =>
+    max === min ? height / 2 : height - PAD - ((v - min) / (max - min)) * (height - PAD * 2);
+  const line = $derived(
+    values.map((v, i) => `${i ? "L" : "M"}${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`).join("")
+  );
   const slot = $derived((width - PAD * 2) / Math.max(1, values.length));
 
   const name = $derived(
@@ -97,18 +100,50 @@
       />
     {/each}
   {:else}
-    {#if area}<path d={`${line}L${xOf(values.length - 1).toFixed(1)},${height}L${xOf(0).toFixed(1)},${height}Z`} class="ta-sparkline-area" />{/if}
+    {#if area}<path
+        d={`${line}L${xOf(values.length - 1).toFixed(1)},${height}L${xOf(0).toFixed(1)},${height}Z`}
+        class="ta-sparkline-area"
+      />{/if}
     <path d={line} class="ta-sparkline-line" />
     <circle cx={xOf(values.length - 1)} cy={yOf(values.at(-1)!)} r="2.5" class="ta-sparkline-end" />
   {/if}
 </svg>
 
 <style>
-  .ta-sparkline { display: inline-block; flex-shrink: 0; vertical-align: middle; overflow: visible; max-width: 100%; --ta-sparkline-ink: var(--ta-sparkline-color, rgb(var(--ta-series-1))); }
-  .ta-sparkline-line { fill: none; stroke: var(--ta-sparkline-ink); stroke-width: 1.75; stroke-linejoin: round; stroke-linecap: round; }
-  .ta-sparkline-area { fill: var(--ta-sparkline-ink); opacity: 0.14; }
-  .ta-sparkline-end { fill: var(--ta-sparkline-ink); stroke: rgb(var(--ta-surface)); stroke-width: 1.5; }
-  .ta-sparkline-bar { fill: var(--ta-sparkline-ink); opacity: 0.5; }
-  .ta-sparkline-bar--last { opacity: 1; }
-  .ta-sparkline-none { stroke: rgb(var(--ta-muted)); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .ta-sparkline {
+    display: inline-block;
+    flex-shrink: 0;
+    vertical-align: middle;
+    overflow: visible;
+    max-width: 100%;
+    --ta-sparkline-ink: var(--ta-sparkline-color, rgb(var(--ta-series-1)));
+  }
+  .ta-sparkline-line {
+    fill: none;
+    stroke: var(--ta-sparkline-ink);
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .ta-sparkline-area {
+    fill: var(--ta-sparkline-ink);
+    opacity: 0.14;
+  }
+  .ta-sparkline-end {
+    fill: var(--ta-sparkline-ink);
+    stroke: rgb(var(--ta-surface));
+    stroke-width: 1.5;
+  }
+  .ta-sparkline-bar {
+    fill: var(--ta-sparkline-ink);
+    opacity: 0.5;
+  }
+  .ta-sparkline-bar--last {
+    opacity: 1;
+  }
+  .ta-sparkline-none {
+    stroke: rgb(var(--ta-muted));
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+  }
 </style>

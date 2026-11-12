@@ -65,7 +65,15 @@
   }: Props = $props();
 </script>
 
-<div {...rest} class={cn("ta-page-header", divider && "ta-page-header--divider", tabs && "ta-page-header--tabs", className)}>
+<div
+  {...rest}
+  class={cn(
+    "ta-page-header",
+    divider && "ta-page-header--divider",
+    tabs && "ta-page-header--tabs",
+    className
+  )}
+>
   {#if breadcrumb}<div class="ta-page-header-trail">{@render breadcrumb()}</div>{/if}
   <div class="ta-page-header-row">
     <div class="ta-page-header-main">
@@ -95,11 +103,20 @@
     margin-bottom: var(--ta-page-header-gap, 1.5rem);
     color: rgb(var(--ta-text));
   }
-  .ta-page-header--divider { padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--ta-border)); }
+  .ta-page-header--divider {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgb(var(--ta-border));
+  }
   /* With tabs, the tabs' own rule closes the header. */
-  .ta-page-header--tabs { padding-bottom: 0; border-bottom: none; }
+  .ta-page-header--tabs {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
 
-  .ta-page-header-trail { min-width: 0; font-size: 0.8125rem; }
+  .ta-page-header-trail {
+    min-width: 0;
+    font-size: 0.8125rem;
+  }
 
   .ta-page-header-row {
     display: flex;
@@ -109,7 +126,10 @@
     min-width: 0;
   }
 
-  .ta-page-header-main { flex: 1 1 auto; min-width: 0; }
+  .ta-page-header-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
 
   /* One height with or without actions: the height of a medium Button. */
   .ta-page-header-heading {
@@ -130,7 +150,11 @@
     overflow-wrap: anywhere;
   }
 
-  .ta-page-header-status { display: inline-flex; align-items: center; gap: 0.375rem; }
+  .ta-page-header-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
 
   .ta-page-header-meta {
     margin: 0.125rem 0 0;
@@ -155,12 +179,22 @@
     min-height: 2.375rem;
   }
 
-  .ta-page-header-tabs { min-width: 0; margin-top: 0.25rem; }
+  .ta-page-header-tabs {
+    min-width: 0;
+    margin-top: 0.25rem;
+  }
 
   /* Narrow header: the actions go under the title, left-aligned, and wrap. */
   @container (max-width: 36rem) {
-    .ta-page-header-row { flex-direction: column; align-items: stretch; }
-    .ta-page-header-actions { justify-content: flex-start; }
-    .ta-page-header-title { font-size: 1.25rem; }
+    .ta-page-header-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .ta-page-header-actions {
+      justify-content: flex-start;
+    }
+    .ta-page-header-title {
+      font-size: 1.25rem;
+    }
   }
 </style>

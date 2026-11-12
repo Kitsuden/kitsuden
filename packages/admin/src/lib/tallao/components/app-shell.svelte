@@ -108,7 +108,10 @@
   });
 </script>
 
-<div class={cn("ta-shell", `ta-shell--${breakpoint}`, className)} style:height={height === "auto" ? undefined : height}>
+<div
+  class={cn("ta-shell", `ta-shell--${breakpoint}`, className)}
+  style:height={height === "auto" ? undefined : height}
+>
   {#if landmarks}<a class="ta-shell-skip" href={`#${mainId}`}>{skipLabel}</a>{/if}
   {#if sidebar}
     <div class="ta-shell-side">{@render sidebar({ mobile: false, close })}</div>
@@ -134,12 +137,24 @@
         {@render user?.()}
       </div>
     </svelte:element>
-    <svelte:element this={landmarks ? "main" : "div"} id={mainId} class="ta-shell-main" tabindex={landmarks ? -1 : undefined}>
+    <svelte:element
+      this={landmarks ? "main" : "div"}
+      id={mainId}
+      class="ta-shell-main"
+      tabindex={landmarks ? -1 : undefined}
+    >
       {@render children?.()}
     </svelte:element>
   </div>
   {#if sidebar}
-    <Dialog bind:open={sidebarOpen} placement="left" ariaLabel={navLabel} {closeLabel} showCloseAlone class="ta-shell-sheet">
+    <Dialog
+      bind:open={sidebarOpen}
+      placement="left"
+      ariaLabel={navLabel}
+      {closeLabel}
+      showCloseAlone
+      class="ta-shell-sheet"
+    >
       {#if sidebarOpen}{@render sidebar({ mobile: true, close })}{/if}
     </Dialog>
   {/if}
@@ -167,13 +182,29 @@
     border-radius: var(--ta-radius);
     transform: translateY(-200%);
   }
-  .ta-shell-skip:focus { transform: none; outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; }
+  .ta-shell-skip:focus {
+    transform: none;
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+  }
 
   /* The column: as tall as the frame, its own scroll. Hidden below the breakpoint. */
-  .ta-shell-side { display: none; flex: 0 0 auto; min-height: 0; }
-  .ta-shell-side > :global(*) { height: 100%; }
+  .ta-shell-side {
+    display: none;
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+  .ta-shell-side > :global(*) {
+    height: 100%;
+  }
 
-  .ta-shell-body { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
+  .ta-shell-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
 
   .ta-shell-top {
     display: flex;
@@ -201,16 +232,44 @@
     border-radius: var(--ta-radius);
     cursor: pointer;
   }
-  .ta-shell-menu:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated)); }
-  .ta-shell-menu:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
+  .ta-shell-menu:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated));
+  }
+  .ta-shell-menu:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
 
-  .ta-shell-trail { flex: 1 1 auto; min-width: 0; overflow: hidden; font-size: 0.8125rem; }
+  .ta-shell-trail {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.8125rem;
+  }
   /* One line: the trail is cut with an ellipsis on its last item instead of growing the bar. */
-  .ta-shell-trail :global(ol) { flex-wrap: nowrap; min-width: 0; }
-  .ta-shell-trail :global(li) { flex: 0 0 auto; white-space: nowrap; }
-  .ta-shell-trail :global(li:last-child) { flex: 0 1 auto; min-width: 0; }
-  .ta-shell-trail :global(li:last-child > span) { overflow: hidden; text-overflow: ellipsis; }
-  .ta-shell-tools { display: flex; align-items: center; flex: 0 0 auto; gap: 0.5rem; }
+  .ta-shell-trail :global(ol) {
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+  .ta-shell-trail :global(li) {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .ta-shell-trail :global(li:last-child) {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .ta-shell-trail :global(li:last-child > span) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ta-shell-tools {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 0.5rem;
+  }
 
   .ta-shell-main {
     flex: 1 1 auto;
@@ -222,30 +281,62 @@
   }
 
   /* The phone sheet: the sidebar fills it. */
-  .ta-shell :global(.ta-shell-sheet) { width: min(18rem, 86vw); }
-  .ta-shell :global(.ta-shell-sheet .ta-dialog-body) { display: flex; padding: 0; }
-  .ta-shell :global(.ta-shell-sheet .ta-dialog-body > *) { flex: 1; width: auto; border-right: none; }
+  .ta-shell :global(.ta-shell-sheet) {
+    width: min(18rem, 86vw);
+  }
+  .ta-shell :global(.ta-shell-sheet .ta-dialog-body) {
+    display: flex;
+    padding: 0;
+  }
+  .ta-shell :global(.ta-shell-sheet .ta-dialog-body > *) {
+    flex: 1;
+    width: auto;
+    border-right: none;
+  }
 
   @media (max-width: 480px) {
-    .ta-shell-top { padding: 0.5rem 0.75rem; }
-    .ta-shell-main { padding: 1rem; }
+    .ta-shell-top {
+      padding: 0.5rem 0.75rem;
+    }
+    .ta-shell-main {
+      padding: 1rem;
+    }
   }
 
   @media (min-width: 640px) {
-    .ta-shell--sm > .ta-shell-side { display: block; }
-    .ta-shell--sm .ta-shell-menu { display: none; }
+    .ta-shell--sm > .ta-shell-side {
+      display: block;
+    }
+    .ta-shell--sm .ta-shell-menu {
+      display: none;
+    }
   }
   @media (min-width: 768px) {
-    .ta-shell--md > .ta-shell-side { display: block; }
-    .ta-shell--md .ta-shell-menu { display: none; }
+    .ta-shell--md > .ta-shell-side {
+      display: block;
+    }
+    .ta-shell--md .ta-shell-menu {
+      display: none;
+    }
   }
   @media (min-width: 1024px) {
-    .ta-shell--lg > .ta-shell-side { display: block; }
-    .ta-shell--lg .ta-shell-menu { display: none; }
+    .ta-shell--lg > .ta-shell-side {
+      display: block;
+    }
+    .ta-shell--lg .ta-shell-menu {
+      display: none;
+    }
   }
 
   @media (pointer: coarse) {
-    .ta-shell-menu { width: 2.75rem; height: 2.75rem; }
-    .ta-shell-skip { min-height: 2.75rem; display: inline-flex; align-items: center; }
+    .ta-shell-menu {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+    .ta-shell-skip {
+      min-height: 2.75rem;
+      display: inline-flex;
+      align-items: center;
+    }
   }
 </style>

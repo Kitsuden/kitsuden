@@ -68,7 +68,11 @@
     if (!open || !b || !a) return;
     const release = anchor(a, b, { placement, gap: 8 });
     // Escape dismisses it; a click outside leaves it alone (it is not an interactive layer).
-    const remove = pushLayer({ inside: () => [a, b], dismiss: () => (open = false), escapeOnly: true });
+    const remove = pushLayer({
+      inside: () => [a, b],
+      dismiss: () => (open = false),
+      escapeOnly: true,
+    });
     return () => {
       remove();
       release();
@@ -93,13 +97,21 @@
 </div>
 
 <style>
-  .ta-tooltip { animation: ta-tooltip-enter var(--ta-duration-fast, 120ms) ease-out; }
+  .ta-tooltip {
+    animation: ta-tooltip-enter var(--ta-duration-fast, 120ms) ease-out;
+  }
   @keyframes ta-tooltip-enter {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ta-tooltip { animation: none; }
+    .ta-tooltip {
+      animation: none;
+    }
   }
 
   .ta-tooltip {

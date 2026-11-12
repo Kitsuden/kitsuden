@@ -62,10 +62,17 @@
   const id = $props.id();
 </script>
 
-<section {...rest} class={cn("ta-chart-card", className)} aria-labelledby={`${id}-title`} data-ta-span={span}>
+<section
+  {...rest}
+  class={cn("ta-chart-card", className)}
+  aria-labelledby={`${id}-title`}
+  data-ta-span={span}
+>
   <header class="ta-chart-card-header">
     <div class="ta-chart-card-heading">
-      <svelte:element this={`h${level}`} class="ta-chart-card-title" id={`${id}-title`}>{title}</svelte:element>
+      <svelte:element this={`h${level}`} class="ta-chart-card-title" id={`${id}-title`}
+        >{title}</svelte:element
+      >
       {#if description}<p class="ta-chart-card-description">{description}</p>{/if}
     </div>
     {#if toolbar}<div class="ta-chart-card-toolbar">{@render toolbar()}</div>{/if}
@@ -79,7 +86,8 @@
       {#if source}
         <span>
           {sourceLabel}:
-          {#if sourceHref}<a class="ta-chart-card-source" href={sourceHref}>{source}</a>{:else}{source}{/if}
+          {#if sourceHref}<a class="ta-chart-card-source" href={sourceHref}>{source}</a
+            >{:else}{source}{/if}
         </span>
       {/if}
     </footer>
@@ -101,13 +109,42 @@
     --ta-heatmap-sticky-bg: color-mix(in srgb, rgb(var(--ta-surface)) 50%, rgb(var(--ta-bg)));
   }
 
-  .ta-chart-card-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.5rem 1rem; }
-  .ta-chart-card-heading { flex: 1 1 12rem; min-width: 0; }
-  .ta-chart-card-title { margin: 0; font-size: 0.9375rem; font-weight: 600; line-height: 1.3; }
-  .ta-chart-card-description { margin: 0.125rem 0 0; font-size: 0.8125rem; color: rgb(var(--ta-text-dim)); }
-  .ta-chart-card-toolbar { flex: 0 0 auto; max-width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; white-space: nowrap; }
+  .ta-chart-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+  }
+  .ta-chart-card-heading {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+  .ta-chart-card-title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .ta-chart-card-description {
+    margin: 0.125rem 0 0;
+    font-size: 0.8125rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-chart-card-toolbar {
+    flex: 0 0 auto;
+    max-width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
 
-  .ta-chart-card-body { flex: 1; min-width: 0; }
+  .ta-chart-card-body {
+    flex: 1;
+    min-width: 0;
+  }
 
   .ta-chart-card-footer {
     display: flex;
@@ -119,14 +156,35 @@
     color: rgb(var(--ta-text-dim));
     border-top: 1px solid rgb(var(--ta-border));
   }
-  .ta-chart-card-source { position: relative; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-  .ta-chart-card-source:hover { color: rgb(var(--ta-text)); }
-  .ta-chart-card-source:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 2px; border-radius: 2px; }
+  .ta-chart-card-source {
+    position: relative;
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .ta-chart-card-source:hover {
+    color: rgb(var(--ta-text));
+  }
+  .ta-chart-card-source:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 
   @media (max-width: 480px) {
-    .ta-chart-card { padding: 0.875rem; }
+    .ta-chart-card {
+      padding: 0.875rem;
+    }
   }
   @media (pointer: coarse) {
-    .ta-chart-card-source::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 2.75rem); height: 2.75rem; transform: translate(-50%, -50%); }
+    .ta-chart-card-source::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 2.75rem);
+      height: 2.75rem;
+      transform: translate(-50%, -50%);
+    }
   }
 </style>

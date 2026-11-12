@@ -1199,7 +1199,9 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
           }
 
           const config = importConfigSchema.parse(importConfig || {}) as ImportConfig;
-          const result = await importToDataset(ctx, datasetId, data, config);
+          const result = await importToDataset(ctx, datasetId, data, config, {
+            user: userOf(c),
+          });
 
           return c.json(result);
         } catch (error: unknown) {
@@ -1238,7 +1240,8 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
             ctx,
             // The package is checked by `importPackage` (the export produced it)
             packageData as unknown as Parameters<typeof importPackage>[1],
-            (config ?? { strategy: "upsert" }) as unknown as Parameters<typeof importPackage>[2]
+            (config ?? { strategy: "upsert" }) as unknown as Parameters<typeof importPackage>[2],
+            { user: userOf(c) }
           );
 
           return c.json(result);

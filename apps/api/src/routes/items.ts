@@ -24,7 +24,16 @@
  *   - Mutations: requireAuth + transactional RLS
  */
 
-import { parseKitsudenQuery, KitsudenQLError, messageOf } from "@kitsuden/engine";
+import {
+  parseKitsudenQuery,
+  KitsudenQLError,
+  messageOf,
+  recordChanges,
+  tableChanges,
+  DATASET_ENTRY_DIFF,
+  DATASET_ENTRY_ENTITY,
+  type RecordAction,
+} from "@kitsuden/engine";
 import { agentSignature } from "@kitsuden/shared";
 import { eq, sql, desc, asc, and, ilike, gt, gte, lt, lte, inArray } from "drizzle-orm";
 import { Hono } from "hono";
@@ -510,6 +519,7 @@ export async function createItemHandler(c: Context) {
           createdById: who?.id ?? null,
         })
         .returning();
+      await rememberItem(c, db, { dataset: true }, "create", null, doc);
 
       broadcastMutation(ds.id, "insert", { datasetSlug: collection, entryId: doc.id });
       await invalidateGraphQLCache();
@@ -518,6 +528,7 @@ export async function createItemHandler(c: Context) {
 
     const table = resolved.table;
     const [doc] = await db.insert(table).values(body).returning();
+    await rememberItem(c, db, { table }, "create", null, doc);
     broadcastMutation(collection, "insert", { id: doc.id });
     await invalidateGraphQLCache();
     return c.json(doc, 201);
@@ -531,6 +542,45 @@ export async function createItemHandler(c: Context) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // UPDATE
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RECORD HISTORY (core migration 0076)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+type HistoryRow = Record<string, unknown>;
+
+/**
+ * A write through /api/items in the record history, as the other paths record
+ * it: a dataset entry as `dataset_entry`, a table row as `table:<name>` with
+ * column names. Never fails the request.
+ */
+async function rememberItem(
+  c: Context,
+  db: Parameters<typeof recordChanges>[0],
+  target: { dataset: true } | { table: unknown },
+  action: RecordAction,
+  before: HistoryRow | null | undefined,
+  after: HistoryRow | null | undefined
+): Promise<void> {
+  const user = c.get("user");
+  const inputs =
+    "dataset" in target
+      ? [
+          {
+            entity: DATASET_ENTRY_ENTITY,
+            rowId: (after ?? before)?.id,
+            action,
+            before: before ?? null,
+            after: after ?? null,
+            user,
+            diff: DATASET_ENTRY_DIFF,
+          },
+        ]
+      : tableChanges(target.table, [{ action, before, after }], user);
+  await recordChanges(db, inputs, (err) =>
+    logger.warn({ error: messageOf(err) }, "[items] could not record the history")
+  );
+}
 
 export async function updateItemHandler(c: Context) {
   const db = getDb(c);
@@ -570,6 +620,7 @@ export async function updateItemHandler(c: Context) {
         })
         .where(eq(dataEntries.id, id))
         .returning();
+      await rememberItem(c, db, { dataset: true }, "update", existing, doc);
 
       broadcastMutation(ds.id, "update", { datasetSlug: collection, entryId: doc.id });
       await invalidateGraphQLCache();
@@ -581,6 +632,7 @@ export async function updateItemHandler(c: Context) {
     if (!existing) return c.json({ error: "Not found" }, 404);
 
     const [doc] = await db.update(table).set(body).where(eq(table.id, id)).returning();
+    await rememberItem(c, db, { table }, "update", existing, doc);
     broadcastMutation(collection, "update", { id: doc.id });
     await invalidateGraphQLCache();
     return c.json(doc);
@@ -618,6 +670,7 @@ export async function deleteItemHandler(c: Context) {
       if (!existing) return c.json({ error: "Not found" }, 404);
 
       await db.delete(dataEntries).where(eq(dataEntries.id, id));
+      await rememberItem(c, db, { dataset: true }, "delete", existing, null);
       broadcastMutation(ds.id, "delete", { datasetSlug: collection, entryId: id });
       await invalidateGraphQLCache();
       return c.json({ success: true, id });
@@ -628,6 +681,7 @@ export async function deleteItemHandler(c: Context) {
     if (!existing) return c.json({ error: "Not found" }, 404);
 
     await db.delete(table).where(eq(table.id, id));
+    await rememberItem(c, db, { table }, "delete", existing, null);
     broadcastMutation(collection, "delete", { id });
     await invalidateGraphQLCache();
     return c.json({ success: true, id });

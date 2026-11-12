@@ -68,7 +68,9 @@
   const prefix = `ta-tabs-${uid}`;
   let list: HTMLElement | undefined = $state();
   const tabIdOf = (t: TabItem) => t.tabId || `${prefix}-${t.id}`;
-  const activeTabId = $derived(tabIdOf(items.find((t) => t.id === value) ?? { id: value, label: "" }));
+  const activeTabId = $derived(
+    tabIdOf(items.find((t) => t.id === value) ?? { id: value, label: "" })
+  );
 
   function select(id: string, focus = false) {
     if (id !== value) {
@@ -81,11 +83,15 @@
   function onKey(e: KeyboardEvent) {
     const i = items.findIndex((t) => t.id === value);
     const target =
-      e.key === "ArrowRight" ? (i + 1) % items.length
-      : e.key === "ArrowLeft" ? (i - 1 + items.length) % items.length
-      : e.key === "Home" ? 0
-      : e.key === "End" ? items.length - 1
-      : -1;
+      e.key === "ArrowRight"
+        ? (i + 1) % items.length
+        : e.key === "ArrowLeft"
+          ? (i - 1 + items.length) % items.length
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? items.length - 1
+              : -1;
     if (target < 0) return;
     e.preventDefault();
     select(items[target].id, true);
@@ -99,33 +105,54 @@
   const sliding = $derived(mounted && variant === "underline" && !wrap);
 </script>
 
-<div class={cn("ta-tabs", variant === "pills" && "ta-tabs--pills", wrap && "ta-tabs--wrap", sliding && "ta-tabs--sliding", className)}>
+<div
+  class={cn(
+    "ta-tabs",
+    variant === "pills" && "ta-tabs--pills",
+    wrap && "ta-tabs--wrap",
+    sliding && "ta-tabs--sliding",
+    className
+  )}
+>
   <div class="ta-tabs-row">
-  <!-- svelte-ignore a11y_interactive_supports_focus -->
-  <div class="ta-tabs-list" role="tablist" aria-label={ariaLabel} bind:this={list} onkeydown={onKey}>
-    {#each items as t (t.id)}
-      <button
-        type="button"
-        role="tab"
-        id={tabIdOf(t)}
-        data-tab={t.id}
-        aria-selected={t.id === value}
-        aria-controls={panels ? `${prefix}-panel` : t.controls || undefined}
-        tabindex={t.id === value ? 0 : -1}
-        class={cn("ta-tab", tabClass)}
-        onclick={() => select(t.id)}
-      >
-        {#if tab}{@render tab(t, t.id === value)}{:else}
-          {t.label}
-          {#if t.count !== undefined}
-            <span class="ta-tab-count">{t.count}</span>
+    <!-- svelte-ignore a11y_interactive_supports_focus -->
+    <div
+      class="ta-tabs-list"
+      role="tablist"
+      aria-label={ariaLabel}
+      bind:this={list}
+      onkeydown={onKey}
+    >
+      {#each items as t (t.id)}
+        <button
+          type="button"
+          role="tab"
+          id={tabIdOf(t)}
+          data-tab={t.id}
+          aria-selected={t.id === value}
+          aria-controls={panels ? `${prefix}-panel` : t.controls || undefined}
+          tabindex={t.id === value ? 0 : -1}
+          class={cn("ta-tab", tabClass)}
+          onclick={() => select(t.id)}
+        >
+          {#if tab}{@render tab(t, t.id === value)}{:else}
+            {t.label}
+            {#if t.count !== undefined}
+              <span class="ta-tab-count">{t.count}</span>
+            {/if}
           {/if}
-        {/if}
-      </button>
-    {/each}
-    {#if sliding}<span class="ta-tabs-indicator" role="presentation" {@attach tabIndicator(() => '[aria-selected="true"]', () => [value, items.length])}></span>{/if}
-  </div>
-  {#if end}<div class="ta-tabs-end">{@render end()}</div>{/if}
+        </button>
+      {/each}
+      {#if sliding}<span
+          class="ta-tabs-indicator"
+          role="presentation"
+          {@attach tabIndicator(
+            () => '[aria-selected="true"]',
+            () => [value, items.length]
+          )}
+        ></span>{/if}
+    </div>
+    {#if end}<div class="ta-tabs-end">{@render end()}</div>{/if}
   </div>
   {#if panels}
     <div
@@ -141,10 +168,26 @@
 </div>
 
 <style>
-  .ta-tabs-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-  .ta-tabs-row > .ta-tabs-list { flex: 1 1 auto; min-width: 0; }
-  .ta-tabs--wrap .ta-tabs-list { flex-wrap: wrap; overflow-x: visible; }
-  .ta-tabs-end { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .ta-tabs-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .ta-tabs-row > .ta-tabs-list {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .ta-tabs--wrap .ta-tabs-list {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+  .ta-tabs-end {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
 
   /* "pills" variant: rounded buttons in a frame, no baseline. */
   .ta-tabs--pills .ta-tabs-list {
@@ -190,12 +233,16 @@
     border: none;
     border-bottom: 2px solid transparent;
     cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
+    transition:
+      color 0.15s,
+      border-color 0.15s;
   }
 
   /* After hydration the underline is one bar that slides between the tabs (`tabIndicator`);
      on the server, and where it cannot slide (pills, wrapped rows), each tab draws its own. */
-  .ta-tabs-list { position: relative; }
+  .ta-tabs-list {
+    position: relative;
+  }
   .ta-tabs-indicator {
     position: absolute;
     left: 0;
@@ -206,7 +253,9 @@
     border-radius: 1px;
     pointer-events: none;
   }
-  .ta-tabs--sliding .ta-tab[aria-selected="true"] { border-bottom-color: transparent; }
+  .ta-tabs--sliding .ta-tab[aria-selected="true"] {
+    border-bottom-color: transparent;
+  }
 
   .ta-tab:hover {
     color: rgb(var(--ta-text));
@@ -241,6 +290,8 @@
 
   /* On touch screens: 16px so iOS does not zoom the page on focus, and 44px of height for the finger. */
   @media (pointer: coarse) {
-    .ta-tab { min-height: 2.75rem; }
+    .ta-tab {
+      min-height: 2.75rem;
+    }
   }
 </style>

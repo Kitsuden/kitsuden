@@ -81,7 +81,9 @@
   const timeText = $derived(
     elapsed < 60
       ? L.secondsShort.replace("{n}", String(elapsed))
-      : L.minutesShort.replace("{m}", String(Math.floor(elapsed / 60))).replace("{s}", String(elapsed % 60))
+      : L.minutesShort
+          .replace("{m}", String(Math.floor(elapsed / 60)))
+          .replace("{s}", String(elapsed % 60))
   );
   const doneText = $derived(doneLabel.replace("{time}", timeText));
   const hasTrace = $derived(steps.length > 0 || !!children);
@@ -114,18 +116,34 @@
   {/if}
 {/snippet}
 
-<div {...rest} class={cn("ta-thinking", running && "ta-thinking--running", className)} aria-busy={running}>
+<div
+  {...rest}
+  class={cn("ta-thinking", running && "ta-thinking--running", className)}
+  aria-busy={running}
+>
   {#if hasTrace}
-    <button type="button" class="ta-thinking-line" aria-expanded={open} aria-controls={`${id}-trace`} onclick={toggle}>
+    <button
+      type="button"
+      class="ta-thinking-line"
+      aria-expanded={open}
+      aria-controls={`${id}-trace`}
+      onclick={toggle}
+    >
       {@render line()}
-      <Icon name="chevron-down" size={12} class={cn("ta-thinking-caret", open && "ta-thinking-caret--open")} />
+      <Icon
+        name="chevron-down"
+        size={12}
+        class={cn("ta-thinking-caret", open && "ta-thinking-caret--open")}
+      />
     </button>
     {#if open}
       <div class="ta-thinking-trace" id={`${id}-trace`} transition:collapse>
         {#if steps.length}
           <ol class="ta-thinking-steps">
             {#each steps as step, i (i)}
-              <li class={cn(running && i === steps.length - 1 && "ta-thinking-step--current")}>{step}</li>
+              <li class={cn(running && i === steps.length - 1 && "ta-thinking-step--current")}>
+                {step}
+              </li>
             {/each}
           </ol>
         {/if}
@@ -139,7 +157,12 @@
 </div>
 
 <style>
-  .ta-thinking { position: relative; min-width: 0; font-size: 0.8125rem; color: rgb(var(--ta-text-dim)); }
+  .ta-thinking {
+    position: relative;
+    min-width: 0;
+    font-size: 0.8125rem;
+    color: rgb(var(--ta-text-dim));
+  }
 
   .ta-thinking-line {
     display: inline-flex;
@@ -156,18 +179,46 @@
     border: none;
     border-radius: var(--ta-radius);
   }
-  button.ta-thinking-line { cursor: pointer; transition: background-color var(--ta-duration-fast, 120ms), color var(--ta-duration-fast, 120ms); }
-  button.ta-thinking-line:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated) / 0.5); }
-  button.ta-thinking-line:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
+  button.ta-thinking-line {
+    cursor: pointer;
+    transition:
+      background-color var(--ta-duration-fast, 120ms),
+      color var(--ta-duration-fast, 120ms);
+  }
+  button.ta-thinking-line:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated) / 0.5);
+  }
+  button.ta-thinking-line:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
 
-  .ta-thinking-mark { display: inline-flex; flex-shrink: 0; color: rgb(var(--ta-text-dim)); }
-  .ta-thinking-mark--busy { color: color-mix(in srgb, rgb(var(--ta-accent)) 70%, rgb(var(--ta-text))); animation: ta-thinking-pulse 1.6s ease-in-out infinite; }
+  .ta-thinking-mark {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-thinking-mark--busy {
+    color: color-mix(in srgb, rgb(var(--ta-accent)) 70%, rgb(var(--ta-text)));
+    animation: ta-thinking-pulse 1.6s ease-in-out infinite;
+  }
 
-  .ta-thinking-label { flex-shrink: 0; font-weight: 500; white-space: nowrap; }
+  .ta-thinking-label {
+    flex-shrink: 0;
+    font-weight: 500;
+    white-space: nowrap;
+  }
   /* The shimmer: a band of the text colour travelling over dimmed text. */
   .ta-thinking-label--busy {
     color: transparent;
-    background: linear-gradient(100deg, rgb(var(--ta-text-dim)) 35%, rgb(var(--ta-text)) 50%, rgb(var(--ta-text-dim)) 65%) 0 0 / 250% 100%;
+    background: linear-gradient(
+        100deg,
+        rgb(var(--ta-text-dim)) 35%,
+        rgb(var(--ta-text)) 50%,
+        rgb(var(--ta-text-dim)) 65%
+      )
+      0 0 / 250% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     animation: ta-thinking-sweep 1.8s linear infinite;
@@ -179,21 +230,48 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .ta-thinking-summary::before { content: "·"; margin-right: 0.4375rem; opacity: 0.6; }
+  .ta-thinking-summary::before {
+    content: "·";
+    margin-right: 0.4375rem;
+    opacity: 0.6;
+  }
 
-  .ta-thinking-time { flex-shrink: 0; font-variant-numeric: tabular-nums; opacity: 0.75; }
-  .ta-thinking-time::before { content: "·"; margin-right: 0.4375rem; opacity: 0.8; }
+  .ta-thinking-time {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.75;
+  }
+  .ta-thinking-time::before {
+    content: "·";
+    margin-right: 0.4375rem;
+    opacity: 0.8;
+  }
 
-  .ta-thinking :global(.ta-thinking-caret) { flex-shrink: 0; opacity: 0.7; transition: transform var(--ta-duration-base, 180ms) var(--ta-ease-out, ease-out); }
-  .ta-thinking :global(.ta-thinking-caret--open) { transform: rotate(180deg); }
+  .ta-thinking :global(.ta-thinking-caret) {
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: transform var(--ta-duration-base, 180ms) var(--ta-ease-out, ease-out);
+  }
+  .ta-thinking :global(.ta-thinking-caret--open) {
+    transform: rotate(180deg);
+  }
 
   .ta-thinking-trace {
     margin: 0.25rem 0 0 0.3125rem;
     padding: 0.125rem 0 0.25rem 0.875rem;
     border-left: 1px solid rgb(var(--ta-border));
   }
-  .ta-thinking-steps { display: flex; flex-direction: column; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
-  .ta-thinking-steps li { position: relative; }
+  .ta-thinking-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ta-thinking-steps li {
+    position: relative;
+  }
   .ta-thinking-steps li::before {
     content: "";
     position: absolute;
@@ -204,10 +282,21 @@
     border-radius: 50%;
     background: rgb(var(--ta-muted));
   }
-  .ta-thinking-step--current { color: rgb(var(--ta-text)); }
-  .ta-thinking-steps li.ta-thinking-step--current::before { background: rgb(var(--ta-accent)); box-shadow: 0 0 0 3px rgb(var(--ta-accent) / 0.2); }
-  .ta-thinking-steps + .ta-thinking-text { margin-top: 0.5rem; }
-  .ta-thinking-text { line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ta-thinking-step--current {
+    color: rgb(var(--ta-text));
+  }
+  .ta-thinking-steps li.ta-thinking-step--current::before {
+    background: rgb(var(--ta-accent));
+    box-shadow: 0 0 0 3px rgb(var(--ta-accent) / 0.2);
+  }
+  .ta-thinking-steps + .ta-thinking-text {
+    margin-top: 0.5rem;
+  }
+  .ta-thinking-text {
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
 
   .ta-thinking-status {
     position: absolute;
@@ -222,21 +311,42 @@
   }
 
   @keyframes ta-thinking-sweep {
-    from { background-position: 100% 0; }
-    to { background-position: -150% 0; }
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -150% 0;
+    }
   }
   @keyframes ta-thinking-pulse {
-    0%, 100% { opacity: 0.55; transform: scale(0.92); }
-    50% { opacity: 1; transform: scale(1.05); }
+    0%,
+    100% {
+      opacity: 0.55;
+      transform: scale(0.92);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
   }
 
   @media (pointer: coarse) {
-    button.ta-thinking-line { min-height: 2.75rem; }
+    button.ta-thinking-line {
+      min-height: 2.75rem;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-thinking-label--busy { animation: none; color: inherit; background: none; }
-    .ta-thinking-mark--busy { animation: none; }
-    .ta-thinking :global(.ta-thinking-caret) { transition: none; }
+    .ta-thinking-label--busy {
+      animation: none;
+      color: inherit;
+      background: none;
+    }
+    .ta-thinking-mark--busy {
+      animation: none;
+    }
+    .ta-thinking :global(.ta-thinking-caret) {
+      transition: none;
+    }
   }
 </style>

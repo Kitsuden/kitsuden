@@ -25,6 +25,7 @@
   import { localeFormat, t } from "$lib/i18n";
   import {
     historyLine,
+    historyValue,
     recordHistory,
     type ChangeLike,
     type HistoryEvent,
@@ -291,6 +292,25 @@
             .catch(() => {})
         : undefined,
     ]);
+    // A recorded change that executed an approved proposal names its approver by user id:
+    // the proposal has the name (the team's to read, like the rest of the approvals).
+    const approvers: Record<string, string> = {};
+    const listed = new Set(proposals.map((p) => p.id));
+    const unnamed = [
+      ...new Set(changes.map((c) => c.proposalId).filter((p): p is string => !!p)),
+    ].filter((p) => !listed.has(p));
+    if (isStaff() && unnamed.length > 0) {
+      await Promise.all(
+        unnamed.slice(0, 20).map((pid) =>
+          getProposal(pid)
+            .then((p) => {
+              const name = (p as unknown as ProposalLike).decidedByName;
+              if (name) approvers[pid] = name;
+            })
+            .catch(() => {})
+        )
+      );
+    }
     const labels = Object.fromEntries(source.fields.map((f) => [f.key, f.label]));
     events = recordHistory({
       id,
@@ -300,7 +320,7 @@
       proposals,
       changes,
       labels,
-      redactedText: t("record.redacted"),
+      approvers,
     });
     historyLoading = false;
   }
@@ -506,7 +526,12 @@
             {#each changedEvents as event (event.id)}
               {@const line = historyLine(event, t, (iso) => dateTime(iso) ?? iso)}
               <h3>{line.title} · {line.date}</h3>
-              <DiffView changes={event.changes} ariaLabel={`${line.title} · ${line.date}`} />
+              <DiffView
+                changes={event.changes}
+                format={(value) => historyValue(value, (iso) => dateTime(iso) ?? iso)}
+                redactedLabel={t("record.redacted")}
+                ariaLabel={`${line.title} · ${line.date}`}
+              />
             {:else}
               <p class="kitsuden-record-note">{t("record.noChanges")}</p>
             {/each}

@@ -16,7 +16,8 @@
     TableHeader,
     TableRow,
   } from "$lib/tallao";
-  import { t, localeFormat } from "$lib/i18n";
+  import { t } from "$lib/i18n";
+  import { formatDateTime } from "$lib/utils";
   import { RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
 
@@ -53,7 +54,7 @@
     }
   }
 
-  const date = (v: string | null) => (v ? new Date(v).toLocaleString(localeFormat()) : "—");
+  const date = formatDateTime;
   const STATUSES = ["pending", "running", "done", "dead"] as const;
   const statusLabel: Record<(typeof STATUSES)[number], () => string> = {
     pending: () => t("systemQueue.pending"),

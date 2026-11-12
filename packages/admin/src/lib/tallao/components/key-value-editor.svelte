@@ -111,7 +111,11 @@
 
 <div class={cn("ta-kv", className)}>
   {#if name}
-    {#each entries as e, i (i)}<input type="hidden" name={`${name}[${e.key}]`} value={e.value} />{/each}
+    {#each entries as e, i (i)}<input
+        type="hidden"
+        name={`${name}[${e.key}]`}
+        value={e.value}
+      />{/each}
   {/if}
   {#if entries.length}
     <ul class="ta-kv-list">

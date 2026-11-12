@@ -19,7 +19,7 @@
     ChevronUp,
     Kanban,
   } from "lucide-svelte";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import {
     toast,
     Table,
@@ -38,6 +38,7 @@
     EmptyState,
     SearchInput,
     Select,
+    Sheet,
     Skeleton,
     Tabs,
     type TabItem,
@@ -45,6 +46,8 @@
 
   import { api } from "$lib/api";
 
+  import DealForm from "./DealForm.svelte";
+  import { crmHref } from "./links";
   import type {
     CRMStats,
     CrmDeal,
@@ -233,6 +236,14 @@
       companiesLoading = false;
     }
   }
+  // ── A deal is created and edited in a sheet over the dashboard: kon-crm's deals view is
+  // a board, with no record page to send "Edit" to. `undefined`: closed; `null`: a new one.
+  let dealSheet = $state<string | null | undefined>(undefined);
+  function dealSaved() {
+    dealSheet = undefined;
+    void Promise.all([loadDeals(), loadOverview(), loadStats()]);
+  }
+
   async function loadOverview() {
     overviewLoading = true;
     try {
@@ -381,13 +392,18 @@
     return next;
   }
 
+  // Loads the tab when it changes. `untrack`: each loader reads its own paging and filters
+  // and then writes them back; tracked, that write re-ran this effect, which loaded again,
+  // forever — the Deals tab never left its skeleton rows.
   $effect(() => {
     const tab = activeTab;
-    if (tab === "overview") loadOverview();
-    else if (tab === "deals") loadDeals();
-    else if (tab === "contacts") loadContacts();
-    else if (tab === "companies") loadCompanies();
-    else if (tab === "pipelines") loadPipelines();
+    untrack(() => {
+      if (tab === "overview") loadOverview();
+      else if (tab === "deals") loadDeals();
+      else if (tab === "contacts") loadContacts();
+      else if (tab === "companies") loadCompanies();
+      else if (tab === "pipelines") loadPipelines();
+    });
   });
   onMount(() => {
     loadStats();
@@ -498,7 +514,7 @@
   description={tr("crmDashboard.manageDealsContactsCompaniesAnd")}
 >
   {#snippet actions()}
-    <Button onclick={() => goto("/g/kon-crm/deals")} size="sm"
+    <Button onclick={() => (dealSheet = null)}
       ><Plus class="w-4 h-4" /> {tr("crmDashboard.addDeal")}</Button
     >
   {/snippet}
@@ -659,13 +675,13 @@
           <CardHeader><CardTitle>{tr("crmDashboard.quickActions")}</CardTitle></CardHeader>
           <CardContent>
             <div class="flex flex-wrap gap-2">
-              <Button onclick={() => goto("/g/kon-crm/deals")}
+              <Button onclick={() => (dealSheet = null)}
                 ><Plus class="w-4 h-4" /> {tr("crmDashboard.addDeal")}</Button
               >
-              <Button variant="secondary" onclick={() => goto("/g/kon-crm/contacts")}
+              <Button variant="secondary" onclick={() => goto(crmHref("contacts", "new"))}
                 ><Plus class="w-4 h-4" /> {tr("crmDashboard.addContact")}</Button
               >
-              <Button variant="secondary" onclick={() => goto("/g/kon-crm/companies")}
+              <Button variant="secondary" onclick={() => goto(crmHref("companies", "new"))}
                 ><Plus class="w-4 h-4" /> {tr("crmDashboard.addCompany")}</Button
               >
             </div>
@@ -680,7 +696,7 @@
         <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <div class="flex flex-col sm:flex-row gap-2 flex-1 min-w-0">
             <SearchInput
-              class="flex-1 sm:max-w-sm"
+              class="min-w-0 flex-1 basis-56 sm:max-w-sm"
               bind:value={dealsSearch}
               placeholder={tr("crmDashboard.searchDeals")}
               oninput={() => {
@@ -689,7 +705,7 @@
               }}
             />
             <Select
-              class="sm:w-auto"
+              width="auto"
               bind:value={dealsStatus}
               aria-label={tr("common.status")}
               onchange={() => {
@@ -704,7 +720,7 @@
               <option value="paused">{tr("crmDashboard.paused")}</option>
             </Select>
             <Select
-              class="sm:w-auto"
+              width="auto"
               bind:value={dealsPipelineId}
               aria-label={tr("crmDashboard.pipelines")}
               onchange={() => {
@@ -777,7 +793,7 @@
                   </TableCell>
                   <TableCell>
                     {@render rowActions(
-                      () => goto(`/crm/deals/${d.id}`),
+                      () => (dealSheet = d.id),
                       () => ofTheDeal(d.id)
                     )}
                   </TableCell>
@@ -796,7 +812,7 @@
         <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <div class="flex flex-col sm:flex-row gap-2 flex-1 min-w-0">
             <SearchInput
-              class="flex-1 sm:max-w-sm"
+              class="min-w-0 flex-1 basis-56 sm:max-w-sm"
               bind:value={contactsSearch}
               placeholder={tr("crmDashboard.searchContacts")}
               oninput={() => {
@@ -805,7 +821,7 @@
               }}
             />
             <Select
-              class="sm:w-auto"
+              width="auto"
               bind:value={contactsStatus}
               aria-label={tr("common.status")}
               onchange={() => {
@@ -875,7 +891,7 @@
                   <TableCell class="text-kitsuden-subtle">{ago(c.lastContactedAt)}</TableCell>
                   <TableCell>
                     {@render rowActions(
-                      () => goto(`/crm/contacts/${c.id}`),
+                      () => goto(crmHref("contacts", c.id)),
                       () => ofTheContact(c.id)
                     )}
                   </TableCell>
@@ -894,7 +910,7 @@
         <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <div class="flex flex-col sm:flex-row gap-2 flex-1 min-w-0">
             <SearchInput
-              class="flex-1 sm:max-w-sm"
+              class="min-w-0 flex-1 basis-56 sm:max-w-sm"
               bind:value={companiesSearch}
               placeholder={tr("crmDashboard.searchCompanies")}
               oninput={() => {
@@ -903,7 +919,7 @@
               }}
             />
             <Select
-              class="sm:w-auto"
+              width="auto"
               bind:value={companiesIndustry}
               aria-label={tr("crmDashboard.industry")}
               onchange={() => {
@@ -969,7 +985,7 @@
                   <TableCell>—</TableCell>
                   <TableCell>
                     {@render rowActions(
-                      () => goto(`/crm/companies/${c.id}`),
+                      () => goto(crmHref("companies", c.id)),
                       () => ofTheCompany(c.id)
                     )}
                   </TableCell>
@@ -1074,4 +1090,22 @@
       </div>
     {/if}
   </div>
+
+  <Sheet
+    open={dealSheet !== undefined}
+    onClose={() => (dealSheet = undefined)}
+    title={dealSheet ? tr("crmDashboard.editDeal") : tr("crmDashboard.addDeal")}
+    size="lg"
+  >
+    {#if dealSheet !== undefined}
+      {#key dealSheet}
+        <DealForm
+          dealId={dealSheet}
+          embedded
+          onBack={() => (dealSheet = undefined)}
+          onSave={dealSaved}
+        />
+      {/key}
+    {/if}
+  </Sheet>
 </ViewPage>

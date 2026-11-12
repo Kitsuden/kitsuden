@@ -30,7 +30,10 @@ export function niceScale(max: number, ticks = 4): { max: number; ticks: number[
 
 /** Axis figures: whole numbers below 10 000 (1,250), compact from there on (12K, 3.4M). */
 export function compactNumber(n: number, locale?: string, compact = Math.abs(n) >= 10_000) {
-  return new Intl.NumberFormat(locale, compact ? { notation: "compact", maximumFractionDigits: 1 } : { maximumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat(
+    locale,
+    compact ? { notation: "compact", maximumFractionDigits: 1 } : { maximumFractionDigits: 2 }
+  ).format(n);
 }
 
 /** Numeric value of a row for a series; anything that is not a number counts as empty. */
@@ -45,13 +48,20 @@ export const fill = (template: string, values: Record<string, string | number>) 
 
 /** `part` as a percentage of `whole` ("42.5%"); 0% when there is no whole. */
 export const percentOf = (part: number, whole: number, locale?: string, digits = 1) =>
-  new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: digits }).format(whole > 0 ? part / whole : 0);
+  new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: digits }).format(
+    whole > 0 ? part / whole : 0
+  );
 
 /** A finite number, or null: what the charts accept as a value. */
-export const finite = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+export const finite = (v: unknown): number | null =>
+  typeof v === "number" && Number.isFinite(v) ? v : null;
 
 /** Round bounds and ticks for a range that need not start at zero (scatter axes, a line's `domain`). */
-export function niceDomain(min: number, max: number, ticks = 4): { min: number; max: number; ticks: number[] } {
+export function niceDomain(
+  min: number,
+  max: number,
+  ticks = 4
+): { min: number; max: number; ticks: number[] } {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: 0, max: 1, ticks: [0, 1] };
   if (!(max > min)) max = min + 1;
   const raw = (max - min) / ticks;
@@ -68,11 +78,20 @@ export function niceDomain(min: number, max: number, ticks = 4): { min: number; 
  * A ring segment (or a pie wedge when `inner` is 0) between two angles in radians,
  * measured clockwise from 12 o'clock.
  */
-export function arcPath(cx: number, cy: number, outer: number, inner: number, from: number, to: number): string {
+export function arcPath(
+  cx: number,
+  cy: number,
+  outer: number,
+  inner: number,
+  from: number,
+  to: number
+): string {
   const end = Math.min(to, from + Math.PI * 2 - 1e-4);
-  const at = (r: number, a: number) => `${(cx + r * Math.sin(a)).toFixed(2)},${(cy - r * Math.cos(a)).toFixed(2)}`;
+  const at = (r: number, a: number) =>
+    `${(cx + r * Math.sin(a)).toFixed(2)},${(cy - r * Math.cos(a)).toFixed(2)}`;
   const large = end - from > Math.PI ? 1 : 0;
-  if (inner <= 0) return `M${cx},${cy}L${at(outer, from)}A${outer},${outer} 0 ${large} 1 ${at(outer, end)}Z`;
+  if (inner <= 0)
+    return `M${cx},${cy}L${at(outer, from)}A${outer},${outer} 0 ${large} 1 ${at(outer, end)}Z`;
   return `M${at(outer, from)}A${outer},${outer} 0 ${large} 1 ${at(outer, end)}L${at(inner, end)}A${inner},${inner} 0 ${large} 0 ${at(inner, from)}Z`;
 }
 
@@ -83,7 +102,9 @@ export type PointShape = (typeof SHAPES)[number];
 /** Path of a point marker of radius `r` centred on (x, y). */
 export function shapePath(shape: PointShape, x: number, y: number, r: number): string {
   if (shape === "square") return `M${x - r},${y - r}h${2 * r}v${2 * r}h${-2 * r}Z`;
-  if (shape === "triangle") return `M${x},${y - r * 1.2}L${x + r * 1.15},${y + r * 0.9}H${x - r * 1.15}Z`;
-  if (shape === "diamond") return `M${x},${y - r * 1.3}L${x + r * 1.3},${y}L${x},${y + r * 1.3}L${x - r * 1.3},${y}Z`;
+  if (shape === "triangle")
+    return `M${x},${y - r * 1.2}L${x + r * 1.15},${y + r * 0.9}H${x - r * 1.15}Z`;
+  if (shape === "diamond")
+    return `M${x},${y - r * 1.3}L${x + r * 1.3},${y}L${x},${y + r * 1.3}L${x - r * 1.3},${y}Z`;
   return `M${x - r},${y}a${r},${r} 0 1 0 ${2 * r},0a${r},${r} 0 1 0 ${-2 * r},0Z`;
 }

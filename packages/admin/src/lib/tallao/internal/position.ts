@@ -30,18 +30,32 @@ export interface AnchorOptions {
   matchWidth?: boolean;
 }
 
-const hasPopoverApi = () => typeof HTMLElement !== "undefined" && "showPopover" in HTMLElement.prototype;
+const hasPopoverApi = () =>
+  typeof HTMLElement !== "undefined" && "showPopover" in HTMLElement.prototype;
 
 /** A point in the viewport as anchor (a context menu opens where the user clicked). */
 export function pointAnchor(x: number, y: number, context?: Element): VirtualElement {
   return {
-    getBoundingClientRect: () => ({ x, y, left: x, top: y, right: x, bottom: y, width: 0, height: 0 }),
+    getBoundingClientRect: () => ({
+      x,
+      y,
+      left: x,
+      top: y,
+      right: x,
+      bottom: y,
+      width: 0,
+      height: 0,
+    }),
     contextElement: context,
   };
 }
 
 /** Shows `panel` anchored to `anchor`; returns the function that hides it and stops tracking it. */
-export function anchor(anchorEl: Element | VirtualElement, panel: HTMLElement, opts: AnchorOptions = {}): () => void {
+export function anchor(
+  anchorEl: Element | VirtualElement,
+  panel: HTMLElement,
+  opts: AnchorOptions = {}
+): () => void {
   if (hasPopoverApi() && panel.hasAttribute("popover")) {
     try {
       panel.showPopover();
@@ -60,20 +74,25 @@ export function anchor(anchorEl: Element | VirtualElement, panel: HTMLElement, o
     size({
       padding: 8,
       apply({ rects, availableHeight }) {
-        panel.style.setProperty("--ta-available-height", `${Math.max(96, Math.floor(availableHeight))}px`);
+        panel.style.setProperty(
+          "--ta-available-height",
+          `${Math.max(96, Math.floor(availableHeight))}px`
+        );
         if (opts.matchWidth) panel.style.minWidth = `${rects.reference.width}px`;
       },
     }),
   ];
 
   const update = () =>
-    computePosition(anchorEl, panel, { strategy: "fixed", placement: opts.placement ?? "bottom-start", middleware }).then(
-      ({ x, y, placement }) => {
-        panel.style.left = `${x}px`;
-        panel.style.top = `${y}px`;
-        panel.dataset.side = placement.split("-")[0];
-      }
-    );
+    computePosition(anchorEl, panel, {
+      strategy: "fixed",
+      placement: opts.placement ?? "bottom-start",
+      middleware,
+    }).then(({ x, y, placement }) => {
+      panel.style.left = `${x}px`;
+      panel.style.top = `${y}px`;
+      panel.dataset.side = placement.split("-")[0];
+    });
 
   const stop = autoUpdate(anchorEl, panel, update, {
     elementResize: typeof ResizeObserver !== "undefined",

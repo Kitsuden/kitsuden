@@ -473,8 +473,58 @@ export async function detectSuspiciousActivity(hours = 24) {
 // MAINTENANCE
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Days an agent audit row is kept when `AGENT_AUDIT_RETENTION_DAYS` does not say. */
+export const DEFAULT_AGENT_AUDIT_RETENTION_DAYS = 90;
+
 /**
- * Cleans up old logs (run periodically)
+ * Days `agent_audit_logs` rows are kept: `AGENT_AUDIT_RETENTION_DAYS`. Unset,
+ * empty or not a number = 90; `0` = kept forever (the convention of
+ * `AGENT_KEY_DEFAULT_EXPIRY_DAYS`). Returns `null` for "forever".
+ */
+export function agentAuditRetentionDays(
+  env: Record<string, string | undefined> = process.env
+): number | null {
+  const raw = env.AGENT_AUDIT_RETENTION_DAYS;
+  if (raw === undefined || raw.trim() === "") return DEFAULT_AGENT_AUDIT_RETENTION_DAYS;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return DEFAULT_AGENT_AUDIT_RETENTION_DAYS;
+  if (n === 0) return null;
+  return Math.max(1, Math.floor(n));
+}
+
+/**
+ * The hourly prune: deletes the rows older than `agentAuditRetentionDays()`.
+ * On the global connection (the system). Never throws.
+ */
+export async function sweepAgentAuditLogs(
+  env: Record<string, string | undefined> = process.env
+): Promise<number> {
+  const days = agentAuditRetentionDays(env);
+  if (days === null) return 0;
+  try {
+    return await cleanupOldLogs(days);
+  } catch (err) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      "Agent audit prune failed"
+    );
+    return 0;
+  }
+}
+
+let auditSweep: ReturnType<typeof setInterval> | null = null;
+
+/** Prunes once at start and then every hour (the OAuth and proposal sweeps' pattern). */
+export function startAgentAuditSweep(): void {
+  if (auditSweep) return;
+  auditSweep = setInterval(() => void sweepAgentAuditLogs(), 60 * 60_000);
+  (auditSweep as { unref?: () => void }).unref?.();
+  void sweepAgentAuditLogs();
+}
+
+/**
+ * Deletes the audit rows older than `retentionDays` (run hourly by
+ * `startAgentAuditSweep`).
  */
 export async function cleanupOldLogs(retentionDays = 90): Promise<number> {
   const cutoffDate = new Date();
@@ -483,7 +533,7 @@ export async function cleanupOldLogs(retentionDays = 90): Promise<number> {
   const result = await db.delete(agentAuditLogs).where(lte(agentAuditLogs.createdAt, cutoffDate));
 
   const deleted = result.rowCount || 0;
-  logger.info({ deleted, retentionDays }, "Cleaned up old agent audit logs");
+  if (deleted > 0) logger.info({ deleted, retentionDays }, "Cleaned up old agent audit logs");
 
   return deleted;
 }

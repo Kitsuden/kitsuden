@@ -320,3 +320,10 @@ layer(base);
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* A visually hidden header ("Actions", `.sr-only`, absolute) in a table that scrolls sideways
+   was placed against the page, not the table, and widened a phone screen by its offset (the
+   journal form: 37px). The table's own box contains it. */
+.ta-table-container {
+  position: relative;
+}

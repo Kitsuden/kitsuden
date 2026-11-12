@@ -157,9 +157,28 @@ import konAssetsRoutes from "./routes/kon-assets";
 import { mailRoutes } from "./routes/mail";
 import { mcpRoutes } from "./routes/mcp";
 import { EXTERNAL_MCP_ROUTE, externalMcpRoutes } from "./routes/mcp-servers";
+import { modelsRoutes, MODELS_ROUTE } from "./routes/models";
 import { modulesRoutes } from "./routes/modules";
 import { oauthCors, mcpChallenge, oauthRoutes } from "./routes/oauth";
+import { oauthPanelRoutes } from "./routes/oauth-panel";
+import {
+  PROMOTION_KON,
+  PROMOTION_ROUTE,
+  ADMIN_PROMOTION_ROUTE,
+  promotionOperations,
+  promotionAdminRoutes,
+  promotionRoutes,
+} from "./routes/promotion";
 import { queueRoutes } from "./routes/queue";
+import {
+  recordHistoryRoutes,
+  RECORD_HISTORY_ROUTE,
+  startRecordHistorySweep,
+} from "./routes/record-history";
+import { runsRoutes } from "./routes/runs";
+import { schemaIntrospectionRoutes } from "./routes/schema-introspection";
+import { systemRoutes } from "./routes/system";
+import { systemMapRoutes } from "./routes/system-map";
 import { tracesRoutes } from "./routes/traces";
 // ── A1: problem+json errors and Idempotency-Key (own block) ──
 
@@ -170,10 +189,9 @@ import { tracesRoutes } from "./routes/traces";
 // Legacy core imports removed — now provided by kons
 
 // ── Engine Routes (Tier 1) — Always-on infrastructure ──
-import { runsRoutes } from "./routes/runs";
-import { systemMapRoutes } from "./routes/system-map";
 import { setKonAvailability, versionRoutes } from "./routes/version";
 import { rpcSurface } from "./rpc";
+import { startAgentAuditSweep } from "./services/agent-audit";
 import {
   authenticateAgent,
   isAgentCredential,
@@ -182,9 +200,6 @@ import {
 import type { AgentAuthContext } from "./services/agent-auth";
 import { initAgentTelemetry } from "./services/agent-telemetry";
 import { loadSecretsIntoEnv } from "./services/secrets";
-import { oauthPanelRoutes } from "./routes/oauth-panel";
-import { schemaIntrospectionRoutes } from "./routes/schema-introspection";
-import { systemRoutes } from "./routes/system";
 
 // ── Module Loader ──
 
@@ -445,17 +460,6 @@ import { createHash } from "crypto";
 
 /** Retirement of `kitsuden_sk_*` keys (announced in the `Sunset` header). */
 const LEGACY_KEYS_END = Date.UTC(2026, 7, 1);
-
-import { modelsRoutes, MODELS_ROUTE } from "./routes/models";
-import { recordHistoryRoutes, RECORD_HISTORY_ROUTE } from "./routes/record-history";
-import {
-  PROMOTION_KON,
-  PROMOTION_ROUTE,
-  ADMIN_PROMOTION_ROUTE,
-  promotionOperations,
-  promotionAdminRoutes,
-  promotionRoutes,
-} from "./routes/promotion";
 
 // Extend Hono context types - agent is now defined in app Variables type above
 
@@ -1131,6 +1135,10 @@ app.route("/api/proposals", proposalsRoutes);
 app.route(MODELS_ROUTE, modelsRoutes);
 // Who changed a row of any table, and which fields (core migration 0076).
 app.route(RECORD_HISTORY_ROUTE, recordHistoryRoutes);
+// Rows older than RECORD_HISTORY_RETENTION_DAYS (365; 0 = forever), hourly.
+startRecordHistorySweep();
+// Agent audit rows older than AGENT_AUDIT_RETENTION_DAYS (90; 0 = forever), hourly.
+startAgentAuditSweep();
 setApprovalsApp((req, env) => app.fetch(req, env));
 startProposalSweep();
 // Promotion of agent code. The agent's operations

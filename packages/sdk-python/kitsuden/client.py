@@ -33,7 +33,9 @@ Async, same contract::
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from datetime import date, datetime
+from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
+from urllib.parse import quote
 
 import httpx
 
@@ -45,6 +47,7 @@ __all__ = [
     "KitsudenError",
     "ListResponse",
     "Pagination",
+    "FILTER_OPS",
 ]
 
 
@@ -100,24 +103,109 @@ class ListResponse:
 # ── Request construction per resource (pure, shared sync/async) ─────────────
 
 
+#: The operators ``GET /api/explorer/:table`` understands (any other one is a 400).
+FILTER_OPS = ("contains", "equals", "gt", "lt", "gte", "lte")
+
+#: A filter value: sent as text (bool as ``true``/``false``, dates in ISO 8601).
+FilterValue = Union[str, int, float, bool, date, datetime]
+
+#: ``{"status": "draft", "price": {"gte": 10, "lt": 20}}``, or a list of
+#: ``{"field": ..., "op": ..., "value": ...}`` (``op`` defaults to ``equals``).
+Filters = Union[
+    Mapping[str, Union[FilterValue, Mapping[str, Optional[FilterValue]], None]],
+    Sequence[Mapping[str, Any]],
+]
+
+
+def _filter_text(value: Any) -> str:
+    """The text the TS SDK would send (``String(value)``)."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))  # JS writes 10.0 as "10"
+    return str(value)
+
+
+def _check_op(op: Any) -> str:
+    if op not in FILTER_OPS:
+        raise ValueError(
+            f"Unsupported filter operator: {op!r} (supported: {', '.join(FILTER_OPS)})"
+        )
+    return op
+
+
+def _filter_pairs(filters: Optional[Filters]) -> List[Tuple[str, str]]:
+    """``filter[<col>]=<v>`` (equals) or ``filter[<col>][<op>]=<v>``, one pair per condition.
+
+    A None value is skipped, like an ``undefined`` in the TS SDK. The operator is checked
+    here so a typo fails before the request instead of as a 400.
+    """
+    if not filters:
+        return []
+    pairs: List[Tuple[str, str]] = []
+    if isinstance(filters, Mapping):
+        for field_name, condition in filters.items():
+            if condition is None:
+                continue
+            if isinstance(condition, Mapping):
+                for op, value in condition.items():
+                    _check_op(op)
+                    if value is not None:
+                        pairs.append((f"filter[{field_name}][{op}]", _filter_text(value)))
+            else:
+                pairs.append((f"filter[{field_name}]", _filter_text(condition)))
+        return pairs
+    if isinstance(filters, (str, bytes)):
+        raise TypeError("filters must be a dict or a list of {field, op, value}")
+    for item in filters:
+        if not isinstance(item, Mapping) or "field" not in item:
+            raise TypeError("each filter in a list must be a dict with 'field' and 'value'")
+        op = _check_op(item.get("op") or "equals")
+        value = item.get("value")
+        if value is None:
+            continue
+        key = f"filter[{item['field']}]" if op == "equals" else f"filter[{item['field']}][{op}]"
+        pairs.append((key, _filter_text(value)))
+    return pairs
+
+
 def _list_params(
-    limit: Optional[int],
-    page: Optional[int],
-    sort: Optional[str],
-    dir: Optional[str],
-    filter_field: Optional[str],
-    filter_op: Optional[str],
-    filter_value: Optional[str],
-) -> dict:
-    return {
-        "limit": limit,
-        "page": page,
-        "sort": sort,
-        "dir": dir,
-        "filter_field": filter_field,
-        "filter_op": filter_op,
-        "filter_value": filter_value,
-    }
+    limit: Optional[int] = None,
+    page: Optional[int] = None,
+    sort: Optional[str] = None,
+    dir: Optional[str] = None,
+    search: Optional[str] = None,
+    search_fields: Union[Sequence[str], str, None] = None,
+    filters: Optional[Filters] = None,
+    filter_field: Optional[str] = None,
+    filter_op: Optional[str] = None,
+    filter_value: Optional[str] = None,
+) -> List[Tuple[str, Any]]:
+    """The explorer list query (apps/api/src/lib/explorer-query.ts), as a list of pairs
+    so several conditions on one column survive the encoding."""
+    if isinstance(search_fields, str):
+        fields_text: Optional[str] = search_fields or None
+    else:
+        fields_text = ",".join(search_fields) if search_fields else None
+    return [
+        ("limit", limit),
+        ("page", page),
+        ("sort", sort),
+        ("dir", dir),
+        ("search", search or None),
+        ("search_fields", fields_text),
+        *_filter_pairs(filters),
+        # The older single filter, still honoured (AND with `filters`).
+        ("filter_field", filter_field),
+        ("filter_op", filter_op),
+        ("filter_value", filter_value),
+    ]
+
+
+def _history_params(limit: Optional[int], offset: Optional[int]) -> dict:
+    return {"limit": limit, "offset": offset}
 
 
 class _RequestFactory:
@@ -166,6 +254,15 @@ class _TableOps:
     def options_req(self) -> Request:
         return self._f.make("GET", f"/explorer/{self._table}/options")
 
+    def history_req(
+        self, row_id: str, limit: Optional[int] = None, offset: Optional[int] = None
+    ) -> Request:
+        return self._f.make(
+            "GET",
+            f"/history/{self._table}/{quote(str(row_id), safe='')}",
+            params=_history_params(limit, offset),
+        )
+
 
 class _CollectionOps:
     """Datasets (dynamic collections), by slug."""
@@ -204,19 +301,42 @@ class TableRef:
         filter_field: Optional[str] = None,
         filter_op: Optional[str] = None,
         filter_value: Optional[str] = None,
+        *,
+        search: Optional[str] = None,
+        search_fields: Union[Sequence[str], str, None] = None,
+        filters: Optional[Filters] = None,
     ) -> ListResponse:
+        """List rows. Every condition must hold (AND).
+
+        ``search`` looks for text in any textual column (or only in ``search_fields``);
+        ``filters`` takes ``{"status": "draft", "price": {"gte": 10, "lt": 20}}`` or a list
+        of ``{"field", "op", "value"}``. Operators: contains, equals, gt, lt, gte, lte.
+        """
         payload = self._client._send(
             self._ops.list_req(
                 limit=limit,
                 page=page,
                 sort=sort,
                 dir=dir,
+                search=search,
+                search_fields=search_fields,
+                filters=filters,
                 filter_field=filter_field,
                 filter_op=filter_op,
                 filter_value=filter_value,
             )
         )
         return ListResponse.from_payload(payload)
+
+    def history(
+        self, row_id: str, limit: Optional[int] = None, offset: Optional[int] = None
+    ) -> Any:
+        """Who created, changed or deleted a row, when, and which fields (newest first).
+
+        Admin only (``GET /api/history/:table/:id``). Returns
+        ``{"history": [...], "total", "limit", "offset"}``.
+        """
+        return self._client._send(self._ops.history_req(row_id, limit=limit, offset=offset))
 
     def get(self, row_id: str) -> Any:
         return self._client._send(self._ops.get_req(row_id))
@@ -372,19 +492,35 @@ class AsyncTableRef:
         filter_field: Optional[str] = None,
         filter_op: Optional[str] = None,
         filter_value: Optional[str] = None,
+        *,
+        search: Optional[str] = None,
+        search_fields: Union[Sequence[str], str, None] = None,
+        filters: Optional[Filters] = None,
     ) -> ListResponse:
+        """Same contract as :meth:`TableRef.list`."""
         payload = await self._client._send(
             self._ops.list_req(
                 limit=limit,
                 page=page,
                 sort=sort,
                 dir=dir,
+                search=search,
+                search_fields=search_fields,
+                filters=filters,
                 filter_field=filter_field,
                 filter_op=filter_op,
                 filter_value=filter_value,
             )
         )
         return ListResponse.from_payload(payload)
+
+    async def history(
+        self, row_id: str, limit: Optional[int] = None, offset: Optional[int] = None
+    ) -> Any:
+        """Same contract as :meth:`TableRef.history` (admin only)."""
+        return await self._client._send(
+            self._ops.history_req(row_id, limit=limit, offset=offset)
+        )
 
     async def get(self, row_id: str) -> Any:
         return await self._client._send(self._ops.get_req(row_id))

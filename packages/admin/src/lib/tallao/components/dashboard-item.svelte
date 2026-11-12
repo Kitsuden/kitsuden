@@ -26,5 +26,7 @@
 </div>
 
 <style>
-  .ta-dash-item { min-width: 0; }
+  .ta-dash-item {
+    min-width: 0;
+  }
 </style>

@@ -10,11 +10,19 @@
 
   interface Props {
     dealId?: string | null;
-    onBack: () => void;
-    onSave: () => void;
+    /** Inside a sheet or dialog that already names it: no "← Deals / New deal" row. */
+    embedded?: boolean;
+    /** Back and Cancel; the previous page when the form is a page of its own. */
+    onBack?: () => void;
+    onSave?: () => void;
   }
 
-  const { dealId = null, onBack, onSave }: Props = $props();
+  const {
+    dealId = null,
+    embedded = false,
+    onBack = () => history.back(),
+    onSave = () => history.back(),
+  }: Props = $props();
 
   let loading = $state(false);
   let pipelines = $state<CrmPipeline[]>([]);
@@ -60,7 +68,9 @@
 
       if (dealId) {
         const res = await api.getCrmDeal(dealId);
-        const deal = res.data;
+        // `{ data: deal }`; anything else (an empty answer) is said, not read as a deal.
+        const deal = res?.data as CrmDeal | undefined;
+        if (!deal || typeof deal !== "object") throw new Error(tr("dealForm.failedToLoadData"));
         formData = {
           ...deal,
           expectedCloseDate: deal.expectedCloseDate
@@ -139,16 +149,18 @@
 </script>
 
 <div class="space-y-6">
-  <div class="flex items-center gap-2 text-sm text-kitsuden-text-dim">
-    <Button variant="ghost" size="sm" onclick={onBack} class="gap-1">
-      <ArrowLeft class="w-4 h-4" />
-      {tr("dealForm.deals")}
-    </Button>
-    <span>/</span>
-    <span class="text-kitsuden-text"
-      >{dealId ? tr("common.edit") : tr("dealForm.new")} {tr("dealForm.deal")}</span
-    >
-  </div>
+  {#if !embedded}
+    <div class="flex items-center gap-2 text-sm text-kitsuden-text-dim">
+      <Button variant="ghost" size="sm" onclick={onBack} class="gap-1">
+        <ArrowLeft class="w-4 h-4" />
+        {tr("dealForm.deals")}
+      </Button>
+      <span>/</span>
+      <span class="text-kitsuden-text"
+        >{dealId ? tr("common.edit") : tr("dealForm.new")} {tr("dealForm.deal")}</span
+      >
+    </div>
+  {/if}
 
   <div class="space-y-8">
     <section>

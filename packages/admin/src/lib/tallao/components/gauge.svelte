@@ -60,14 +60,21 @@
   const ring = $derived(variant === "ring");
   const R = 84;
   // The dial runs from 9 o'clock over the top to 3 o'clock; the ring starts at 12 o'clock.
-  const track = $derived(ring ? `M100,${100 - R}A${R},${R} 0 1 1 99.99,${100 - R}` : `M${100 - R},100A${R},${R} 0 0 1 ${100 + R},100`);
+  const track = $derived(
+    ring
+      ? `M100,${100 - R}A${R},${R} 0 1 1 99.99,${100 - R}`
+      : `M${100 - R},100A${R},${R} 0 0 1 ${100 + R},100`
+  );
   const tick = $derived.by(() => {
     if (target == null || !Number.isFinite(target)) return null;
     const a = ring ? ratio(target) * Math.PI * 2 : -Math.PI / 2 + ratio(target) * Math.PI;
-    const at = (r: number) => `${(100 + r * Math.sin(a)).toFixed(1)},${(100 - r * Math.cos(a)).toFixed(1)}`;
+    const at = (r: number) =>
+      `${(100 + r * Math.sin(a)).toFixed(1)},${(100 - r * Math.cos(a)).toFixed(1)}`;
     return `M${at(R - 11)}L${at(R + 11)}`;
   });
-  const text = $derived(`${format(value)}${target != null ? `, ${targetLabel} ${format(target)}` : ""}`);
+  const text = $derived(
+    `${format(value)}${target != null ? `, ${targetLabel} ${format(target)}` : ""}`
+  );
 </script>
 
 <div
@@ -83,40 +90,108 @@
 >
   <svg viewBox={ring ? "0 0 200 200" : "0 0 200 112"} class="ta-gauge-svg" aria-hidden="true">
     <path d={track} class="ta-gauge-track" />
-    {#if share > 0}<path d={track} class="ta-gauge-arc" pathLength="100" stroke-dasharray={`${(share * 100).toFixed(2)} 100`} />{/if}
+    {#if share > 0}<path
+        d={track}
+        class="ta-gauge-arc"
+        pathLength="100"
+        stroke-dasharray={`${(share * 100).toFixed(2)} 100`}
+      />{/if}
     {#if tick}<path d={tick} class="ta-gauge-tick" />{/if}
-    <text x="100" y={ring ? 110 : 98} class="ta-gauge-value" text-anchor="middle">{format(value)}</text>
+    <text x="100" y={ring ? 110 : 98} class="ta-gauge-value" text-anchor="middle"
+      >{format(value)}</text
+    >
   </svg>
   {#if !ring}
-    <div class="ta-gauge-ends" aria-hidden="true"><span>{format(min)}</span><span>{format(max)}</span></div>
+    <div class="ta-gauge-ends" aria-hidden="true">
+      <span>{format(min)}</span><span>{format(max)}</span>
+    </div>
   {/if}
   <div class="ta-gauge-label" aria-hidden="true">
-    <span>{label}</span>{#if target != null}<span class="ta-gauge-target">· {targetLabel} {format(target)}</span>{/if}
+    <span>{label}</span>{#if target != null}<span class="ta-gauge-target"
+        >· {targetLabel} {format(target)}</span
+      >{/if}
   </div>
 </div>
 
 <style>
-  .ta-gauge { display: flex; flex-direction: column; max-width: 100%; color: rgb(var(--ta-text)); --ta-gauge-color: rgb(var(--ta-accent)); }
-  .ta-gauge--success { --ta-gauge-color: rgb(var(--ta-success)); }
-  .ta-gauge--warning { --ta-gauge-color: rgb(var(--ta-warning)); }
-  .ta-gauge--error { --ta-gauge-color: rgb(var(--ta-danger)); }
+  .ta-gauge {
+    display: flex;
+    flex-direction: column;
+    max-width: 100%;
+    color: rgb(var(--ta-text));
+    --ta-gauge-color: rgb(var(--ta-accent));
+  }
+  .ta-gauge--success {
+    --ta-gauge-color: rgb(var(--ta-success));
+  }
+  .ta-gauge--warning {
+    --ta-gauge-color: rgb(var(--ta-warning));
+  }
+  .ta-gauge--error {
+    --ta-gauge-color: rgb(var(--ta-danger));
+  }
 
-  .ta-gauge-svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .ta-gauge-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
   .ta-gauge-track,
-  .ta-gauge-arc { fill: none; stroke-width: 16; stroke-linecap: round; }
-  .ta-gauge-track { stroke: rgb(var(--ta-elevated)); }
-  .ta-gauge-arc { stroke: var(--ta-gauge-color); animation: ta-gauge-in 0.6s ease-out; }
-  .ta-gauge-tick { stroke: rgb(var(--ta-text)); stroke-width: 3; stroke-linecap: round; }
-  .ta-gauge-value { fill: rgb(var(--ta-text)); font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ta-gauge-arc {
+    fill: none;
+    stroke-width: 16;
+    stroke-linecap: round;
+  }
+  .ta-gauge-track {
+    stroke: rgb(var(--ta-elevated));
+  }
+  .ta-gauge-arc {
+    stroke: var(--ta-gauge-color);
+    animation: ta-gauge-in 0.6s ease-out;
+  }
+  .ta-gauge-tick {
+    stroke: rgb(var(--ta-text));
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+  .ta-gauge-value {
+    fill: rgb(var(--ta-text));
+    font-size: 34px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
 
-  .ta-gauge-ends { display: flex; justify-content: space-between; padding: 0.25rem 0.125rem 0; font-size: 0.6875rem; color: rgb(var(--ta-text-dim)); font-variant-numeric: tabular-nums; }
-  .ta-gauge-label { margin-top: 0.25rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 0.3em; text-align: center; font-size: 0.8125rem; color: rgb(var(--ta-text-dim)); }
-  .ta-gauge-target { white-space: nowrap; }
+  .ta-gauge-ends {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0.125rem 0;
+    font-size: 0.6875rem;
+    color: rgb(var(--ta-text-dim));
+    font-variant-numeric: tabular-nums;
+  }
+  .ta-gauge-label {
+    margin-top: 0.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 0.3em;
+    text-align: center;
+    font-size: 0.8125rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-gauge-target {
+    white-space: nowrap;
+  }
 
   @keyframes ta-gauge-in {
-    from { stroke-dasharray: 0 100; }
+    from {
+      stroke-dasharray: 0 100;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ta-gauge-arc { animation: none; }
+    .ta-gauge-arc {
+      animation: none;
+    }
   }
 </style>

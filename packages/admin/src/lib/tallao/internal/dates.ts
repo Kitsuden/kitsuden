@@ -8,14 +8,17 @@
 export type ISODate = string;
 
 /** "2026-11-03" → { y, m, d }, or null if it is not a real date (February 31 is not). */
-export function parseISO(text: string | null | undefined): { y: number; m: number; d: number } | null {
+export function parseISO(
+  text: string | null | undefined
+): { y: number; m: number; d: number } | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((text ?? "").trim());
   if (!m) return null;
   const y = Number(m[1]);
   const month = Number(m[2]);
   const d = Number(m[3]);
   const date = new Date(Date.UTC(y, month - 1, d));
-  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== d) return null;
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== d)
+    return null;
   return { y, m: month, d };
 }
 
@@ -27,7 +30,8 @@ const toDate = (iso: ISODate) => {
   return new Date(Date.UTC(p.y, p.m - 1, p.d));
 };
 
-const fromDate = (date: Date): ISODate => toISO(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
+const fromDate = (date: Date): ISODate =>
+  toISO(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
 
 export function addDays(iso: ISODate, n: number): ISODate {
   const date = toDate(iso);
@@ -39,7 +43,9 @@ export function addDays(iso: ISODate, n: number): ISODate {
 export function addMonths(iso: ISODate, n: number): ISODate {
   const p = parseISO(iso)!;
   const target = new Date(Date.UTC(p.y, p.m - 1 + n, 1));
-  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  const last = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)
+  ).getUTCDate();
   return toISO(target.getUTCFullYear(), target.getUTCMonth() + 1, Math.min(p.d, last));
 }
 
@@ -75,7 +81,11 @@ export function monthGrid(iso: ISODate, weekStartsOn: number): ISODate[][] {
 }
 
 /** Locale formats (Intl) for dates without time: read in UTC so the day does not shift. */
-export function formatDate(iso: ISODate, locale: string | undefined, opts: Intl.DateTimeFormatOptions) {
+export function formatDate(
+  iso: ISODate,
+  locale: string | undefined,
+  opts: Intl.DateTimeFormatOptions
+) {
   return new Intl.DateTimeFormat(locale, { ...opts, timeZone: "UTC" }).format(toDate(iso));
 }
 

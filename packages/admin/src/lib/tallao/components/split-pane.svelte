@@ -71,7 +71,9 @@
     const r = container.getBoundingClientRect();
     const move = (ev: PointerEvent) => {
       const pct =
-        orientation === "horizontal" ? ((ev.clientX - r.left) / r.width) * 100 : ((ev.clientY - r.top) / r.height) * 100;
+        orientation === "horizontal"
+          ? ((ev.clientX - r.left) / r.width) * 100
+          : ((ev.clientY - r.top) / r.height) * 100;
       if (Number.isFinite(pct)) setSize(pct);
     };
     const release = () => {
@@ -113,10 +115,18 @@
     height: 100%;
     min-height: 0;
   }
-  .ta-split--horizontal { grid-template-columns: var(--ta-split-size) 6px minmax(0, 1fr); }
-  .ta-split--vertical { grid-template-rows: var(--ta-split-size) 6px minmax(0, 1fr); }
+  .ta-split--horizontal {
+    grid-template-columns: var(--ta-split-size) 6px minmax(0, 1fr);
+  }
+  .ta-split--vertical {
+    grid-template-rows: var(--ta-split-size) 6px minmax(0, 1fr);
+  }
 
-  .ta-split-panel { min-width: 0; min-height: 0; overflow: auto; }
+  .ta-split-panel {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+  }
 
   .ta-split-separator {
     position: relative;
@@ -124,8 +134,12 @@
     touch-action: none;
     outline: none;
   }
-  .ta-split--horizontal .ta-split-separator { cursor: col-resize; }
-  .ta-split--vertical .ta-split-separator { cursor: row-resize; }
+  .ta-split--horizontal .ta-split-separator {
+    cursor: col-resize;
+  }
+  .ta-split--vertical .ta-split-separator {
+    cursor: row-resize;
+  }
 
   /* The visible line is thin; the grab area is the full 6px. */
   .ta-split-separator::after {
@@ -134,16 +148,49 @@
     background: rgb(var(--ta-border));
     transition: background-color 0.15s;
   }
-  .ta-split--horizontal .ta-split-separator::after { top: 0; bottom: 0; left: 2.5px; width: 1px; }
-  .ta-split--vertical .ta-split-separator::after { left: 0; right: 0; top: 2.5px; height: 1px; }
+  .ta-split--horizontal .ta-split-separator::after {
+    top: 0;
+    bottom: 0;
+    left: 2.5px;
+    width: 1px;
+  }
+  .ta-split--vertical .ta-split-separator::after {
+    left: 0;
+    right: 0;
+    top: 2.5px;
+    height: 1px;
+  }
 
   .ta-split-separator:hover::after,
-  .ta-split-separator:focus-visible::after { background: rgb(var(--ta-accent)); }
-  .ta-split--horizontal .ta-split-separator:focus-visible::after { left: 1.5px; width: 3px; }
-  .ta-split--vertical .ta-split-separator:focus-visible::after { top: 1.5px; height: 3px; }
+  .ta-split-separator:focus-visible::after {
+    background: rgb(var(--ta-accent));
+  }
+  .ta-split--horizontal .ta-split-separator:focus-visible::after {
+    left: 1.5px;
+    width: 3px;
+  }
+  .ta-split--vertical .ta-split-separator:focus-visible::after {
+    top: 1.5px;
+    height: 3px;
+  }
   @media (pointer: coarse) {
-    .ta-split-separator::before { content: ""; position: absolute; }
-    .ta-split--horizontal .ta-split-separator::before { top: 0; bottom: 0; left: 50%; width: 2.75rem; transform: translateX(-50%); }
-    .ta-split--vertical .ta-split-separator::before { left: 0; right: 0; top: 50%; height: 2.75rem; transform: translateY(-50%); }
+    .ta-split-separator::before {
+      content: "";
+      position: absolute;
+    }
+    .ta-split--horizontal .ta-split-separator::before {
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 2.75rem;
+      transform: translateX(-50%);
+    }
+    .ta-split--vertical .ta-split-separator::before {
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 2.75rem;
+      transform: translateY(-50%);
+    }
   }
 </style>

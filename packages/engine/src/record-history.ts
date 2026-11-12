@@ -8,6 +8,13 @@
  *   · dataset entries      packages/core/datasets (create / update / delete entry)
  *   · model records        `modelOperations` (./models.ts)
  *   · explorer writes      apps/api/src/routes/data-explorer.ts
+ *   · imports              packages/core/datasets/datasets.import-export.ts
+ *   · GraphQL mutations    apps/api/src/routes/graphql.ts
+ *   · core MCP record tools apps/api/src/services/mcp-tools.ts (datasets and native tables)
+ *   · the kons' `repo()`   ./repository.ts (capped per call, `history: false` to skip)
+ *
+ * Retention: `pruneRecordHistory`, run hourly by the API
+ * (`RECORD_HISTORY_RETENTION_DAYS`, 365 by default, `0` = forever).
  *
  * A record is addressed as the agent data ledger addresses it (`field_evidence`):
  * `dataset_entry` + the entry id, or `table:<name>` + the primary key. A model row
@@ -29,9 +36,9 @@
  * the write when the write commits, and a failure to record never undoes it.
  */
 
-import { sql } from "drizzle-orm";
+import { getTableColumns, getTableName, sql } from "drizzle-orm";
 
-import { useRequest } from "./request-scope";
+import { DB_METRICS_SERVICE, useRequest } from "./request-scope";
 import { asSystem, attemptSql } from "./rls-request";
 import { isSecretColumn } from "./secret-columns";
 
@@ -81,6 +88,117 @@ export const DATASET_ENTRY_ENTITY = "dataset_entry";
 export const tableEntity = (table: string) => `table:${table}`;
 
 type Row = Record<string, unknown>;
+
+/** How a dataset entry is diffed: its own fields under `data`, never its keys. */
+export const DATASET_ENTRY_DIFF = { nested: "data", skip: ["id", "dataSetId", "createdById"] };
+
+/**
+ * How a row of a Drizzle table is addressed in the history: `table:<name>`,
+ * with COLUMN names (a Drizzle row comes keyed by property: `kpiName` →
+ * `kpi_name`), the primary key `id` left out of the diff. The address the
+ * explorer and `defineModel` use, so a row has one history whatever wrote it.
+ */
+export function tableHistoryTarget(table: unknown): {
+  entity: string;
+  idColumn: string;
+  diff: DiffOptions;
+  row: (row: Row | null | undefined) => Row | null;
+} {
+  const name = getTableName(table as never);
+  // A dataset entry written as a table row is still a dataset entry: the
+  // address and field names its own routes use (`data.<key>`).
+  if (name === "data_entries") {
+    return {
+      entity: DATASET_ENTRY_ENTITY,
+      idColumn: "id",
+      diff: DATASET_ENTRY_DIFF,
+      row: (row) => row ?? null,
+    };
+  }
+  const columns = getTableColumns(table as never) as Record<string, { name: string }>;
+  const idColumn = columns.id?.name ?? "id";
+  return {
+    entity: tableEntity(name),
+    idColumn,
+    diff: { skip: [idColumn] },
+    row: (row) =>
+      row
+        ? Object.fromEntries(Object.entries(row).map(([k, v]) => [columns[k]?.name ?? k, v]))
+        : null,
+  };
+}
+
+/** Rows one bulk call may write and still be recorded, one history row each. */
+export const BULK_HISTORY_CAP = 500;
+
+/**
+ * The changes of rows written to a Drizzle table, as `recordChanges` inputs.
+ * More than `BULK_HISTORY_CAP` changes in one call → none (a bulk job, not an edit).
+ */
+export function tableChanges(
+  table: unknown,
+  changes: Array<{ action: RecordAction; before?: Row | null; after?: Row | null }>,
+  user: unknown
+): RecordChangeInput[] {
+  if (changes.length === 0 || changes.length > BULK_HISTORY_CAP) return [];
+  const target = tableHistoryTarget(table);
+  return changes.map((c) => {
+    const before = target.row(c.before);
+    const after = target.row(c.after);
+    return {
+      entity: target.entity,
+      rowId: (after ?? before)?.[target.idColumn],
+      action: c.action,
+      before,
+      after,
+      user,
+      diff: target.diff,
+    };
+  });
+}
+
+/** A row written to some table by a multi-table call (a batch). */
+export interface TableWrite {
+  table: unknown;
+  action: RecordAction;
+  before?: Row | null;
+  after?: Row | null;
+}
+
+/**
+ * `tableChanges` for writes to several tables in one call: all of them, or none
+ * when there are more than `BULK_HISTORY_CAP`.
+ */
+export function tableWritesChanges(writes: TableWrite[], user: unknown): RecordChangeInput[] {
+  if (writes.length === 0 || writes.length > BULK_HISTORY_CAP) return [];
+  return writes.flatMap((w) => tableChanges(w.table, [w], user));
+}
+
+/**
+ * `runAsSystem` for `recordChanges` inside a transaction that is not the
+ * request's own (a batch opens one): the INSERT goes in a savepoint of `tx`, as
+ * the system, and the RLS context the transaction had is put back afterwards.
+ * A failed INSERT rolls back only the savepoint, never the batch.
+ */
+export function systemSavepointOn(tx: {
+  transaction(fn: (sp: HistoryExecutor) => Promise<unknown>): Promise<unknown>;
+}): (insert: () => Promise<void>) => Promise<void> {
+  return async (insert) => {
+    await tx.transaction(async (sp) => {
+      const [prior] = rowsOf(
+        await sp.execute(sql`
+          SELECT COALESCE(current_setting('app.current_user_id', true), '') AS id,
+                 COALESCE(current_setting('app.current_user_role', true), '') AS role
+        `)
+      );
+      await sp.execute(sql`SELECT set_config('app.current_user_id', '', true),
+                                  set_config('app.current_user_role', '', true)`);
+      await insert();
+      await sp.execute(sql`SELECT set_config('app.current_user_id', ${String(prior?.id ?? "")}, true),
+                                  set_config('app.current_user_role', ${String(prior?.role ?? "")}, true)`);
+    });
+  };
+}
 
 const plain = (v: unknown): v is Row =>
   !!v && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
@@ -342,13 +460,21 @@ export async function recordChanges(
     }
   };
   const insert = async () => {
-    for (let i = 0; i < rows.length; i += INSERT_BATCH) {
-      await executor.execute(sql`
-        INSERT INTO record_changes
-          (entity, row_id, action, actor_type, actor_id, actor_name, changes, truncated,
-           proposal_id, approved_by)
-        VALUES ${sql.join(rows.slice(i, i + INSERT_BATCH), sql`, `)}
-      `);
+    // The glass box counts the rows a request's writes touched: the history is
+    // bookkeeping, not one of them. Its own INSERTs are left out of the count.
+    const measures = useRequest()?.services?.[DB_METRICS_SERVICE] as { rows?: number } | undefined;
+    const counted = measures?.rows;
+    try {
+      for (let i = 0; i < rows.length; i += INSERT_BATCH) {
+        await executor.execute(sql`
+          INSERT INTO record_changes
+            (entity, row_id, action, actor_type, actor_id, actor_name, changes, truncated,
+             proposal_id, approved_by)
+          VALUES ${sql.join(rows.slice(i, i + INSERT_BATCH), sql`, `)}
+        `);
+      }
+    } finally {
+      if (measures && typeof counted === "number") measures.rows = counted;
     }
   };
   if (runAsSystem) {
@@ -376,6 +502,61 @@ export async function recordChange(
   input: RecordChangeInput
 ): Promise<boolean> {
   return (await recordChanges(executor, [input], input.onFailure)) > 0;
+}
+
+// ── Retention ───────────────────────────────────────────────────────────────────
+
+/** Days a history row is kept when `RECORD_HISTORY_RETENTION_DAYS` does not say. */
+export const DEFAULT_RECORD_HISTORY_RETENTION_DAYS = 365;
+
+/**
+ * Days a `record_changes` row is kept: `RECORD_HISTORY_RETENTION_DAYS`. Unset,
+ * empty or not a number = 365; `0` = kept forever (the convention of
+ * `AGENT_KEY_DEFAULT_EXPIRY_DAYS`: empty is the default, `0` is never). Returns
+ * `null` for "forever".
+ */
+export function recordHistoryRetentionDays(
+  env: Record<string, string | undefined> = process.env
+): number | null {
+  const raw = env.RECORD_HISTORY_RETENTION_DAYS;
+  if (raw === undefined || raw.trim() === "") return DEFAULT_RECORD_HISTORY_RETENTION_DAYS;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return DEFAULT_RECORD_HISTORY_RETENTION_DAYS;
+  if (n === 0) return null;
+  return Math.max(1, Math.floor(n));
+}
+
+/** Rows deleted per statement, and statements per prune, so a prune never holds a long lock. */
+const PRUNE_BATCH = 5000;
+const PRUNE_ROUNDS = 40;
+
+/**
+ * Deletes the history rows older than `days`. Run it as the system (the global
+ * connection, never inside a request: only the system may delete these rows).
+ * `null` deletes nothing. At most `PRUNE_BATCH * PRUNE_ROUNDS` rows per call;
+ * the next sweep takes the rest. Returns how many rows were deleted.
+ */
+export async function pruneRecordHistory(
+  executor: HistoryExecutor,
+  days: number | null = recordHistoryRetentionDays()
+): Promise<number> {
+  if (days === null || !Number.isFinite(days) || days <= 0) return 0;
+  const whole = Math.floor(days);
+  let deleted = 0;
+  for (let round = 0; round < PRUNE_ROUNDS; round++) {
+    const result = await executor.execute(sql`
+      DELETE FROM record_changes
+       WHERE id IN (
+         SELECT id FROM record_changes
+          WHERE created_at < now() - make_interval(days => ${whole}::int)
+          LIMIT ${PRUNE_BATCH}
+       )
+    `);
+    const n = Number((result as { rowCount?: number } | null)?.rowCount ?? 0);
+    deleted += n;
+    if (n < PRUNE_BATCH) break;
+  }
+  return deleted;
 }
 
 // ── Reading ─────────────────────────────────────────────────────────────────────

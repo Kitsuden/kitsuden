@@ -17,7 +17,14 @@
 <script lang="ts">
   import ChartFigure from "../internal/chart-figure.svelte";
   import { useLabels } from "../i18n";
-  import { compactNumber, niceDomain, niceScale, seriesColor, valueOf, type ChartSeries } from "../internal/chart";
+  import {
+    compactNumber,
+    niceDomain,
+    niceScale,
+    seriesColor,
+    valueOf,
+    type ChartSeries,
+  } from "../internal/chart";
 
   const L = useLabels();
   const {
@@ -73,7 +80,8 @@
   const plotHeight = $derived(Math.max(40, height - M.top - M.bottom));
   const piles = $derived(stacked && series.length > 1);
 
-  const totalOf = (row: Record<string, unknown>) => series.reduce((sum, s) => sum + Math.max(0, valueOf(row, s.key) ?? 0), 0);
+  const totalOf = (row: Record<string, unknown>) =>
+    series.reduce((sum, s) => sum + Math.max(0, valueOf(row, s.key) ?? 0), 0);
   /** What is drawn for series `si` in row `i`: its value, or the running sum when stacked. */
   function drawn(i: number, si: number): number | null {
     if (!piles) return valueOf(data[i], series[si].key);
@@ -82,11 +90,27 @@
     return sum;
   }
 
-  const maxValue = $derived(Math.max(0, ...data.map((d) => (piles ? totalOf(d) : Math.max(0, ...series.map((s) => valueOf(d, s.key) ?? 0))))));
-  const scale = $derived(domain && !piles ? niceDomain(domain[0], domain[1]) : { min: 0, ...niceScale(maxValue) });
-  const yOf = (v: number) => M.top + plotHeight - ((Math.min(scale.max, Math.max(scale.min, v)) - scale.min) / (scale.max - scale.min)) * plotHeight;
-  const xOf = (i: number) => M.left + (data.length <= 1 ? plotWidth / 2 : (i / (data.length - 1)) * plotWidth);
-  const labelStep = $derived(Math.max(1, Math.ceil(data.length / Math.max(1, Math.floor(plotWidth / 64)))));
+  const maxValue = $derived(
+    Math.max(
+      0,
+      ...data.map((d) =>
+        piles ? totalOf(d) : Math.max(0, ...series.map((s) => valueOf(d, s.key) ?? 0))
+      )
+    )
+  );
+  const scale = $derived(
+    domain && !piles ? niceDomain(domain[0], domain[1]) : { min: 0, ...niceScale(maxValue) }
+  );
+  const yOf = (v: number) =>
+    M.top +
+    plotHeight -
+    ((Math.min(scale.max, Math.max(scale.min, v)) - scale.min) / (scale.max - scale.min)) *
+      plotHeight;
+  const xOf = (i: number) =>
+    M.left + (data.length <= 1 ? plotWidth / 2 : (i / (data.length - 1)) * plotWidth);
+  const labelStep = $derived(
+    Math.max(1, Math.ceil(data.length / Math.max(1, Math.floor(plotWidth / 64))))
+  );
 
   /** A series' path; a gap (missing value) breaks the line instead of inventing a zero. */
   function linePath(si: number) {
@@ -106,11 +130,17 @@
 
   /** The fill: down to the base line, or down to the series below when stacked. */
   function areaPath(si: number) {
-    const points = data.map((_, i) => [i, drawn(i, si)] as const).filter(([, v]) => v != null) as [number, number][];
+    const points = data.map((_, i) => [i, drawn(i, si)] as const).filter(([, v]) => v != null) as [
+      number,
+      number,
+    ][];
     if (points.length < 2) return "";
     const top = points.map(([i, v], n) => `${n ? "L" : "M"}${xOf(i)},${yOf(v)}`).join("");
     if (piles && si > 0) {
-      const below = [...points].reverse().map(([i]) => `L${xOf(i)},${yOf(drawn(i, si - 1) ?? 0)}`).join("");
+      const below = [...points]
+        .reverse()
+        .map(([i]) => `L${xOf(i)},${yOf(drawn(i, si - 1) ?? 0)}`)
+        .join("");
       return `${top}${below}Z`;
     }
     const base = yOf(scale.min);
@@ -139,14 +169,23 @@
   );
 
   const table = $derived({
-    columns: [{ label: xLabel ?? x }, ...series.map((s) => ({ label: s.label, numeric: true })), ...(piles ? [{ label: totalLabel, numeric: true }] : [])],
-    rows: data.map((row, i) => [category(i), ...series.map((s) => fmt(valueOf(row, s.key))), ...(piles ? [format(totalOf(row))] : [])]),
+    columns: [
+      { label: xLabel ?? x },
+      ...series.map((s) => ({ label: s.label, numeric: true })),
+      ...(piles ? [{ label: totalLabel, numeric: true }] : []),
+    ],
+    rows: data.map((row, i) => [
+      category(i),
+      ...series.map((s) => fmt(valueOf(row, s.key))),
+      ...(piles ? [format(totalOf(row))] : []),
+    ]),
   });
 
   function onKey(e: KeyboardEvent) {
     if (!data.length) return;
     if (e.key === "ArrowRight") active = active == null ? 0 : Math.min(data.length - 1, active + 1);
-    else if (e.key === "ArrowLeft") active = active == null ? data.length - 1 : Math.max(0, active - 1);
+    else if (e.key === "ArrowLeft")
+      active = active == null ? data.length - 1 : Math.max(0, active - 1);
     else if (e.key === "Home") active = 0;
     else if (e.key === "End") active = data.length - 1;
     else if (e.key === "Escape") active = null;
@@ -185,33 +224,86 @@
     onpointermove={onMove}
     onpointerleave={() => (active = null)}
   >
-    <svg width="100%" {height} viewBox={`0 0 ${chartWidth} ${height}`} class="ta-chart-svg" aria-hidden="true">
+    <svg
+      width="100%"
+      {height}
+      viewBox={`0 0 ${chartWidth} ${height}`}
+      class="ta-chart-svg"
+      aria-hidden="true"
+    >
       {#each scale.ticks as t (t)}
-        <line x1={M.left} x2={M.left + plotWidth} y1={yOf(t)} y2={yOf(t)} class={t === scale.min ? "ta-chart-base" : "ta-chart-grid"} />
-        <text x={M.left - 8} y={yOf(t)} class="ta-chart-axis" text-anchor="end" dominant-baseline="middle">{format(t)}</text>
+        <line
+          x1={M.left}
+          x2={M.left + plotWidth}
+          y1={yOf(t)}
+          y2={yOf(t)}
+          class={t === scale.min ? "ta-chart-base" : "ta-chart-grid"}
+        />
+        <text
+          x={M.left - 8}
+          y={yOf(t)}
+          class="ta-chart-axis"
+          text-anchor="end"
+          dominant-baseline="middle">{format(t)}</text
+        >
       {/each}
       {#each data as _, i (i)}
         {#if i % labelStep === 0 || i === data.length - 1}
-          <text x={xOf(i)} y={height - 8} class="ta-chart-axis" text-anchor={i === data.length - 1 && data.length > 1 ? "end" : "middle"}>{category(i)}</text>
+          <text
+            x={xOf(i)}
+            y={height - 8}
+            class="ta-chart-axis"
+            text-anchor={i === data.length - 1 && data.length > 1 ? "end" : "middle"}
+            >{category(i)}</text
+          >
         {/if}
       {/each}
 
       {#if area || piles}
-        {#each series as s, si (s.key)}<path d={areaPath(si)} fill={seriesColor(si)} fill-opacity={piles ? 0.35 : 0.1} />{/each}
+        {#each series as s, si (s.key)}<path
+            d={areaPath(si)}
+            fill={seriesColor(si)}
+            fill-opacity={piles ? 0.35 : 0.1}
+          />{/each}
       {/if}
       {#each series as s, si (s.key)}
-        <path d={linePath(si)} fill="none" stroke={seriesColor(si)} stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+        <path
+          d={linePath(si)}
+          fill="none"
+          stroke={seriesColor(si)}
+          stroke-width="2"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
         {@const u = lastIndex(si)}
         {#if u >= 0}
-          <circle cx={xOf(u)} cy={yOf(drawn(u, si)!)} r="4" fill={seriesColor(si)} class="ta-chart-dot" />
+          <circle
+            cx={xOf(u)}
+            cy={yOf(drawn(u, si)!)}
+            r="4"
+            fill={seriesColor(si)}
+            class="ta-chart-dot"
+          />
         {/if}
       {/each}
 
       {#if active != null && data[active]}
-        <line x1={xOf(active)} x2={xOf(active)} y1={M.top} y2={M.top + plotHeight} class="ta-chart-crosshair" />
+        <line
+          x1={xOf(active)}
+          x2={xOf(active)}
+          y1={M.top}
+          y2={M.top + plotHeight}
+          class="ta-chart-crosshair"
+        />
         {#each series as s, si (s.key)}
           {@const v = drawn(active, si)}
-          {#if v != null}<circle cx={xOf(active)} cy={yOf(v)} r="4" fill={seriesColor(si)} class="ta-chart-dot" />{/if}
+          {#if v != null}<circle
+              cx={xOf(active)}
+              cy={yOf(v)}
+              r="4"
+              fill={seriesColor(si)}
+              class="ta-chart-dot"
+            />{/if}
         {/each}
       {/if}
     </svg>
@@ -225,7 +317,10 @@
         <span class="ta-chart-tooltip-x">{category(active)}</span>
         {#each series as s, si (s.key)}
           <span class="ta-chart-tooltip-row">
-            <span class={piles ? "ta-chart-key" : "ta-chart-line"} style:background={seriesColor(si)}></span>
+            <span
+              class={piles ? "ta-chart-key" : "ta-chart-line"}
+              style:background={seriesColor(si)}
+            ></span>
             <strong>{fmt(valueOf(data[active], s.key))}</strong>
             <span>{s.label}</span>
           </span>
@@ -242,10 +337,16 @@
 </ChartFigure>
 
 <style>
-  .ta-chart-tooltip-total { margin-top: 0.125rem; padding-top: 0.25rem; border-top: 1px solid rgb(var(--ta-border)); }
+  .ta-chart-tooltip-total {
+    margin-top: 0.125rem;
+    padding-top: 0.25rem;
+    border-top: 1px solid rgb(var(--ta-border));
+  }
 
   @media (pointer: coarse) {
     /* The chart itself is the control: tall enough to step through with a finger. */
-    .ta-chart-canvas { min-height: 2.75rem; }
+    .ta-chart-canvas {
+      min-height: 2.75rem;
+    }
   }
 </style>

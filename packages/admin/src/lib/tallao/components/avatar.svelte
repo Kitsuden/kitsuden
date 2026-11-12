@@ -85,14 +85,30 @@
     user-select: none;
   }
 
-  .ta-avatar--sm { width: 1.5rem; height: 1.5rem; font-size: 0.625rem; }
-  .ta-avatar--md { width: 2.25rem; height: 2.25rem; font-size: 0.8125rem; }
-  .ta-avatar--lg { width: 3rem; height: 3rem; font-size: 1rem; }
+  .ta-avatar--sm {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.625rem;
+  }
+  .ta-avatar--md {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 0.8125rem;
+  }
+  .ta-avatar--lg {
+    width: 3rem;
+    height: 3rem;
+    font-size: 1rem;
+  }
 
   .ta-avatar--circle,
-  .ta-avatar--circle img { border-radius: 9999px; }
+  .ta-avatar--circle img {
+    border-radius: 9999px;
+  }
   .ta-avatar--square,
-  .ta-avatar--square img { border-radius: var(--ta-radius); }
+  .ta-avatar--square img {
+    border-radius: var(--ta-radius);
+  }
 
   .ta-avatar img {
     width: 100%;

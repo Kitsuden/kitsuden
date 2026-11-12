@@ -20,7 +20,11 @@
  *   (transitions and attachments only run in the browser).
  * - No dependency: Svelte's transition contract and the Web Animations API.
  */
-import { crossfade as svelteCrossfade, type CrossfadeParams, type TransitionConfig } from "svelte/transition";
+import {
+  crossfade as svelteCrossfade,
+  type CrossfadeParams,
+  type TransitionConfig,
+} from "svelte/transition";
 
 /** The kit's durations in ms; the same as `--ta-duration-fast | base | slow`. */
 export const DURATION = { fast: 120, base: 180, slow: 240 } as const;
@@ -70,7 +74,10 @@ export function fade(_node: Element, { duration, delay = 0 }: MotionParams = {})
 }
 
 /** Fades in while rising a few pixels: list items, cards, messages. `y` is the distance. */
-export function rise(_node: Element, { duration, delay = 0, y = 6 }: MotionParams & { y?: number } = {}): TransitionConfig {
+export function rise(
+  _node: Element,
+  { duration, delay = 0, y = 6 }: MotionParams & { y?: number } = {}
+): TransitionConfig {
   if (prefersReducedMotion()) return still();
   return {
     delay,
@@ -81,7 +88,10 @@ export function rise(_node: Element, { duration, delay = 0, y = 6 }: MotionParam
 }
 
 /** Grows from slightly smaller while fading in: dialogs, popovers, menus. */
-export function scaleIn(_node: Element, { duration, delay = 0, from = 0.96 }: MotionParams & { from?: number } = {}): TransitionConfig {
+export function scaleIn(
+  _node: Element,
+  { duration, delay = 0, from = 0.96 }: MotionParams & { from?: number } = {}
+): TransitionConfig {
   if (prefersReducedMotion()) return still();
   return {
     delay,
@@ -94,7 +104,12 @@ export function scaleIn(_node: Element, { duration, delay = 0, from = 0.96 }: Mo
 /** Slides in from an edge: sheets and drawers. `distance` is a CSS length (its own size by default). */
 export function slide(
   _node: Element,
-  { duration, delay = 0, from = "right", distance = "100%" }: MotionParams & { from?: "left" | "right" | "top" | "bottom"; distance?: string } = {}
+  {
+    duration,
+    delay = 0,
+    from = "right",
+    distance = "100%",
+  }: MotionParams & { from?: "left" | "right" | "top" | "bottom"; distance?: string } = {}
 ): TransitionConfig {
   if (prefersReducedMotion()) return still();
   const axis = from === "left" || from === "right" ? "X" : "Y";
@@ -108,7 +123,10 @@ export function slide(
 }
 
 /** Opens and closes a block of unknown height (an accordion panel, a details row). */
-export function collapse(node: Element, { duration, delay = 0 }: MotionParams = {}): TransitionConfig {
+export function collapse(
+  node: Element,
+  { duration, delay = 0 }: MotionParams = {}
+): TransitionConfig {
   if (prefersReducedMotion()) return still();
   const height = (node as HTMLElement).offsetHeight;
   return {
@@ -124,7 +142,10 @@ export function collapse(node: Element, { duration, delay = 0 }: MotionParams = 
  * `<li in:rise={stagger(i)}>`. The delay stops growing after `max` items so a long list
  * does not make anyone wait.
  */
-export function stagger(index: number, { step = 30, max = 8, ...params }: MotionParams & { step?: number; max?: number; y?: number } = {}) {
+export function stagger(
+  index: number,
+  { step = 30, max = 8, ...params }: MotionParams & { step?: number; max?: number; y?: number } = {}
+) {
   return { ...params, delay: (params.delay ?? 0) + Math.min(index, max) * step };
 }
 
@@ -139,10 +160,8 @@ export function crossfade({ duration }: { duration?: Speed } = {}) {
     easing: easeOut,
     fallback: (node) => scaleIn(node),
   });
-  const quiet =
-    (fn: typeof send) =>
-    (node: Element, params: CrossfadeParams & { key: unknown }) =>
-      fn(node, prefersReducedMotion() ? { ...params, duration: 0 } : params);
+  const quiet = (fn: typeof send) => (node: Element, params: CrossfadeParams & { key: unknown }) =>
+    fn(node, prefersReducedMotion() ? { ...params, duration: 0 } : params);
   return [quiet(send), quiet(receive)] as const;
 }
 
@@ -158,13 +177,21 @@ export function press({ scale = 0.97 }: { scale?: number } = {}): Attachment {
     let animation: Animation | undefined;
     const down = () => {
       if (!canAnimate(node)) return;
-      animation = node.animate([{ transform: `scale(${scale})` }], { duration: 80, easing: EASE.out, fill: "forwards" });
+      animation = node.animate([{ transform: `scale(${scale})` }], {
+        duration: 80,
+        easing: EASE.out,
+        fill: "forwards",
+      });
     };
     const up = () => {
       if (!animation) return;
       animation.cancel();
       animation = undefined;
-      if (canAnimate(node)) node.animate([{ transform: `scale(${scale})` }, { transform: "scale(1)" }], { duration: DURATION.base, easing: EASE.spring });
+      if (canAnimate(node))
+        node.animate([{ transform: `scale(${scale})` }, { transform: "scale(1)" }], {
+          duration: DURATION.base,
+          easing: EASE.spring,
+        });
     };
     node.addEventListener("pointerdown", down);
     node.addEventListener("pointerup", up);
@@ -189,10 +216,14 @@ export function shimmer({ duration = 1400 }: { duration?: number } = {}): Attach
   return (node) => {
     if (!canAnimate(node)) return;
     const previous = node.style.backgroundImage;
-    node.style.backgroundImage = "linear-gradient(100deg, transparent 30%, rgb(var(--ta-text) / 0.08) 50%, transparent 70%)";
+    node.style.backgroundImage =
+      "linear-gradient(100deg, transparent 30%, rgb(var(--ta-text) / 0.08) 50%, transparent 70%)";
     node.style.backgroundSize = "200% 100%";
     node.style.backgroundRepeat = "no-repeat";
-    const animation = node.animate([{ backgroundPosition: "150% 0" }, { backgroundPosition: "-50% 0" }], { duration, iterations: Infinity, easing: "linear" });
+    const animation = node.animate(
+      [{ backgroundPosition: "150% 0" }, { backgroundPosition: "-50% 0" }],
+      { duration, iterations: Infinity, easing: "linear" }
+    );
     return () => {
       animation.cancel();
       node.style.backgroundImage = previous;
@@ -203,7 +234,10 @@ export function shimmer({ duration = 1400 }: { duration?: number } = {}): Attach
 }
 
 /** Shakes an element sideways once: an invalid field, a refused action. Call it when it happens. */
-export function shake(node: Element | null | undefined, { distance = 5 }: { distance?: number } = {}): void {
+export function shake(
+  node: Element | null | undefined,
+  { distance = 5 }: { distance?: number } = {}
+): void {
   if (!node || !canAnimate(node)) return;
   const d = distance;
   node.animate(
@@ -216,7 +250,10 @@ export function shake(node: Element | null | undefined, { distance = 5 }: { dist
  * Draws the stroke of an SVG shape from nothing (a success check, a ring): attach it to a
  * `<path>`, `<circle>` or `<polyline>`. The shape is drawn whole under reduced motion.
  */
-export function drawCheck({ duration, delay = 0 }: MotionParams = {}): Attachment<SVGGeometryElement> {
+export function drawCheck({
+  duration,
+  delay = 0,
+}: MotionParams = {}): Attachment<SVGGeometryElement> {
   return (node) => {
     if (!canAnimate(node) || typeof node.getTotalLength !== "function") return;
     const length = node.getTotalLength();
@@ -237,13 +274,20 @@ export function drawCheck({ duration, delay = 0 }: MotionParams = {}): Attachmen
  * real figure; only the painted frames in between count up. Re-create it when the value
  * changes: `{@attach rollNumber(total)}`.
  */
-export function rollNumber(value: number, { duration, format = (n: number) => String(Math.round(n)) }: { duration?: Speed; format?: (n: number) => string } = {}): Attachment {
+export function rollNumber(
+  value: number,
+  {
+    duration,
+    format = (n: number) => String(Math.round(n)),
+  }: { duration?: Speed; format?: (n: number) => string } = {}
+): Attachment {
   return (node) => {
     const store = node as HTMLElement & { __taNumber?: number };
     const from = store.__taNumber ?? value;
     store.__taNumber = value;
     node.textContent = format(value);
-    if (from === value || prefersReducedMotion() || typeof requestAnimationFrame !== "function") return;
+    if (from === value || prefersReducedMotion() || typeof requestAnimationFrame !== "function")
+      return;
     const total = ms(duration, 600);
     const start = performance.now();
     let frame = requestAnimationFrame(function step(now) {
@@ -269,20 +313,26 @@ export function rollNumber(value: number, { duration, format = (n: number) => St
  *     <span class="bar" {@attach tabIndicator(() => `[aria-selected="true"]`, () => current)}></span>
  *   </div>
  */
-export function tabIndicator(active: () => HTMLElement | string | null | undefined, track?: () => unknown): Attachment {
+export function tabIndicator(
+  active: () => HTMLElement | string | null | undefined,
+  track?: () => unknown
+): Attachment {
   return (node) => {
     const container = node.parentElement;
     if (!container) return;
     track?.();
     const place = (animate: boolean) => {
       const target = active();
-      const item = typeof target === "string" ? container.querySelector<HTMLElement>(target) : target;
+      const item =
+        typeof target === "string" ? container.querySelector<HTMLElement>(target) : target;
       if (!item) {
         node.style.opacity = "0";
         return;
       }
       const moves = animate && !prefersReducedMotion() && node.style.width !== "";
-      node.style.transition = moves ? `transform ${DURATION.base}ms ${EASE.out}, width ${DURATION.base}ms ${EASE.out}` : "none";
+      node.style.transition = moves
+        ? `transform ${DURATION.base}ms ${EASE.out}, width ${DURATION.base}ms ${EASE.out}`
+        : "none";
       node.style.opacity = "1";
       node.style.width = `${item.offsetWidth}px`;
       node.style.transform = `translateX(${item.offsetLeft}px)`;
@@ -301,7 +351,12 @@ export function tabIndicator(active: () => HTMLElement | string | null | undefin
  * transition is over.
  */
 export async function viewTransition(update: () => void | Promise<void>): Promise<void> {
-  const doc = typeof document === "undefined" ? undefined : (document as Document & { startViewTransition?: (cb: () => void | Promise<void>) => { finished: Promise<void> } });
+  const doc =
+    typeof document === "undefined"
+      ? undefined
+      : (document as Document & {
+          startViewTransition?: (cb: () => void | Promise<void>) => { finished: Promise<void> };
+        });
   if (!doc?.startViewTransition || prefersReducedMotion()) {
     await update();
     return;

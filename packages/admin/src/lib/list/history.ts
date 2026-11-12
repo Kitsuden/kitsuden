@@ -22,6 +22,46 @@ export interface Change {
   label?: string;
   before?: unknown;
   after?: unknown;
+  /** A secret field: it changed and its values were never kept (DiffView shows "hidden"). */
+  redacted?: boolean;
+}
+
+/** A value the API cut because it was too long: `{ truncated: true, bytes, preview }`. */
+const isCut = (v: unknown): v is { truncated: true; preview: string; bytes?: number } =>
+  !!v &&
+  typeof v === "object" &&
+  (v as { truncated?: unknown }).truncated === true &&
+  typeof (v as { preview?: unknown }).preview === "string";
+
+/**
+ * A field the form does not label (a column, a secret, `ownerId`) in words:
+ * `api_token` → "Api token", `ownerId` → "Owner id".
+ */
+export function fieldWords(key: string): string {
+  const words = key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .toLowerCase();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : key;
+}
+
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/;
+
+/**
+ * DiffView's `format` for the history: a value the API cut shows its preview with an
+ * ellipsis, a timestamp is written as a date; anything else keeps DiffView's own.
+ */
+export function historyValue(
+  value: unknown,
+  formatDate?: (iso: string) => string
+): string | undefined {
+  if (isCut(value)) return `${value.preview.trimEnd()}…`;
+  // A timestamp reads as a date, like the rest of the page.
+  if (formatDate && typeof value === "string" && ISO_DATE_TIME.test(value)) {
+    return formatDate(value);
+  }
+  return undefined;
 }
 
 export type HistoryKind = "created" | "updated" | "snapshot" | "proposal" | "change";
@@ -41,6 +81,10 @@ export interface HistoryEvent {
   decidedBy?: string;
   /** For a recorded change: what was done to the record. */
   action?: "create" | "update" | "delete";
+  /** The system wrote it (no person, no agent). */
+  system?: boolean;
+  /** The API left some fields out of this change (too many or too large). */
+  truncated?: boolean;
   note?: string;
   changes: Change[];
 }
@@ -60,6 +104,8 @@ export interface ChangeLike {
   changes: Array<{ field: string; before?: unknown; after?: unknown; redacted?: boolean }>;
   truncated?: boolean;
   proposalId?: string | null;
+  /** The user id of who approved it, when the write was an approved agent proposal. */
+  approvedBy?: string | null;
 }
 
 export interface ProposalLike {
@@ -163,27 +209,25 @@ export interface HistoryInput {
   changes?: ChangeLike[];
   /** Field key → label, for the diff. */
   labels?: Record<string, string>;
-  /** Shown instead of the value of a secret field (the API never sends it). */
-  redactedText?: string;
+  /** Proposal id → the name of the person who approved it, for recorded changes. */
+  approvers?: Record<string, string>;
 }
 
 /**
  * A recorded change's fields as DiffView changes: `data.price` is shown as `price` (an
- * entry's own field); a secret field shows that it changed, never its value.
+ * entry's own field); a secret field shows that it changed, never its value (see
+ * `Change.redacted` and `historyValue`).
  */
-export function changeFields(
-  change: ChangeLike,
-  labels: Record<string, string> = {},
-  redactedText = "hidden"
-): Change[] {
+export function changeFields(change: ChangeLike, labels: Record<string, string> = {}): Change[] {
   return change.changes.map((c) => {
     const field = c.field.replace(/^data\./, "");
+    const label = labels[field] ?? fieldWords(field);
     if (c.redacted) {
-      return { field, label: labels[field], before: redactedText, after: redactedText };
+      return { field, label, redacted: true };
     }
     return {
       field,
-      label: labels[field],
+      label,
       before: change.action === "create" ? null : (c.before ?? null),
       after: change.action === "delete" ? null : (c.after ?? null),
     };
@@ -209,6 +253,8 @@ export function recordHistory(input: HistoryInput): HistoryEvent[] {
     // An approved proposal's write is already its proposal's event (agent and approver).
     if (c.proposalId && proposalIds.has(c.proposalId)) continue;
     const agent = c.actor.type === "agent";
+    // An agent's write that a person approved, whose proposal is not listed here.
+    const approved = !!c.proposalId && (agent || !!c.approvedBy);
     events.push({
       id: `change:${c.id}`,
       at: c.at,
@@ -216,7 +262,12 @@ export function recordHistory(input: HistoryInput): HistoryEvent[] {
       action: c.action,
       actor: agent ? undefined : (c.actor.name ?? undefined),
       agent: agent ? (c.actor.name ?? c.actor.id ?? undefined) : undefined,
-      changes: changeFields(c, labels, input.redactedText),
+      system: c.actor.type === "system" || undefined,
+      truncated: c.truncated || undefined,
+      ...(approved
+        ? { status: "approved", decidedBy: input.approvers?.[c.proposalId!] ?? undefined }
+        : {}),
+      changes: changeFields(c, labels),
     });
   }
   const recordedCreate = recorded.some((c) => c.action === "create");
@@ -309,9 +360,14 @@ export function historyLine(
   t: Translate,
   formatDate: (iso: string) => string
 ): HistoryLine {
-  const who = event.actor ?? t("record.someone");
+  const who = event.actor ?? (event.system ? t("record.theSystem") : t("record.someone"));
   const count = event.changes.length;
-  const changed = count > 0 ? t("record.fieldsChanged", { n: count }) : undefined;
+  const changed =
+    count === 1
+      ? t("record.fieldChangedOne")
+      : count > 0
+        ? t("record.fieldsChanged", { n: count })
+        : undefined;
   const date = formatDate(event.at);
 
   if (event.kind === "proposal") {
@@ -337,20 +393,30 @@ export function historyLine(
   }
   if (event.kind === "change") {
     const action = event.action ?? "update";
-    const description = [changed, event.note].filter(Boolean).join(" · ") || undefined;
-    if (event.agent) {
+    const description =
+      [changed, event.truncated ? t("record.someLeftOut") : undefined, event.note]
+        .filter(Boolean)
+        .join(" · ") || undefined;
+    if (event.agent || event.status === "approved") {
+      const agent = event.agent ?? t("record.anAgent");
       return {
         date,
-        title: t(`record.agent${ACTION_KEY[action]}`, { agent: event.agent }),
+        title:
+          event.status === "approved"
+            ? event.decidedBy
+              ? t("record.agentApproved", { agent, who: event.decidedBy })
+              : t("record.agentApprovedProposal", { agent })
+            : t(`record.agent${ACTION_KEY[action]}`, { agent }),
         description,
         tag: t("record.tagAgent"),
-        tone: action === "delete" ? "error" : "accent",
+        tone: action === "delete" ? "error" : event.status === "approved" ? "success" : "accent",
       };
     }
+    const named = event.actor ?? (event.system ? t("record.theSystem") : undefined);
     return {
       date,
-      title: event.actor
-        ? t(`record.change${ACTION_KEY[action]}By`, { who: event.actor })
+      title: named
+        ? t(`record.change${ACTION_KEY[action]}By`, { who: named })
         : t(`record.change${ACTION_KEY[action]}`),
       description,
       tag: t(

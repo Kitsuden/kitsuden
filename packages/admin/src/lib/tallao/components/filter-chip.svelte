@@ -95,13 +95,22 @@
           { value: true as string | boolean, label: yesLabel },
           { value: false as string | boolean, label: noLabel },
         ]
-      : options.map((o) => (typeof o === "string" ? { value: o as string | boolean, label: o } : { value: o.value as string | boolean, label: o.label }))
+      : options.map((o) =>
+          typeof o === "string"
+            ? { value: o as string | boolean, label: o }
+            : { value: o.value as string | boolean, label: o.label }
+        )
   );
   const active = $derived(value !== null && value !== undefined && value !== "");
   const shown = $derived.by(() => {
     if (!active) return "";
-    if (type === "select" || type === "boolean") return choices.find((c) => c.value === value)?.label ?? String(value);
-    if (type === "date" && range) return String(value).split("..").map((d) => d || "…").join(" – ");
+    if (type === "select" || type === "boolean")
+      return choices.find((c) => c.value === value)?.label ?? String(value);
+    if (type === "date" && range)
+      return String(value)
+        .split("..")
+        .map((d) => d || "…")
+        .join(" – ");
     return String(value);
   });
 
@@ -133,21 +142,36 @@
 </script>
 
 {#snippet face(props: Record<string | symbol, unknown>)}
-  <button {...props} type="button" class="ta-filter-chip-main" aria-label={active ? label + ": " + shown : undefined}>
-    <span class="ta-filter-chip-label">{label}{#if active}<span class="ta-filter-chip-colon">:</span>{/if}</span>
+  <button
+    {...props}
+    type="button"
+    class="ta-filter-chip-main"
+    aria-label={active ? label + ": " + shown : undefined}
+  >
+    <span class="ta-filter-chip-label"
+      >{label}{#if active}<span class="ta-filter-chip-colon">:</span>{/if}</span
+    >
     {#if active}<span class="ta-filter-chip-value">{shown}</span>{/if}
     <Icon name="chevron-down" size={12} class="ta-filter-chip-caret" />
   </button>
 {/snippet}
 
-<span bind:this={root} class={cn("ta-filter-chip", active && "ta-filter-chip--active", className)} data-active={active || undefined}>
+<span
+  bind:this={root}
+  class={cn("ta-filter-chip", active && "ta-filter-chip--active", className)}
+  data-active={active || undefined}
+>
   {#if type === "select" || type === "boolean"}
     <DropdownMenu {label} bind:open>
       {#snippet trigger(props)}{@render face(props)}{/snippet}
       <MenuItem checked={!active} checkType="radio" onSelect={() => set(null)}>{anyLabel}</MenuItem>
       <MenuSeparator />
       {#each choices as c (c.value)}
-        <MenuItem checked={active && c.value === value} checkType="radio" onSelect={() => set(c.value)}>{c.label}</MenuItem>
+        <MenuItem
+          checked={active && c.value === value}
+          checkType="radio"
+          onSelect={() => set(c.value)}>{c.label}</MenuItem
+        >
       {/each}
     </DropdownMenu>
   {:else}
@@ -171,7 +195,13 @@
           }}
         />
       {:else if range}
-        <DateRangePicker inline value={rangeValue} {locale} onchange={(next) => set(next.start || next.end ? `${next.start ?? ""}..${next.end ?? ""}` : null)} />
+        <DateRangePicker
+          inline
+          value={rangeValue}
+          {locale}
+          onchange={(next) =>
+            set(next.start || next.end ? `${next.start ?? ""}..${next.end ?? ""}` : null)}
+        />
       {:else}
         <Calendar
           value={typeof value === "string" ? value : null}
@@ -186,7 +216,12 @@
     </Popover>
   {/if}
   {#if active && removable}
-    <button type="button" class="ta-filter-chip-remove" aria-label={removeLabel.replace("{filter}", label)} onclick={remove}>
+    <button
+      type="button"
+      class="ta-filter-chip-remove"
+      aria-label={removeLabel.replace("{filter}", label)}
+      onclick={remove}
+    >
       <Icon name="x" size={12} />
     </button>
   {/if}
@@ -202,9 +237,13 @@
     color: rgb(var(--ta-text-dim));
     border: 1px dashed rgb(var(--ta-muted));
     border-radius: 9999px;
-    transition: border-color 0.15s, background-color 0.15s;
+    transition:
+      border-color 0.15s,
+      background-color 0.15s;
   }
-  .ta-filter-chip:hover { border-color: rgb(var(--ta-subtle)); }
+  .ta-filter-chip:hover {
+    border-color: rgb(var(--ta-subtle));
+  }
   /* Applied: a solid frame and a tint, besides the value in text. */
   .ta-filter-chip--active {
     color: rgb(var(--ta-text));
@@ -225,12 +264,22 @@
     border-radius: 9999px;
     cursor: pointer;
   }
-  .ta-filter-chip-main:hover { color: rgb(var(--ta-text)); }
+  .ta-filter-chip-main:hover {
+    color: rgb(var(--ta-text));
+  }
   .ta-filter-chip-main:focus-visible,
-  .ta-filter-chip-remove:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
+  .ta-filter-chip-remove:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
 
-  .ta-filter-chip-label { flex-shrink: 0; white-space: nowrap; }
-  .ta-filter-chip--active .ta-filter-chip-label { color: rgb(var(--ta-text-dim)); }
+  .ta-filter-chip-label {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .ta-filter-chip--active .ta-filter-chip-label {
+    color: rgb(var(--ta-text-dim));
+  }
   .ta-filter-chip-value {
     min-width: 0;
     max-width: 14rem;
@@ -239,7 +288,10 @@
     white-space: nowrap;
     font-weight: 500;
   }
-  .ta-filter-chip :global(.ta-filter-chip-caret) { flex-shrink: 0; opacity: 0.7; }
+  .ta-filter-chip :global(.ta-filter-chip-caret) {
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
 
   .ta-filter-chip-remove {
     position: relative;
@@ -256,7 +308,10 @@
     border-radius: 0 9999px 9999px 0;
     cursor: pointer;
   }
-  .ta-filter-chip-remove:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-accent) / 0.15); }
+  .ta-filter-chip-remove:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-accent) / 0.15);
+  }
 
   .ta-filter-chip-field {
     width: 14rem;
@@ -270,16 +325,30 @@
     border-radius: var(--ta-radius);
     outline: none;
   }
-  .ta-filter-chip-field::placeholder { color: rgb(var(--ta-text-dim)); }
-  .ta-filter-chip-field:focus { border-color: rgb(var(--ta-accent) / 0.5); box-shadow: 0 0 0 2px rgb(var(--ta-accent) / 0.15); }
+  .ta-filter-chip-field::placeholder {
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-filter-chip-field:focus {
+    border-color: rgb(var(--ta-accent) / 0.5);
+    box-shadow: 0 0 0 2px rgb(var(--ta-accent) / 0.15);
+  }
 
   @media (pointer: coarse) {
-    .ta-filter-chip { min-height: 2.75rem; }
-    .ta-filter-chip-remove { width: 2.75rem; }
-    .ta-filter-chip-field { font-size: 1rem; min-height: 2.75rem; }
+    .ta-filter-chip {
+      min-height: 2.75rem;
+    }
+    .ta-filter-chip-remove {
+      width: 2.75rem;
+    }
+    .ta-filter-chip-field {
+      font-size: 1rem;
+      min-height: 2.75rem;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-filter-chip { transition: none; }
+    .ta-filter-chip {
+      transition: none;
+    }
   }
 </style>

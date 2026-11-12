@@ -58,6 +58,11 @@
    */
   let ownScreens = $state<Set<string>>(new Set());
   const bare = (key: string) => key.replace(/^kon-/, "");
+  /** `system-tools` → "System tools": the last resort for a kon with no name. */
+  const konWords = (key: string) => {
+    const words = bare(key).replace(/[-_]+/g, " ").trim();
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  };
 
   const groups = $derived(
     buildNav({
@@ -97,9 +102,13 @@
   // ── Breadcrumb and <title>: one source ───────────────────────────────────────────
   const section = $derived.by(() => {
     if (entry) return { label: labelOf(entry), path: entry.path };
-    // A kon's page with no menu entry (a system view, a kon being disabled).
+    // A kon's page with no menu entry (a system view, a kon being disabled): the kon's
+    // name, else the title its own page shows, else its id in words — never the raw id.
     const kon = currentPath.startsWith("/g/") ? currentPath.split("/")[2] : "";
-    return kon ? { label: bare(kon), path: `/g/${kon}` } : undefined;
+    if (!kon) return undefined;
+    const path = `/g/${kon}`;
+    const named = moduleStore.modules.find((m) => m.key === kon)?.name;
+    return { label: named || pageMeta.titleFor(path) || konWords(kon), path };
   });
   const extra = $derived(pageMeta.crumbsFor(currentPath));
   const trail = $derived(trailFor(section, extra));

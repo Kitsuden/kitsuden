@@ -116,18 +116,26 @@
   let active = $state(0);
 
   const matches = (it: CommandItem, q: string) =>
-    !q || [it.label, it.description ?? "", ...(it.keywords ?? [])].some((t) => normalizeText(t).includes(normalizeText(q)));
+    !q ||
+    [it.label, it.description ?? "", ...(it.keywords ?? [])].some((t) =>
+      normalizeText(t).includes(normalizeText(q))
+    );
   const visible = $derived(filter ? items.filter((it) => matches(it, query)) : items);
   const groups = $derived(
-    visible.reduce<{ group: string | undefined; items: { it: CommandItem; i: number }[] }[]>((acc, it, i) => {
-      const last = acc.at(-1);
-      if (last && last.group === it.group) last.items.push({ it, i });
-      else acc.push({ group: it.group, items: [{ it, i }] });
-      return acc;
-    }, [])
+    visible.reduce<{ group: string | undefined; items: { it: CommandItem; i: number }[] }[]>(
+      (acc, it, i) => {
+        const last = acc.at(-1);
+        if (last && last.group === it.group) last.items.push({ it, i });
+        else acc.push({ group: it.group, items: [{ it, i }] });
+        return acc;
+      },
+      []
+    )
   );
   const hasList = $derived(visible.length > 0);
-  const emptyMessage = $derived(typeof emptyText === "function" ? emptyText(query) : emptyText.replaceAll("{query}", query));
+  const emptyMessage = $derived(
+    typeof emptyText === "function" ? emptyText(query) : emptyText.replaceAll("{query}", query)
+  );
 
   // Every time it opens, it starts clean. It depends only on `open`: if it
   // followed the search, every keystroke would clear it. In `inline` the page
@@ -185,7 +193,8 @@
       e.preventDefault();
       const it = visible[active];
       // A link is followed through its own click: the browser navigates and goes through run().
-      if (it?.href && !it.disabled) listEl?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.click();
+      if (it?.href && !it.disabled)
+        listEl?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.click();
       else run(it);
     } else if (e.key === "Escape" && inline) {
       e.preventDefault();
@@ -228,7 +237,10 @@
       bind:value={query}
       onkeydown={onKey}
     />
-    {#if loading && hasList}<span class="ta-command-spinner ta-command-spinner--field" aria-hidden="true"></span>{/if}
+    {#if loading && hasList}<span
+        class="ta-command-spinner ta-command-spinner--field"
+        aria-hidden="true"
+      ></span>{/if}
   </div>
   {#if hasList}
     <div
@@ -241,7 +253,9 @@
     >
       {#each groups as g, gi (gi)}
         <div role="group" aria-labelledby={g.group ? `${id}-g-${gi}` : undefined}>
-          {#if g.group}<div class="ta-command-group" id={`${id}-g-${gi}`} role="presentation">{g.group}</div>{/if}
+          {#if g.group}<div class="ta-command-group" id={`${id}-g-${gi}`} role="presentation">
+              {g.group}
+            </div>{/if}
           {#each g.items as { it, i } (it.id)}
             {@const link = it.href && !it.disabled ? it.href : undefined}
             <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -260,7 +274,9 @@
               onpointermove={() => !it.disabled && (active = i)}
               onclick={(e: MouseEvent) => run(it, e)}
             >
-              {#if leading}<span class="ta-command-leading">{@render leading(it, i === active)}</span>{/if}
+              {#if leading}<span class="ta-command-leading"
+                  >{@render leading(it, i === active)}</span
+                >{/if}
               <span class="ta-command-text">
                 {#if it.description}
                   <span class="ta-command-title">{it.label}</span>
@@ -268,8 +284,12 @@
                 {:else}{it.label}{/if}
               </span>
               {#if it.badge}<span class="ta-command-badge">{it.badge}</span>{/if}
-              {#if it.shortcut}<kbd class="ta-command-shortcut" aria-hidden="true">{it.shortcut}</kbd>{/if}
-              {#if trailing}<span class="ta-command-trailing">{@render trailing(it, i === active)}</span>{/if}
+              {#if it.shortcut}<kbd class="ta-command-shortcut" aria-hidden="true"
+                  >{it.shortcut}</kbd
+                >{/if}
+              {#if trailing}<span class="ta-command-trailing"
+                  >{@render trailing(it, i === active)}</span
+                >{/if}
             </svelte:element>
           {/each}
         </div>
@@ -285,7 +305,9 @@
     {:else if loading}
       <span class="ta-command-hidden">{loadingLabel}</span>
     {:else if !hasList}
-      {#if empty}{@render empty(query)}{:else if filter || query}<p class="ta-command-empty">{emptyMessage}</p>{/if}
+      {#if empty}{@render empty(query)}{:else if filter || query}<p class="ta-command-empty">
+          {emptyMessage}
+        </p>{/if}
     {/if}
   </div>
 {/snippet}
@@ -299,7 +321,9 @@
 {/if}
 
 <style>
-  .ta-command-field { position: relative; }
+  .ta-command-field {
+    position: relative;
+  }
 
   .ta-command-search {
     width: 100%;
@@ -345,18 +369,44 @@
     border-radius: var(--ta-radius-sm);
     cursor: pointer;
   }
-  .ta-command-item--active { background: rgb(var(--ta-elevated)); }
-  .ta-command-item[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+  .ta-command-item--active {
+    background: rgb(var(--ta-elevated));
+  }
+  .ta-command-item[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
   .ta-command-leading,
-  .ta-command-trailing { display: inline-flex; flex-shrink: 0; align-items: center; color: rgb(var(--ta-text-dim)); }
-  .ta-command-item--active .ta-command-trailing { color: rgb(var(--ta-accent)); }
+  .ta-command-trailing {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    color: rgb(var(--ta-text-dim));
+  }
+  .ta-command-item--active .ta-command-trailing {
+    color: rgb(var(--ta-accent));
+  }
 
-  .ta-command-text { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
+  .ta-command-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+  }
   .ta-command-title,
-  .ta-command-desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ta-command-title { font-weight: 500; }
-  .ta-command-desc { font-size: 0.75rem; color: rgb(var(--ta-text-dim)); }
+  .ta-command-desc {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ta-command-title {
+    font-weight: 500;
+  }
+  .ta-command-desc {
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
 
   .ta-command-badge {
     flex-shrink: 0;
@@ -386,7 +436,11 @@
     color: rgb(var(--ta-text-dim));
   }
 
-  .ta-command-loading { display: flex; justify-content: center; padding: 1.5rem 0.5rem; }
+  .ta-command-loading {
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem 0.5rem;
+  }
   .ta-command-spinner {
     display: inline-block;
     width: 1.25rem;
@@ -404,16 +458,36 @@
     height: 1rem;
     margin-top: -0.5rem;
   }
-  @keyframes ta-command-spin { to { transform: rotate(360deg); } }
+  @keyframes ta-command-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .ta-command-spinner { animation-duration: 2s; }
+    .ta-command-spinner {
+      animation-duration: 2s;
+    }
   }
 
-  .ta-command-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .ta-command-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
 
   /* On touch screens: 16px so iOS does not zoom the page on focus. */
   @media (pointer: coarse) {
-    .ta-command-search { font-size: 1rem; }
-    .ta-command-item { min-height: 2.75rem; }
+    .ta-command-search {
+      font-size: 1rem;
+    }
+    .ta-command-item {
+      min-height: 2.75rem;
+    }
   }
 </style>

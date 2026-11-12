@@ -126,15 +126,27 @@
     animation: ta-chatmsg-dot 1.2s infinite ease-in-out;
   }
 
-  .ta-chatmsg-typing span:nth-child(2) { animation-delay: 0.15s; }
-  .ta-chatmsg-typing span:nth-child(3) { animation-delay: 0.3s; }
+  .ta-chatmsg-typing span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .ta-chatmsg-typing span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
 
   @keyframes ta-chatmsg-dot {
-    0%, 80%, 100% { opacity: 0.3; }
-    40% { opacity: 1; }
+    0%,
+    80%,
+    100% {
+      opacity: 0.3;
+    }
+    40% {
+      opacity: 1;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ta-chatmsg-typing span { animation: none; }
+    .ta-chatmsg-typing span {
+      animation: none;
+    }
   }
 </style>

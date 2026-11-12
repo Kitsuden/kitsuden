@@ -54,7 +54,11 @@
   }
 
   /** The applied filters from a query string; keys that are not declared are ignored. */
-  export function filtersFromQuery(query: string | URLSearchParams, filters: FilterDef[], searchKey = "q"): FilterValues {
+  export function filtersFromQuery(
+    query: string | URLSearchParams,
+    filters: FilterDef[],
+    searchKey = "q"
+  ): FilterValues {
     const params = typeof query === "string" ? new URLSearchParams(query) : query;
     const value: FilterValues = {};
     const search = params.get(searchKey);
@@ -135,7 +139,11 @@
   const activeCount = $derived(filters.filter((f) => has(f.key)).length);
   const anything = $derived(activeCount > 0 || (search && has(searchKey)));
   const countText = $derived(
-    activeCount === 0 ? L.noActiveFilters : activeCount === 1 ? L.activeFilterOne : L.activeFilters.replace("{n}", String(activeCount))
+    activeCount === 0
+      ? L.noActiveFilters
+      : activeCount === 1
+        ? L.activeFilterOne
+        : L.activeFilters.replace("{n}", String(activeCount))
   );
 
   function set(key: string, next: FilterChipValue | undefined) {
@@ -199,7 +207,9 @@
     </DropdownMenu>
   {/if}
   {#if anything}
-    <Button variant="ghost" size="sm" class="ta-filter-bar-clear" onclick={clear}>{clearAllLabel}</Button>
+    <Button variant="ghost" size="sm" class="ta-filter-bar-clear" onclick={clear}
+      >{clearAllLabel}</Button
+    >
   {/if}
   {#if end}<div class="ta-filter-bar-end">{@render end()}</div>{/if}
   <span class="ta-filter-bar-count" role="status" aria-live="polite">{countText}</span>
@@ -215,7 +225,10 @@
     min-width: 0;
   }
 
-  .ta-filter-bar :global(.ta-filter-bar-search) { flex: 1 1 14rem; max-width: 22rem; }
+  .ta-filter-bar :global(.ta-filter-bar-search) {
+    flex: 1 1 14rem;
+    max-width: 22rem;
+  }
 
   .ta-filter-bar-add {
     display: inline-flex;
@@ -231,10 +244,21 @@
     border-radius: 9999px;
     cursor: pointer;
   }
-  .ta-filter-bar-add:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated) / 0.5); }
-  .ta-filter-bar-add:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.6); outline-offset: 1px; }
+  .ta-filter-bar-add:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated) / 0.5);
+  }
+  .ta-filter-bar-add:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 1px;
+  }
 
-  .ta-filter-bar-end { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
+  .ta-filter-bar-end {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
 
   .ta-filter-bar-count {
     position: absolute;
@@ -250,10 +274,15 @@
 
   /* A phone: the search takes the first row. */
   @media (max-width: 480px) {
-    .ta-filter-bar :global(.ta-filter-bar-search) { flex-basis: 100%; max-width: none; }
+    .ta-filter-bar :global(.ta-filter-bar-search) {
+      flex-basis: 100%;
+      max-width: none;
+    }
   }
 
   @media (pointer: coarse) {
-    .ta-filter-bar-add { min-height: 2.75rem; }
+    .ta-filter-bar-add {
+      min-height: 2.75rem;
+    }
   }
 </style>

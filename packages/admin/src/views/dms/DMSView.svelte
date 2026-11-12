@@ -9,9 +9,12 @@
     CardTitle,
     Checkbox,
     Dialog,
+    DropdownMenu,
     EmptyState,
     Field,
     Input,
+    MenuItem,
+    MenuSeparator,
     Pagination,
     Progress,
     SearchInput,
@@ -47,7 +50,6 @@
     FolderTree,
     Plus,
     Eye,
-    Edit2,
     Trash2,
     CheckCircle,
     Clock,
@@ -220,6 +222,38 @@
     { key: "currentVersionNumber", label: tr("dMSView.version") },
     { key: "updatedAt", label: tr("dMSView.updated") },
   ];
+
+  // ── Columns: the reader picks them (kept in this browser). Version starts hidden so the
+  // table fits a 1440px window beside the category tree. Code and Title always show.
+  const COLUMNS_KEY = "kitsuden.dms.columns";
+  const ALWAYS_SHOWN = new Set(["code", "title"]);
+  const DEFAULT_HIDDEN = ["currentVersionNumber"];
+  function readHidden(): string[] {
+    try {
+      const raw = localStorage.getItem(COLUMNS_KEY);
+      const parsed = raw ? (JSON.parse(raw) as unknown) : null;
+      return Array.isArray(parsed)
+        ? parsed.filter((k): k is string => typeof k === "string")
+        : DEFAULT_HIDDEN;
+    } catch {
+      return DEFAULT_HIDDEN;
+    }
+  }
+  let hiddenColumns = $state<string[]>(readHidden());
+  const shownColumns = $derived(
+    sortableColumns.filter((c) => ALWAYS_SHOWN.has(c.key) || !hiddenColumns.includes(c.key))
+  );
+  const shows = (key: string) => shownColumns.some((c) => c.key === key);
+  function toggleColumn(key: string) {
+    hiddenColumns = hiddenColumns.includes(key)
+      ? hiddenColumns.filter((k) => k !== key)
+      : [...hiddenColumns, key];
+    try {
+      localStorage.setItem(COLUMNS_KEY, JSON.stringify(hiddenColumns));
+    } catch {
+      // Private window: the choice lasts until the page is left.
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STATE
@@ -1286,6 +1320,23 @@
                 loadDocuments();
               }}
             />
+            <DropdownMenu label={tr("dMSView.columns")} placement="bottom-end">
+              {#snippet trigger(props)}
+                <Button {...props} variant="secondary">
+                  <Layers class="w-4 h-4" />
+                  {tr("dMSView.columns")}
+                </Button>
+              {/snippet}
+              {#each sortableColumns.filter((c) => !ALWAYS_SHOWN.has(c.key)) as col (col.key)}
+                <MenuItem
+                  checked={!hiddenColumns.includes(col.key)}
+                  closeOnSelect={false}
+                  onSelect={() => toggleColumn(col.key)}
+                >
+                  {col.label}
+                </MenuItem>
+              {/each}
+            </DropdownMenu>
             {#if selectedIds.size > 0}
               <div class="ml-auto flex items-center gap-2">
                 <span class="text-xs text-kitsuden-subtle"
@@ -1313,7 +1364,7 @@
               onAction={openCreateDocumentModal}
             />
           {:else}
-            <Table>
+            <Table class="dms-docs">
               <TableHeader>
                 <TableRow>
                   <TableHead>
@@ -1324,7 +1375,7 @@
                       onchange={toggleSelectAll}
                     />
                   </TableHead>
-                  {#each sortableColumns as col}
+                  {#each shownColumns as col (col.key)}
                     <TableHead
                       aria-sort={sortKey === col.key
                         ? sortDir === "asc"
@@ -1345,7 +1396,9 @@
                       </Button>
                     </TableHead>
                   {/each}
-                  <TableHead>{tr("common.actions")}</TableHead>
+                  <TableHead class="dms-pin"
+                    ><span class="sr-only">{tr("common.actions")}</span></TableHead
+                  >
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1364,69 +1417,82 @@
                       >{doc.code}</TableCell
                     >
                     <TableCell>
-                      <div class="flex items-center gap-2 min-w-56">
+                      <div class="flex items-start gap-2 min-w-40">
                         {#if doc.requiresReview || isOverdue(doc.reviewDueDate)}
-                          <span title={tr("dMSView.reviewOverdue")}
-                            ><AlertCircle class="w-3.5 h-3.5 shrink-0 text-kitsuden-danger" /></span
+                          <span class="mt-0.5" title={tr("dMSView.reviewOverdue")}
+                            ><AlertCircle class="w-3.5 h-3.5 shrink-0 text-kitsuden-danger" /><span
+                              class="sr-only">{tr("dMSView.reviewOverdue")}</span
+                            ></span
                           >
                         {/if}
-                        <span class="font-medium text-kitsuden-text">{doc.title}</span>
+                        <!-- The title opens the document, as a list's first column does. -->
+                        <button type="button" class="dms-doc-link" onclick={() => openDrawer(doc)}>
+                          {doc.title}
+                        </button>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        <span aria-hidden="true">{type.icon}</span>
-                        {type.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant(doc.status)}>
-                        <status.icon class="w-3 h-3" />
-                        {status.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell class="text-kitsuden-subtle">{doc.categoryName || "—"}</TableCell>
-                    <TableCell class="font-mono text-kitsuden-subtle"
-                      >v{doc.currentVersionNumber}</TableCell
-                    >
-                    <TableCell class="whitespace-nowrap text-kitsuden-subtle"
-                      >{formatDate(doc.updatedAt)}</TableCell
-                    >
-                    <TableCell>
-                      <div class="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          ariaLabel={tr("common.edit")}
-                          title={tr("common.edit")}
-                          onclick={() => openDrawer(doc)}
-                        >
-                          <Edit2 class="w-4 h-4" />
-                        </Button>
-                        {#if doc.isTemplate}
+                    {#if shows("type")}
+                      <TableCell>
+                        <Badge variant="secondary">
+                          <span aria-hidden="true">{type.icon}</span>
+                          {type.label}
+                        </Badge>
+                      </TableCell>
+                    {/if}
+                    {#if shows("status")}
+                      <TableCell>
+                        <Badge variant={statusVariant(doc.status)}>
+                          <status.icon class="w-3 h-3" />
+                          {status.label}
+                        </Badge>
+                      </TableCell>
+                    {/if}
+                    {#if shows("categoryName")}
+                      <TableCell class="dms-wrap text-kitsuden-subtle"
+                        >{doc.categoryName || "—"}</TableCell
+                      >
+                    {/if}
+                    {#if shows("currentVersionNumber")}
+                      <TableCell class="font-mono text-kitsuden-subtle"
+                        >v{doc.currentVersionNumber}</TableCell
+                      >
+                    {/if}
+                    {#if shows("updatedAt")}
+                      <TableCell class="whitespace-nowrap text-kitsuden-subtle"
+                        >{formatDate(doc.updatedAt)}</TableCell
+                      >
+                    {/if}
+                    <TableCell class="dms-pin">
+                      <DropdownMenu
+                        label={tr("dMSView.actionsOf", { title: doc.title })}
+                        placement="bottom-end"
+                      >
+                        {#snippet trigger(props)}
                           <Button
+                            {...props}
                             variant="ghost"
                             size="icon"
-                            ariaLabel={tr("dMSView.clone")}
-                            title={tr("dMSView.clone")}
-                            onclick={() => cloneFromTemplate(doc.id)}
+                            class="dms-row-menu"
+                            ariaLabel={tr("dMSView.actionsOf", { title: doc.title })}
                           >
-                            <Copy class="w-4 h-4" />
+                            <span aria-hidden="true">⋯</span>
                           </Button>
+                        {/snippet}
+                        <MenuItem onSelect={() => openDrawer(doc)}>{tr("common.edit")}</MenuItem>
+                        {#if doc.isTemplate}
+                          <MenuItem onSelect={() => cloneFromTemplate(doc.id)}
+                            >{tr("dMSView.clone")}</MenuItem
+                          >
                         {/if}
-                        <Button
-                          variant="danger-ghost"
-                          size="icon"
-                          ariaLabel={tr("common.delete")}
-                          title={tr("common.delete")}
-                          onclick={() => {
+                        <MenuSeparator />
+                        <MenuItem
+                          variant="danger"
+                          onSelect={() => {
                             deleteTargetIds = [doc.id];
                             showConfirmDeleteModal = true;
-                          }}
+                          }}>{tr("common.delete")}</MenuItem
                         >
-                          <Trash2 class="w-4 h-4" />
-                        </Button>
-                      </div>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 {/each}
@@ -2390,8 +2456,15 @@
   <!-- Confirm deletion -->
   <Dialog
     open={!!showConfirmDeleteModal}
-    title={tr("dMSView.confirmDeletion")}
-    description={tr("dMSView.areYouSureYouWant", { deleteTargetIdsCount: deleteTargetIds.length })}
+    title={deleteTargetIds.length === 1
+      ? tr("list.deleteOneTitle", {
+          name:
+            documents.find((d) => d.id === deleteTargetIds[0])?.title ??
+            tr("dMSView.deleteOneFallback"),
+        })
+      : tr("dMSView.deleteManyTitle", { n: deleteTargetIds.length })}
+    description={tr("list.deleteDescription")}
+    size="sm"
     onClose={() => (showConfirmDeleteModal = false)}
   >
     {#snippet footer()}
@@ -2480,3 +2553,70 @@
     {/snippet}
   </Dialog>
 </ViewPage>
+
+<style>
+  /* The title wraps and opens the document; the other values keep one line. */
+  :global(.dms-docs .ta-table-td) {
+    white-space: nowrap;
+  }
+  :global(.dms-docs .ta-table-td:has(.dms-doc-link)),
+  :global(.dms-docs .ta-table-td.dms-wrap) {
+    white-space: normal;
+  }
+  :global(.dms-docs .ta-table-td.dms-wrap) {
+    min-width: 7rem;
+  }
+  .dms-doc-link {
+    padding: 0;
+    font: inherit;
+    font-weight: 500;
+    text-align: left;
+    color: rgb(var(--ta-text));
+    background: none;
+    border: none;
+    border-radius: var(--ta-radius-sm);
+    cursor: pointer;
+  }
+  .dms-doc-link:hover {
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--ta-accent));
+    text-underline-offset: 3px;
+  }
+  .dms-doc-link:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.6);
+    outline-offset: 2px;
+  }
+  /* The row menu is pinned to the right edge while the table scrolls sideways (a phone). */
+  :global(.dms-docs .dms-pin) {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    width: 1%;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    text-align: right;
+    background: rgb(var(--ta-bg));
+    box-shadow: inset 1px 0 0 rgb(var(--ta-border));
+  }
+  :global(.dms-docs thead .dms-pin) {
+    background:
+      linear-gradient(rgb(var(--ta-elevated) / 0.4), rgb(var(--ta-elevated) / 0.4)),
+      rgb(var(--ta-bg));
+  }
+  :global(.dms-docs tbody tr:hover > .dms-pin) {
+    background:
+      linear-gradient(rgb(var(--ta-elevated) / 0.35), rgb(var(--ta-elevated) / 0.35)),
+      rgb(var(--ta-bg));
+  }
+  :global(.dms-docs .dms-row-menu) {
+    width: 1.75rem;
+    height: 1.75rem;
+    min-height: 0;
+  }
+  @media (pointer: coarse) {
+    :global(.dms-docs .dms-row-menu) {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+  }
+</style>

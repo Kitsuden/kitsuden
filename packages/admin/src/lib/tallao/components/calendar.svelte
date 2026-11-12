@@ -62,7 +62,9 @@
     today = todayISO();
   });
   // The focused day (and so the month shown); starts at the value, or at today.
-  let focused = $state<ISODate>(untrack(() => clampISO(parseISO(value) ? value! : todayISO(), min, max)));
+  let focused = $state<ISODate>(
+    untrack(() => clampISO(parseISO(value) ? value! : todayISO(), min, max))
+  );
   let grid: HTMLElement | undefined = $state();
 
   // If the value changes from outside, the calendar goes to that month. It only follows the
@@ -76,7 +78,9 @@
 
   const weeks = $derived(monthGrid(focused, weekStartsOn));
   // Only the first letter: CSS capitalize produced "Noviembre De 2026"
-  const heading = $derived(capitalizeFirst(formatDate(focused, locale, { month: "long", year: "numeric" })));
+  const heading = $derived(
+    capitalizeFirst(formatDate(focused, locale, { month: "long", year: "numeric" }))
+  );
   const headers = $derived(
     weeks[0].map((d) => ({
       short: formatDate(d, locale, { weekday: "short" }),
@@ -84,7 +88,8 @@
     }))
   );
 
-  const isBlocked = (iso: ISODate) => (min != null && iso < min) || (max != null && iso > max) || !!isDisabled?.(iso);
+  const isBlocked = (iso: ISODate) =>
+    (min != null && iso < min) || (max != null && iso > max) || !!isDisabled?.(iso);
 
   async function focusDay(iso: ISODate) {
     focused = clampISO(iso, min, max);
@@ -102,15 +107,23 @@
   function onKey(e: KeyboardEvent, iso: ISODate) {
     const weekStart = addDays(iso, -((weekday(iso) - weekStartsOn + 7) % 7));
     const target =
-      e.key === "ArrowLeft" ? addDays(iso, -1)
-      : e.key === "ArrowRight" ? addDays(iso, 1)
-      : e.key === "ArrowUp" ? addDays(iso, -7)
-      : e.key === "ArrowDown" ? addDays(iso, 7)
-      : e.key === "Home" ? weekStart
-      : e.key === "End" ? addDays(weekStart, 6)
-      : e.key === "PageUp" ? addMonths(iso, e.shiftKey ? -12 : -1)
-      : e.key === "PageDown" ? addMonths(iso, e.shiftKey ? 12 : 1)
-      : null;
+      e.key === "ArrowLeft"
+        ? addDays(iso, -1)
+        : e.key === "ArrowRight"
+          ? addDays(iso, 1)
+          : e.key === "ArrowUp"
+            ? addDays(iso, -7)
+            : e.key === "ArrowDown"
+              ? addDays(iso, 7)
+              : e.key === "Home"
+                ? weekStart
+                : e.key === "End"
+                  ? addDays(weekStart, 6)
+                  : e.key === "PageUp"
+                    ? addMonths(iso, e.shiftKey ? -12 : -1)
+                    : e.key === "PageDown"
+                      ? addMonths(iso, e.shiftKey ? 12 : 1)
+                      : null;
     if (target) {
       e.preventDefault();
       focusDay(target);
@@ -123,14 +136,25 @@
   /** So focus is not left on a button that is no longer rendered when changing month with the arrows. */
   const shiftMonth = (n: number) => focusDay(addMonths(focused, n));
 
-  const dayLabel = (iso: ISODate) => formatDate(iso, locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const dayLabel = (iso: ISODate) =>
+    formatDate(iso, locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 </script>
 
 <div class={cn("ta-calendar", className)}>
   <div class="ta-calendar-header">
-    <button type="button" class="ta-calendar-month" aria-label={previousLabel} onclick={() => shiftMonth(-1)}>‹</button>
+    <button
+      type="button"
+      class="ta-calendar-month"
+      aria-label={previousLabel}
+      onclick={() => shiftMonth(-1)}>‹</button
+    >
     <h2 class="ta-calendar-title" id={`${id}-title`} aria-live="polite">{heading}</h2>
-    <button type="button" class="ta-calendar-month" aria-label={nextLabel} onclick={() => shiftMonth(1)}>›</button>
+    <button
+      type="button"
+      class="ta-calendar-month"
+      aria-label={nextLabel}
+      onclick={() => shiftMonth(1)}>›</button
+    >
   </div>
   <table class="ta-calendar-grid" role="grid" aria-labelledby={`${id}-title`} bind:this={grid}>
     <thead>
@@ -142,7 +166,11 @@
       {#each weeks as week, s (s)}
         <tr>
           {#each week as day (day)}
-            <td role="gridcell" aria-selected={day === value} class:ta-calendar-outside={!sameMonth(day, focused)}>
+            <td
+              role="gridcell"
+              aria-selected={day === value}
+              class:ta-calendar-outside={!sameMonth(day, focused)}
+            >
               <button
                 type="button"
                 class="ta-calendar-day"
@@ -197,9 +225,14 @@
     border-radius: var(--ta-radius-sm);
     cursor: pointer;
   }
-  .ta-calendar-month:hover { color: rgb(var(--ta-text)); background: rgb(var(--ta-elevated)); }
+  .ta-calendar-month:hover {
+    color: rgb(var(--ta-text));
+    background: rgb(var(--ta-elevated));
+  }
 
-  .ta-calendar-grid { border-collapse: collapse; }
+  .ta-calendar-grid {
+    border-collapse: collapse;
+  }
 
   .ta-calendar-grid th {
     padding: 0.25rem 0;
@@ -209,7 +242,10 @@
     text-transform: capitalize;
   }
 
-  .ta-calendar-grid td { padding: 1px; text-align: center; }
+  .ta-calendar-grid td {
+    padding: 1px;
+    text-align: center;
+  }
 
   .ta-calendar-day {
     width: 2rem;
@@ -223,12 +259,24 @@
     border-radius: var(--ta-radius-sm);
     cursor: pointer;
   }
-  .ta-calendar-day:hover { background: rgb(var(--ta-elevated)); }
-  .ta-calendar-day:focus-visible { outline: 2px solid rgb(var(--ta-accent) / 0.7); outline-offset: 1px; }
-  .ta-calendar-day[aria-current="date"] { border-color: rgb(var(--ta-accent) / 0.6); }
-  .ta-calendar-day[aria-disabled="true"] { opacity: 0.35; cursor: not-allowed; }
+  .ta-calendar-day:hover {
+    background: rgb(var(--ta-elevated));
+  }
+  .ta-calendar-day:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent) / 0.7);
+    outline-offset: 1px;
+  }
+  .ta-calendar-day[aria-current="date"] {
+    border-color: rgb(var(--ta-accent) / 0.6);
+  }
+  .ta-calendar-day[aria-disabled="true"] {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
 
-  .ta-calendar-outside .ta-calendar-day { color: rgb(var(--ta-text-dim) / 0.7); }
+  .ta-calendar-outside .ta-calendar-day {
+    color: rgb(var(--ta-text-dim) / 0.7);
+  }
 
   td[aria-selected="true"] .ta-calendar-day {
     color: rgb(var(--ta-on-accent));
@@ -238,7 +286,13 @@
 
   /* On touch screens: 44 × 44px days and month arrows. */
   @media (pointer: coarse) {
-    .ta-calendar-month { min-width: 2.75rem; min-height: 2.75rem; }
-    .ta-calendar-day { min-width: 2.75rem; min-height: 2.75rem; }
+    .ta-calendar-month {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
+    .ta-calendar-day {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
   }
 </style>
