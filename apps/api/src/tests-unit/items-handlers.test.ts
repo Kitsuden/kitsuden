@@ -123,7 +123,7 @@ mock.module("@kitsuden/engine", () => {
   };
 });
 mock.module("../lib/logger", () => ({
-  logger: { error: mock(() => {}), info: mock(() => {}) },
+  logger: { error: mock(() => {}), info: mock(() => {}), warn: mock(() => {}) },
 }));
 mock.module("../lib/realtime", () => ({
   broadcastMutation: mock(() => {}),

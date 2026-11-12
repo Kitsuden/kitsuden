@@ -562,24 +562,29 @@ async function rememberItem(
   before: HistoryRow | null | undefined,
   after: HistoryRow | null | undefined
 ): Promise<void> {
-  const user = c.get("user");
-  const inputs =
-    "dataset" in target
-      ? [
-          {
-            entity: DATASET_ENTRY_ENTITY,
-            rowId: (after ?? before)?.id,
-            action,
-            before: before ?? null,
-            after: after ?? null,
-            user,
-            diff: DATASET_ENTRY_DIFF,
-          },
-        ]
-      : tableChanges(target.table, [{ action, before, after }], user);
-  await recordChanges(db, inputs, (err) =>
-    logger.warn({ error: messageOf(err) }, "[items] could not record the history")
-  );
+  const warn = (err: unknown) =>
+    logger.warn({ error: messageOf(err) }, "[items] could not record the history");
+  try {
+    const user = c.get("user");
+    const inputs =
+      "dataset" in target
+        ? [
+            {
+              entity: DATASET_ENTRY_ENTITY,
+              rowId: (after ?? before)?.id,
+              action,
+              before: before ?? null,
+              after: after ?? null,
+              user,
+              diff: DATASET_ENTRY_DIFF,
+            },
+          ]
+        : tableChanges(target.table, [{ action, before, after }], user);
+    await recordChanges(db, inputs, warn);
+  } catch (err) {
+    // Building the entries can throw too (a table without a name); the write stands.
+    warn(err);
+  }
 }
 
 export async function updateItemHandler(c: Context) {
