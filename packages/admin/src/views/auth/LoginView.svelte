@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from "$lib/i18n";
   import LanguageSwitcher from "$lib/components/LanguageSwitcher.svelte";
+  import { Alert, Button, Card, CardContent, Checkbox, Input, Label } from "$lib/tallao";
   import {
     signIn,
     signOut,
@@ -284,272 +285,244 @@
 </script>
 
 <!--
-  LoginView.svelte — Admin Panel Login
-  Cyberpunk glassmorphism aesthetic, centered card.
+  LoginView.svelte — the panel's sign-in page: a centred tallao Card on the theme's
+  background, so it follows light and dark like the rest of the panel.
 -->
-<div class="login-bg">
+<div class="auth-bg">
   <div class="language-selector"><LanguageSwitcher /></div>
-  <!-- Animated grid background -->
-  <div class="grid-overlay"></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
 
-  <div class="login-card">
-    <!-- Logo / Brand -->
-    <div class="brand">
-      <div class="brand-icon">
-        <svg
-          width="32"
-          height="32"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-        </svg>
-      </div>
-      <h1 class="brand-name">{t("common.kitsuden")}</h1>
-      <p class="brand-sub">{t("loginView.adminConsole")}</p>
-    </div>
+  <div class="auth-panel">
+    <Card>
+      <CardContent class="auth-panel-body">
+        <!-- Logo / Brand -->
+        <div class="brand">
+          <div class="brand-icon">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          </div>
+          <h1 class="brand-name">{t("common.kitsuden")}</h1>
+          <p class="brand-sub">{t("loginView.adminConsole")}</p>
+        </div>
 
-    <!-- Error -->
-    {#if errorVisible}
-      <div class="error-banner">
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line
-            x1="9"
-            y1="9"
-            x2="15"
-            y2="15"
-          />
-        </svg>
-        {errorVisible}
-      </div>
-    {/if}
+        {#if errorVisible}
+          <Alert variant="error" class="mb-4">{errorVisible}</Alert>
+        {/if}
 
-    {#if warning}
-      <div class="notice-banner" role="status">{warning}</div>
-    {/if}
+        {#if warning}
+          <Alert variant="success" class="mb-4">{warning}</Alert>
+        {/if}
 
-    <!-- Form -->
-    {#if mode === "entrar"}
-      <form onsubmit={handleLogin} class="login-form">
-        <div class="field">
-          <label class="field-label" for="email">{t("common.email")}</label>
-          <input
-            bind:value={email}
-            type="email"
-            id="email"
-            placeholder={t("loginView.emailPlaceholder")}
-            class="field-input"
-            autocomplete="email"
-            required
-          />
-        </div>
-        <div class="field">
-          <label class="field-label" for="password">{t("common.password")}</label>
-          <input
-            bind:value={password}
-            type="password"
-            id="password"
-            placeholder="••••••••"
-            class="field-input"
-            autocomplete="current-password"
-            required
-          />
-        </div>
-        <button type="submit" disabled={loading} class="login-btn">
-          {#if loading}
-            <span class="spinner"></span>
-          {:else}
-            <span>{t("loginView.signIn")}</span>
-          {/if}
-        </button>
-      </form>
+        <!-- Form -->
+        {#if mode === "entrar"}
+          <form onsubmit={handleLogin} class="auth-form">
+            <div class="field">
+              <Label for="email">{t("common.email")}</Label>
+              <Input
+                bind:value={email}
+                type="email"
+                id="email"
+                placeholder={t("loginView.emailPlaceholder")}
+                autocomplete="email"
+                required
+              />
+            </div>
+            <div class="field">
+              <Label for="password">{t("common.password")}</Label>
+              <Input
+                bind:value={password}
+                type="password"
+                id="password"
+                placeholder="••••••••"
+                autocomplete="current-password"
+                required
+              />
+            </div>
+            <Button type="submit" size="lg" class="w-full" {loading}>
+              {t("loginView.signIn")}
+            </Button>
+          </form>
 
-      {#if pendingVerification}
-        <button type="button" class="link-btn" disabled={sending || !email} onclick={handleResend}>
-          {t("loginView.resendConfirmationEmail")}
-        </button>
-      {/if}
-      <button type="button" class="link-btn" onclick={() => changeMode("olvido")}>
-        {t("loginView.forgotYourPassword")}
-      </button>
-      {#if magicLinks}
-        <button type="button" class="link-btn" onclick={() => changeMode("magic")}>
-          {t("loginView.emailMeALink")}
-        </button>
-      {/if}
-    {:else if mode === "code"}
-      <form onsubmit={handleCode} class="login-form">
-        <p class="field-help">
-          {useBackup ? t("loginView.backupCodePrompt") : t("loginView.twoFactorPrompt")}
-        </p>
-        <div class="field">
-          <label class="field-label" for="two-factor-code">
-            {useBackup ? t("loginView.backupCode") : t("loginView.code")}
-          </label>
-          <input
-            bind:value={twoFactorCode}
-            id="two-factor-code"
-            class="field-input"
-            autocomplete="one-time-code"
-            inputmode={useBackup ? "text" : "numeric"}
-            required
-          />
-        </div>
-        <label class="check-row">
-          <input type="checkbox" bind:checked={trustDevice} />
-          <span>{t("loginView.trustDevice")}</span>
-        </label>
-        <button type="submit" disabled={sending} class="login-btn">
-          {#if sending}
-            <span class="spinner"></span>
-          {:else}
-            <span>{t("loginView.verify")}</span>
-          {/if}
-        </button>
-      </form>
-      <button
-        type="button"
-        class="link-btn"
-        onclick={() => {
-          useBackup = !useBackup;
-          twoFactorCode = "";
-          localError = null;
-        }}
-      >
-        {useBackup ? t("loginView.useAuthenticator") : t("loginView.useBackupCode")}
-      </button>
-      <button type="button" class="link-btn" onclick={() => changeMode("entrar")}>
-        {t("loginView.reenter")}
-      </button>
-    {:else if mode === "magic"}
-      <form onsubmit={handleMagic} class="login-form">
-        <div class="field">
-          <label class="field-label" for="magic-email">{t("common.email")}</label>
-          <input
-            bind:value={email}
-            type="email"
-            id="magic-email"
-            placeholder={t("loginView.emailPlaceholder")}
-            class="field-input"
-            autocomplete="email"
-            required
-          />
-        </div>
-        <button type="submit" disabled={sending} class="login-btn">
-          {#if sending}
-            <span class="spinner"></span>
-          {:else}
-            <span>{t("loginView.sendSignInLink")}</span>
-          {/if}
-        </button>
-      </form>
-      <button type="button" class="link-btn" onclick={() => changeMode("entrar")}>
-        {t("loginView.reenter")}
-      </button>
-    {:else if mode === "olvido"}
-      <form onsubmit={handleForgot} class="login-form">
-        <div class="field">
-          <label class="field-label" for="forgot-email">{t("common.email")}</label>
-          <input
-            bind:value={email}
-            type="email"
-            id="forgot-email"
-            placeholder={t("loginView.emailPlaceholder")}
-            class="field-input"
-            autocomplete="email"
-            required
-          />
-        </div>
-        <button type="submit" disabled={sending} class="login-btn">
-          {#if sending}
-            <span class="spinner"></span>
-          {:else}
-            <span>{t("loginView.sendLink")}</span>
-          {/if}
-        </button>
-      </form>
-      <button type="button" class="link-btn" onclick={() => changeMode("entrar")}>
-        {t("loginView.reenter")}
-      </button>
-    {:else}
-      <form onsubmit={handleNew} class="login-form">
-        <div class="field">
-          <label class="field-label" for="new-password">{t("loginView.newPassword")}</label>
-          <input
-            bind:value={newPassword}
-            type="password"
-            id="new-password"
-            class="field-input"
-            autocomplete="new-password"
-            minlength="8"
-            required
-          />
-        </div>
-        <div class="field">
-          <label class="field-label" for="repeat-password">{t("loginView.repitela")}</label>
-          <input
-            bind:value={repeatPassword}
-            type="password"
-            id="repeat-password"
-            class="field-input"
-            autocomplete="new-password"
-            minlength="8"
-            required
-          />
-        </div>
-        <button type="submit" disabled={sending} class="login-btn">
-          {#if sending}
-            <span class="spinner"></span>
-          {:else}
-            <span>{t("loginView.savePassword")}</span>
-          {/if}
-        </button>
-      </form>
-    {/if}
-
-    {#if mode === "entrar" && providers.length > 0}
-      <div class="divider"><span>o</span></div>
-      <div class="social-list">
-        {#each providers as provider (provider.id)}
-          <button
-            type="button"
-            class="social-btn"
-            disabled={loading}
-            style:--brand={PROVIDER_STYLE[provider.id]?.color ?? "#4a4a5a"}
-            onclick={() => handleSocial(provider.id)}
-          >
-            {#if PROVIDER_STYLE[provider.id]}
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
+          <div class="auth-links">
+            {#if pendingVerification}
+              <Button
+                variant="ghost"
+                size="sm"
+                class="w-full"
+                disabled={sending || !email}
+                onclick={handleResend}
               >
-                <path d={PROVIDER_STYLE[provider.id].icon} />
-              </svg>
+                {t("loginView.resendConfirmationEmail")}
+              </Button>
             {/if}
-            <span>{t("loginView.continueWith")} {provider.label}</span>
-          </button>
-        {/each}
-      </div>
-      <!-- Signing in here creates the account if it does not exist, but this console requires
-           the admin role: without it, checkSession kicks it out just like a wrong password. -->
-      <p class="social-note">{t("loginView.theConsoleStillRequiresRole")}</p>
-    {/if}
+            <Button variant="ghost" size="sm" class="w-full" onclick={() => changeMode("olvido")}>
+              {t("loginView.forgotYourPassword")}
+            </Button>
+            {#if magicLinks}
+              <Button variant="ghost" size="sm" class="w-full" onclick={() => changeMode("magic")}>
+                {t("loginView.emailMeALink")}
+              </Button>
+            {/if}
+          </div>
+        {:else if mode === "code"}
+          <form onsubmit={handleCode} class="auth-form">
+            <p class="field-help">
+              {useBackup ? t("loginView.backupCodePrompt") : t("loginView.twoFactorPrompt")}
+            </p>
+            <div class="field">
+              <Label for="two-factor-code">
+                {useBackup ? t("loginView.backupCode") : t("loginView.code")}
+              </Label>
+              <Input
+                bind:value={twoFactorCode}
+                id="two-factor-code"
+                autocomplete="one-time-code"
+                inputmode={useBackup ? "text" : "numeric"}
+                required
+              />
+            </div>
+            <Checkbox bind:checked={trustDevice} label={t("loginView.trustDevice")} />
+            <Button type="submit" size="lg" class="w-full" loading={sending}>
+              {t("loginView.verify")}
+            </Button>
+          </form>
+          <div class="auth-links">
+            <Button
+              variant="ghost"
+              size="sm"
+              class="w-full"
+              onclick={() => {
+                useBackup = !useBackup;
+                twoFactorCode = "";
+                localError = null;
+              }}
+            >
+              {useBackup ? t("loginView.useAuthenticator") : t("loginView.useBackupCode")}
+            </Button>
+            <Button variant="ghost" size="sm" class="w-full" onclick={() => changeMode("entrar")}>
+              {t("loginView.reenter")}
+            </Button>
+          </div>
+        {:else if mode === "magic"}
+          <form onsubmit={handleMagic} class="auth-form">
+            <div class="field">
+              <Label for="magic-email">{t("common.email")}</Label>
+              <Input
+                bind:value={email}
+                type="email"
+                id="magic-email"
+                placeholder={t("loginView.emailPlaceholder")}
+                autocomplete="email"
+                required
+              />
+            </div>
+            <Button type="submit" size="lg" class="w-full" loading={sending}>
+              {t("loginView.sendSignInLink")}
+            </Button>
+          </form>
+          <div class="auth-links">
+            <Button variant="ghost" size="sm" class="w-full" onclick={() => changeMode("entrar")}>
+              {t("loginView.reenter")}
+            </Button>
+          </div>
+        {:else if mode === "olvido"}
+          <form onsubmit={handleForgot} class="auth-form">
+            <div class="field">
+              <Label for="forgot-email">{t("common.email")}</Label>
+              <Input
+                bind:value={email}
+                type="email"
+                id="forgot-email"
+                placeholder={t("loginView.emailPlaceholder")}
+                autocomplete="email"
+                required
+              />
+            </div>
+            <Button type="submit" size="lg" class="w-full" loading={sending}>
+              {t("loginView.sendLink")}
+            </Button>
+          </form>
+          <div class="auth-links">
+            <Button variant="ghost" size="sm" class="w-full" onclick={() => changeMode("entrar")}>
+              {t("loginView.reenter")}
+            </Button>
+          </div>
+        {:else}
+          <form onsubmit={handleNew} class="auth-form">
+            <div class="field">
+              <Label for="new-password">{t("loginView.newPassword")}</Label>
+              <Input
+                bind:value={newPassword}
+                type="password"
+                id="new-password"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              />
+            </div>
+            <div class="field">
+              <Label for="repeat-password">{t("loginView.repitela")}</Label>
+              <Input
+                bind:value={repeatPassword}
+                type="password"
+                id="repeat-password"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              />
+            </div>
+            <Button type="submit" size="lg" class="w-full" loading={sending}>
+              {t("loginView.savePassword")}
+            </Button>
+          </form>
+        {/if}
 
-    <p class="login-hint">{t("loginView.builtWithBetterAuth")}</p>
+        {#if mode === "entrar" && providers.length > 0}
+          <div class="divider"><span>o</span></div>
+          <div class="social-list">
+            {#each providers as provider (provider.id)}
+              <Button
+                variant="secondary"
+                class="w-full"
+                disabled={loading}
+                onclick={() => handleSocial(provider.id)}
+              >
+                {#if PROVIDER_STYLE[provider.id]}
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    style:color={PROVIDER_STYLE[provider.id].color}
+                    style:flex="none"
+                  >
+                    <path d={PROVIDER_STYLE[provider.id].icon} />
+                  </svg>
+                {/if}
+                <span>{t("loginView.continueWith")} {provider.label}</span>
+              </Button>
+            {/each}
+          </div>
+          <!-- Signing in here creates the account if it does not exist, but this console requires
+               the admin role: without it, checkSession kicks it out just like a wrong password. -->
+          <p class="auth-note">{t("loginView.theConsoleStillRequiresRole")}</p>
+        {/if}
+
+        <p class="auth-hint">{t("loginView.builtWithBetterAuth")}</p>
+      </CardContent>
+    </Card>
   </div>
 </div>
 
@@ -561,57 +534,43 @@
     z-index: 10;
   }
 
-  /* ── Background ── */
-  .login-bg {
+  /* ── Background: the theme's own, with a faint accent grid ── */
+  .auth-bg {
     position: fixed;
     inset: 0;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #0a0612;
-    overflow: hidden;
+    padding: 4rem 1rem 1.5rem;
+    overflow-y: auto;
+    background: rgb(var(--kitsuden-bg));
   }
 
   .grid-overlay {
     position: absolute;
     inset: 0;
+    pointer-events: none;
     background-image:
-      linear-gradient(rgba(168, 85, 247, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(168, 85, 247, 0.03) 1px, transparent 1px);
+      linear-gradient(rgb(var(--kitsuden-accent) / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--kitsuden-accent) / 0.05) 1px, transparent 1px);
     background-size: 60px 60px;
-    animation: drift 20s linear infinite;
   }
 
-  @keyframes drift {
-    from {
-      transform: translate(0, 0);
-    }
-    to {
-      transform: translate(60px, 60px);
-    }
-  }
-
-  /* ── Card ── */
-  .login-card {
+  /* `margin: auto` centres the card and still lets a tall form scroll from its top. */
+  .auth-panel {
     position: relative;
     z-index: 1;
     width: 100%;
     max-width: 380px;
-    padding: 2.5rem 2rem;
-    background: rgba(16, 16, 24, 0.7);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(168, 85, 247, 0.08);
-    border-radius: 1.25rem;
-    box-shadow:
-      0 0 80px rgba(168, 85, 247, 0.05),
-      inset 0 0 60px rgba(0, 0, 0, 0.3);
+    margin: auto;
+  }
+
+  .auth-panel :global(.auth-panel-body) {
+    padding: 2rem 1.5rem;
   }
 
   /* ── Brand ── */
   .brand {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
   }
 
   .brand-icon {
@@ -620,48 +579,31 @@
     justify-content: center;
     width: 56px;
     height: 56px;
+    margin-bottom: 0.75rem;
+    color: rgb(var(--kitsuden-accent));
+    background: rgb(var(--kitsuden-accent) / 0.1);
+    border: 1px solid rgb(var(--kitsuden-accent) / 0.2);
     border-radius: 16px;
-    background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(168, 85, 247, 0.03));
-    border: 1px solid rgba(168, 85, 247, 0.15);
-    color: #c084fc;
-    margin-bottom: 1rem;
   }
 
   .brand-name {
     font-size: 1.375rem;
-    font-weight: 800;
-    color: #fff;
+    font-weight: 700;
     letter-spacing: -0.02em;
+    color: rgb(var(--kitsuden-text));
   }
 
   .brand-sub {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: rgba(255, 255, 255, 0.3);
     margin-top: 4px;
-  }
-
-  /* ── Error ── */
-  .error-banner {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    margin-bottom: 1.25rem;
-    border-radius: 10px;
-    background: rgba(255, 45, 111, 0.08);
-    border: 1px solid rgba(255, 45, 111, 0.15);
-    color: #ff6b8a;
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.8125rem;
+    color: rgb(var(--kitsuden-text-dim));
   }
 
   /* ── Form ── */
-  .login-form {
+  .auth-form {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1rem;
   }
 
   .field {
@@ -670,86 +612,16 @@
     gap: 6px;
   }
 
-  .field-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.35);
+  .field-help {
+    font-size: 0.8125rem;
+    color: rgb(var(--kitsuden-text-dim));
   }
 
-  .field-input {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
-    padding: 12px 14px;
-    font-size: 0.85rem;
-    color: #fff;
-    outline: none;
-    transition:
-      border-color 0.2s,
-      box-shadow 0.2s;
-    font-family: inherit;
-  }
-
-  .field-input::placeholder {
-    color: rgba(255, 255, 255, 0.15);
-  }
-
-  .field-input:focus {
-    border-color: rgba(168, 85, 247, 0.3);
-    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.06);
-  }
-
-  /* ── Button ── */
-  .login-btn {
-    margin-top: 0.5rem;
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: none;
-    background: linear-gradient(120deg, #a855f7, #ff2d6f);
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition:
-      transform 0.15s,
-      box-shadow 0.2s;
+  .auth-links {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-family: inherit;
-  }
-
-  .login-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 24px rgba(168, 85, 247, 0.2);
-  }
-
-  .login-btn:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
-  .login-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .spinner {
-    width: 18px;
-    height: 18px;
-    border: 2px solid rgba(10, 10, 18, 0.3);
-    border-top-color: #0a0612;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 0.75rem;
   }
 
   /* ── Social ── */
@@ -757,11 +629,9 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 1.5rem 0 1rem;
+    margin: 1.25rem 0 1rem;
     font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: rgba(255, 255, 255, 0.2);
+    color: rgb(var(--kitsuden-text-dim));
   }
 
   .divider::before,
@@ -769,7 +639,7 @@
     content: "";
     flex: 1;
     height: 1px;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgb(var(--kitsuden-border));
   }
 
   .social-list {
@@ -778,100 +648,18 @@
     gap: 8px;
   }
 
-  .social-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 11px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.03);
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.8rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition:
-      border-color 0.2s,
-      background 0.2s;
-  }
-
-  .social-btn:hover:not(:disabled) {
-    border-color: var(--brand);
-    background: color-mix(in srgb, var(--brand) 12%, transparent);
-  }
-
-  .social-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .social-btn svg {
-    color: var(--brand);
-    flex: none;
-  }
-
-  .social-note {
+  .auth-note,
+  .auth-hint {
     text-align: center;
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.25);
+    color: rgb(var(--kitsuden-text-dim));
+  }
+
+  .auth-note {
     margin-top: 0.75rem;
   }
 
-  /* ── Hint ── */
-  .login-hint {
-    text-align: center;
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.15);
+  .auth-hint {
     margin-top: 1.5rem;
-  }
-
-  .notice-banner {
-    padding: 10px 14px;
-    margin-bottom: 1.25rem;
-    border-radius: 10px;
-    background: rgba(74, 217, 145, 0.08);
-    border: 1px solid rgba(74, 217, 145, 0.18);
-    color: #6ee7a8;
-    font-size: 0.75rem;
-    font-weight: 500;
-  }
-
-  .field-help {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  .check-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.72rem;
-    color: rgba(255, 255, 255, 0.55);
-  }
-
-  .link-btn {
-    display: block;
-    width: 100%;
-    margin-top: 0.75rem;
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.45);
-    font-size: 0.72rem;
-    cursor: pointer;
-    font-family: inherit;
-    text-align: center;
-  }
-
-  .link-btn:hover:not(:disabled) {
-    color: #fff;
-    text-decoration: underline;
-  }
-
-  .link-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 </style>

@@ -5,8 +5,14 @@
 -->
 <script lang="ts">
   import {
+    Alert,
+    Badge,
     Button,
     Dialog,
+    EmptyState,
+    Field,
+    Input,
+    Select,
     Skeleton,
     Table,
     TableHeader,
@@ -115,22 +121,25 @@
 
   const date = (v: string | null) => (v ? new Date(v).toLocaleString(localeFormat()) : "—");
 
-  const STATUS: Record<AgentApiKey["status"], { text: () => string; kind: string }> = {
+  const STATUS: Record<
+    AgentApiKey["status"],
+    { text: () => string; kind: "success" | "warning" | "default" | "error" }
+  > = {
     active: {
       text: () => t("agentKeys.statusActive"),
-      kind: "bg-kitsuden-green/15 text-kitsuden-green",
+      kind: "success",
     },
     expiring: {
       text: () => t("agentKeys.statusExpiring"),
-      kind: "bg-kitsuden-amber/15 text-kitsuden-amber",
+      kind: "warning",
     },
     expired: {
       text: () => t("agentKeys.statusExpired"),
-      kind: "bg-kitsuden-muted/40 text-kitsuden-text-dim",
+      kind: "default",
     },
     revoked: {
       text: () => t("agentKeys.statusRevoked"),
-      kind: "bg-kitsuden-danger/15 text-kitsuden-danger",
+      kind: "error",
     },
   };
   const alive = (k: AgentApiKey) => k.status === "active" || k.status === "expiring";
@@ -151,15 +160,16 @@
   {#if loading}
     <Skeleton lines={3} />
   {:else if error}
-    <div
-      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
-    >
-      {error}
-    </div>
+    <Alert variant="error">{error}</Alert>
   {:else if keys.length === 0}
-    <p class="text-sm text-kitsuden-subtle">{t("agentKeys.none")}</p>
+    <EmptyState
+      size="sm"
+      title={t("agentKeys.none")}
+      actionLabel={t("agentKeys.newKey")}
+      onAction={() => (creating = true)}
+    />
   {:else}
-    <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
+    <div class="min-w-0">
       <Table class="w-full text-sm">
         <TableHeader class="text-xs text-kitsuden-subtle">
           <TableRow>
@@ -187,9 +197,7 @@
                 {/if}
               </TableCell>
               <TableCell class="px-3 py-2">
-                <span class="text-[11px] px-1.5 py-0.5 rounded-sm {STATUS[k.status].kind}"
-                  >{STATUS[k.status].text()}</span
-                >
+                <Badge variant={STATUS[k.status].kind}>{STATUS[k.status].text()}</Badge>
               </TableCell>
               <TableCell class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap"
                 >{date(k.createdAt)}</TableCell
@@ -210,12 +218,7 @@
                     <Button variant="ghost" size="sm" onclick={() => (rotating = k)}>
                       <RefreshCw size={14} class="mr-1" />{t("agentKeys.rotate")}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      class="text-kitsuden-danger hover:text-kitsuden-danger"
-                      onclick={() => (revoking = k)}
-                    >
+                    <Button variant="danger-ghost" size="sm" onclick={() => (revoking = k)}>
                       <Ban size={14} class="mr-1" />{t("agentKeys.revoke")}
                     </Button>
                   </div>
@@ -242,32 +245,21 @@
       create();
     }}
   >
-    <div>
-      <label for="key-name" class="block text-sm font-medium text-kitsuden-text mb-1.5"
-        >{t("agentKeys.name")}</label
-      >
-      <input
-        id="key-name"
-        bind:value={name}
-        placeholder={t("agentKeys.namePlaceholder")}
-        class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
-      />
-    </div>
-    <div>
-      <label for="key-expiry" class="block text-sm font-medium text-kitsuden-text mb-1.5"
-        >{t("agentKeys.expiry")}</label
-      >
-      <select
+    <Field label={t("agentKeys.name")}>
+      <Input id="key-name" bind:value={name} placeholder={t("agentKeys.namePlaceholder")} />
+    </Field>
+    <Field label={t("agentKeys.expiry")}>
+      <Select
         id="key-expiry"
         bind:value={expiry}
-        class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
-      >
-        <option value="30">{t("agentKeys.days", { n: 30 })}</option>
-        <option value="90">{t("agentKeys.days", { n: 90 })}</option>
-        <option value="365">{t("agentKeys.days", { n: 365 })}</option>
-        <option value="never">{t("agentKeys.noExpiry")}</option>
-      </select>
-    </div>
+        options={[
+          { value: "30", label: t("agentKeys.days", { n: 30 }) },
+          { value: "90", label: t("agentKeys.days", { n: 90 }) },
+          { value: "365", label: t("agentKeys.days", { n: 365 }) },
+          { value: "never", label: t("agentKeys.noExpiry") },
+        ]}
+      />
+    </Field>
     <div class="flex justify-end gap-3 pt-2">
       <Button type="button" variant="secondary" onclick={() => (creating = false)}
         >{t("common.cancel")}</Button
@@ -284,22 +276,19 @@
   onClose={() => (rotating = null)}
 >
   <div class="space-y-4">
-    <div>
-      <label for="key-grace" class="block text-sm font-medium text-kitsuden-text mb-1.5"
-        >{t("agentKeys.grace")}</label
-      >
-      <select
+    <Field label={t("agentKeys.grace")}>
+      <Select
         id="key-grace"
         bind:value={grace}
-        class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
-      >
-        <option value="0">{t("agentKeys.graceNow")}</option>
-        <option value="1">{t("agentKeys.hours", { n: 1 })}</option>
-        <option value="24">{t("agentKeys.hours", { n: 24 })}</option>
-        <option value="72">{t("agentKeys.hours", { n: 72 })}</option>
-        <option value="168">{t("agentKeys.hours", { n: 168 })}</option>
-      </select>
-    </div>
+        options={[
+          { value: "0", label: t("agentKeys.graceNow") },
+          { value: "1", label: t("agentKeys.hours", { n: 1 }) },
+          { value: "24", label: t("agentKeys.hours", { n: 24 }) },
+          { value: "72", label: t("agentKeys.hours", { n: 72 }) },
+          { value: "168", label: t("agentKeys.hours", { n: 168 }) },
+        ]}
+      />
+    </Field>
     <div class="flex justify-end gap-3">
       <Button variant="secondary" onclick={() => (rotating = null)}>{t("common.cancel")}</Button>
       <Button variant="primary" loading={busy} onclick={rotate}>{t("agentKeys.rotate")}</Button>

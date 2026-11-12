@@ -16,6 +16,7 @@ import { operations as promotionOps, type PromotionApi } from "./kons/promotion"
 import { operations as promotionAdminOps, type PromotionAdminApi } from "./kons/promotion-admin";
 import { operations as proposalsOps, type ProposalsApi } from "./kons/proposals";
 import { operations as queueOps, type QueueApi } from "./kons/queue";
+import { operations as recordHistoryOps, type RecordHistoryApi } from "./kons/record-history";
 import { operations as tracesOps, type TracesApi } from "./kons/traces";
 
 export * as AgentNotifications from "./kons/agent-notifications";
@@ -32,6 +33,7 @@ export * as Promotion from "./kons/promotion";
 export * as PromotionAdmin from "./kons/promotion-admin";
 export * as Proposals from "./kons/proposals";
 export * as Queue from "./kons/queue";
+export * as RecordHistory from "./kons/record-history";
 export * as Traces from "./kons/traces";
 
 /** Version of the Kitsuden API this client was generated from. */
@@ -72,6 +74,8 @@ export interface KitsudenKons {
   readonly proposals: ProposalsApi;
   /** kon-queue: The Postgres queue: status and dead jobs (administrators only). */
   readonly queue: QueueApi;
+  /** kon-record-history: The change history of the rows of any explorable table (for the admin panel). */
+  readonly recordHistory: RecordHistoryApi;
   /** kon-traces: The glass box: one trace per request, in Postgres (administrators only). */
   readonly traces: TracesApi;
 }
@@ -92,5 +96,6 @@ export const KONS = {
   promotionAdmin: promotionAdminOps,
   proposals: proposalsOps,
   queue: queueOps,
+  recordHistory: recordHistoryOps,
   traces: tracesOps,
 } as const satisfies Record<string, Record<string, OperationInfo>>;

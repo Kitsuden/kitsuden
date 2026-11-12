@@ -1,19 +1,21 @@
 <script lang="ts">
   import Page from "$lib/components/layout/Page.svelte";
-  import { Button, Dialog, Field, Input, Select, toast } from "$lib/tallao";
-  import { t } from "$lib/i18n";
   import {
-    Building2,
-    Users,
-    ChevronDown,
-    ChevronRight,
-    Search,
-    User,
-    Mail,
-    Plus,
-    X,
-    Loader2,
-  } from "lucide-svelte";
+    Avatar,
+    Button,
+    Card,
+    CardContent,
+    Dialog,
+    EmptyState,
+    Field,
+    Input,
+    SearchInput,
+    Select,
+    Spinner,
+    toast,
+  } from "$lib/tallao";
+  import { t } from "$lib/i18n";
+  import { Users, ChevronDown, ChevronRight, User, Mail } from "lucide-svelte";
   import { onMount } from "svelte";
 
   import { api } from "$lib/api";
@@ -92,10 +94,6 @@
     expandedNodes = expandedNodes;
   }
 
-  function getInitials(firstName: string, lastName: string): string {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  }
-
   function filterNodes(nodes: Employee[]): Employee[] {
     if (!searchQuery) return nodes;
 
@@ -163,68 +161,50 @@
   {/snippet}
   <div class="space-y-6">
     <!-- Search -->
-    <div class="card p-4">
-      <div class="relative max-w-md">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-subtle" />
-        <input
-          type="text"
-          aria-label={t("orgChartPage.searchEmployee")}
-          placeholder={t("orgChartPage.searchEmployee")}
-          bind:value={searchQuery}
-          class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:border-kitsuden-accent/50 focus:outline-hidden"
-        />
-      </div>
-    </div>
+    <SearchInput
+      class="max-w-md"
+      ariaLabel={t("orgChartPage.searchEmployee")}
+      placeholder={t("orgChartPage.searchEmployee")}
+      bind:value={searchQuery}
+    />
 
     <!-- Org Chart -->
-    <div class="card p-6 min-h-[500px]">
-      {#if loading}
-        <div class="flex items-center justify-center h-64">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
-        </div>
-      {:else if organizations.length === 0}
-        <div class="text-center py-12">
-          <Building2 class="w-16 h-16 text-kitsuden-subtle mx-auto mb-4" />
-          <h3 class="text-lg font-medium text-kitsuden-text mb-2">
-            {t("orgChartPage.noOrganizations")}
-          </h3>
-          <p class="text-kitsuden-subtle mb-4">{t("orgChartPage.createsAnOrganizationToSee")}</p>
-          <button
-            class="btn btn-primary gap-2"
-            onclick={() => {
+    <Card class="min-h-[500px]">
+      <CardContent>
+        {#if loading}
+          <div class="flex items-center justify-center h-64">
+            <Spinner size="lg" />
+          </div>
+        {:else if organizations.length === 0}
+          <EmptyState
+            title={t("orgChartPage.noOrganizations")}
+            description={t("orgChartPage.createsAnOrganizationToSee")}
+            actionLabel={t("orgChartPage.createOrganization")}
+            onAction={() => {
               showCreateOrgModal = true;
               resetOrgForm();
             }}
-          >
-            <Plus class="w-4 h-4" />
-            {t("orgChartPage.createOrganization")}
-          </button>
-        </div>
-      {:else if orgData.length === 0}
-        <div class="text-center py-12">
-          <Users class="w-16 h-16 text-kitsuden-subtle mx-auto mb-4" />
-          <h3 class="text-lg font-medium text-kitsuden-text mb-2">
-            {t("orgChartPage.noEmployees")}
-          </h3>
-          <p class="text-kitsuden-subtle">
-            {t("orgChartPage.theSelectedOrganizationDoesNotHave")}
-          </p>
-        </div>
-      {:else}
-        <div class="space-y-2">
-          {#each filterNodes(orgData) as root}
-            {@render OrgNode({
-              node: root,
-              level: 0,
-              expandedNodes,
-              toggleNode,
-              getInitials,
-              onSelect: (e: Employee) => (selectedEmployee = e),
-            })}
-          {/each}
-        </div>
-      {/if}
-    </div>
+          />
+        {:else if orgData.length === 0}
+          <EmptyState
+            title={t("orgChartPage.noEmployees")}
+            description={t("orgChartPage.theSelectedOrganizationDoesNotHave")}
+          />
+        {:else}
+          <div class="space-y-2">
+            {#each filterNodes(orgData) as root}
+              {@render OrgNode({
+                node: root,
+                level: 0,
+                expandedNodes,
+                toggleNode,
+                onSelect: (e: Employee) => (selectedEmployee = e),
+              })}
+            {/each}
+          </div>
+        {/if}
+      </CardContent>
+    </Card>
 
     <!-- Employee detail -->
     <Dialog
@@ -289,32 +269,31 @@
   level,
   expandedNodes,
   toggleNode,
-  getInitials,
   onSelect,
 }: {
   node: Employee;
   level: number;
   expandedNodes: Set<string>;
   toggleNode: (id: string) => void;
-  getInitials: (f: string, l: string) => string;
   onSelect: (e: Employee) => void;
 })}
   <div class="select-none">
     <!-- Node Card -->
     <div
-      class="flex items-center gap-3 p-3 rounded-lg hover:bg-kitsuden-text/5 transition-colors cursor-pointer group"
-      style="padding-left: {level * 24 + 12}px"
+      class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 min-w-0 rounded-lg hover:bg-kitsuden-text/5 transition-colors cursor-pointer group"
+      style="padding-left: {level * 16 + 8}px"
       onclick={() => onSelect(node)}
     >
       <!-- Expand/Collapse -->
       {#if node.children && node.children.length > 0}
-        <button
-          class="p-1 rounded-sm hover:bg-kitsuden-text/10 transition-colors"
-          aria-label={t("orgChartPage.toggleReports", {
+        <Button
+          variant="ghost"
+          size="icon"
+          ariaLabel={t("orgChartPage.toggleReports", {
             name: node.displayName || node.firstName + " " + node.lastName,
           })}
           aria-expanded={expandedNodes.has(node.id)}
-          onclick={(e) => {
+          onclick={(e: MouseEvent) => {
             e.stopPropagation();
             toggleNode(node.id);
           }}
@@ -324,17 +303,13 @@
           {:else}
             <ChevronRight class="w-4 h-4 text-kitsuden-subtle" />
           {/if}
-        </button>
+        </Button>
       {:else}
-        <div class="w-6"></div>
+        <div class="w-10 shrink-0"></div>
       {/if}
 
       <!-- Avatar -->
-      <div
-        class="w-10 h-10 rounded-full bg-kitsuden-accent/20 flex items-center justify-center text-kitsuden-accent text-sm font-medium"
-      >
-        {getInitials(node.firstName, node.lastName)}
-      </div>
+      <Avatar name={node.displayName || `${node.firstName} ${node.lastName}`} decorative />
 
       <!-- Info -->
       <div class="flex-1 min-w-0">
@@ -355,16 +330,18 @@
       {/if}
 
       <!-- View Button (visible on hover) -->
-      <a
+      <Button
+        variant="ghost"
+        size="icon"
         href="/directory/employees/{node.id}"
-        class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 p-2 text-kitsuden-subtle hover:text-kitsuden-text transition-all"
-        aria-label={t("orgChartPage.viewProfile", {
+        class="md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100"
+        ariaLabel={t("orgChartPage.viewProfile", {
           name: node.displayName || node.firstName + " " + node.lastName,
         })}
-        onclick={(e) => e.stopPropagation()}
+        onclick={(e: MouseEvent) => e.stopPropagation()}
       >
         <User class="w-4 h-4" />
-      </a>
+      </Button>
     </div>
 
     <!-- Children -->
@@ -372,7 +349,8 @@
       <div class="relative">
         <!-- Vertical line -->
         <div
-          class="absolute left-[{level * 24 + 27}px] top-0 bottom-0 w-px bg-kitsuden-border"
+          class="absolute top-0 bottom-0 w-px bg-kitsuden-border"
+          style="left: {level * 16 + 28}px"
         ></div>
 
         {#each node.children as child}
@@ -381,7 +359,6 @@
             level: level + 1,
             expandedNodes,
             toggleNode,
-            getInitials,
             onSelect,
           })}
         {/each}
@@ -389,23 +366,3 @@
     {/if}
   </div>
 {/snippet}
-
-<style>
-  @reference "../../../style.css";
-
-  .card {
-    @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
-  }
-
-  .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all;
-  }
-
-  .btn-primary {
-    @apply bg-kitsuden-accent text-kitsuden-on-accent hover:bg-kitsuden-accent/90;
-  }
-
-  .btn-ghost {
-    @apply text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-text/5;
-  }
-</style>

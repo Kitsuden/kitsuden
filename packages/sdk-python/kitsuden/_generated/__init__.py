@@ -20,6 +20,7 @@ if TYPE_CHECKING:  # the kon modules are imported lazily, on first use of the at
     from .kons.promotion_admin import AsyncPromotionAdminApi, PromotionAdminApi
     from .kons.proposals import AsyncProposalsApi, ProposalsApi
     from .kons.queue import AsyncQueueApi, QueueApi
+    from .kons.record_history import AsyncRecordHistoryApi, RecordHistoryApi
     from .kons.traces import AsyncTracesApi, TracesApi
 
 API_VERSION = "0.9.0-beta"
@@ -98,6 +99,7 @@ KONS: Tuple[Tuple[str, str, str, str], ...] = (
     ("promotion_admin", "kon-promotion-admin", "kitsuden._generated.kons.promotion_admin", "PromotionAdminApi"),
     ("proposals", "kon-proposals", "kitsuden._generated.kons.proposals", "ProposalsApi"),
     ("queue", "kon-queue", "kitsuden._generated.kons.queue", "QueueApi"),
+    ("record_history", "kon-record-history", "kitsuden._generated.kons.record_history", "RecordHistoryApi"),
     ("traces", "kon-traces", "kitsuden._generated.kons.traces", "TracesApi"),
 )
 """(attribute, kon id, module, sync class) of every kon; the async class is `Async` + the sync one."""
@@ -120,6 +122,7 @@ class GeneratedKons:
     promotion_admin: PromotionAdminApi
     proposals: ProposalsApi
     queue: QueueApi
+    record_history: RecordHistoryApi
     traces: TracesApi
 
 
@@ -140,4 +143,5 @@ class AsyncGeneratedKons:
     promotion_admin: AsyncPromotionAdminApi
     proposals: AsyncProposalsApi
     queue: AsyncQueueApi
+    record_history: AsyncRecordHistoryApi
     traces: AsyncTracesApi

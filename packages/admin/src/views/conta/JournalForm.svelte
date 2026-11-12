@@ -7,7 +7,9 @@
     Badge,
     Button,
     Input,
-    Label,
+    Field,
+    Select,
+    Spinner,
     Textarea,
     Table,
     TableHeader,
@@ -144,10 +146,10 @@
   onMount(load);
 </script>
 
-<div class="space-y-6">
-  <div class="flex items-center justify-between">
+<div class="space-y-6 min-w-0">
+  <div class="flex flex-wrap items-center justify-between gap-2">
     <Button variant="ghost" onclick={onBack}
-      ><ArrowLeft class="w-4 h-4 mr-2" /> {t("common.back")}</Button
+      ><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button
     >
     <div class="flex items-center gap-2">
       {#if isBalanced}
@@ -162,117 +164,107 @@
   </div>
 
   {#if loading}
-    <div class="flex items-center justify-center h-48">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <div class="flex items-center justify-center h-48"><Spinner size="lg" /></div>
   {:else}
     <div class="grid gap-4 md:grid-cols-3">
-      <div><Label>{t("common.date")}</Label><Input type="date" bind:value={journal.date} /></div>
-      <div>
-        <Label>{t("journalForm.reference")}</Label><Input
-          bind:value={journal.reference}
-          placeholder={t("journalForm.inv001Case123")}
-        />
-      </div>
-      <div>
-        <Label>{t("common.type")}</Label>
-        <select
-          bind:value={journal.journalType}
-          class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm"
-        >
+      <Field label={t("common.date")}><Input type="date" bind:value={journal.date} /></Field>
+      <Field label={t("journalForm.reference")}>
+        <Input bind:value={journal.reference} placeholder={t("journalForm.inv001Case123")} />
+      </Field>
+      <Field label={t("common.type")}>
+        <Select bind:value={journal.journalType}>
           <option value="standard">{t("journalForm.standard")}</option>
           <option value="trust_deposit">{t("journalForm.trustDeposit")}</option>
           <option value="trust_withdrawal">{t("journalForm.trustWithdrawal")}</option>
           <option value="disbursement">{t("journalForm.disbursement")}</option>
-        </select>
-      </div>
+        </Select>
+      </Field>
     </div>
 
-    <div>
-      <Label>{t("common.description")}</Label><Textarea bind:value={journal.description} rows={2} />
-    </div>
+    <Field label={t("common.description")}>
+      <Textarea bind:value={journal.description} rows={2} />
+    </Field>
 
-    <div>
-      <Label>{t("journalForm.counterparty")}</Label>
-      <select
-        bind:value={journal.counterpartyId}
-        class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm"
-      >
+    <Field label={t("journalForm.counterparty")}>
+      <Select bind:value={journal.counterpartyId}>
         <option value="">{t("journalForm.none")}</option>
         {#each counterparties as cp}
           <option value={cp.id}>{cp.name} ({cp.type})</option>
         {/each}
-      </select>
-    </div>
+      </Select>
+    </Field>
 
     <div class="space-y-2">
-      <div class="flex items-center justify-between">
-        <Label>{t("journalForm.ledgerLines")}</Label>
-        <Button variant="outline" size="sm" onclick={addLine}
-          ><Plus class="w-4 h-4 mr-1" /> {t("journalForm.addLine")}</Button
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h3 class="text-sm font-medium text-kitsuden-text">{t("journalForm.ledgerLines")}</h3>
+        <Button variant="secondary" size="sm" onclick={addLine}
+          ><Plus class="w-4 h-4" /> {t("journalForm.addLine")}</Button
         >
       </div>
 
-      <div class="border border-kitsuden-border rounded-lg overflow-hidden">
-        <Table class="w-full text-sm">
-          <TableHeader class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left">
+      <div>
+        <Table density="compact" aria-label={t("journalForm.ledgerLines")}>
+          <TableHeader>
             <TableRow>
-              <TableHead class="px-3 py-2 font-medium">{t("journalForm.account")}</TableHead>
-              <TableHead class="px-3 py-2 font-medium">{t("common.description")}</TableHead>
-              <TableHead class="px-3 py-2 font-medium text-right"
-                >{t("journalForm.debit")}</TableHead
-              >
-              <TableHead class="px-3 py-2 font-medium text-right"
-                >{t("journalForm.credit")}</TableHead
-              >
-              <TableHead class="px-3 py-2 font-medium">{t("common.currency")}</TableHead>
-              <TableHead class="px-3 py-2 font-medium w-10"></TableHead>
+              <TableHead>{t("journalForm.account")}</TableHead>
+              <TableHead>{t("common.description")}</TableHead>
+              <TableHead class="text-right">{t("journalForm.debit")}</TableHead>
+              <TableHead class="text-right">{t("journalForm.credit")}</TableHead>
+              <TableHead>{t("common.currency")}</TableHead>
+              <TableHead class="w-10"><span class="sr-only">{t("common.actions")}</span></TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody class="divide-y divide-kitsuden-border">
+          <TableBody>
             {#each journal.lines as line, idx}
-              <TableRow class="hover:bg-kitsuden-border/20">
-                <TableCell class="px-3 py-2">
-                  <select
+              <TableRow>
+                <TableCell>
+                  <Select
+                    size="sm"
                     bind:value={line.accountId}
-                    class="w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
+                    aria-label={t("journalForm.account")}
                   >
                     <option value="">{t("common.select")}</option>
                     {#each accounts as a}
                       <option value={a.id}>{a.code} - {a.name}</option>
                     {/each}
-                  </select>
+                  </Select>
                 </TableCell>
-                <TableCell class="px-3 py-2"
-                  ><Input bind:value={line.description} class="text-sm py-1" /></TableCell
+                <TableCell
+                  ><Input
+                    bind:value={line.description}
+                    aria-label={t("common.description")}
+                  /></TableCell
                 >
-                <TableCell class="px-3 py-2"
+                <TableCell
                   ><Input
                     type="number"
                     step="0.01"
                     bind:value={line.debit}
-                    class="text-sm py-1 text-right"
+                    aria-label={t("journalForm.debit")}
+                    class="text-right"
                   /></TableCell
                 >
-                <TableCell class="px-3 py-2"
+                <TableCell
                   ><Input
                     type="number"
                     step="0.01"
                     bind:value={line.credit}
-                    class="text-sm py-1 text-right"
+                    aria-label={t("journalForm.credit")}
+                    class="text-right"
                   /></TableCell
                 >
-                <TableCell class="px-3 py-2">
-                  <select
-                    bind:value={line.currency}
-                    class="w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
-                  >
+                <TableCell>
+                  <Select size="sm" bind:value={line.currency} aria-label={t("common.currency")}>
                     {#each currencies as c}<option value={c.code}>{c.code}</option>{/each}
-                  </select>
+                  </Select>
                 </TableCell>
-                <TableCell class="px-3 py-2">
-                  <Button variant="ghost" size="sm" onclick={() => removeLine(idx)}
-                    ><X class="w-4 h-4 text-kitsuden-danger" /></Button
+                <TableCell>
+                  <Button
+                    variant="danger-ghost"
+                    size="icon"
+                    ariaLabel={t("journalForm.removeLine")}
+                    title={t("journalForm.removeLine")}
+                    onclick={() => removeLine(idx)}><X class="w-4 h-4" aria-hidden="true" /></Button
                   >
                 </TableCell>
               </TableRow>
@@ -282,14 +274,16 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-between pt-4 border-t border-kitsuden-border">
-      <Button variant="outline" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
-      <div class="flex items-center gap-2">
+    <div
+      class="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-kitsuden-border"
+    >
+      <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
+      <div class="flex flex-wrap items-center gap-2">
         <Button variant="secondary" onclick={saveDraft} loading={saving}
-          ><Save class="w-4 h-4 mr-2" /> {t("journalForm.saveDraft")}</Button
+          ><Save class="w-4 h-4" /> {t("journalForm.saveDraft")}</Button
         >
         <Button onclick={post} loading={saving} disabled={!isBalanced}
-          ><CheckCircle class="w-4 h-4 mr-2" /> {t("journalForm.post")}</Button
+          ><CheckCircle class="w-4 h-4" /> {t("journalForm.post")}</Button
         >
       </div>
     </div>

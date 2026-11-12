@@ -11,7 +11,16 @@
   import { RefreshCw, ServerCog, ShieldCheck, Trash2 } from "lucide-svelte";
   import { onMount } from "svelte";
   import {
+    Alert,
+    Badge,
     Button,
+    Card,
+    CardContent,
+    EmptyState,
+    Field,
+    Input,
+    Spinner,
+    Switch,
     Table,
     TableBody,
     TableCell,
@@ -137,201 +146,190 @@
 <div class="space-y-6" data-testid="mcp-servers">
   <p class="text-sm text-kitsuden-text-dim">{t("mcpServers.help")}</p>
 
-  <form class="grid gap-2 md:grid-cols-5 items-end" onsubmit={add}>
-    <label class="text-xs text-kitsuden-text-dim"
-      >{t("mcpServers.name")}
-      <input
-        class="mt-1 w-full rounded-sm bg-kitsuden-card border border-kitsuden-input px-2 py-1 text-sm text-kitsuden-text"
-        bind:value={form.name}
-        required
-      />
-    </label>
-    <label class="text-xs text-kitsuden-text-dim md:col-span-2"
-      >{t("mcpServers.url")}
-      <input
-        class="mt-1 w-full rounded-sm bg-kitsuden-card border border-kitsuden-input px-2 py-1 text-sm text-kitsuden-text"
-        type="url"
-        bind:value={form.url}
-        required
-      />
-    </label>
-    <label class="text-xs text-kitsuden-text-dim"
-      >{t("mcpServers.authHeaderName")}
-      <input
-        class="mt-1 w-full rounded-sm bg-kitsuden-card border border-kitsuden-input px-2 py-1 text-sm text-kitsuden-text"
-        bind:value={form.authHeaderName}
-      />
-    </label>
-    <label class="text-xs text-kitsuden-text-dim"
-      >{t("mcpServers.authHeaderValue")}
-      <input
-        class="mt-1 w-full rounded-sm bg-kitsuden-card border border-kitsuden-input px-2 py-1 text-sm text-kitsuden-text"
-        type="password"
-        autocomplete="off"
-        bind:value={form.authHeaderValue}
-      />
-    </label>
-    <div class="md:col-span-5">
-      <Button type="submit" size="sm" loading={busy === "add"}>{t("mcpServers.add")}</Button>
-    </div>
-  </form>
+  <Card>
+    <CardContent>
+      <form class="grid gap-3 md:grid-cols-5 items-end" onsubmit={add}>
+        <Field label={t("mcpServers.name")} required>
+          <Input bind:value={form.name} required />
+        </Field>
+        <Field label={t("mcpServers.url")} required class="md:col-span-2">
+          <Input type="url" bind:value={form.url} required />
+        </Field>
+        <Field label={t("mcpServers.authHeaderName")}>
+          <Input bind:value={form.authHeaderName} />
+        </Field>
+        <Field label={t("mcpServers.authHeaderValue")}>
+          <Input type="password" autocomplete="off" bind:value={form.authHeaderValue} />
+        </Field>
+        <div class="md:col-span-5 flex justify-end">
+          <Button type="submit" loading={busy === "add"}>{t("mcpServers.add")}</Button>
+        </div>
+      </form>
+    </CardContent>
+  </Card>
 
   {#if loading && servers.length === 0}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
+      <Spinner />
     </div>
   {:else if error}
-    <div
-      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
-    >
-      {error}
-    </div>
+    <Alert variant="error">{error}</Alert>
   {:else if servers.length === 0}
-    <p class="text-sm text-kitsuden-subtle" data-testid="mcp-servers-empty">
-      {t("mcpServers.empty")}
-    </p>
+    <EmptyState size="sm" title={t("mcpServers.empty")} data-testid="mcp-servers-empty" />
   {:else}
     <div class="space-y-3">
       {#each servers as s (s.id)}
-        <div class="rounded-lg border border-kitsuden-border p-3" data-testid="mcp-server-row">
-          <div class="flex flex-wrap items-center gap-3 justify-between">
-            <div>
-              <button
-                class="text-kitsuden-text font-medium hover:underline"
-                onclick={() => toggle(s)}>{s.name}</button
-              >
-              <span class="block text-xs text-kitsuden-subtle break-all">{s.url}</span>
-              <span class="block text-xs text-kitsuden-subtle">
-                {t("mcpServers.summary", {
-                  tools: s.tools,
-                  review: s.needsReview,
-                  date: date(s.lastRefreshedAt),
-                })}
-              </span>
-              {#if s.lastError}<span class="block text-xs text-kitsuden-danger">{s.lastError}</span
-                >{/if}
-            </div>
-            <div class="flex items-center gap-2">
-              {#if s.needsReview > 0}
-                <span
-                  class="text-xs rounded-sm px-2 py-0.5 bg-kitsuden-amber/10 text-kitsuden-amber"
-                  >{t("mcpServers.needsReview", { count: s.needsReview })}</span
+        <div data-testid="mcp-server-row">
+          <Card class="p-3">
+            <div class="flex flex-wrap items-center gap-3 justify-between">
+              <div class="min-w-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="-ml-2 font-medium"
+                  aria-expanded={open === s.id}
+                  onclick={() => toggle(s)}>{s.name}</Button
                 >
-              {/if}
-              <label class="flex items-center gap-1 text-xs text-kitsuden-text-dim">
-                <input
-                  type="checkbox"
-                  checked={s.enabled}
-                  onchange={() => run(`enable:${s.id}`, () => setEnabled(s.id, !s.enabled))}
+                <span class="block text-xs text-kitsuden-subtle break-all">{s.url}</span>
+                <span class="block text-xs text-kitsuden-subtle">
+                  {t("mcpServers.summary", {
+                    tools: s.tools,
+                    review: s.needsReview,
+                    date: date(s.lastRefreshedAt),
+                  })}
+                </span>
+                {#if s.lastError}<span class="block text-xs text-kitsuden-danger"
+                    >{s.lastError}</span
+                  >{/if}
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                {#if s.needsReview > 0}
+                  <Badge variant="warning"
+                    >{t("mcpServers.needsReview", { count: s.needsReview })}</Badge
+                  >
+                {/if}
+                <Switch
+                  size="sm"
+                  bind:checked={
+                    () => s.enabled, () => run(`enable:${s.id}`, () => setEnabled(s.id, !s.enabled))
+                  }
+                  label={t("mcpServers.enabled")}
                 />
-                {t("mcpServers.enabled")}
-              </label>
-              <Button
-                variant="ghost"
-                size="sm"
-                loading={busy === `refresh:${s.id}`}
-                onclick={() => refresh(s)}
-              >
-                <RefreshCw size={14} class="mr-1" />{t("mcpServers.refresh")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="text-kitsuden-danger"
-                loading={busy === `delete:${s.id}`}
-                onclick={() => remove(s)}
-              >
-                <Trash2 size={14} class="mr-1" />{t("mcpServers.delete")}
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  loading={busy === `refresh:${s.id}`}
+                  onclick={() => refresh(s)}
+                >
+                  <RefreshCw size={14} aria-hidden="true" />{t("mcpServers.refresh")}
+                </Button>
+                <Button
+                  variant="danger-ghost"
+                  size="sm"
+                  loading={busy === `delete:${s.id}`}
+                  onclick={() => remove(s)}
+                >
+                  <Trash2 size={14} aria-hidden="true" />{t("mcpServers.delete")}
+                </Button>
+              </div>
             </div>
-          </div>
 
-          {#if open === s.id}
-            {#if (tools[s.id] ?? []).length === 0}
-              <p class="mt-3 text-sm text-kitsuden-subtle">{t("mcpServers.noTools")}</p>
-            {:else}
-              <Table density="compact">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("mcpServers.tool")}</TableHead>
-                    <TableHead>{t("mcpServers.status")}</TableHead>
-                    <TableHead>{t("mcpServers.fingerprint")}</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {#each tools[s.id] ?? [] as tool (tool.name)}
-                    <TableRow data-testid="mcp-tool-row">
-                      <TableCell>
-                        {tool.name}
-                        <details class="text-xs text-kitsuden-text-dim">
-                          <summary class="cursor-pointer">{t("mcpServers.details")}</summary>
-                          <p class="whitespace-pre-wrap wrap-break-word mt-1">
-                            {tool.description ?? ""}
-                          </p>
-                          <pre class="mt-1 overflow-x-auto text-kitsuden-subtle">{JSON.stringify(
-                              tool.inputSchema,
-                              null,
-                              2
-                            )}</pre>
-                        </details>
-                      </TableCell>
-                      <TableCell>
-                        {#if tool.status === "approved"}
-                          <span class="text-xs text-kitsuden-green"
-                            >{t("mcpServers.statusApproved")}</span
-                          >
-                          {#if tool.agentTool}
-                            <span
-                              class="block text-xs text-kitsuden-text-dim"
-                              data-testid="mcp-tool-agent"
-                            >
-                              {t("mcpServers.agentName")}
-                              <code class="text-kitsuden-text">{tool.agentTool.name}</code>
-                              · {t("mcpServers.agentScope")}
-                              <code class="text-kitsuden-text">{tool.agentTool.scope}</code>
-                            </span>
-                            {#if !tool.agentTool.offered}
-                              <span class="block text-xs text-kitsuden-amber"
-                                >{t("mcpServers.notOffered")}</span
+            {#if open === s.id}
+              {#if (tools[s.id] ?? []).length === 0}
+                <EmptyState
+                  size="sm"
+                  icon={false}
+                  level={null}
+                  class="mt-3"
+                  title={t("mcpServers.noTools")}
+                />
+              {:else}
+                <div class="mt-3 min-w-0">
+                  <Table density="compact">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("mcpServers.tool")}</TableHead>
+                        <TableHead>{t("mcpServers.status")}</TableHead>
+                        <TableHead>{t("mcpServers.fingerprint")}</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {#each tools[s.id] ?? [] as tool (tool.name)}
+                        <TableRow data-testid="mcp-tool-row">
+                          <TableCell>
+                            {tool.name}
+                            <details class="text-xs text-kitsuden-text-dim">
+                              <summary class="cursor-pointer">{t("mcpServers.details")}</summary>
+                              <p class="whitespace-pre-wrap wrap-break-word mt-1">
+                                {tool.description ?? ""}
+                              </p>
+                              <pre
+                                class="mt-1 overflow-x-auto text-kitsuden-subtle">{JSON.stringify(
+                                  tool.inputSchema,
+                                  null,
+                                  2
+                                )}</pre>
+                            </details>
+                          </TableCell>
+                          <TableCell>
+                            {#if tool.status === "approved"}
+                              <Badge variant="success">{t("mcpServers.statusApproved")}</Badge>
+                              {#if tool.agentTool}
+                                <span
+                                  class="block text-xs text-kitsuden-text-dim"
+                                  data-testid="mcp-tool-agent"
+                                >
+                                  {t("mcpServers.agentName")}
+                                  <code class="text-kitsuden-text">{tool.agentTool.name}</code>
+                                  · {t("mcpServers.agentScope")}
+                                  <code class="text-kitsuden-text">{tool.agentTool.scope}</code>
+                                </span>
+                                {#if !tool.agentTool.offered}
+                                  <span class="block text-xs text-kitsuden-amber"
+                                    >{t("mcpServers.notOffered")}</span
+                                  >
+                                {/if}
+                              {/if}
+                            {:else}
+                              <Badge variant="warning"
+                                >{t("mcpServers.statusReview")} · {changeLabel(tool.change)}</Badge
                               >
                             {/if}
-                          {/if}
-                        {:else}
-                          <span class="text-xs text-kitsuden-amber"
-                            >{t("mcpServers.statusReview")} · {changeLabel(tool.change)}</span
-                          >
-                        {/if}
-                      </TableCell>
-                      <TableCell>
-                        <code class="text-xs text-kitsuden-text">{short(tool.fingerprint)}</code>
-                        {#if tool.approvedFingerprint && tool.approvedFingerprint !== tool.fingerprint}
-                          <span class="block text-xs text-kitsuden-subtle"
-                            >{t("mcpServers.approvedWas", {
-                              fp: short(tool.approvedFingerprint),
-                            })}</span
-                          >
-                        {/if}
-                      </TableCell>
-                      <TableCell class="text-right">
-                        {#if tool.status === "needs_review"}
-                          <Button
-                            size="sm"
-                            loading={busy === `approve:${s.id}:${tool.name}`}
-                            onclick={() => approve(s, tool)}
-                          >
-                            <ShieldCheck size={14} class="mr-1" />{tool.change === "removed"
-                              ? t("mcpServers.acknowledge")
-                              : t("mcpServers.approve")}
-                          </Button>
-                        {/if}
-                      </TableCell>
-                    </TableRow>
-                  {/each}
-                </TableBody>
-              </Table>
+                          </TableCell>
+                          <TableCell>
+                            <code class="text-xs text-kitsuden-text">{short(tool.fingerprint)}</code
+                            >
+                            {#if tool.approvedFingerprint && tool.approvedFingerprint !== tool.fingerprint}
+                              <span class="block text-xs text-kitsuden-subtle"
+                                >{t("mcpServers.approvedWas", {
+                                  fp: short(tool.approvedFingerprint),
+                                })}</span
+                              >
+                            {/if}
+                          </TableCell>
+                          <TableCell class="text-right">
+                            {#if tool.status === "needs_review"}
+                              <Button
+                                size="sm"
+                                loading={busy === `approve:${s.id}:${tool.name}`}
+                                onclick={() => approve(s, tool)}
+                              >
+                                <ShieldCheck size={14} aria-hidden="true" />{tool.change ===
+                                "removed"
+                                  ? t("mcpServers.acknowledge")
+                                  : t("mcpServers.approve")}
+                              </Button>
+                            {/if}
+                          </TableCell>
+                        </TableRow>
+                      {/each}
+                    </TableBody>
+                  </Table>
+                </div>
+              {/if}
             {/if}
-          {/if}
+          </Card>
         </div>
       {/each}
     </div>

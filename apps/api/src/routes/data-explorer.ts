@@ -8,11 +8,13 @@
  *   ✅ Server-side filtering (several fields at once) and search across columns
  *      (the query syntax is in lib/explorer-query.ts)
  *   ✅ Inline edit via PATCH (single cell updates)
+ *   ✅ Change history: every create, update and delete is recorded (who, when, which
+ *      fields); read back at GET /api/history/:collection/:id (routes/record-history.ts)
  *   ✅ Column metadata (types, editability)
  *   ✅ Smart Views (saved filter presets)
  */
 
-import { messageOf } from "@kitsuden/engine";
+import { DATASET_ENTRY_ENTITY, messageOf, recordChange, tableEntity } from "@kitsuden/engine";
 import {
   and,
   count,
@@ -21,6 +23,7 @@ import {
   asc,
   desc,
   getTableColumns,
+  getTableName,
   gt,
   lt,
   gte,
@@ -103,6 +106,80 @@ function readListQuery(
     if (error instanceof ExplorerQueryError) return badQuery(c, error);
     throw error;
   }
+}
+
+// ═══════════════════════════════════════════════
+// RECORD HISTORY (who changed a row, when, and which fields)
+// ═══════════════════════════════════════════════
+
+type HistoryRow = Record<string, unknown>;
+
+/**
+ * How a collection's rows are addressed in the record history, so a row has ONE
+ * history whatever route wrote it: a dataset entry is `dataset_entry` with its
+ * fields as `data.<key>` (as its own routes record it); any other table is
+ * `table:<real name>` with its COLUMN names (as a model's routes record it).
+ */
+function historyTarget(collection: string, meta: TableMeta) {
+  if (!meta._dynamic && meta.table === dataEntries) {
+    return {
+      entity: DATASET_ENTRY_ENTITY,
+      diff: { nested: "data", skip: ["id", "dataSetId", "createdById"] },
+      row: (row: HistoryRow | null | undefined) => row ?? null,
+    };
+  }
+  if (meta._dynamic) {
+    return {
+      entity: tableEntity(collection),
+      diff: { skip: [meta.pk] },
+      row: (row: HistoryRow | null | undefined) => row ?? null,
+    };
+  }
+  // A table of the static registry answers with Drizzle's property names.
+  const columns = getTableColumns(meta.table) as Record<string, { name: string }>;
+  const column = (key: string) => columns[key]?.name ?? key;
+  return {
+    entity: tableEntity(getTableName(meta.table)),
+    diff: { skip: [column(meta.pk)] },
+    row: (row: HistoryRow | null | undefined) =>
+      row ? Object.fromEntries(Object.entries(row).map(([k, v]) => [column(k), v])) : null,
+  };
+}
+
+/**
+ * The record-history entity of a row of this collection, or `null` when the
+ * collection cannot be explored (same gate as every explorer route). Read by
+ * `GET /api/history/:collection/:id` (routes/record-history.ts).
+ */
+export async function explorerHistoryEntity(collection: string): Promise<string | null> {
+  const meta = await resolveTable(collection);
+  return meta ? historyTarget(collection, meta).entity : null;
+}
+
+/** Records a write made through the explorer. Never fails the request. */
+async function recordExplorerChange(
+  c: { get(k: "user"): unknown },
+  collection: string,
+  meta: TableMeta,
+  change: {
+    action: "create" | "update" | "delete";
+    id: unknown;
+    before?: HistoryRow | null;
+    after?: HistoryRow | null;
+  }
+): Promise<void> {
+  const target = historyTarget(collection, meta);
+  await recordChange(db, {
+    entity: target.entity,
+    rowId: change.id,
+    action: change.action,
+    before: target.row(change.before),
+    after: target.row(change.after),
+    user: c.get("user"),
+    diff: target.diff,
+    onFailure: (error) =>
+      console.warn(`[Explorer] Could not record the history of ${collection}:`, messageOf(error)),
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -728,11 +805,19 @@ explorerRoutes.patch("/:collection/:id", async (c) => {
     }
 
     const pkCol = meta.table[meta.pk];
+    const [before] = await db.select().from(meta.table).where(eq(pkCol, id)).limit(1);
     const [updated] = await db.update(meta.table).set(body).where(eq(pkCol, id)).returning();
 
     if (!updated) {
       return c.json({ error: "Record not found" }, 404);
     }
+
+    await recordExplorerChange(c, collectionName, meta, {
+      action: "update",
+      id,
+      before,
+      after: updated,
+    });
 
     return c.json(updated);
   } catch (error: unknown) {
@@ -774,6 +859,12 @@ explorerRoutes.post("/:collection", async (c) => {
 
     const created = Array.isArray(result) ? result[0] : result;
 
+    await recordExplorerChange(c, collectionName, meta, {
+      action: "create",
+      id: created?.[meta.pk],
+      after: created,
+    });
+
     return c.json(created, 201);
   } catch (error: unknown) {
     console.error(`Explorer Create [${collectionName}]:`, error);
@@ -806,6 +897,12 @@ explorerRoutes.delete("/:collection/:id", async (c) => {
     if (!deleted) {
       return c.json({ error: "Record not found" }, 404);
     }
+
+    await recordExplorerChange(c, collectionName, meta, {
+      action: "delete",
+      id,
+      before: deleted,
+    });
 
     return c.json({ deleted: true, id });
   } catch (error: unknown) {
@@ -939,7 +1036,13 @@ async function handleDynamicCreate(c: any, tableName: string, meta: TableMeta) {
         `INSERT INTO "${tableName}" (${safeKeys.join(", ")}) VALUES (${values.join(", ")}) RETURNING *`
       )
     );
-    return c.json(result.rows[0], 201);
+    const created = result.rows[0] as HistoryRow | undefined;
+    await recordExplorerChange(c, tableName, meta, {
+      action: "create",
+      id: created?.[meta.pk],
+      after: created,
+    });
+    return c.json(created, 201);
   } catch (error: unknown) {
     console.error(`Explorer Dynamic Create [${tableName}]:`, error);
     return c.json({ error: messageOf(error) }, 500);
@@ -959,12 +1062,21 @@ async function handleDynamicUpdate(c: any, tableName: string, meta: TableMeta, i
     );
     const safePk = meta.pk.replace(/[^a-zA-Z0-9_]/g, "");
 
+    const previous = await db.execute(
+      sql.raw(`SELECT * FROM "${tableName}" WHERE "${safePk}" = ${pgLiteral(id)} LIMIT 1`)
+    );
     const result = await db.execute(
       sql.raw(
         `UPDATE "${tableName}" SET ${setClauses.join(", ")} WHERE "${safePk}" = ${pgLiteral(id)} RETURNING *`
       )
     );
     if (result.rows.length === 0) return c.json({ error: "Record not found" }, 404);
+    await recordExplorerChange(c, tableName, meta, {
+      action: "update",
+      id,
+      before: previous.rows[0] as HistoryRow | undefined,
+      after: result.rows[0] as HistoryRow,
+    });
     return c.json(result.rows[0]);
   } catch (error: unknown) {
     console.error(`Explorer Dynamic Update [${tableName}]:`, error);
@@ -979,6 +1091,11 @@ async function handleDynamicDelete(c: any, tableName: string, meta: TableMeta, i
       sql.raw(`DELETE FROM "${tableName}" WHERE "${safePk}" = ${pgLiteral(id)} RETURNING *`)
     );
     if (result.rows.length === 0) return c.json({ error: "Record not found" }, 404);
+    await recordExplorerChange(c, tableName, meta, {
+      action: "delete",
+      id,
+      before: result.rows[0] as HistoryRow,
+    });
     return c.json({ deleted: true, id });
   } catch (error: unknown) {
     console.error(`Explorer Dynamic Delete [${tableName}]:`, error);

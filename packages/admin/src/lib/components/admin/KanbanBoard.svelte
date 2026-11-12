@@ -3,6 +3,8 @@
   import { Plus, MoreHorizontal } from "lucide-svelte";
   import { onMount } from "svelte";
 
+  import { Button, EmptyState, Spinner } from "$lib/tallao";
+
   import type { KanbanView } from "$lib/types/admin";
 
   interface Props {
@@ -251,31 +253,21 @@
   </div>
 
   {#if loading}
-    <div class="flex items-center justify-center h-64">
-      <div
-        class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-      ></div>
+    <div class="flex items-center justify-center h-64 text-kitsuden-accent">
+      <Spinner size="lg" />
     </div>
   {:else if !hasValidGroupBy}
-    <div
-      class="flex items-center justify-center h-64 bg-kitsuden-bg/50 border border-kitsuden-border border-dashed rounded-xl"
-    >
-      <div class="text-center max-w-md p-6">
-        <div class="text-4xl mb-4">⚠️</div>
-        <h3 class="text-lg font-semibold text-kitsuden-text mb-2">
-          {t("kanbanBoard.incompatibleKanbanView")}
-        </h3>
-        <p class="text-sm text-kitsuden-subtle mb-4">
-          {t("kanbanBoard.thisKanbanViewIsConfigured")}
-          <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded-sm text-kitsuden-accent"
-            >'{view.groupBy}'</code
-          >{t("kanbanBoard.butTheCurrentDatasetDoes")}
-        </p>
-        <p class="text-xs text-kitsuden-text-dim">
-          {t("kanbanBoard.pleaseUpdateTheGrimoireConfig")}
-        </p>
-      </div>
-    </div>
+    <EmptyState icon="alert" title={t("kanbanBoard.incompatibleKanbanView")}>
+      <p class="text-sm text-kitsuden-subtle mb-2">
+        {t("kanbanBoard.thisKanbanViewIsConfigured")}
+        <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded-sm text-kitsuden-accent"
+          >'{view.groupBy}'</code
+        >{t("kanbanBoard.butTheCurrentDatasetDoes")}
+      </p>
+      <p class="text-xs text-kitsuden-text-dim">
+        {t("kanbanBoard.pleaseUpdateTheGrimoireConfig")}
+      </p>
+    </EmptyState>
   {:else}
     <div class="flex gap-4 overflow-x-auto pb-4" style="min-height: 400px;">
       {#each stages as stage, i}
@@ -305,9 +297,9 @@
               </span>
               <span class="text-xs text-kitsuden-subtle">{items.length}</span>
             </div>
-            <button class="p-1 rounded-sm hover:bg-kitsuden-border/30">
-              <Plus class="w-3.5 h-3.5 text-kitsuden-text-dim" />
-            </button>
+            <Button variant="ghost" size="icon" ariaLabel={t("kanbanBoard.addItem")}>
+              <Plus class="w-3.5 h-3.5" />
+            </Button>
           </div>
 
           <!-- Cards -->
@@ -331,9 +323,14 @@
                       </span>
                     {/if}
                   </div>
-                  <button class="p-1 rounded-sm hover:bg-kitsuden-border/30 shrink-0">
-                    <MoreHorizontal class="w-3.5 h-3.5 text-kitsuden-text-dim" />
-                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="shrink-0"
+                    ariaLabel={t("kanbanBoard.moreActions")}
+                  >
+                    <MoreHorizontal class="w-3.5 h-3.5" />
+                  </Button>
                 </div>
 
                 <!-- Card Fields -->

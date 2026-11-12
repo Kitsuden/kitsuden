@@ -2,7 +2,7 @@
   import ViewPage from "$lib/components/admin/ViewPage.svelte";
   import { t as tr } from "$lib/i18n";
   import { Palette, Check, Download, Trash2, Eye, Upload, AlertCircle } from "lucide-svelte";
-  import { toast, Dialog, Button } from "$lib/tallao";
+  import { Alert, Badge, Button, Card, Dialog, Textarea, toast } from "$lib/tallao";
 
   import { currentTheme, setTheme, themes as builtinThemes } from "$lib/theme.svelte";
 
@@ -101,37 +101,26 @@
       <div class="lg:w-[60%] space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           {#each allThemes as theme (theme.id)}
-            <div
-              class="card p-4 relative group transition-all"
-              class:border-kitsuden-accent={currentTheme() === theme.id}
-              class:border-2={currentTheme() === theme.id}
-              class:border-kitsuden-border={currentTheme() !== theme.id}
-            >
-              {#if currentTheme() === theme.id}
-                <div class="absolute top-2 right-2">
-                  <span
-                    class="px-2 py-1 text-xs font-medium bg-kitsuden-accent/10 text-kitsuden-accent rounded-full"
-                  >
-                    {tr("common.active")}
-                  </span>
-                </div>
-              {/if}
-
-              <div class="flex items-center gap-3 mb-3">
+            {@const active = currentTheme() === theme.id}
+            <Card class={active ? "p-4 border-kitsuden-accent!" : "p-4"}>
+              <div class="flex items-start gap-3 mb-3">
                 <div
                   class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
                   style="background: {theme.preview}"
                 >
-                  <Palette class="w-5 h-5 text-kitsuden-text" />
+                  <Palette class="w-5 h-5 text-kitsuden-text" aria-hidden="true" />
                 </div>
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1">
                   <h3 class="font-semibold text-kitsuden-text truncate">{theme.name}</h3>
                   <p class="text-xs text-kitsuden-subtle">{theme.description}</p>
                 </div>
+                {#if active}
+                  <Badge variant="accent">{tr("common.active")}</Badge>
+                {/if}
               </div>
 
               <div class="flex items-center gap-2 mt-4">
-                {#if currentTheme() === theme.id}
+                {#if active}
                   <Button variant="secondary" class="flex-1" disabled>
                     <Check class="w-4 h-4" />
                     {tr("common.active")}
@@ -143,21 +132,25 @@
                 {/if}
 
                 {#if !builtinThemes.some((t) => t.id === theme.id)}
-                  <button
-                    class="p-2 rounded-lg text-kitsuden-text-dim hover:bg-kitsuden-accent-2/10 hover:text-kitsuden-accent-2 transition-colors"
+                  <Button
+                    variant="danger-ghost"
+                    size="icon"
                     onclick={() => handleDelete(theme)}
                     title={tr("themesView.deleteTheme")}
+                    ariaLabel={tr("themesView.deleteTheme")}
                   >
-                    <Trash2 class="w-4 h-4" />
-                  </button>
+                    <Trash2 class="w-4 h-4" aria-hidden="true" />
+                  </Button>
                 {/if}
               </div>
-            </div>
+            </Card>
           {/each}
 
           <!-- Install New Theme Card -->
+          <!-- The whole dashed tile is the control: a card-sized button the kit has no part for. -->
           <button
-            class="card p-4 border-dashed border-2 border-kitsuden-border hover:border-kitsuden-accent/50 transition-colors flex flex-col items-center justify-center min-h-[160px] gap-3"
+            type="button"
+            class="rounded-xl bg-kitsuden-card p-4 border-dashed border-2 border-kitsuden-border hover:border-kitsuden-accent/50 transition-colors flex flex-col items-center justify-center min-h-[160px] gap-3"
             onclick={() => {
               showImportModal = true;
               jsonInput = "";
@@ -179,7 +172,7 @@
 
       <!-- Right: Live Preview Panel -->
       <div class="lg:w-[40%] space-y-4">
-        <div class="card p-5 border border-kitsuden-border sticky top-4">
+        <Card class="p-5 lg:sticky lg:top-4">
           <div class="flex items-center gap-2 mb-4">
             <Eye class="w-5 h-5 text-kitsuden-accent" />
             <h2 class="text-lg font-semibold text-kitsuden-text">{tr("themesView.livePreview")}</h2>
@@ -246,18 +239,19 @@
                   ></div>
                 </div>
                 <div class="flex items-center gap-2 pt-1">
-                  <button
+                  <!-- Drawings of buttons inside the mock-up, not controls. -->
+                  <span
                     class="text-xs px-3 py-1.5 rounded-md font-medium"
                     style="background: rgb(var(--kitsuden-primary)); color: rgb(var(--kitsuden-bg));"
                   >
                     {tr("themesView.primary")}
-                  </button>
-                  <button
+                  </span>
+                  <span
                     class="text-xs px-3 py-1.5 rounded-md font-medium"
                     style="background: rgb(var(--kitsuden-danger) / 0.15); color: rgb(var(--kitsuden-danger));"
                   >
                     {tr("themesView.danger")}
-                  </button>
+                  </span>
                 </div>
               </div>
 
@@ -299,7 +293,7 @@
               {/each}
             </div>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   </div>
@@ -313,18 +307,16 @@
   >
     {#snippet children()}
       <div class="space-y-3">
-        <textarea
+        <Textarea
           bind:value={jsonInput}
-          rows="10"
+          rows={10}
+          mono
+          aria-label={tr("themesView.pasteAThemeconfigJsonObject")}
           placeholder={'{ "id": "custom", "name": "My Theme", "description": "A custom theme", "preview": "linear-gradient(135deg, #000, #fff)", "cssVars": { "--kitsuden-primary": "137 180 250" } }'}
-          class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-xs font-mono placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent resize-y"
-        ></textarea>
+        />
 
         {#if jsonError}
-          <div class="flex items-center gap-2 text-xs text-kitsuden-accent-2">
-            <AlertCircle class="w-4 h-4 shrink-0" />
-            {jsonError}
-          </div>
+          <Alert variant="error">{jsonError}</Alert>
         {/if}
       </div>
     {/snippet}
@@ -340,7 +332,7 @@
         {tr("common.cancel")}
       </Button>
       <Button variant="secondary" onclick={validateJson}>
-        <AlertCircle class="w-4 h-4" />
+        <AlertCircle class="w-4 h-4" aria-hidden="true" />
         {tr("themesView.validate")}
       </Button>
       <Button onclick={importTheme}>

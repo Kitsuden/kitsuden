@@ -1,7 +1,8 @@
 <script lang="ts">
   import { t } from "$lib/i18n";
-  import { Archive, Database, Trash2, RotateCcw } from "lucide-svelte";
+  import { Archive, Database, Trash2, RotateCcw, Package } from "lucide-svelte";
 
+  import { Badge, Button, Card, CardContent, CardFooter } from "$lib/tallao";
   import type { UninstalledKon } from "$lib/states/modules.svelte";
 
   interface Props {
@@ -20,107 +21,137 @@
   }
 </script>
 
-<div
-  class="card p-5 relative overflow-hidden border-dashed border-kitsuden-border/50 bg-kitsuden-surface/30"
->
-  <!-- Dashed border indicator for uninstalled state -->
-  <div
-    class="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-kitsuden-subtle/40 via-kitsuden-subtle/20 to-transparent"
-  ></div>
-
-  <div class="flex items-start gap-3">
-    <div
-      class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 bg-kitsuden-surface/50 border border-kitsuden-border/50 grayscale opacity-70"
-    >
-      📦
+<Card class="uninstalled-kon">
+  <CardContent class="uninstalled-kon-body">
+    <div class="uninstalled-kon-icon" aria-hidden="true">
+      <Package size={20} />
     </div>
 
-    <div class="flex-1 min-w-0">
-      <div class="flex items-center gap-2 flex-wrap">
-        <p class="font-semibold text-kitsuden-text text-sm opacity-80">{kon.name}</p>
-        <span
-          class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-kitsuden-subtle/20 text-kitsuden-subtle border border-kitsuden-border/50 flex items-center gap-1"
-        >
-          <Archive class="w-2.5 h-2.5" />
+    <div class="uninstalled-kon-text">
+      <div class="uninstalled-kon-title">
+        <h3>{kon.name}</h3>
+        <Badge variant="secondary">
+          <Archive size={10} aria-hidden="true" />
           {t("uninstalledGrimoireCard.uninstalled")}
-        </span>
+        </Badge>
       </div>
 
       {#if kon.hasPreservedData}
-        <div class="mt-2 flex items-center gap-1.5 text-xs text-kitsuden-accent/80">
-          <Database class="w-3.5 h-3.5" />
-          <span
-            >{t("uninstalledGrimoireCard.dataPreservedRows", {
-              v: formatNumber(kon.dataSummary.totalRows),
-            })}</span
-          >
-        </div>
+        <p class="uninstalled-kon-data">
+          <Database size={14} aria-hidden="true" />
+          {t("uninstalledGrimoireCard.dataPreservedRows", {
+            v: formatNumber(kon.dataSummary.totalRows),
+          })}
+        </p>
 
         {#if kon.dataSummary.tables.length > 0}
-          <div class="mt-1.5 flex flex-wrap gap-1">
+          <div class="uninstalled-kon-tables">
             {#each kon.dataSummary.tables.slice(0, 3) as table}
-              <span
-                class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border/50 text-kitsuden-subtle font-mono"
-              >
-                {table.name}: {formatNumber(table.rows)}
-              </span>
+              <Badge class="font-mono">{table.name}: {formatNumber(table.rows)}</Badge>
             {/each}
             {#if kon.dataSummary.tables.length > 3}
-              <span
-                class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border/50 text-kitsuden-subtle"
-              >
-                {t("common.more", { v: kon.dataSummary.tables.length - 3 })}
-              </span>
+              <Badge>{t("common.more", { v: kon.dataSummary.tables.length - 3 })}</Badge>
             {/if}
           </div>
         {/if}
       {:else}
-        <p class="text-xs text-kitsuden-subtle mt-1">
-          {t("uninstalledGrimoireCard.noDataPreserved")}
-        </p>
+        <p class="uninstalled-kon-data">{t("uninstalledGrimoireCard.noDataPreserved")}</p>
       {/if}
     </div>
-  </div>
+  </CardContent>
 
-  <!-- Action Buttons -->
-  <div class="mt-4 pt-3 border-t border-kitsuden-border/30 flex gap-2">
-    {#if kon.canRecover}
-      <button
-        onclick={onRecover}
-        disabled={recovering}
-        class="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors bg-kitsuden-accent/10 text-kitsuden-accent hover:bg-kitsuden-accent/20 border border-kitsuden-accent/20 disabled:opacity-50"
-      >
-        {#if recovering}
-          <RotateCcw class="w-3.5 h-3.5 animate-spin" />
-          {t("uninstalledGrimoireCard.recovering")}
-        {:else}
-          <RotateCcw class="w-3.5 h-3.5" />
-          {t("uninstalledGrimoireCard.recover")}
-        {/if}
-      </button>
-    {/if}
+  {#if kon.canRecover || kon.canDelete}
+    <CardFooter class="uninstalled-kon-actions">
+      {#if kon.canRecover}
+        <Button
+          variant="secondary"
+          size="sm"
+          loading={recovering}
+          disabled={recovering}
+          onclick={onRecover}
+        >
+          {#if recovering}
+            {t("uninstalledGrimoireCard.recovering")}
+          {:else}
+            <RotateCcw size={14} aria-hidden="true" />
+            {t("uninstalledGrimoireCard.recover")}
+          {/if}
+        </Button>
+      {/if}
 
-    {#if kon.canDelete}
-      <button
-        onclick={onDelete}
-        disabled={deleting}
-        class="flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors bg-kitsuden-accent-2/10 text-kitsuden-accent-2 hover:bg-kitsuden-accent-2/20 border border-kitsuden-accent-2/20 disabled:opacity-50"
-        title={t("uninstalledGrimoireCard.permanentlyDeleteData")}
-      >
-        {#if deleting}
-          <Trash2 class="w-3.5 h-3.5 animate-pulse" />
-        {:else}
-          <Trash2 class="w-3.5 h-3.5" />
-        {/if}
-      </button>
-    {/if}
-  </div>
-</div>
+      {#if kon.canDelete}
+        <Button
+          variant="danger-ghost"
+          size="sm"
+          loading={deleting}
+          disabled={deleting}
+          onclick={onDelete}
+        >
+          {#if !deleting}<Trash2 size={14} aria-hidden="true" />{/if}
+          {t("uninstalledGrimoireCard.permanentlyDeleteData")}
+        </Button>
+      {/if}
+    </CardFooter>
+  {/if}
+</Card>
 
 <style>
-  @reference "../../../style.css";
-
-  .card {
-    @apply rounded-xl border border-kitsuden-border bg-kitsuden-card;
+  :global(.uninstalled-kon) {
+    border-style: dashed;
+    min-width: 0;
+  }
+  :global(.uninstalled-kon-body) {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .uninstalled-kon-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--ta-radius-lg);
+    background: rgb(var(--ta-surface));
+    color: rgb(var(--ta-text-dim));
+  }
+  .uninstalled-kon-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .uninstalled-kon-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .uninstalled-kon-title h3 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .uninstalled-kon-data {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .uninstalled-kon-tables {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  :global(.ta-card-footer.uninstalled-kon-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
   }
 </style>

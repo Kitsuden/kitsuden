@@ -13,6 +13,18 @@
   import { ShieldCheck, ShieldOff } from "lucide-svelte";
 
   import {
+    Alert,
+    Badge,
+    Button,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    Input,
+    Label,
+  } from "$lib/tallao";
+
+  import {
     getUser,
     enableTwoFactor,
     confirmTwoFactor,
@@ -93,109 +105,103 @@
     backupCodes = [];
     code = "";
   }
-
-  const inputClass =
-    "w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text focus:border-kitsuden-accent outline-hidden";
-  const buttonClass =
-    "px-4 py-2 text-sm rounded-lg bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/30 hover:bg-kitsuden-accent/20 transition-colors disabled:opacity-50";
-  const plainButtonClass =
-    "px-4 py-2 text-sm rounded-lg border border-kitsuden-border text-kitsuden-text hover:border-kitsuden-accent/50 transition-colors disabled:opacity-50";
 </script>
 
-<div class="card p-6 border border-kitsuden-border space-y-5">
-  <div class="flex items-start gap-3">
-    {#if enabled}
-      <ShieldCheck class="w-5 h-5 text-kitsuden-green shrink-0" />
-    {:else}
-      <ShieldOff class="w-5 h-5 text-kitsuden-subtle shrink-0" />
-    {/if}
-    <div>
-      <h2 class="text-lg font-bold text-kitsuden-text">
-        {t("twoFactor.title")}
-        <span class="ml-2 text-xs font-medium text-kitsuden-subtle">
-          {enabled ? t("twoFactor.enabled") : t("twoFactor.disabled")}
-        </span>
-      </h2>
-      <p class="text-sm text-kitsuden-subtle mt-1">{t("twoFactor.description")}</p>
-    </div>
-  </div>
-
-  {#if error}
-    <p class="text-sm text-kitsuden-accent-2" role="alert">{error}</p>
-  {/if}
-  {#if notice}
-    <p class="text-sm text-kitsuden-green" role="status">{notice}</p>
-  {/if}
-
-  {#if !enrolment}
-    <div>
-      <label class="block text-xs text-kitsuden-subtle mb-1" for="tf-password"
-        >{t("twoFactor.password")}</label
-      >
-      <input
-        id="tf-password"
-        type="password"
-        class={inputClass}
-        autocomplete="current-password"
-        bind:value={password}
-      />
-      <p class="text-xs text-kitsuden-subtle mt-1">{t("twoFactor.passwordHint")}</p>
-    </div>
-
-    {#if enabled}
-      <div class="flex flex-wrap gap-2">
-        <button type="button" class={plainButtonClass} disabled={busy} onclick={newCodes}>
-          {t("twoFactor.regenerate")}
-        </button>
-        <button type="button" class={plainButtonClass} disabled={busy} onclick={turnOff}>
-          {t("twoFactor.disable")}
-        </button>
+<Card>
+  <CardHeader>
+    <div class="flex items-start gap-3">
+      {#if enabled}
+        <ShieldCheck class="w-5 h-5 text-kitsuden-green shrink-0" aria-hidden="true" />
+      {:else}
+        <ShieldOff class="w-5 h-5 text-kitsuden-subtle shrink-0" aria-hidden="true" />
+      {/if}
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+          <CardTitle level={2}>{t("twoFactor.title")}</CardTitle>
+          <Badge variant={enabled ? "success" : "default"} dot>
+            {enabled ? t("twoFactor.enabled") : t("twoFactor.disabled")}
+          </Badge>
+        </div>
+        <p class="text-sm text-kitsuden-subtle mt-1">{t("twoFactor.description")}</p>
       </div>
+    </div>
+  </CardHeader>
+  <CardContent class="space-y-5">
+    {#if error}
+      <Alert variant="error">{error}</Alert>
+    {/if}
+    {#if notice}
+      <Alert variant="success">{notice}</Alert>
+    {/if}
+
+    {#if !enrolment}
+      <div class="max-w-md space-y-1.5">
+        <Label for="tf-password">{t("twoFactor.password")}</Label>
+        <Input
+          id="tf-password"
+          type="password"
+          autocomplete="current-password"
+          bind:value={password}
+        />
+        <p class="text-xs text-kitsuden-subtle">{t("twoFactor.passwordHint")}</p>
+      </div>
+
+      {#if enabled}
+        <div class="flex flex-wrap gap-2">
+          <Button variant="secondary" disabled={busy} onclick={newCodes}>
+            {t("twoFactor.regenerate")}
+          </Button>
+          <Button variant="danger-ghost" disabled={busy} onclick={turnOff}>
+            {t("twoFactor.disable")}
+          </Button>
+        </div>
+      {:else}
+        <form onsubmit={start}>
+          <Button type="submit" loading={busy}>{t("twoFactor.start")}</Button>
+        </form>
+      {/if}
     {:else}
-      <form onsubmit={start}>
-        <button type="submit" class={buttonClass} disabled={busy}>{t("twoFactor.start")}</button>
+      <div class="space-y-2">
+        <p class="text-sm text-kitsuden-text">{t("twoFactor.scanOrType")}</p>
+        <p class="text-xs text-kitsuden-subtle">{t("twoFactor.secretKey")}</p>
+        <code class="block break-all font-mono text-sm text-kitsuden-text">{enrolment.key}</code>
+        <a class="text-sm text-kitsuden-accent underline" href={enrolment.uri}
+          >{t("twoFactor.openInApp")}</a
+        >
+      </div>
+
+      <form class="max-w-md space-y-3" onsubmit={confirm}>
+        <div class="space-y-1.5">
+          <Label for="tf-code" required>{t("twoFactor.confirmCode")}</Label>
+          <Input
+            id="tf-code"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength={6}
+            placeholder="123456"
+            required
+            bind:value={code}
+          />
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <Button type="submit" loading={busy} disabled={code.trim().length < 6}>
+            {t("twoFactor.confirm")}
+          </Button>
+          <Button variant="ghost" disabled={busy} onclick={cancel}>
+            {t("twoFactor.cancel")}
+          </Button>
+        </div>
       </form>
     {/if}
-  {:else}
-    <div class="space-y-2">
-      <p class="text-sm text-kitsuden-text">{t("twoFactor.scanOrType")}</p>
-      <p class="text-xs text-kitsuden-subtle">{t("twoFactor.secretKey")}</p>
-      <code class="block break-all font-mono text-sm text-kitsuden-text">{enrolment.key}</code>
-      <a class="text-sm text-kitsuden-accent underline" href={enrolment.uri}
-        >{t("twoFactor.openInApp")}</a
-      >
-    </div>
 
-    <form class="space-y-2" onsubmit={confirm}>
-      <label class="block text-xs text-kitsuden-subtle mb-1" for="tf-code"
-        >{t("twoFactor.confirmCode")}</label
-      >
-      <input
-        id="tf-code"
-        class={inputClass}
-        inputmode="numeric"
-        autocomplete="one-time-code"
-        maxlength="6"
-        placeholder="123456"
-        required
-        bind:value={code}
-      />
-      <div class="flex gap-2">
-        <button type="submit" class={buttonClass} disabled={busy || code.trim().length < 6}>
-          {t("twoFactor.confirm")}
-        </button>
-        <button type="button" class={plainButtonClass} disabled={busy} onclick={cancel}>
-          {t("twoFactor.cancel")}
-        </button>
+    {#if backupCodes.length > 0}
+      <div class="space-y-2">
+        <h3 class="text-sm font-semibold text-kitsuden-text">{t("twoFactor.backupCodesTitle")}</h3>
+        <p class="text-xs text-kitsuden-subtle">{t("twoFactor.backupCodesHint")}</p>
+        <pre class="font-mono text-sm text-kitsuden-text overflow-x-auto">{backupCodes.join(
+            "\n"
+          )}</pre>
       </div>
-    </form>
-  {/if}
-
-  {#if backupCodes.length > 0}
-    <div class="space-y-2">
-      <h3 class="text-sm font-semibold text-kitsuden-text">{t("twoFactor.backupCodesTitle")}</h3>
-      <p class="text-xs text-kitsuden-subtle">{t("twoFactor.backupCodesHint")}</p>
-      <pre class="font-mono text-sm text-kitsuden-text">{backupCodes.join("\n")}</pre>
-    </div>
-  {/if}
-</div>
+    {/if}
+  </CardContent>
+</Card>

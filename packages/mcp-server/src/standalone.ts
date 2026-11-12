@@ -33,6 +33,7 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 
 import { DOMAIN_TOOL_DEFINITIONS, runDomainTool } from "./domain-tools.js";
+import { FILTER_OPS, queryTableParams, type QueryTableArgs } from "./explorer-params.js";
 import { META_FORMAT } from "./format.js";
 import { WebSseTransport } from "./sse-web.js";
 import { encodeToon } from "./toon.js";
@@ -210,7 +211,7 @@ const TOOL_DEFINITIONS = [
   {
     name: "kitsuden_query_table",
     description:
-      "Query records from any Kitsuden table with pagination, sorting, and filtering. Returns data + column metadata.",
+      "Query records from any Kitsuden table with pagination, sorting, search and filters. `search` finds text in any textual column (or only in `search_fields`); `filters` holds one or more conditions per column, all of which must hold: a value means equals, or `{ op: value }` with op contains, equals, gt, lt, gte or lte (e.g. { status: 'draft', created_at: { gte: '2026-01-01' } }). At most 20 conditions. An unknown operator or column, or a secret column (token, password, hash), is refused with a 400. Returns data + column metadata.",
     inputSchema: {
       type: "object",
       properties: {
@@ -231,13 +232,40 @@ const TOOL_DEFINITIONS = [
           description: "Sort direction",
           default: "desc",
         },
-        filter_field: { type: "string", description: "Field to filter on" },
+        search: {
+          type: "string",
+          description:
+            "Text to find (case-insensitive) in any textual column, at most 200 characters",
+        },
+        search_fields: {
+          type: "string",
+          description: "Comma-separated columns the search is limited to (at most 30)",
+        },
+        filters: {
+          type: "object",
+          description:
+            "Conditions per column, all of which must hold: { column: value } (equals) or { column: { op: value } } with op contains, equals, gt, lt, gte or lte",
+          additionalProperties: {
+            anyOf: [
+              { type: ["string", "number", "boolean"] },
+              {
+                type: "object",
+                propertyNames: { enum: [...FILTER_OPS] },
+                additionalProperties: { type: ["string", "number", "boolean"] },
+              },
+            ],
+          },
+        },
+        filter_field: {
+          type: "string",
+          description: "Older single filter: field to filter on (prefer `filters`)",
+        },
         filter_op: {
           type: "string",
-          enum: ["contains", "equals", "gt", "lt", "gte", "lte"],
-          description: "Filter operator",
+          enum: [...FILTER_OPS],
+          description: "Older single filter: operator (default contains)",
         },
-        filter_value: { type: "string", description: "Filter value" },
+        filter_value: { type: "string", description: "Older single filter: value" },
         format: {
           type: "string",
           enum: ["auto", "json", "toon", "tron"],
@@ -700,25 +728,8 @@ function createStandaloneMcpServer() {
         }
 
         case "kitsuden_query_table": {
-          const {
-            table,
-            limit = 25,
-            page = 1,
-            sort,
-            dir,
-            filter_field,
-            filter_op,
-            filter_value,
-            format = "auto",
-          } = args as any;
-          const params = new URLSearchParams();
-          params.set("limit", String(Math.min(limit, 100)));
-          params.set("page", String(page));
-          if (sort) params.set("sort", sort);
-          if (dir) params.set("dir", dir);
-          if (filter_field) params.set("filter_field", filter_field);
-          if (filter_op) params.set("filter_op", filter_op);
-          if (filter_value) params.set("filter_value", filter_value);
+          const { table, format = "auto", ...query } = args as any;
+          const params = queryTableParams(query as QueryTableArgs);
 
           return dump(
             `/explorer/${encodeURIComponent(table)}?${params.toString()}`,

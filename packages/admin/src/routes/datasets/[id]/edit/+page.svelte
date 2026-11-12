@@ -2,7 +2,7 @@
   import Page from "$lib/components/layout/Page.svelte";
   import { t } from "$lib/i18n";
   import type { DatasetDefinition } from "@kitsuden/shared";
-  import { Alert, Button, Card, CardContent, EmptyState, Skeleton } from "$lib/tallao";
+  import { Alert, Button, EmptyState, Skeleton } from "$lib/tallao";
   import { onMount } from "svelte";
 
   import SchemaBuilder from "$lib/components/datasets/SchemaBuilder.svelte";
@@ -118,16 +118,12 @@
         onAction={goBack}
       />
     {:else}
-      <Card>
-        <CardContent>
-          <SchemaBuilder
-            definition={dataset}
-            {allDatasets}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-        </CardContent>
-      </Card>
+      <SchemaBuilder
+        definition={dataset}
+        {allDatasets}
+        onSave={handleSave}
+        onCancel={handleCancel}
+      />
     {/if}
   </div>
 </Page>

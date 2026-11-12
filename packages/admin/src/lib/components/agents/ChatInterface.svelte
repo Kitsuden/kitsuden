@@ -3,9 +3,9 @@
   Interactive chat panel for testing agents
 -->
 <script lang="ts">
-  import { Button } from "$lib/tallao";
+  import { Button, Input, Spinner } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
-  import { Send, Bot, User, Loader2, Wrench, Sparkles } from "lucide-svelte";
+  import { Send, Bot, User, Wrench, Sparkles } from "lucide-svelte";
   import { tick } from "svelte";
   import { cn } from "$lib/utils";
 
@@ -90,8 +90,8 @@
     </div>
     {#if loading}
       <div class="ml-auto flex items-center gap-2 text-xs text-kitsuden-subtle">
-        <Loader2 size={14} class="animate-spin" />
-        <span>{t("chatInterface.thinking")}</span>
+        <Spinner size={14} label={t("chatInterface.thinking")} />
+        <span aria-hidden="true">{t("chatInterface.thinking")}</span>
       </div>
     {/if}
   </div>
@@ -229,21 +229,22 @@
   <!-- Input -->
   <form onsubmit={handleSubmit} class="p-4 border-t border-kitsuden-border bg-kitsuden-card/80">
     <div class="flex gap-2">
-      <input
-        type="text"
+      <Input
+        class="flex-1 min-w-0"
         bind:value={inputValue}
         placeholder={t("chatInterface.writesAMessage")}
+        aria-label={t("chatInterface.writesAMessage")}
         disabled={loading}
-        class="flex-1 px-4 py-2.5 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/50 focus:border-kitsuden-accent/50 disabled:opacity-50"
       />
       <Button
         type="submit"
         variant="primary"
-        size="md"
+        size="icon"
+        ariaLabel={t("chatInterface.send")}
         {loading}
         disabled={!inputValue.trim() || loading}
       >
-        <Send size={16} />
+        <Send size={16} aria-hidden="true" />
       </Button>
     </div>
   </form>

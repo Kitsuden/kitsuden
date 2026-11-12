@@ -5,7 +5,6 @@
   import { toast } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import {
-    Settings,
     Key,
     Plus,
     Trash2,
@@ -15,9 +14,6 @@
     Palette,
     Cpu,
     Bot,
-    RefreshCw,
-    X,
-    AlertCircle,
     Check,
     Database,
     Server,
@@ -40,11 +36,21 @@
     Alert,
     Badge,
     Button,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CodeBlock,
     Dialog,
+    EmptyState,
+    Field,
     Input,
     Label,
     NumberInput,
+    SaveBar,
     Select,
+    Spinner,
+    Stat,
     Table,
     TableBody,
     TableCell,
@@ -451,6 +457,8 @@
   }
   let defaultMetadata = $state('{\n  "description": "Powered by Kitsuden"\n}');
   let savingGeneral = $state(false);
+  /** A failed save, said in the form's SaveBar; `errorSettings` is the failed load. */
+  let generalSaveError = $state("");
   let loadingSettings = $state(true);
   let errorSettings = $state("");
 
@@ -466,6 +474,15 @@
   let mcpCopied = $state(false);
   const mcpUrl = `${import.meta.env.VITE_API_URL ?? ""}/api/mcp`;
 
+  // What the two "configuration" cards show; a CodeBlock copies them whole.
+  const STDIO_CONFIG = [
+    '"kitsuden-cms": {',
+    '  "command": "node",',
+    '  "args": ["packages/mcp-server/dist/index.js"],',
+    "}",
+  ].join("\n");
+  const HTTP_CONFIG = [`Endpoint: ${mcpUrl}`, "Auth: Bearer API_KEY"].join("\n");
+
   function copyMcpUrl() {
     navigator.clipboard.writeText(mcpUrl);
     mcpCopied = true;
@@ -478,12 +495,31 @@
    */
   let savedGeneral = $state<string | null>(null);
   let savedSocials = $state<string | null>(null);
-  const generalSnapshot = () => JSON.stringify({ siteName, siteDescription, siteUrl, branding });
+  const generalSnapshot = () =>
+    JSON.stringify({ siteName, siteDescription, siteUrl, branding, defaultMetadata });
   const socialsSnapshot = () => JSON.stringify({ socials, youtubeChannels });
-  const settingsDirty = $derived(
-    (savedGeneral !== null && savedGeneral !== generalSnapshot()) ||
-      (savedSocials !== null && savedSocials !== socialsSnapshot())
-  );
+  const generalDirty = $derived(savedGeneral !== null && savedGeneral !== generalSnapshot());
+  const socialsDirty = $derived(savedSocials !== null && savedSocials !== socialsSnapshot());
+  const settingsDirty = $derived(generalDirty || socialsDirty);
+
+  /** Discard: back to what was last loaded or saved. */
+  function discardGeneral() {
+    if (savedGeneral === null) return;
+    const saved = JSON.parse(savedGeneral);
+    siteName = saved.siteName;
+    siteDescription = saved.siteDescription;
+    siteUrl = saved.siteUrl;
+    branding = saved.branding;
+    defaultMetadata = saved.defaultMetadata;
+    generalSaveError = "";
+  }
+  function discardSocials() {
+    if (savedSocials === null) return;
+    const saved = JSON.parse(savedSocials);
+    socials = saved.socials;
+    youtubeChannels = saved.youtubeChannels;
+    socialsError = "";
+  }
 
   async function loadSettings() {
     loadingSettings = true;
@@ -534,6 +570,7 @@
     e.preventDefault();
     savingGeneral = true;
     errorSettings = "";
+    generalSaveError = "";
     try {
       let metadataObj: any = {};
       try {
@@ -570,7 +607,7 @@
       // Saving used to end in silence: the button stopped spinning and that was all.
       toast.success(t("settings.saved"));
     } catch (err: any) {
-      errorSettings = err.message || t("settings.failedToSaveSettings");
+      generalSaveError = err.message || t("settings.failedToSaveSettings");
     } finally {
       savingGeneral = false;
     }
@@ -841,12 +878,12 @@
     return new Date(date).toLocaleString(localeFormat());
   }
 
-  function getScopeColor(scope: string): string {
-    if (scope.startsWith("mcp:")) return "bg-kitsuden-purple/20 text-kitsuden-purple";
-    if (scope.startsWith("read:")) return "bg-kitsuden-green/20 text-kitsuden-green";
-    if (scope.startsWith("write:")) return "bg-kitsuden-amber/20 text-kitsuden-amber";
-    if (scope.startsWith("delete:")) return "bg-kitsuden-danger/20 text-kitsuden-danger";
-    return "bg-kitsuden-subtle/20 text-kitsuden-text-dim";
+  function scopeVariant(scope: string): "purple" | "success" | "warning" | "error" | "default" {
+    if (scope.startsWith("mcp:")) return "purple";
+    if (scope.startsWith("read:")) return "success";
+    if (scope.startsWith("write:")) return "warning";
+    if (scope.startsWith("delete:")) return "error";
+    return "default";
   }
 
   function getActionIcon(action: string) {
@@ -1072,431 +1109,368 @@
       {/snippet}
       <!-- Tab Content -->
       {#if activeTab === "general"}
-        <div class="card p-8 animate-fade-in border border-kitsuden-border">
-          <div class="mb-6">
-            <h2 class="text-xl font-bold text-kitsuden-text">
-              {t("settings.generalConfiguration")}
-            </h2>
-            <p class="text-sm text-kitsuden-subtle mt-1">
-              {t("settings.manageCoreSettingsForYour")}
-            </p>
+        {#if loadingSettings}
+          <div class="flex items-center justify-center py-12">
+            <Spinner />
           </div>
-
-          {#if loadingSettings}
-            <div class="flex items-center justify-center py-12">
-              <div
-                class="w-6 h-6 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-              ></div>
-            </div>
-          {:else}
+        {:else}
+          <div class="max-w-3xl space-y-8">
             {#if errorSettings}
-              <div
-                class="mb-6 p-3 rounded-lg bg-kitsuden-accent-2/10 border border-kitsuden-accent-2/30 text-kitsuden-accent-2 text-sm flex items-center gap-2"
-              >
-                <AlertCircle class="w-4 h-4 shrink-0" />
-                {errorSettings}
-              </div>
+              <Alert variant="error">{errorSettings}</Alert>
             {/if}
-            <form onsubmit={saveGeneralSettings} class="space-y-6 max-w-2xl">
-              <div class="space-y-2">
-                <label
-                  for="sitename"
-                  class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider"
-                >
-                  {t("settings.siteName")}
-                </label>
-                <Input
-                  id="sitename"
-                  bind:value={siteName}
-                  type="text"
-                  placeholder={t("settings.eGMySite")}
-                  required
-                />
-                <p class="text-xs text-kitsuden-text-dim">
-                  {t("settings.thePublicSiteName")}
-                </p>
-              </div>
 
-              <div class="space-y-2">
-                <label
-                  for="sitedescription"
-                  class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider"
-                >
-                  {t("settings.siteDescription")}
-                </label>
-                <Input
-                  id="sitedescription"
-                  bind:value={siteDescription}
-                  type="text"
-                  placeholder={t("settings.shortDescriptionForSeoAnd")}
-                />
-              </div>
+            <form onsubmit={saveGeneralSettings}>
+              <Card>
+                <CardHeader>
+                  <div class="min-w-0">
+                    <CardTitle level={2}>{t("settings.generalConfiguration")}</CardTitle>
+                    <p class="text-sm text-kitsuden-subtle mt-1">
+                      {t("settings.manageCoreSettingsForYour")}
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent class="space-y-6">
+                  <div class="space-y-1.5">
+                    <Field label={t("settings.siteName")} required>
+                      <Input
+                        id="sitename"
+                        bind:value={siteName}
+                        type="text"
+                        placeholder={t("settings.eGMySite")}
+                        required
+                      />
+                    </Field>
+                    <p class="text-xs text-kitsuden-text-dim">
+                      {t("settings.thePublicSiteName")}
+                    </p>
+                  </div>
 
-              <div class="space-y-2">
-                <label
-                  for="siteurl"
-                  class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider"
-                >
-                  {t("settings.siteUrl")}
-                </label>
-                <Input
-                  id="siteurl"
-                  bind:value={siteUrl}
-                  type="url"
-                  placeholder="https://example.com"
-                />
-                <!--
-              This field is NOT decorative: the public site's addresses
-              hang from it. Changing it moves all the domain wikis, so
-              the wildcard DNS and the certificate have to follow it.
-            -->
-                <p class="text-xs text-kitsuden-text-dim">
-                  {t("settings.siteUrlHelp")}
-                </p>
-              </div>
+                  <Field label={t("settings.siteDescription")}>
+                    <Input
+                      id="sitedescription"
+                      bind:value={siteDescription}
+                      type="text"
+                      placeholder={t("settings.shortDescriptionForSeoAnd")}
+                    />
+                  </Field>
 
-              <div class="space-y-3">
-                <p
-                  class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider"
-                >
-                  {t("settings.publicSiteIdentity")}
-                </p>
-                <p class="text-xs text-kitsuden-text-dim">
-                  {t("settings.whatVisitorsSee")}
-                </p>
-                <div class="grid gap-3 sm:grid-cols-3">
-                  {#each BRAND_FIELDS as field (field.key)}
-                    {@const view = brandPreview(field.key)}
-                    <div class="space-y-2 rounded-lg border border-kitsuden-border p-3">
-                      <p class="text-xs font-semibold text-kitsuden-text">{field.label}</p>
-                      <div class="flex h-20 items-center justify-center rounded-sm bg-kitsuden-bg">
-                        {#if view}
-                          <img src={view} alt="" class="max-h-16 max-w-full object-contain" />
-                        {:else}
-                          <span class="text-xs text-kitsuden-text-dim"
-                            >{t("settings.withoutChoosing")}</span
-                          >
-                        {/if}
-                      </div>
-                      <p class="text-[11px] leading-snug text-kitsuden-text-dim">{field.help}</p>
-                      <div class="flex gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          type="button"
-                          onclick={() => (choosingBrand = field.key)}
-                        >
-                          {view ? t("settings.change") : t("settings.choose")}
-                        </Button>
-                        {#if view}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            type="button"
-                            onclick={() => removeMark(field.key)}
-                          >
-                            {t("settings.remove")}
-                          </Button>
-                        {/if}
-                      </div>
+                  <div class="space-y-1.5">
+                    <Field label={t("settings.siteUrl")}>
+                      <Input
+                        id="siteurl"
+                        bind:value={siteUrl}
+                        type="url"
+                        placeholder="https://example.com"
+                      />
+                    </Field>
+                    <!--
+                      This field is NOT decorative: the public site's addresses
+                      hang from it. Changing it moves all the domain wikis, so
+                      the wildcard DNS and the certificate have to follow it.
+                    -->
+                    <p class="text-xs text-kitsuden-text-dim">
+                      {t("settings.siteUrlHelp")}
+                    </p>
+                  </div>
+
+                  <div class="space-y-3">
+                    <div>
+                      <h3 class="text-sm font-semibold text-kitsuden-text">
+                        {t("settings.publicSiteIdentity")}
+                      </h3>
+                      <p class="text-xs text-kitsuden-text-dim mt-1">
+                        {t("settings.whatVisitorsSee")}
+                      </p>
                     </div>
-                  {/each}
-                </div>
-              </div>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                      {#each BRAND_FIELDS as field (field.key)}
+                        {@const view = brandPreview(field.key)}
+                        <div class="space-y-2 rounded-lg border border-kitsuden-border p-3 min-w-0">
+                          <p class="text-xs font-semibold text-kitsuden-text">{field.label}</p>
+                          <div
+                            class="flex h-20 items-center justify-center rounded-sm bg-kitsuden-bg"
+                          >
+                            {#if view}
+                              <img src={view} alt="" class="max-h-16 max-w-full object-contain" />
+                            {:else}
+                              <span class="text-xs text-kitsuden-text-dim"
+                                >{t("settings.withoutChoosing")}</span
+                              >
+                            {/if}
+                          </div>
+                          <p class="text-[11px] leading-snug text-kitsuden-text-dim">
+                            {field.help}
+                          </p>
+                          <div class="flex flex-wrap gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              type="button"
+                              onclick={() => (choosingBrand = field.key)}
+                            >
+                              {view ? t("settings.change") : t("settings.choose")}
+                            </Button>
+                            {#if view}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                type="button"
+                                onclick={() => removeMark(field.key)}
+                              >
+                                {t("settings.remove")}
+                              </Button>
+                            {/if}
+                          </div>
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
 
-              <MediaPicker
-                open={choosingBrand !== null}
-                title={t("settings.chooseSiteImage")}
-                onSelect={(medium) => {
-                  if (choosingBrand) branding = { ...branding, [choosingBrand]: medium.id };
-                  choosingBrand = null;
-                }}
-                onClose={() => (choosingBrand = null)}
+                  <Field label={t("settings.defaultMetadataJson")}>
+                    <Textarea
+                      mono
+                      id="defaultmetadata"
+                      bind:value={defaultMetadata}
+                      rows={5}
+                      placeholder={t("settings.jsonMetadataForHeaders")}
+                    />
+                  </Field>
+                </CardContent>
+              </Card>
+
+              <SaveBar
+                dirty={generalDirty}
+                saving={savingGeneral}
+                error={generalSaveError || undefined}
+                disableWhenClean
+                savedText={savedGeneral !== null ? t("record.allSaved") : ""}
+                saveLabel={t("settings.saveConfiguration")}
+                cancelLabel={t("record.discard")}
+                onCancel={generalDirty ? discardGeneral : undefined}
               />
-
-              <div class="space-y-2">
-                <label
-                  for="defaultmetadata"
-                  class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider"
-                >
-                  {t("settings.defaultMetadataJson")}
-                </label>
-                <Textarea
-                  class="font-mono!"
-                  id="defaultmetadata"
-                  bind:value={defaultMetadata}
-                  rows={5}
-                  placeholder={t("settings.jsonMetadataForHeaders")}
-                />
-              </div>
-
-              <div class="pt-4 border-t border-kitsuden-border">
-                <Button type="submit" disabled={savingGeneral}>
-                  {#if savingGeneral}
-                    <div
-                      class="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin mr-2 inline-block"
-                    ></div>
-                    {t("common.saving")}
-                  {:else}
-                    {t("settings.saveConfiguration")}
-                  {/if}
-                </Button>
-              </div>
             </form>
 
-            <form
-              onsubmit={saveSocials}
-              class="mt-10 space-y-6 max-w-2xl border-t border-kitsuden-border pt-6"
-            >
-              <div>
-                <h3 class="text-lg font-semibold text-kitsuden-text">
-                  {t("settings.groupNetworks")}
-                </h3>
-                <p class="text-sm text-kitsuden-text-dim mt-1">
-                  {t("settings.discordTwitchYoutubeYEl")}
-                </p>
-              </div>
+            <MediaPicker
+              open={choosingBrand !== null}
+              title={t("settings.chooseSiteImage")}
+              onSelect={(medium) => {
+                if (choosingBrand) branding = { ...branding, [choosingBrand]: medium.id };
+                choosingBrand = null;
+              }}
+              onClose={() => (choosingBrand = null)}
+            />
 
-              {#if socialsError}
-                <div
-                  class="p-3 rounded-lg bg-kitsuden-accent-2/10 border border-kitsuden-accent-2/30 text-kitsuden-accent-2 text-sm flex items-center gap-2"
-                >
-                  <AlertCircle class="w-4 h-4 shrink-0" />
-                  {socialsError}
-                </div>
-              {/if}
-              {#if socialsOk}
-                <div
-                  class="p-3 rounded-lg bg-kitsuden-green/10 border border-kitsuden-green/30 text-kitsuden-green text-sm"
-                >
-                  {t("settings.savedNetworks")}
-                </div>
-              {/if}
-
-              <div class="grid gap-4 sm:grid-cols-2">
-                {#each SOCIAL_FIELDS as field (field.key)}
-                  <div class="space-y-2">
-                    <label
-                      for={`redes-${field.key}`}
-                      class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider"
-                    >
-                      {field.label}
-                    </label>
-                    <Input id={`redes-${field.key}`} bind:value={socials[field.key]} type="text" />
-                    <p class="text-[11px] leading-snug text-kitsuden-text-dim">{field.help}</p>
+            <form onsubmit={saveSocials}>
+              <Card>
+                <CardHeader>
+                  <div class="min-w-0">
+                    <CardTitle level={2}>{t("settings.groupNetworks")}</CardTitle>
+                    <p class="text-sm text-kitsuden-subtle mt-1">
+                      {t("settings.discordTwitchYoutubeYEl")}
+                    </p>
                   </div>
-                {/each}
-              </div>
+                </CardHeader>
+                <CardContent class="space-y-6">
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    {#each SOCIAL_FIELDS as field (field.key)}
+                      <div class="space-y-1.5 min-w-0">
+                        <Field label={field.label}>
+                          <Input
+                            id={`redes-${field.key}`}
+                            bind:value={socials[field.key]}
+                            type="text"
+                          />
+                        </Field>
+                        <p class="text-[11px] leading-snug text-kitsuden-text-dim">{field.help}</p>
+                      </div>
+                    {/each}
+                  </div>
 
-              <div class="space-y-3">
-                <p
-                  class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider"
-                >
-                  {t("settings.youtubeChannels")}
-                </p>
-                <p class="text-xs text-kitsuden-text-dim">
-                  {t("settings.latestVideosMixBlock")} <code class="font-mono">id</code>
-                  {t("settings.isChannelIdentifier")}
-                </p>
-                {#each youtubeChannels as channel, i (i)}
-                  <div class="flex flex-wrap items-end gap-2">
-                    <div class="flex-1 min-w-40 space-y-1">
-                      <span class="block text-[11px] text-kitsuden-subtle"
-                        >{t("settings.visibleName")}</span
-                      >
-                      <Input
-                        bind:value={channel.name}
-                        type="text"
-                        placeholder={t("common.kitsuden")}
-                      />
+                  <div class="space-y-3">
+                    <div>
+                      <h3 class="text-sm font-semibold text-kitsuden-text">
+                        {t("settings.youtubeChannels")}
+                      </h3>
+                      <p class="text-xs text-kitsuden-text-dim mt-1">
+                        {t("settings.latestVideosMixBlock")} <code class="font-mono">id</code>
+                        {t("settings.isChannelIdentifier")}
+                      </p>
                     </div>
-                    <div class="flex-2 min-w-48 space-y-1">
-                      <span class="block text-[11px] text-kitsuden-subtle"
-                        >{t("settings.channelId")}</span
-                      >
-                      <Input
-                        class="font-mono!"
-                        bind:value={channel.id}
-                        type="text"
-                        placeholder={t("settings.ucxxxxxxxxxxxxxxxxxxxxxx")}
-                      />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onclick={() => removeYoutubeChannel(i)}
-                    >
-                      {t("settings.remove")}
+                    {#each youtubeChannels as channel, i (i)}
+                      <div class="flex flex-wrap items-end gap-2">
+                        <Field class="flex-1 min-w-40" label={t("settings.visibleName")}>
+                          <Input
+                            bind:value={channel.name}
+                            type="text"
+                            placeholder={t("common.kitsuden")}
+                          />
+                        </Field>
+                        <Field class="flex-2 min-w-48" label={t("settings.channelId")}>
+                          <Input
+                            class="font-mono!"
+                            bind:value={channel.id}
+                            type="text"
+                            placeholder={t("settings.ucxxxxxxxxxxxxxxxxxxxxxx")}
+                          />
+                        </Field>
+                        <Button
+                          variant="ghost"
+                          type="button"
+                          onclick={() => removeYoutubeChannel(i)}
+                        >
+                          {t("settings.remove")}
+                        </Button>
+                      </div>
+                    {/each}
+                    <Button variant="secondary" size="sm" type="button" onclick={addYoutubeChannel}>
+                      <Plus class="w-4 h-4" aria-hidden="true" />
+                      {t("settings.addChannel")}
                     </Button>
                   </div>
-                {/each}
-                <Button variant="secondary" size="sm" type="button" onclick={addYoutubeChannel}>
-                  {t("settings.addChannel")}
-                </Button>
-              </div>
+                </CardContent>
+              </Card>
 
-              <div class="pt-4 border-t border-kitsuden-border">
-                <Button type="submit" disabled={savingSocials}>
-                  {#if savingSocials}
-                    <div
-                      class="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin mr-2 inline-block"
-                    ></div>
-                    {t("settings.saving")}
-                  {:else}
-                    {t("settings.saveSocials")}
-                  {/if}
-                </Button>
-              </div>
+              <SaveBar
+                dirty={socialsDirty}
+                saving={savingSocials}
+                error={socialsError || undefined}
+                disableWhenClean
+                savedText={socialsOk
+                  ? t("settings.savedNetworks")
+                  : savedSocials !== null
+                    ? t("record.allSaved")
+                    : ""}
+                saveLabel={t("settings.saveSocials")}
+                cancelLabel={t("record.discard")}
+                onCancel={socialsDirty ? discardSocials : undefined}
+              />
             </form>
-          {/if}
-        </div>
+          </div>
+        {/if}
       {:else if activeTab === "appearance"}
         <ThemeSelector />
       {:else if activeTab === "keys"}
         <div class="space-y-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-lg font-semibold text-kitsuden-text">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="text-lg font-semibold text-kitsuden-text">
                 {t("settings.machineAuthentication")}
-              </h3>
+              </h2>
               <p class="text-xs text-kitsuden-subtle mt-1">
                 {t("settings.apiKeysAllowAstroN8n")}
               </p>
             </div>
             <Button onclick={() => (showCreateModal = true)}>
-              <Plus class="w-4 h-4" />
+              <Plus class="w-4 h-4" aria-hidden="true" />
               {t("settings.createApiKey")}
             </Button>
           </div>
 
           {#if newlyGeneratedToken}
-            <div class="card bg-kitsuden-green/10 border-kitsuden-green/30 p-5 mt-4">
-              <div class="flex items-start gap-4">
-                <div
-                  class="w-10 h-10 rounded-full bg-kitsuden-green/20 flex items-center justify-center shrink-0"
+            <Alert variant="success" title={t("settings.apiKeyGeneratedSuccessfully")}>
+              <p class="text-xs text-kitsuden-text-dim mt-1 mb-3">
+                {t("settings.pleaseCopyYourApiKey")}
+                <strong>{t("settings.itWillNotBeShown")}</strong>
+                {t("settings.youMustIncludeItIn")}
+                <code>Authorization: Bearer &lt;token&gt;</code>
+                {t("settings.header")}
+              </p>
+
+              <div class="flex items-center gap-2 max-w-lg">
+                <Input
+                  class="font-mono! text-xs! min-w-0 flex-1"
+                  type="text"
+                  readonly
+                  aria-label={t("settings.apiKeyGeneratedSuccessfully")}
+                  value={newlyGeneratedToken}
+                />
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  onclick={copyToClipboard}
+                  title={t("settings.copyToClipboard")}
+                  ariaLabel={t("settings.copyToClipboard")}
                 >
-                  <Key class="w-5 h-5 text-kitsuden-green" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <h4 class="text-kitsuden-green font-medium">
-                    {t("settings.apiKeyGeneratedSuccessfully")}
-                  </h4>
-                  <p class="text-xs text-kitsuden-green/80 mt-1 mb-3">
-                    {t("settings.pleaseCopyYourApiKey")}
-                    <strong>{t("settings.itWillNotBeShown")}</strong>
-                    {t("settings.youMustIncludeItIn")}
-                    <code>Authorization: Bearer &lt;token&gt;</code>
-                    {t("settings.header")}
-                  </p>
-
-                  <div class="flex items-center gap-2 max-w-lg relative">
-                    <Input
-                      class="font-mono! text-xs! pr-12! text-kitsuden-green! bg-black/40! border-kitsuden-green/30!"
-                      type="text"
-                      readonly
-                      value={newlyGeneratedToken}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="absolute right-2 top-1/2 -translate-y-1/2 text-kitsuden-green!"
-                      onclick={copyToClipboard}
-                      title={t("settings.copyToClipboard")}
-                      ariaLabel={t("settings.copyToClipboard")}
-                    >
-                      {#if copied}
-                        <CheckCircle2 class="w-4 h-4" />
-                      {:else}
-                        <Copy class="w-4 h-4" />
-                      {/if}
-                    </Button>
-                  </div>
-
-                  <Button variant="ghost" class="mt-4" onclick={() => (newlyGeneratedToken = null)}>
-                    {t("settings.iHaveCopiedMyKey")}
-                  </Button>
-                </div>
+                  {#if copied}
+                    <CheckCircle2 class="w-4 h-4" aria-hidden="true" />
+                  {:else}
+                    <Copy class="w-4 h-4" aria-hidden="true" />
+                  {/if}
+                </Button>
               </div>
-            </div>
+
+              <div class="mt-3">
+                <Button variant="ghost" size="sm" onclick={() => (newlyGeneratedToken = null)}>
+                  {t("settings.iHaveCopiedMyKey")}
+                </Button>
+              </div>
+            </Alert>
           {/if}
 
           {#if errorKeys}
-            <div
-              class="p-3 rounded-lg bg-kitsuden-danger/10 border border-kitsuden-danger/20 text-kitsuden-danger text-xs flex items-center gap-2"
-            >
-              <ShieldAlert class="w-4 h-4 shrink-0" />
-              {errorKeys}
-            </div>
+            <Alert variant="error">{errorKeys}</Alert>
           {/if}
 
-          <div class="card overflow-hidden">
-            {#if loadingKeys}
-              <div class="p-12 text-center text-kitsuden-subtle text-sm">
-                {t("settings.loadingKeys")}
-              </div>
-            {:else if keys.length === 0}
-              <div class="p-12 text-center">
-                <div
-                  class="w-12 h-12 rounded-full bg-kitsuden-bg flex items-center justify-center mx-auto mb-3"
-                >
-                  <Key class="w-5 h-5 text-kitsuden-subtle" />
-                </div>
-                <p class="text-kitsuden-text text-sm">{t("settings.noApiKeysFound")}</p>
-                <p class="text-kitsuden-subtle text-xs mt-1">
-                  {t("settings.generateAKeyToConnect")}
-                </p>
-              </div>
-            {:else}
-              <Table>
-                <TableHeader>
+          {#if loadingKeys}
+            <div class="flex items-center justify-center gap-2 py-12 text-kitsuden-subtle text-sm">
+              <Spinner size="sm" label={t("settings.loadingKeys")} />
+              <span aria-hidden="true">{t("settings.loadingKeys")}</span>
+            </div>
+          {:else if keys.length === 0}
+            <EmptyState
+              title={t("settings.noApiKeysFound")}
+              description={t("settings.generateAKeyToConnect")}
+              actionLabel={t("settings.createApiKey")}
+              onAction={() => (showCreateModal = true)}
+            />
+          {:else}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("common.name")}</TableHead>
+                  <TableHead>{t("settings.hint")}</TableHead>
+                  <TableHead>{t("settings.created")}</TableHead>
+                  <TableHead>{t("settings.lastUsed")}</TableHead>
+                  <TableHead class="text-right!">{t("common.actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {#each keys as k}
                   <TableRow>
-                    <TableHead>{t("common.name")}</TableHead>
-                    <TableHead>{t("settings.hint")}</TableHead>
-                    <TableHead>{t("settings.created")}</TableHead>
-                    <TableHead>{t("settings.lastUsed")}</TableHead>
-                    <TableHead class="text-right!">{t("common.actions")}</TableHead>
+                    <TableCell>
+                      <div class="font-medium text-kitsuden-text">{k.name}</div>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        class="font-mono text-xs bg-kitsuden-bg px-2 py-1 rounded-sm text-kitsuden-text-dim border border-kitsuden-border"
+                      >
+                        {k.hint}
+                      </span>
+                    </TableCell>
+                    <TableCell class="text-kitsuden-text-dim!">
+                      {new Date(k.createdAt).toLocaleDateString(localeFormat())}
+                    </TableCell>
+                    <TableCell class="text-kitsuden-text-dim!">
+                      {k.lastUsedAt
+                        ? new Date(k.lastUsedAt).toLocaleDateString(localeFormat())
+                        : t("settings.never")}
+                    </TableCell>
+                    <TableCell class="text-right!">
+                      <Button
+                        variant="danger-ghost"
+                        size="icon"
+                        onclick={() => revokeKey(k.id)}
+                        title={t("settings.revokeKey")}
+                        ariaLabel={t("settings.revokeKey")}
+                      >
+                        <Trash2 class="w-4 h-4" aria-hidden="true" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {#each keys as k}
-                    <TableRow class="group">
-                      <TableCell>
-                        <div class="font-medium text-kitsuden-text">{k.name}</div>
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          class="font-mono text-xs bg-kitsuden-bg px-2 py-1 rounded-sm text-kitsuden-text-dim border border-kitsuden-border"
-                        >
-                          {k.hint}
-                        </span>
-                      </TableCell>
-                      <TableCell class="text-kitsuden-text-dim!">
-                        {new Date(k.createdAt).toLocaleDateString(localeFormat())}
-                      </TableCell>
-                      <TableCell class="text-kitsuden-text-dim!">
-                        {k.lastUsedAt
-                          ? new Date(k.lastUsedAt).toLocaleDateString(localeFormat())
-                          : t("settings.never")}
-                      </TableCell>
-                      <TableCell class="text-right!">
-                        <Button
-                          variant="danger-ghost"
-                          size="icon"
-                          class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                          onclick={() => revokeKey(k.id)}
-                          title={t("settings.revokeKey")}
-                          ariaLabel={t("settings.revokeKey")}
-                        >
-                          <Trash2 class="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  {/each}
-                </TableBody>
-              </Table>
-            {/if}
-          </div>
+                {/each}
+              </TableBody>
+            </Table>
+          {/if}
         </div>
       {:else if activeTab === "security"}
         <TwoFactorPanel />
@@ -1506,18 +1480,18 @@
         <!-- AGENTS TAB -->
         <div class="space-y-6">
           <!-- Header -->
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-lg font-semibold text-kitsuden-text flex items-center gap-2">
-                <Bot class="w-5 h-5 text-kitsuden-accent" />
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="text-lg font-semibold text-kitsuden-text flex items-center gap-2">
+                <Bot class="w-5 h-5 text-kitsuden-accent" aria-hidden="true" />
                 {t("settings.agentIdentities")}
-              </h3>
+              </h2>
               <p class="text-xs text-kitsuden-subtle mt-1">
                 {t("settings.manageNonHumanIdentitiesNhi")}
               </p>
             </div>
-            <Button variant="soft" onclick={() => (showCreateAgentModal = true)}>
-              <Plus class="w-4 h-4" />
+            <Button onclick={() => (showCreateAgentModal = true)}>
+              <Plus class="w-4 h-4" aria-hidden="true" />
               {t("settings.createAgent")}
             </Button>
           </div>
@@ -1530,41 +1504,33 @@
           <!-- Agents Grid -->
           {#if loadingAgents}
             <div class="flex justify-center py-12">
-              <RefreshCw class="w-8 h-8 animate-spin text-kitsuden-accent" />
+              <Spinner size="lg" />
             </div>
           {:else if agents.length === 0}
-            <div class="p-12 text-center border border-kitsuden-border rounded-xl bg-kitsuden-card">
-              <Bot class="w-12 h-12 text-kitsuden-subtle mx-auto mb-4" />
-              <h3 class="text-lg font-medium text-kitsuden-text mb-2">
-                {t("settings.noAgentsYet")}
-              </h3>
-              <p class="text-kitsuden-subtle mb-4">
-                {t("settings.createYourFirstAiAgent")}
-              </p>
-              <Button variant="soft" onclick={() => (showCreateAgentModal = true)}>
-                {t("settings.createYourFirstAgent")}
-              </Button>
-            </div>
+            <EmptyState
+              title={t("settings.noAgentsYet")}
+              description={t("settings.createYourFirstAiAgent")}
+              actionLabel={t("settings.createYourFirstAgent")}
+              onAction={() => (showCreateAgentModal = true)}
+            />
           {:else}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {#each agents as agent}
+                <!-- The whole card opens the agent: one large button, which the kit has no part for. -->
                 <button
+                  type="button"
                   onclick={() => viewAgent(agent)}
-                  class="p-4 text-left border border-kitsuden-border rounded-xl bg-kitsuden-card hover:border-kitsuden-accent/50 transition-colors group"
+                  class="p-4 min-w-0 text-left border border-kitsuden-border rounded-xl bg-kitsuden-card hover:border-kitsuden-accent/50 focus-visible:outline-2 focus-visible:outline-kitsuden-accent transition-colors group"
                 >
-                  <div class="flex justify-between items-start mb-3">
+                  <div class="flex justify-between items-start gap-2 mb-3">
                     <h3
-                      class="font-semibold text-lg text-kitsuden-text group-hover:text-kitsuden-accent transition-colors"
+                      class="min-w-0 font-semibold text-lg text-kitsuden-text group-hover:text-kitsuden-accent transition-colors"
                     >
                       {agent.name}
                     </h3>
-                    <span
-                      class="px-2 py-0.5 text-xs rounded-full {agent.isActive
-                        ? 'bg-kitsuden-green/20 text-kitsuden-green'
-                        : 'bg-kitsuden-subtle/20 text-kitsuden-subtle'}"
-                    >
+                    <Badge variant={agent.isActive ? "success" : "default"} dot>
                       {agent.isActive ? t("common.active") : t("settings.inactive")}
-                    </span>
+                    </Badge>
                   </div>
 
                   {#if agent.description}
@@ -1575,22 +1541,16 @@
 
                   <div class="flex flex-wrap gap-1 mb-3">
                     {#each agent.scopes.slice(0, 3) as scope}
-                      <span class="px-1.5 py-0.5 text-xs rounded-sm {getScopeColor(scope)}">
-                        {scope}
-                      </span>
+                      <Badge variant={scopeVariant(scope)}>{scope}</Badge>
                     {/each}
                     {#if agent.scopes.length > 3}
-                      <span
-                        class="px-1.5 py-0.5 text-xs rounded-sm bg-kitsuden-subtle/20 text-kitsuden-subtle"
-                      >
-                        +{agent.scopes.length - 3}
-                      </span>
+                      <Badge>+{agent.scopes.length - 3}</Badge>
                     {/if}
                   </div>
 
                   <div class="flex justify-between items-center text-sm text-kitsuden-subtle">
                     <span class="flex items-center gap-1">
-                      <Key class="w-4 h-4" />
+                      <Key class="w-4 h-4" aria-hidden="true" />
                       {t("settings.key", { keysCount: agent.keys.length })}{agent.keys.length !== 1
                         ? "s"
                         : ""}
@@ -1603,15 +1563,11 @@
           {/if}
         </div>
       {:else if activeTab === "mcp"}
-        <div class="space-y-6 animate-fade-in">
+        <div class="space-y-6">
           <!-- Header -->
-          <div>
-            <h2 class="text-2xl font-bold text-kitsuden-text flex items-center gap-3">
-              <div
-                class="w-10 h-10 rounded-xl bg-linear-to-br from-kitsuden-accent/20 to-kitsuden-purple/20 border border-kitsuden-accent/20 flex items-center justify-center"
-              >
-                <LibraryBig class="w-5 h-5 text-kitsuden-accent" />
-              </div>
+          <div class="min-w-0">
+            <h2 class="text-lg font-semibold text-kitsuden-text flex items-center gap-2">
+              <LibraryBig class="w-5 h-5 text-kitsuden-accent" aria-hidden="true" />
               {t("settings.mcpCapabilities")}
             </h2>
             <p class="text-sm text-kitsuden-subtle mt-1">
@@ -1620,148 +1576,150 @@
           </div>
 
           <!-- SSE Connection Endpoint -->
-          <div class="card p-6 border-l-4 border-l-kitsuden-accent">
-            <h3 class="font-semibold text-lg text-kitsuden-text mb-2 flex items-center gap-2">
-              <Cpu class="w-5 h-5 text-kitsuden-accent" />
-              {t("settings.sseConnectionEndpoint")}
-            </h3>
-            <p class="text-sm text-kitsuden-subtle mb-4">
-              {t("settings.useThisSseEndpointTo")}
-            </p>
-
-            <div class="flex items-center gap-2">
-              <code
-                class="flex-1 bg-kitsuden-bg font-mono text-sm px-4 py-3 rounded-lg border border-kitsuden-border text-kitsuden-accent select-all"
-              >
-                {mcpUrl}
-              </code>
-              <Button variant="secondary" class="px-4 py-3 min-w-[120px]" onclick={copyMcpUrl}>
-                {#if mcpCopied}
-                  <Check class="w-4 h-4 text-kitsuden-green inline mr-1" /> {t("settings.copied")}
-                {:else}
-                  <Copy class="w-4 h-4 inline mr-1" /> {t("settings.copyUrl")}
-                {/if}
-              </Button>
-            </div>
-          </div>
+          <Card>
+            <CardHeader>
+              <div class="min-w-0">
+                <CardTitle level={3}>{t("settings.sseConnectionEndpoint")}</CardTitle>
+                <p class="text-sm text-kitsuden-subtle mt-1">
+                  {t("settings.useThisSseEndpointTo")}
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div class="flex flex-wrap items-center gap-2">
+                <code
+                  class="flex-1 min-w-0 break-all bg-kitsuden-bg font-mono text-sm px-4 py-3 rounded-lg border border-kitsuden-border text-kitsuden-text select-all"
+                >
+                  {mcpUrl}
+                </code>
+                <Button variant="secondary" onclick={copyMcpUrl}>
+                  {#if mcpCopied}
+                    <Check class="w-4 h-4 text-kitsuden-green" aria-hidden="true" />
+                    {t("settings.copied")}
+                  {:else}
+                    <Copy class="w-4 h-4" aria-hidden="true" />
+                    {t("settings.copyUrl")}
+                  {/if}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           <!-- Configuration Grid -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Stdio Configuration -->
-            <div class="card p-5">
-              <h4 class="font-medium text-kitsuden-text mb-3 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-kitsuden-accent"></span>
-                {t("settings.stdioConfiguration")}
-              </h4>
-              <p class="text-xs text-kitsuden-text-dim mb-3">
-                {t("settings.forClaudeDesktopCursorOr")}
-              </p>
-              <div
-                class="p-3 rounded-lg bg-black/40 border border-kitsuden-border font-mono text-xs"
-              >
-                <code class="text-kitsuden-accent block">"kitsuden-cms": {"{"}</code>
-                <code class="text-kitsuden-accent block ml-4">"command": "node",</code>
-                <code class="text-kitsuden-accent block ml-4"
-                  >"args": ["packages/mcp-server/dist/index.js"],</code
-                >
-                <code class="text-kitsuden-accent block">}</code>
-              </div>
-              <div class="mt-3 flex gap-2">
+            <Card class="min-w-0">
+              <CardHeader>
+                <div class="min-w-0">
+                  <CardTitle level={3}>{t("settings.stdioConfiguration")}</CardTitle>
+                  <p class="text-xs text-kitsuden-text-dim mt-1">
+                    {t("settings.forClaudeDesktopCursorOr")}
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent class="space-y-3">
+                <CodeBlock code={STDIO_CONFIG} language="json" />
                 <Button
                   variant="ghost"
+                  size="sm"
                   onclick={() =>
                     toast.error(
                       "Generate an API Key from the API Keys tab to authenticate external processes."
                     )}
                 >
-                  <Key class="w-3 h-3 inline mr-1" />
+                  <Key class="w-4 h-4" aria-hidden="true" />
                   {t("settings.viewDocs")}
                 </Button>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             <!-- HTTP/SSE Configuration -->
-            <div class="card p-5">
-              <h4 class="font-medium text-kitsuden-text mb-3 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-kitsuden-purple"></span>
-                {t("settings.httpSseConfiguration")}
-              </h4>
-              <p class="text-xs text-kitsuden-text-dim mb-3">
-                {t("settings.forRemoteAgentsOrCloud")}
-              </p>
-              <div
-                class="p-3 rounded-lg bg-black/40 border border-kitsuden-border font-mono text-xs space-y-1"
-              >
-                <code class="text-kitsuden-purple block">Endpoint: {mcpUrl}</code>
-                <code class="text-kitsuden-subtle block">Auth: Bearer API_KEY</code>
-              </div>
-              <div class="mt-3 flex gap-2">
-                <Button variant="ghost" onclick={copyMcpUrl}>
-                  <Copy class="w-3 h-3 inline mr-1" />
+            <Card class="min-w-0">
+              <CardHeader>
+                <div class="min-w-0">
+                  <CardTitle level={3}>{t("settings.httpSseConfiguration")}</CardTitle>
+                  <p class="text-xs text-kitsuden-text-dim mt-1">
+                    {t("settings.forRemoteAgentsOrCloud")}
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent class="space-y-3">
+                <CodeBlock code={HTTP_CONFIG} wrap />
+                <Button variant="ghost" size="sm" onclick={copyMcpUrl}>
+                  <Copy class="w-4 h-4" aria-hidden="true" />
                   {t("settings.copyEndpoint")}
                 </Button>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
 
           <!-- Resources & Tools Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="card p-5 border-t-2 border-t-kitsuden-purple/50">
-              <h4 class="font-medium text-kitsuden-text mb-2 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-kitsuden-purple"></span>
-                {t("settings.visibleResources")}
-              </h4>
-              <p class="text-[11px] text-kitsuden-text-dim mb-3">
-                {t("settings.aiAgentsCanReadThese")}
-              </p>
-              <ul class="text-sm text-kitsuden-subtle space-y-2 list-disc pl-4 font-mono text-xs">
-                <li>{t("settings.kitsudenDatasets")}</li>
-                <li>{t("settings.kitsudenDatasetId")}</li>
-                <li>{t("settings.kitsudenGrimoires")}</li>
-              </ul>
-            </div>
+            <Card class="min-w-0">
+              <CardHeader>
+                <div class="min-w-0">
+                  <CardTitle level={3}>{t("settings.visibleResources")}</CardTitle>
+                  <p class="text-xs text-kitsuden-text-dim mt-1">
+                    {t("settings.aiAgentsCanReadThese")}
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul
+                  class="text-kitsuden-subtle space-y-2 list-disc pl-4 font-mono text-xs break-all"
+                >
+                  <li>{t("settings.kitsudenDatasets")}</li>
+                  <li>{t("settings.kitsudenDatasetId")}</li>
+                  <li>{t("settings.kitsudenGrimoires")}</li>
+                </ul>
+              </CardContent>
+            </Card>
 
-            <div class="card p-5 border-t-2 border-t-kitsuden-amber/50">
-              <h4 class="font-medium text-kitsuden-text mb-2 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-kitsuden-amber"></span>
-                {t("settings.callableTools")}
-              </h4>
-              <p class="text-[11px] text-kitsuden-text-dim mb-3">
-                {t("settings.aiAgentsHavePermissionTo")}
-              </p>
-              <ul class="text-sm text-kitsuden-subtle space-y-2 list-disc pl-4 font-mono text-xs">
-                <li>{t("settings.kitsudenQueryDataset")}</li>
-                <li>{t("settings.kitsudenInsertRecord")}</li>
-                <li>{t("settings.kitsudenUpdateRecord")}</li>
-                <li>{t("settings.kitsudenDeleteRecord")}</li>
-                <li>{t("settings.kitsudenListDatasets")}</li>
-                <li>{t("settings.kitsudenDispatchWorker")}</li>
-              </ul>
-            </div>
+            <Card class="min-w-0">
+              <CardHeader>
+                <div class="min-w-0">
+                  <CardTitle level={3}>{t("settings.callableTools")}</CardTitle>
+                  <p class="text-xs text-kitsuden-text-dim mt-1">
+                    {t("settings.aiAgentsHavePermissionTo")}
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul
+                  class="text-kitsuden-subtle space-y-2 list-disc pl-4 font-mono text-xs break-all"
+                >
+                  <li>{t("settings.kitsudenQueryDataset")}</li>
+                  <li>{t("settings.kitsudenInsertRecord")}</li>
+                  <li>{t("settings.kitsudenUpdateRecord")}</li>
+                  <li>{t("settings.kitsudenDeleteRecord")}</li>
+                  <li>{t("settings.kitsudenListDatasets")}</li>
+                  <li>{t("settings.kitsudenDispatchWorker")}</li>
+                </ul>
+              </CardContent>
+            </Card>
           </div>
         </div>
       {:else if activeTab === "datasources"}
         <!-- DATA SOURCES TAB -->
         <div class="space-y-6">
           <!-- Header -->
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-lg font-semibold text-kitsuden-text flex items-center gap-2">
-                <Database class="w-5 h-5 text-kitsuden-accent" />
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="text-lg font-semibold text-kitsuden-text flex items-center gap-2">
+                <Database class="w-5 h-5 text-kitsuden-accent" aria-hidden="true" />
                 {t("settings.externalDataSources")}
-              </h3>
+              </h2>
               <p class="text-xs text-kitsuden-subtle mt-1">
                 {t("settings.connectToExternalDatabasesApis")}
               </p>
             </div>
             <Button
-              class="group"
               onclick={() => {
                 resetDataSourceForm();
                 showCreateDataSourceModal = true;
               }}
             >
-              <Plus class="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+              <Plus class="w-4 h-4" aria-hidden="true" />
               {t("settings.connectSource")}
             </Button>
           </div>
@@ -1776,54 +1734,40 @@
           <!-- Data Sources Grid -->
           {#if loadingDataSources}
             <div class="flex justify-center py-12">
-              <RefreshCw class="w-8 h-8 animate-spin text-kitsuden-accent" />
+              <Spinner size="lg" />
             </div>
           {:else if dataSources.length === 0}
-            <div class="p-12 text-center border border-kitsuden-border rounded-xl bg-kitsuden-card">
-              <Database class="w-12 h-12 text-kitsuden-subtle mx-auto mb-4" />
-              <h3 class="text-lg font-medium text-kitsuden-text mb-2">
-                {t("settings.noDataSourcesConnected")}
-              </h3>
-              <p class="text-kitsuden-subtle mb-6">
-                {t("settings.connectExternalDatabasesOrApis")}
-              </p>
-              <Button
-                class="group"
-                onclick={() => {
-                  resetDataSourceForm();
-                  showCreateDataSourceModal = true;
-                }}
-              >
-                <Plus class="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-                {t("settings.connectFirstSource")}
-              </Button>
-            </div>
+            <EmptyState
+              title={t("settings.noDataSourcesConnected")}
+              description={t("settings.connectExternalDatabasesOrApis")}
+              actionLabel={t("settings.connectFirstSource")}
+              onAction={() => {
+                resetDataSourceForm();
+                showCreateDataSourceModal = true;
+              }}
+            />
           {:else}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {#each dataSources as source}
                 {@const Icon = getDataSourceIcon(source.type)}
-                <div
-                  class="p-5 border border-kitsuden-border rounded-xl bg-kitsuden-card hover:border-kitsuden-accent/50 transition-colors group"
-                >
-                  <div class="flex items-start justify-between mb-4">
-                    <div class="flex items-center gap-3">
+                <Card class="p-5 min-w-0">
+                  <div class="flex items-start justify-between gap-2 mb-4">
+                    <div class="flex items-center gap-3 min-w-0">
                       <div
-                        class="w-10 h-10 rounded-lg flex items-center justify-center {getDataSourceTypeColor(
+                        class="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center {getDataSourceTypeColor(
                           source.type
                         )}"
                       >
-                        <Icon class="w-5 h-5" />
+                        <Icon class="w-5 h-5" aria-hidden="true" />
                       </div>
-                      <div>
-                        <h3 class="font-semibold text-kitsuden-text">{source.name}</h3>
+                      <div class="min-w-0">
+                        <h3 class="font-semibold text-kitsuden-text truncate">{source.name}</h3>
                         <span class="text-xs text-kitsuden-subtle uppercase">{source.type}</span>
                       </div>
                     </div>
-                    <span
-                      class="w-2 h-2 rounded-full {source.isActive
-                        ? 'bg-kitsuden-green'
-                        : 'bg-kitsuden-amber'}"
-                    ></span>
+                    <Badge variant={source.isActive ? "success" : "warning"} dot>
+                      {source.isActive ? t("common.active") : t("settings.inactive")}
+                    </Badge>
                   </div>
 
                   {#if source.host}
@@ -1846,7 +1790,7 @@
                   {/if}
 
                   <div
-                    class="mt-4 pt-4 border-t border-kitsuden-border flex items-center justify-between"
+                    class="mt-4 pt-4 border-t border-kitsuden-border flex items-center justify-between gap-2"
                   >
                     <span class="text-xs text-kitsuden-subtle">
                       {source.lastSyncAt
@@ -1862,10 +1806,10 @@
                       title={t("settings.deleteDataSource")}
                       ariaLabel={t("settings.deleteDataSource")}
                     >
-                      <Trash2 class="w-4 h-4" />
+                      <Trash2 class="w-4 h-4" aria-hidden="true" />
                     </Button>
                   </div>
-                </div>
+                </Card>
               {/each}
             </div>
           {/if}
@@ -1881,18 +1825,21 @@
     -->
         <div class="space-y-8">
           <section>
-            <h3 class="text-lg font-semibold text-kitsuden-text flex items-center gap-2">
-              <Users class="w-5 h-5 text-kitsuden-accent" />
+            <h2 class="text-lg font-semibold text-kitsuden-text flex items-center gap-2">
+              <Users class="w-5 h-5 text-kitsuden-accent" aria-hidden="true" />
               {t("settings.users")}
-            </h3>
+            </h2>
             <p class="text-xs text-kitsuden-subtle mt-1 mb-4">
               {t("settings.whoCanEnterPanel")}
             </p>
 
             {#if loadingSystem}
-              <p class="text-sm text-kitsuden-subtle">{t("common.loadingEllipsis")}</p>
+              <div class="flex items-center gap-2 text-sm text-kitsuden-subtle">
+                <Spinner size="sm" label={t("common.loadingEllipsis")} />
+                <span aria-hidden="true">{t("common.loadingEllipsis")}</span>
+              </div>
             {:else if systemError}
-              <p class="text-sm text-kitsuden-danger">{systemError}</p>
+              <Alert variant="error">{systemError}</Alert>
             {:else}
               <div>
                 <Table>
@@ -1936,44 +1883,28 @@
           </section>
 
           <section>
-            <h3 class="text-lg font-semibold text-kitsuden-text flex items-center gap-2">
-              <Database class="w-5 h-5 text-kitsuden-accent" />
+            <h2 class="text-lg font-semibold text-kitsuden-text flex items-center gap-2">
+              <Database class="w-5 h-5 text-kitsuden-accent" aria-hidden="true" />
               {t("settings.schemaStatus")}
-            </h3>
+            </h2>
             <p class="text-xs text-kitsuden-subtle mt-1 mb-4">
               {t("settings.readOnlyHistoryOf")}
             </p>
 
             {#if status}
               <div class="grid gap-4 sm:grid-cols-3">
-                <div class="card p-4">
-                  <p class="text-xs uppercase tracking-wider text-kitsuden-subtle">
-                    {t("settings.migrations")}
-                  </p>
-                  <p class="mt-1 text-2xl font-bold">{status.migrations.total}</p>
-                </div>
-                <div class="card p-4">
-                  <p class="text-xs uppercase tracking-wider text-kitsuden-subtle">
-                    {t("settings.activeKons")}
-                  </p>
-                  <p class="mt-1 text-2xl font-bold">
-                    {status.kons.active}<span class="text-base text-kitsuden-subtle"
-                      >/{status.kons.total}</span
-                    >
-                  </p>
-                </div>
-                <div class="card p-4">
-                  <p class="text-xs uppercase tracking-wider text-kitsuden-subtle">
-                    {t("settings.installed")}
-                  </p>
-                  <p class="mt-1 text-2xl font-bold">{status.installed.length}</p>
-                </div>
+                <Stat label={t("settings.migrations")} value={status.migrations.total} />
+                <Stat
+                  label={t("settings.activeKons")}
+                  value={`${status.kons.active}/${status.kons.total}`}
+                />
+                <Stat label={t("settings.installed")} value={status.installed.length} />
               </div>
 
               <p class="mt-4 mb-2 text-xs uppercase tracking-wider text-kitsuden-subtle">
                 {t("settings.lastAppliedMigrations")}
               </p>
-              <ul class="space-y-1 text-xs font-mono text-kitsuden-subtle">
+              <ul class="space-y-1 text-xs font-mono text-kitsuden-subtle break-all">
                 {#each status.migrations.latest as m (m.name)}
                   <li>{m.name}{m.baselined ? t("settings.baseline") : ""}</li>
                 {/each}
@@ -1995,14 +1926,8 @@
     newKeyName = "";
   }}
 >
-  <form onsubmit={createKey} class="space-y-4">
-    <div class="space-y-1.5">
-      <label
-        for="newkeyname"
-        class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider"
-      >
-        {t("settings.keyName")}
-      </label>
+  <form id="settings-new-key" onsubmit={createKey} class="space-y-4">
+    <Field label={t("settings.keyName")} required>
       <Input
         id="newkeyname"
         bind:value={newKeyName}
@@ -2011,15 +1936,9 @@
         required
         autocomplete="off"
       />
-    </div>
+    </Field>
 
-    <div class="space-y-1.5">
-      <label
-        for="newkeyexpiresinstr"
-        class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider"
-      >
-        {t("settings.expiration")}
-      </label>
+    <Field label={t("settings.expiration")}>
       <Select id="newkeyexpiresinstr" bind:value={newKeyExpiresInStr}>
         <option value="0">{t("settings.neverExpire")}</option>
         <option value="7">{t("settings.n7Days")}</option>
@@ -2027,25 +1946,28 @@
         <option value="90">{t("settings.n90Days")}</option>
         <option value="365">{t("settings.n1Year")}</option>
       </Select>
-    </div>
-
-    <div class="pt-4 flex items-center justify-end gap-3 border-t border-kitsuden-border mt-6">
-      <Button
-        variant="ghost"
-        type="button"
-        onclick={() => {
-          showCreateModal = false;
-          newKeyName = "";
-        }}
-        disabled={creatingKey}
-      >
-        {t("common.cancel")}
-      </Button>
-      <Button type="submit" disabled={creatingKey || !newKeyName.trim()}>
-        {creatingKey ? t("common.creating") : t("settings.createKey")}
-      </Button>
-    </div>
+    </Field>
   </form>
+  {#snippet footer()}
+    <Button
+      variant="ghost"
+      onclick={() => {
+        showCreateModal = false;
+        newKeyName = "";
+      }}
+      disabled={creatingKey}
+    >
+      {t("common.cancel")}
+    </Button>
+    <Button
+      type="submit"
+      form="settings-new-key"
+      loading={creatingKey}
+      disabled={!newKeyName.trim()}
+    >
+      {creatingKey ? t("common.creating") : t("settings.createKey")}
+    </Button>
+  {/snippet}
 </Dialog>
 
 <!-- Create Agent Modal -->
@@ -2087,7 +2009,7 @@
       </p>
     </div>
 
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <Label class="block! mb-1.5" for="agentformratelimit">{t("settings.rateLimitReqMin")}</Label
         >
@@ -2108,14 +2030,14 @@
     </div>
   </div>
 
-  <div class="flex justify-end gap-2 mt-6">
+  {#snippet footer()}
     <Button variant="ghost" onclick={() => (showCreateAgentModal = false)}>
       {t("common.cancel")}
     </Button>
-    <Button variant="soft" onclick={createAgent} disabled={!agentFormName}>
+    <Button onclick={createAgent} disabled={!agentFormName}>
       {t("settings.createAgent")}
     </Button>
-  </div>
+  {/snippet}
 </Dialog>
 
 <!-- New API Key Modal -->
@@ -2134,37 +2056,37 @@
     {t("settings.copyThisApiKeyNow")}
   </p>
 
-  <div class="flex gap-2 mb-6">
+  <div class="flex gap-2">
     <code
-      class="flex-1 p-3 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm break-all text-kitsuden-text"
+      class="flex-1 min-w-0 p-3 bg-kitsuden-bg border border-kitsuden-border rounded-lg text-sm break-all text-kitsuden-text"
     >
       {newAgentApiKey}
     </code>
     <Button
-      variant="soft"
+      variant="secondary"
       size="icon"
       onclick={() => copyAgentKeyToClipboard(newAgentApiKey)}
       title={t("settings.copyToClipboard")}
       ariaLabel={t("settings.copyToClipboard")}
     >
       {#if agentKeyCopied}
-        <Check class="w-5 h-5" />
+        <Check class="w-4 h-4" aria-hidden="true" />
       {:else}
-        <Copy class="w-5 h-5" />
+        <Copy class="w-4 h-4" aria-hidden="true" />
       {/if}
     </Button>
   </div>
 
-  <Button
-    variant="soft"
-    class="w-full"
-    onclick={() => {
-      showNewAgentKeyModal = false;
-      newAgentApiKey = "";
-    }}
-  >
-    {t("settings.iVeSavedTheKey")}
-  </Button>
+  {#snippet footer()}
+    <Button
+      onclick={() => {
+        showNewAgentKeyModal = false;
+        newAgentApiKey = "";
+      }}
+    >
+      {t("settings.iVeSavedTheKey")}
+    </Button>
+  {/snippet}
 </Dialog>
 
 <!-- Agent Detail Modal -->
@@ -2196,9 +2118,7 @@
           <div class="space-y-6">
             <!-- Info -->
             <div>
-              <label class="block text-sm text-kitsuden-subtle mb-1"
-                >{t("common.description")}</label
-              >
+              <p class="text-sm text-kitsuden-subtle mb-1">{t("common.description")}</p>
               <p class="text-kitsuden-text">
                 {selectedAgent.description || t("settings.noDescription")}
               </p>
@@ -2206,24 +2126,22 @@
 
             <!-- Scopes -->
             <div>
-              <label class="block text-sm text-kitsuden-subtle mb-2">{t("settings.scopes")}</label>
+              <p class="text-sm text-kitsuden-subtle mb-2">{t("settings.scopes")}</p>
               <div class="flex flex-wrap gap-2">
                 {#each selectedAgent.scopes as scope}
-                  <span class="px-2 py-1 text-sm rounded-sm {getScopeColor(scope)}">
-                    {scope}
-                  </span>
+                  <Badge variant={scopeVariant(scope)} size="md">{scope}</Badge>
                 {/each}
               </div>
             </div>
 
             <!-- Stats -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="p-4 border border-kitsuden-border rounded-lg">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="p-4 border border-kitsuden-border rounded-lg min-w-0">
                 <p class="text-sm text-kitsuden-subtle">{t("settings.rateLimit")}</p>
                 <p class="text-2xl font-bold text-kitsuden-text">{selectedAgent.rateLimit}</p>
                 <p class="text-xs text-kitsuden-subtle">{t("settings.requestsPerMinute")}</p>
               </div>
-              <div class="p-4 border border-kitsuden-border rounded-lg">
+              <div class="p-4 border border-kitsuden-border rounded-lg min-w-0">
                 <p class="text-sm text-kitsuden-subtle">{t("settings.created")}</p>
                 <p class="text-kitsuden-text">{formatDate(selectedAgent.createdAt)}</p>
               </div>
@@ -2231,14 +2149,14 @@
 
             <!-- API Keys -->
             <div>
-              <div class="flex justify-between items-center mb-3">
-                <label class="block text-sm text-kitsuden-subtle">{t("settings.apiKeys")}</label>
+              <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                <p class="text-sm text-kitsuden-subtle">{t("settings.apiKeys")}</p>
                 <Button
-                  variant="soft"
+                  variant="secondary"
                   size="sm"
                   onclick={() => selectedAgent && createAgentApiKey(selectedAgent.id)}
                 >
-                  <Plus class="w-3 h-3" />
+                  <Plus class="w-4 h-4" aria-hidden="true" />
                   {t("settings.newKey")}
                 </Button>
               </div>
@@ -2249,10 +2167,10 @@
                 <div class="space-y-2">
                   {#each selectedAgent?.keys || [] as key}
                     <div
-                      class="flex justify-between items-center p-3 bg-kitsuden-bg border border-kitsuden-border rounded-lg"
+                      class="flex justify-between items-center gap-2 p-3 bg-kitsuden-bg border border-kitsuden-border rounded-lg"
                     >
-                      <div>
-                        <code class="text-sm text-kitsuden-text">{key.keyPrefix}</code>
+                      <div class="min-w-0">
+                        <code class="text-sm text-kitsuden-text break-all">{key.keyPrefix}</code>
                         <p class="text-xs text-kitsuden-subtle">
                           {t("settings.created2", { v: formatDate(key.createdAt) })}
                           {#if key.lastUsedAt}
@@ -2296,17 +2214,13 @@
             <div class="space-y-2">
               {#each auditLogs as log}
                 <div
-                  class="flex items-center gap-3 p-3 text-sm border border-kitsuden-border rounded-lg"
+                  class="flex flex-wrap items-center gap-x-3 gap-y-1 p-3 text-sm border border-kitsuden-border rounded-lg"
                 >
-                  <span class="text-lg">{getActionIcon(log.action)}</span>
-                  <span
-                    class="px-2 py-0.5 text-xs rounded {log.success
-                      ? 'bg-kitsuden-green/20 text-kitsuden-green'
-                      : 'bg-kitsuden-accent-2/20 text-kitsuden-accent-2'}"
+                  <span class="text-lg" aria-hidden="true">{getActionIcon(log.action)}</span>
+                  <Badge variant={log.success ? "success" : "error"}>{log.action}</Badge>
+                  <span class="flex-1 min-w-0 break-all text-kitsuden-text"
+                    >{log.resource || "-"}</span
                   >
-                    {log.action}
-                  </span>
-                  <span class="flex-1 text-kitsuden-text">{log.resource || "-"}</span>
                   <span class="text-kitsuden-subtle text-xs">{formatDate(log.createdAt)}</span>
                 </div>
               {/each}
@@ -2314,17 +2228,14 @@
           {/if}
         {:else if agentDetailTab === "stats"}
           {#if !agentStats}
-            <p class="text-kitsuden-subtle text-center py-8">{t("settings.loadingStatistics")}</p>
+            <div class="flex items-center justify-center gap-2 py-8 text-kitsuden-subtle text-sm">
+              <Spinner size="sm" label={t("settings.loadingStatistics")} />
+              <span aria-hidden="true">{t("settings.loadingStatistics")}</span>
+            </div>
           {:else}
             <div class="grid grid-cols-2 gap-4 mb-6">
-              <div class="p-4 border border-kitsuden-border rounded-lg">
-                <p class="text-sm text-kitsuden-subtle">{t("settings.totalCalls")}</p>
-                <p class="text-2xl font-bold text-kitsuden-text">{agentStats.totalCalls}</p>
-              </div>
-              <div class="p-4 border border-kitsuden-border rounded-lg">
-                <p class="text-sm text-kitsuden-subtle">{t("settings.successRate")}</p>
-                <p class="text-2xl font-bold text-kitsuden-text">{agentStats.successRate}</p>
-              </div>
+              <Stat label={t("settings.totalCalls")} value={agentStats.totalCalls} />
+              <Stat label={t("settings.successRate")} value={agentStats.successRate} />
             </div>
 
             {#if Object.keys(agentStats.actionsByType || {}).length > 0}
@@ -2332,19 +2243,13 @@
               <div class="space-y-2">
                 {#each Object.entries(agentStats.actionsByType) as [action, data]}
                   <div
-                    class="flex justify-between items-center p-3 bg-kitsuden-bg border border-kitsuden-border rounded-lg"
+                    class="flex flex-wrap justify-between items-center gap-2 p-3 bg-kitsuden-bg border border-kitsuden-border rounded-lg"
                   >
                     <span class="text-kitsuden-text capitalize">{action.replace("_", " ")}</span>
                     <div class="flex gap-2">
-                      <span
-                        class="px-2 py-0.5 text-xs rounded-sm bg-kitsuden-green/20 text-kitsuden-green"
-                        >{(data as any).success} {t("settings.ok")}</span
-                      >
+                      <Badge variant="success">{(data as any).success} {t("settings.ok")}</Badge>
                       {#if (data as any).failed > 0}
-                        <span
-                          class="px-2 py-0.5 text-xs rounded-sm bg-kitsuden-accent-2/20 text-kitsuden-accent-2"
-                          >{(data as any).failed} {t("settings.fail")}</span
-                        >
+                        <Badge variant="error">{(data as any).failed} {t("settings.fail")}</Badge>
                       {/if}
                     </div>
                   </div>
@@ -2412,7 +2317,7 @@
       </div>
     {:else}
       <!-- Database fields -->
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label class="block! mb-1.5" for="host">{t("settings.host2")}</Label>
           <Input id="host" bind:value={dataSourceForm.host} placeholder="localhost" />
@@ -2453,24 +2358,13 @@
 
     <!-- Test Result -->
     {#if testResult}
-      <div
-        class="p-3 rounded-lg {testResult.success
-          ? 'bg-kitsuden-green/10 border border-kitsuden-green/30 text-kitsuden-green'
-          : 'bg-kitsuden-danger/10 border border-kitsuden-danger/30 text-kitsuden-danger'} flex items-center gap-2"
-      >
-        {#if testResult.success}
-          <Check class="w-4 h-4" />
-        {:else}
-          <AlertCircle class="w-4 h-4" />
-        {/if}
-        <span class="text-sm">{testResult.message}</span>
-      </div>
+      <Alert variant={testResult.success ? "success" : "error"}>{testResult.message}</Alert>
     {/if}
   </div>
 
   {#snippet footer()}
     <Button
-      variant="secondary"
+      variant="ghost"
       onclick={() => {
         showCreateDataSourceModal = false;
         resetDataSourceForm();
@@ -2478,29 +2372,22 @@
     >
       {t("common.cancel")}
     </Button>
-    <Button
-      variant="secondary"
-      class="group"
-      onclick={testDataSourceConnection}
-      disabled={testingConnection}
-    >
+    <Button variant="secondary" onclick={testDataSourceConnection} loading={testingConnection}>
       {#if testingConnection}
-        <RefreshCw class="w-4 h-4 animate-spin" />
         {t("settings.testing")}
       {:else}
-        <TestTube class="w-4 h-4 group-hover:scale-110 transition-transform" />
+        <TestTube class="w-4 h-4" aria-hidden="true" />
         {t("settings.testConnection")}
       {/if}
     </Button>
     <Button
-      class="group"
       onclick={createDataSource}
       disabled={!dataSourceForm.name ||
         (dataSourceForm.type === "api" || dataSourceForm.type === "webhook"
           ? !dataSourceForm.url
           : !dataSourceForm.host || !dataSourceForm.database)}
     >
-      <Plus class="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+      <Plus class="w-4 h-4" aria-hidden="true" />
       {t("settings.connect")}
     </Button>
   {/snippet}

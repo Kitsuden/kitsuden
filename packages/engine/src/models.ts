@@ -28,6 +28,10 @@
  * on POST/PATCH; DELETE is already idempotent), the `KITSUDEN_E_*` problem+json
  * errors (a repeated UNIQUE is 409 CONFLICT), human approval of
  * sensitive operations (DELETE) and request limits.
+ *
+ * Every create, update and delete is also recorded in the record history
+ * (`record-history.ts`, core migration 0076) as `table:<the model's table>`, in
+ * the same transaction: who did it, and the columns that changed.
  */
 
 import {
@@ -74,6 +78,7 @@ import {
   type AnyOperation,
 } from "./operations";
 import { queue } from "./queue";
+import { recordChange, tableEntity, type RecordAction } from "./record-history";
 import { EMBEDDINGS_QUEUE, embed, vectorLiteral, type EmbeddingJob } from "./semantics";
 
 // ── The table ───────────────────────────────────────────────────────────────
@@ -261,6 +266,36 @@ export function modelOperations(konId: string, m: Model): AnyOperation[] {
     await queue.dispatch(EMBEDDINGS_QUEUE, `embed:${m.table}`, job, { attempts: 5 });
   };
 
+  /**
+   * The record history names fields by COLUMN (`owner_id`), not by the model's
+   * key (`ownerId`): the same row edited through the data explorer is the same
+   * record, with one history.
+   */
+  const columnNames = getTableColumns(table) as Record<string, { name: string }>;
+  const asColumns = (row: Row | null | undefined): Row | null =>
+    row
+      ? Object.fromEntries(Object.entries(row).map(([k, v]) => [columnNames[k]?.name ?? k, v]))
+      : null;
+  const remember = (
+    h: { ctx: KonContext; user: OperationUser | null },
+    action: RecordAction,
+    before: Row | null | undefined,
+    after: Row | null | undefined
+  ) =>
+    recordChange(db(h), {
+      entity: tableEntity(m.table),
+      rowId: (after ?? before)?.id,
+      action,
+      before: asColumns(before),
+      after: asColumns(after),
+      user: h.user,
+      diff: { skip: ["id"] },
+      onFailure: (err) =>
+        h.ctx.logger.warn(`Could not record the history of a ${m.name}`, {
+          error: err instanceof Error ? err.message : String(err),
+        }),
+    });
+
   const readFilter = (u: OperationUser | null): SQL | undefined =>
     withOwner && !seesAll(m, u, kon) ? eq(table.ownerId, idOf(u)) : undefined;
   const writeFilter = (u: OperationUser | null): SQL | undefined =>
@@ -385,6 +420,7 @@ export function modelOperations(konId: string, m: Model): AnyOperation[] {
         delete values.ownerId;
       }
       const [row] = (await db(h).insert(table).values(values).returning()) as Row[];
+      await remember(h, "create", null, row);
       await enqueueEmbedding(row);
       return row;
     },
@@ -407,12 +443,16 @@ export function modelOperations(konId: string, m: Model): AnyOperation[] {
     handle: async ({ params, body: body }, h) => {
       await h.authorize();
       const ownValue = writeFilter(h.user);
+      const target = and(eq(table.id, (params as { id: string }).id), ownValue);
+      // The row as it was, for the record history (same filter as the write).
+      const [previous] = (await db(h).select().from(table).where(target).limit(1)) as Row[];
       const [row] = (await db(h)
         .update(table)
         .set({ ...(body as Row), updatedAt: new Date() })
-        .where(and(eq(table.id, (params as { id: string }).id), ownValue))
+        .where(target)
         .returning()) as Row[];
       if (!row) throw AppError.notFound(`${m.name} not found`);
+      await remember(h, "update", previous, row);
       await enqueueEmbedding(row);
       return row;
     },
@@ -438,8 +478,9 @@ export function modelOperations(konId: string, m: Model): AnyOperation[] {
       const deleted = (await db(h)
         .delete(table)
         .where(and(eq(table.id, (params as { id: string }).id), ownValue))
-        .returning({ id: table.id })) as Row[];
+        .returning()) as Row[];
       if (deleted.length === 0) throw AppError.notFound(`${m.name} not found`);
+      await remember(h, "delete", deleted[0], null);
       return null;
     },
   });

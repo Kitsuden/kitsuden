@@ -790,6 +790,35 @@ export const fieldEvidence = pgTable(
 );
 
 /**
+ * Per-record change history (0076): who changed a record, when, and which fields.
+ * Addressed like `field_evidence` (`dataset_entry`, `table:<name>`). Written by
+ * `recordChange` (packages/engine/src/record-history.ts) as the system, in the
+ * transaction of the write. RLS in the migration: the team reads all; others, only
+ * the history of a dataset entry they can see.
+ */
+export const recordChanges = pgTable(
+  "record_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    entity: text("entity").notNull(),
+    rowId: text("row_id").notNull(),
+    action: text("action").notNull(),
+    actorType: text("actor_type").default("system").notNull(),
+    actorId: text("actor_id"),
+    actorName: text("actor_name"),
+    changes: jsonb("changes").default([]).notNull(),
+    truncated: boolean("truncated").default(false).notNull(),
+    proposalId: uuid("proposal_id"),
+    approvedBy: text("approved_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("record_changes_row_idx").on(t.entity, t.rowId, t.createdAt),
+    index("record_changes_created_idx").on(t.createdAt),
+  ]
+);
+
+/**
  * A later review of what was decided on a proposal (0069). A queue job with a run
  * date turns it `due`; the approvals inbox lists the due ones.
  */

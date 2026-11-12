@@ -10,6 +10,7 @@
    */
   import TwoFactorPanel from "$lib/components/settings/TwoFactorPanel.svelte";
   import { signOut } from "$lib/auth.svelte";
+  import { Button } from "$lib/tallao";
 
   async function leave() {
     await signOut();
@@ -21,12 +22,6 @@
   <div class="w-full max-w-lg space-y-4">
     <p class="text-sm text-kitsuden-text">{t("twoFactor.required")}</p>
     <TwoFactorPanel />
-    <button
-      type="button"
-      class="text-sm text-kitsuden-subtle hover:text-kitsuden-text underline"
-      onclick={leave}
-    >
-      {t("twoFactor.signOut")}
-    </button>
+    <Button variant="ghost" size="sm" onclick={leave}>{t("twoFactor.signOut")}</Button>
   </div>
 </div>

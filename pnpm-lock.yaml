@@ -668,6 +668,282 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
+  packages/kons/kon-analytics:
+    dependencies:
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-blog:
+    dependencies:
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      pg-mem:
+        specifier: ^3.0.14
+        version: 3.0.14(kysely@0.28.19)(postgres@3.4.9)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-broadcast:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.3.0
+        version: 3.3.0
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@kitsuden/kon-esports':
+        specifier: workspace:*
+        version: link:../kon-esports
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-cardsim:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.3.0
+        version: 3.3.0
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-character-builder:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.3.0
+        version: 3.3.0
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@kitsuden/kon-formulas':
+        specifier: workspace:*
+        version: link:../kon-formulas
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-collection:
+    dependencies:
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-comments:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.3.0
+        version: 3.3.0
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-esports:
+    dependencies:
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-formulas:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.3.0
+        version: 3.3.0
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-games:
+    dependencies:
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-maps:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.3.0
+        version: 3.3.0
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-members:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.3.0
+        version: 3.3.0
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-streamers:
+    dependencies:
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-tierlist:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.3.0
+        version: 3.3.0
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/kons/kon-wiki:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.3.0
+        version: 3.3.0
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@types/pg@8.16.0)(bun-types@1.4.4)(kysely@0.28.19)(mysql2@3.24.6(@types/node@22.19.13))(pg@8.20.0)(postgres@3.4.9)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   packages/mcp-server:
     dependencies:
       '@modelcontextprotocol/sdk':

@@ -3,7 +3,7 @@
   import { Save, Check, AlertCircle, ChevronDown } from "lucide-svelte";
 
   import { autosaveStore } from "$lib/states/autosave.svelte";
-  import { Popover } from "$lib/tallao";
+  import { Button, Popover } from "$lib/tallao";
 
   import VersionHistory from "./VersionHistory.svelte";
 
@@ -25,16 +25,7 @@
   class="w-72"
 >
   {#snippet trigger(props)}
-    <button
-      {...props}
-      class="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-colors
-      {autosaveStore.status === 'saving'
-        ? 'text-kitsuden-amber bg-kitsuden-amber/10'
-        : autosaveStore.status === 'unsaved'
-          ? 'text-kitsuden-accent-2 bg-kitsuden-accent-2/10'
-          : 'text-kitsuden-green bg-kitsuden-green/10'}"
-      data-testid="autosave-indicator"
-    >
+    <Button {...props} variant="ghost" size="sm" data-testid="autosave-indicator">
       <!--
       ── WHY IT SAYS «DRAFT» AND NOT «SAVED» ─────────────────────────────────
 
@@ -46,18 +37,26 @@
       The same goes for the other place that uses this indicator (`AutoFormModal`):
       there too it is a local draft.
     -->
-      {#if autosaveStore.status === "saving"}
-        <Save class="w-3.5 h-3.5 animate-pulse" />
-        <span>{t("autoSaveIndicator.savingDraft")}</span>
-      {:else if autosaveStore.status === "unsaved"}
-        <AlertCircle class="w-3.5 h-3.5" />
-        <span>{t("autoSaveIndicator.unsavedDraft")}</span>
-      {:else}
-        <Check class="w-3.5 h-3.5" />
-        <span>{t("autoSaveIndicator.savedDraft")}</span>
-      {/if}
+      <span
+        class="flex items-center gap-1.5 {autosaveStore.status === 'saving'
+          ? 'text-kitsuden-amber'
+          : autosaveStore.status === 'unsaved'
+            ? 'text-kitsuden-accent-2'
+            : 'text-kitsuden-green'}"
+      >
+        {#if autosaveStore.status === "saving"}
+          <Save class="w-3.5 h-3.5 animate-pulse" />
+          <span>{t("autoSaveIndicator.savingDraft")}</span>
+        {:else if autosaveStore.status === "unsaved"}
+          <AlertCircle class="w-3.5 h-3.5" />
+          <span>{t("autoSaveIndicator.unsavedDraft")}</span>
+        {:else}
+          <Check class="w-3.5 h-3.5" />
+          <span>{t("autoSaveIndicator.savedDraft")}</span>
+        {/if}
+      </span>
       <ChevronDown class="w-3 h-3 ml-0.5 transition-transform {showDropdown ? 'rotate-180' : ''}" />
-    </button>
+    </Button>
   {/snippet}
   <VersionHistory onRestore={closeDropdown} />
 </Popover>

@@ -9,6 +9,9 @@
     CardHeader,
     CardTitle,
     Input,
+    Spinner,
+    Tabs,
+    type TabItem,
     Table,
     TableHeader,
     TableBody,
@@ -19,7 +22,13 @@
 
   import { api } from "$lib/api";
 
-  let activeTab = $state<"trial" | "balance" | "pl">("trial");
+  type Tab = "trial" | "balance" | "pl";
+  let activeTab = $state<Tab>("trial");
+  const tabItems: TabItem[] = [
+    { id: "trial", label: t("reportsView.trialBalance") },
+    { id: "balance", label: t("reportsView.balanceSheet") },
+    { id: "pl", label: t("reportsView.profitLoss") },
+  ];
   let loading = $state(false);
   let dateFrom = $state("");
   let dateTo = $state("");
@@ -80,84 +89,63 @@
   onMount(loadTrial);
 </script>
 
-<div class="space-y-4">
-  <div class="flex items-center gap-4">
-    <button
-      class="px-4 py-2 text-sm font-medium rounded-lg transition-colors {activeTab === 'trial'
-        ? 'bg-kitsuden-accent text-kitsuden-on-accent'
-        : 'text-kitsuden-text-dim hover:bg-kitsuden-border'}"
-      onclick={() => {
-        activeTab = "trial";
-        loadTrial();
-      }}>{t("reportsView.trialBalance")}</button
-    >
-    <button
-      class="px-4 py-2 text-sm font-medium rounded-lg transition-colors {activeTab === 'balance'
-        ? 'bg-kitsuden-accent text-kitsuden-on-accent'
-        : 'text-kitsuden-text-dim hover:bg-kitsuden-border'}"
-      onclick={() => {
-        activeTab = "balance";
-        loadBalance();
-      }}>{t("reportsView.balanceSheet")}</button
-    >
-    <button
-      class="px-4 py-2 text-sm font-medium rounded-lg transition-colors {activeTab === 'pl'
-        ? 'bg-kitsuden-accent text-kitsuden-on-accent'
-        : 'text-kitsuden-text-dim hover:bg-kitsuden-border'}"
-      onclick={() => {
-        activeTab = "pl";
-        loadPL();
-      }}>{t("reportsView.profitLoss")}</button
-    >
-  </div>
+<div class="space-y-4 min-w-0">
+  <Tabs
+    items={tabItems}
+    value={activeTab}
+    panels={false}
+    ariaLabel={t("reportsView.reports")}
+    onchange={(id) => {
+      activeTab = id as Tab;
+      loadActive();
+    }}
+  />
 
-  <div class="flex items-center gap-3">
+  <div class="flex flex-wrap items-center gap-3">
     {#if activeTab === "balance"}
-      <Input type="date" bind:value={asOf} class="w-48" />
+      <div class="w-48 max-w-full">
+        <Input type="date" bind:value={asOf} aria-label={t("reportsView.asOf")} />
+      </div>
     {:else}
-      <Input type="date" bind:value={dateFrom} class="w-48" placeholder={t("reportsView.from")} />
-      <Input type="date" bind:value={dateTo} class="w-48" placeholder={t("reportsView.to")} />
+      <div class="w-48 max-w-full">
+        <Input type="date" bind:value={dateFrom} aria-label={t("reportsView.from")} />
+      </div>
+      <div class="w-48 max-w-full">
+        <Input type="date" bind:value={dateTo} aria-label={t("reportsView.to")} />
+      </div>
     {/if}
     <Button onclick={loadActive}>{t("reportsView.runReport")}</Button>
   </div>
 
   {#if loading}
-    <div class="flex items-center justify-center h-48">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <div class="flex items-center justify-center h-48"><Spinner size="lg" /></div>
   {:else if activeTab === "trial"}
-    <div class="border border-kitsuden-border rounded-lg overflow-hidden">
-      <Table class="w-full text-sm">
-        <TableHeader class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left">
+    <div>
+      <Table>
+        <TableHeader>
           <TableRow
-            ><TableHead class="px-4 py-3 font-medium">{t("reportsView.code")}</TableHead><TableHead
-              class="px-4 py-3 font-medium">{t("reportsView.account")}</TableHead
-            ><TableHead class="px-4 py-3 font-medium text-right">{t("reportsView.debit")}</TableHead
-            ><TableHead class="px-4 py-3 font-medium text-right"
-              >{t("reportsView.credit")}</TableHead
-            ><TableHead class="px-4 py-3 font-medium text-right"
-              >{t("reportsView.balance")}</TableHead
-            ></TableRow
+            ><TableHead>{t("reportsView.code")}</TableHead><TableHead
+              >{t("reportsView.account")}</TableHead
+            ><TableHead class="text-right">{t("reportsView.debit")}</TableHead><TableHead
+              class="text-right">{t("reportsView.credit")}</TableHead
+            ><TableHead class="text-right">{t("reportsView.balance")}</TableHead></TableRow
           >
         </TableHeader>
-        <TableBody class="divide-y divide-kitsuden-border">
+        <TableBody>
           {#each trialData as row}
-            <TableRow class="hover:bg-kitsuden-border/30">
-              <TableCell class="px-4 py-2 font-mono">{row.account.code}</TableCell>
-              <TableCell class="px-4 py-2">{row.account.name}</TableCell>
-              <TableCell class="px-4 py-2 text-right font-mono"
-                >{Number(row.totalDebit).toFixed(2)}</TableCell
+            <TableRow>
+              <TableCell class="font-mono">{row.account.code}</TableCell>
+              <TableCell>{row.account.name}</TableCell>
+              <TableCell class="text-right font-mono">{Number(row.totalDebit).toFixed(2)}</TableCell
               >
-              <TableCell class="px-4 py-2 text-right font-mono"
+              <TableCell class="text-right font-mono"
                 >{Number(row.totalCredit).toFixed(2)}</TableCell
               >
-              <TableCell class="px-4 py-2 text-right font-mono"
-                >{Number(row.balance).toFixed(2)}</TableCell
-              >
+              <TableCell class="text-right font-mono">{Number(row.balance).toFixed(2)}</TableCell>
             </TableRow>
           {:else}
             <TableRow
-              ><TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-subtle"
+              ><TableCell colspan={5} class="2 text-center text-kitsuden-subtle"
                 >{t("reportsView.noData")}</TableCell
               ></TableRow
             >
@@ -187,29 +175,29 @@
         </CardContent></Card
       >
     </div>
-    <div class="border border-kitsuden-border rounded-lg overflow-hidden">
-      <Table class="w-full text-sm">
-        <TableHeader class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left"
+    <div>
+      <Table>
+        <TableHeader
           ><TableRow
-            ><TableHead class="px-4 py-3">{t("reportsView.account")}</TableHead><TableHead
-              class="px-4 py-3 text-right">{t("reportsView.balance")}</TableHead
+            ><TableHead>{t("reportsView.account")}</TableHead><TableHead class="text-right"
+              >{t("reportsView.balance")}</TableHead
             ></TableRow
           ></TableHeader
         >
-        <TableBody class="divide-y divide-kitsuden-border">
+        <TableBody>
           {#each balanceData.assets as a}<TableRow
-              ><TableCell class="px-4 py-2">{a.account.name}</TableCell><TableCell
-                class="px-4 py-2 text-right font-mono">{Number(a.balance).toFixed(2)}</TableCell
+              ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
+                >{Number(a.balance).toFixed(2)}</TableCell
               ></TableRow
             >{/each}
           {#each balanceData.liabilities as a}<TableRow
-              ><TableCell class="px-4 py-2">{a.account.name}</TableCell><TableCell
-                class="px-4 py-2 text-right font-mono">{Number(a.balance).toFixed(2)}</TableCell
+              ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
+                >{Number(a.balance).toFixed(2)}</TableCell
               ></TableRow
             >{/each}
           {#each balanceData.equity as a}<TableRow
-              ><TableCell class="px-4 py-2">{a.account.name}</TableCell><TableCell
-                class="px-4 py-2 text-right font-mono">{Number(a.balance).toFixed(2)}</TableCell
+              ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
+                >{Number(a.balance).toFixed(2)}</TableCell
               ></TableRow
             >{/each}
         </TableBody>
@@ -240,24 +228,24 @@
         ></Card
       >
     </div>
-    <div class="border border-kitsuden-border rounded-lg overflow-hidden">
-      <Table class="w-full text-sm">
-        <TableHeader class="bg-kitsuden-card/80 text-kitsuden-text-dim text-left"
+    <div>
+      <Table>
+        <TableHeader
           ><TableRow
-            ><TableHead class="px-4 py-3">{t("reportsView.account")}</TableHead><TableHead
-              class="px-4 py-3 text-right">{t("reportsView.balance")}</TableHead
+            ><TableHead>{t("reportsView.account")}</TableHead><TableHead class="text-right"
+              >{t("reportsView.balance")}</TableHead
             ></TableRow
           ></TableHeader
         >
-        <TableBody class="divide-y divide-kitsuden-border">
+        <TableBody>
           {#each plData.revenue as a}<TableRow
-              ><TableCell class="px-4 py-2">{a.account.name}</TableCell><TableCell
-                class="px-4 py-2 text-right font-mono">{Number(a.balance).toFixed(2)}</TableCell
+              ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
+                >{Number(a.balance).toFixed(2)}</TableCell
               ></TableRow
             >{/each}
           {#each plData.expenses as a}<TableRow
-              ><TableCell class="px-4 py-2">{a.account.name}</TableCell><TableCell
-                class="px-4 py-2 text-right font-mono">{Number(a.balance).toFixed(2)}</TableCell
+              ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
+                >{Number(a.balance).toFixed(2)}</TableCell
               ></TableRow
             >{/each}
         </TableBody>

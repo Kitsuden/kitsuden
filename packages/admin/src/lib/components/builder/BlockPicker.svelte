@@ -60,7 +60,9 @@
   <!-- Header -->
   <div class="p-4 border-b border-kitsuden-border flex items-center justify-between">
     <h3 class="text-sm font-semibold text-kitsuden-text">{t("blockPicker.addBlock")}</h3>
-    <Button onclick={onClose} variant="ghost" size="icon"><X class="w-4 h-4" /></Button>
+    <Button onclick={onClose} variant="ghost" size="icon" ariaLabel={t("blockPicker.close")}
+      ><X class="w-4 h-4" /></Button
+    >
   </div>
 
   <!-- Block Categories -->

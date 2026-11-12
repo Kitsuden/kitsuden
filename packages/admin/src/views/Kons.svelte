@@ -1,18 +1,21 @@
 <script lang="ts">
   import { disableKonPrompt } from "$lib/kon-disable";
   import { confirmDialog } from "$lib/confirm.svelte";
-  import { Button, Dialog, Field, Input, toast } from "$lib/tallao";
+  import {
+    Badge,
+    Button,
+    Card,
+    CardContent,
+    CardFooter,
+    Dialog,
+    Field,
+    Input,
+    Spinner,
+    toast,
+  } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import KonIcon from "$lib/components/KonIcon.svelte";
-  import {
-    Puzzle,
-    CheckCircle,
-    XCircle,
-    Loader2,
-    Archive,
-    Trash2,
-    AlertTriangle,
-  } from "lucide-svelte";
+  import { Archive, Trash2 } from "lucide-svelte";
   import { onMount } from "svelte";
 
   import UninstalledGrimoireCard from "$lib/components/modules/UninstalledGrimoireCard.svelte";
@@ -151,144 +154,118 @@
   }
 </script>
 
-<div class="space-y-6">
+<div class="kons">
   {#if moduleStore.loading}
-    <div class="card p-12 text-center">
-      <div
-        class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin mx-auto mb-4"
-      ></div>
-      <p class="text-kitsuden-subtle">{t("kons.loadingKons")}</p>
-    </div>
+    <Card>
+      <CardContent class="kons-loading">
+        <Spinner size="lg" label={t("kons.loadingKons")} />
+        <p>{t("kons.loadingKons")}</p>
+      </CardContent>
+    </Card>
   {:else}
     <!-- Installed Kons -->
     {@const groups = groupedModules}
     {#each Object.entries(groups) as [category, mods]}
-      <div>
-        <div class="flex items-center gap-2 mb-3">
-          <h2 class="text-sm font-semibold uppercase tracking-wider text-kitsuden-subtle">
-            {getCategoryLabel(category)}
-          </h2>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-kitsuden-surface text-kitsuden-text-dim">
-            {mods.length}
-          </span>
+      <section class="kons-group">
+        <div class="kons-group-head">
+          <h2>{getCategoryLabel(category)}</h2>
+          <Badge variant="secondary">{mods.length}</Badge>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div class="kons-grid">
           {#each mods as mod}
-            <div
-              class="card p-5 relative"
-              class:border-kitsuden-accent={mod.enabled}
-              class:border={mod.enabled}
-            >
-              <div class="flex items-start justify-between mb-4">
-                <div class="flex items-center gap-3">
+            <Card class={mod.enabled ? "kon-card kon-card--on" : "kon-card"}>
+              <CardContent class="kon-card-body">
+                <div class="kon-card-head">
                   <!--
                     `mod.icon` is the NAME of a lucide icon ("Gamepad2",
-                    "FileText"…), not an emoji. Rendering it directly showed
-                    that word as text, overflowing the card on the
-                    left and overlapping the kon's name.
+                    "FileText"…), not an emoji: see KonIcon.
                   -->
-                  <div
-                    class="w-10 h-10 shrink-0 rounded-lg bg-kitsuden-surface flex items-center justify-center text-kitsuden-accent"
-                  >
+                  <div class="kon-card-icon" aria-hidden="true">
                     <KonIcon name={mod.icon} size={20} />
                   </div>
-                  <div>
-                    <h3 class="font-semibold text-kitsuden-text">{mod.name}</h3>
-                    <p class="text-xs font-medium uppercase tracking-wider text-kitsuden-subtle">
-                      {getCategoryLabel(mod.category)}
-                    </p>
+                  <div class="kon-card-title">
+                    <h3>{mod.name}</h3>
+                    <p>{getCategoryLabel(mod.category)}</p>
+                  </div>
+                  <Badge variant={mod.enabled ? "success" : "default"} dot>
+                    {mod.enabled ? t("kons.statusEnabled") : t("kons.statusDisabled")}
+                  </Badge>
+                </div>
+                {#if (mod.maturity && mod.maturity !== "stable") || mod.enabledByGrimoire}
+                  <div class="kon-card-tags">
                     {#if mod.maturity && mod.maturity !== "stable"}
-                      <span
-                        class="text-xs px-1.5 py-0.5 rounded-full border mt-1 mr-1 inline-block {mod.maturity ===
-                        'experimental'
-                          ? 'bg-kitsuden-danger/10 text-kitsuden-danger border-kitsuden-danger/20'
-                          : 'bg-kitsuden-amber/10 text-kitsuden-amber border-kitsuden-amber/20'}"
+                      <Badge
+                        variant={mod.maturity === "experimental" ? "error" : "warning"}
                         title={mod.maturity === "experimental"
                           ? t("kons.experimentalNotUsedEndTo")
                           : t("kons.betaUsedButWithGaps")}
                       >
                         {mod.maturity === "experimental" ? t("kons.experimental") : t("kons.beta")}
-                      </span>
+                      </Badge>
                     {/if}
                     {#if mod.enabledByGrimoire}
-                      <span
-                        class="text-xs px-1.5 py-0.5 rounded-full bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/20 mt-1 inline-block"
-                      >
-                        {t("kons.activeByGrimoire")}
-                      </span>
+                      <Badge variant="accent">{t("kons.activeByGrimoire")}</Badge>
                     {/if}
                   </div>
-                </div>
-                {#if mod.enabled}
-                  <CheckCircle class="w-5 h-5 text-kitsuden-accent" />
-                {:else}
-                  <XCircle class="w-5 h-5 text-kitsuden-subtle" />
                 {/if}
-              </div>
-              <p class="text-sm text-kitsuden-text-dim mb-4">{mod.description}</p>
+                <p class="kon-card-desc">{mod.description}</p>
+              </CardContent>
 
-              <!-- Actions -->
-              <div class="pt-3 border-t border-kitsuden-border space-y-2">
-                <!-- Enable/Disable Toggle -->
+              <!-- Enabling is the primary move; disabling and uninstalling stay quiet. -->
+              <CardFooter class="kon-card-actions">
                 {#if mod.canToggle !== false}
-                  <button
-                    class="w-full text-sm font-medium px-3 py-2 rounded-lg transition-colors {mod.enabled
-                      ? 'bg-kitsuden-accent-2/10 text-kitsuden-accent-2 hover:bg-kitsuden-accent-2/20 border border-kitsuden-accent-2/20'
-                      : 'bg-kitsuden-accent/10 text-kitsuden-accent hover:bg-kitsuden-accent/20 border border-kitsuden-accent/20'}"
+                  <Button
+                    variant={mod.enabled ? "danger-ghost" : "primary"}
+                    size="sm"
+                    loading={toggling === mod.key}
                     disabled={toggling === mod.key}
                     onclick={() => toggleModule(mod)}
                   >
                     {#if toggling === mod.key}
-                      <Loader2 class="w-4 h-4 animate-spin inline mr-1" /> {t("kons.toggling")}
+                      {t("kons.toggling")}
                     {:else}
                       {mod.enabled ? t("kons.disable") : t("kons.enable")}
                     {/if}
-                  </button>
+                  </Button>
                 {:else}
-                  <p class="text-xs text-kitsuden-subtle text-center py-2">
+                  <p class="kon-card-note">
                     {mod.isGrimoireActive
                       ? t("kons.controlledByActiveGrimoire")
                       : t("kons.cannotBeToggled")}
                   </p>
                 {/if}
 
-                <!-- Uninstall Button -->
-                <button
-                  class="w-full text-xs font-medium px-3 py-2 rounded-lg transition-colors bg-kitsuden-subtle/10 text-kitsuden-subtle hover:bg-kitsuden-subtle/20 border border-kitsuden-border/50 flex items-center justify-center gap-1.5"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  loading={uninstalling === mod.key}
                   disabled={uninstalling === mod.key}
                   onclick={() => openUninstallModal(mod)}
                 >
                   {#if uninstalling === mod.key}
-                    <Loader2 class="w-3.5 h-3.5 animate-spin" />
                     {t("kons.uninstalling")}
                   {:else}
-                    <Archive class="w-3.5 h-3.5" />
+                    <Archive size={14} aria-hidden="true" />
                     {t("kons.uninstallPreserveData")}
                   {/if}
-                </button>
-              </div>
-            </div>
+                </Button>
+              </CardFooter>
+            </Card>
           {/each}
         </div>
-      </div>
+      </section>
     {/each}
 
     <!-- Uninstalled Kons Section -->
     {#if moduleStore.uninstalled.length > 0}
-      <div class="pt-6 border-t border-kitsuden-border">
-        <div class="flex items-center gap-2 mb-3">
-          <Archive class="w-4 h-4 text-kitsuden-subtle" />
-          <h2 class="text-sm font-semibold uppercase tracking-wider text-kitsuden-subtle">
-            {t("kons.uninstalledKonsDataPreserved")}
-          </h2>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-kitsuden-surface text-kitsuden-text-dim">
-            {moduleStore.uninstalled.length}
-          </span>
+      <section class="kons-group kons-group--uninstalled">
+        <div class="kons-group-head">
+          <Archive size={16} aria-hidden="true" />
+          <h2>{t("kons.uninstalledKonsDataPreserved")}</h2>
+          <Badge variant="secondary">{moduleStore.uninstalled.length}</Badge>
         </div>
-        <p class="text-xs text-kitsuden-subtle mb-4">
-          {t("kons.theseKonsHaveBeenUninstalled")}
-        </p>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <p class="kons-group-note">{t("kons.theseKonsHaveBeenUninstalled")}</p>
+        <div class="kons-grid">
           {#each moduleStore.uninstalled as kon}
             <UninstalledGrimoireCard
               {kon}
@@ -299,7 +276,7 @@
             />
           {/each}
         </div>
-      </div>
+      </section>
     {/if}
   {/if}
 </div>
@@ -427,24 +404,117 @@
 </Dialog>
 
 <style>
-  @reference "../style.css";
-
-  .card {
-    @apply rounded-xl border border-kitsuden-border bg-kitsuden-card;
+  .kons {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    min-width: 0;
   }
-
-  .animate-fade-in {
-    animation: fadeIn 0.2s ease-out;
+  :global(.kons-loading) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding-block: 3rem;
+    color: rgb(var(--ta-text-dim));
   }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  :global(.kons-loading p) {
+    margin: 0;
+  }
+  .kons-group-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .kons-group-head h2 {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .kons-group--uninstalled {
+    padding-top: 1.5rem;
+    border-top: 1px solid rgb(var(--ta-border));
+  }
+  .kons-group-note {
+    margin: -0.25rem 0 1rem;
+    font-size: 0.8125rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .kons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+    gap: 1rem;
+  }
+  :global(.kon-card) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  :global(.kon-card--on) {
+    border-color: rgb(var(--ta-accent) / 0.45);
+  }
+  :global(.kon-card-body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .kon-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+  .kon-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--ta-radius-lg);
+    background: rgb(var(--ta-surface));
+    color: rgb(var(--ta-accent));
+  }
+  .kon-card-title {
+    flex: 1;
+    min-width: 0;
+  }
+  .kon-card-title h3 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .kon-card-title p {
+    margin: 0.125rem 0 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .kon-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+  .kon-card-desc {
+    margin: 0;
+    font-size: 0.875rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  :global(.ta-card-footer.kon-card-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .kon-card-note {
+    margin: 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
   }
 </style>

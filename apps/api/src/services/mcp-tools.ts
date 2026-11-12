@@ -11,7 +11,7 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import { setRlsContext, messageOf } from "@kitsuden/engine";
+import { setRlsContext, messageOf, recordChanges, DATASET_ENTRY_ENTITY } from "@kitsuden/engine";
 import {
   accessToDataset,
   buildDatasetWhere,
@@ -31,7 +31,15 @@ import type { PgTable } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
 import { db, mergedSchema } from "@/db";
-import { actions, dataEntries, dataSets, installedKons, modules, siteSettings } from "@/db/schema";
+import {
+  actions,
+  agentIdentities,
+  dataEntries,
+  dataSets,
+  installedKons,
+  modules,
+  siteSettings,
+} from "@/db/schema";
 import {
   CodeOutsidePromotion,
   CUSTOMER_DATA_HOSTS_MESSAGE,
@@ -393,6 +401,57 @@ const actor = (): ActorMcp => callActor.getStore() ?? { id: "", scopes: [], spon
  * policies treat as "system".
  */
 const bd = (): typeof db => (actor().tx as typeof db | undefined) ?? db;
+
+type EntryRow = typeof dataEntries.$inferSelect;
+
+/**
+ * The record history (core migration 0076) of a dataset entry written by a tool:
+ * the same rows the REST routes write, with the agent as the actor. The call runs
+ * in its own RLS transaction as the agent, and only the system writes
+ * `record_changes`: the INSERT goes in a savepoint with the system's context,
+ * which is put back afterwards. Never fails the tool.
+ */
+async function rememberEntries(
+  changes: Array<{
+    action: "create" | "update" | "delete";
+    before?: EntryRow | null;
+    after?: EntryRow | null;
+  }>
+): Promise<void> {
+  const who = actor();
+  if (!who.id) return;
+  // On the system's connection, not the call's: a failed read here must not abort it.
+  const [agent] = await db
+    .select({ name: agentIdentities.name })
+    .from(agentIdentities)
+    .where(eq(agentIdentities.id, who.id))
+    .limit(1)
+    .catch(() => []);
+  const user = { id: who.id, role: "agent", name: agent?.name ?? null, scopes: who.scopes };
+  const tx = who.tx as typeof db | undefined;
+  await recordChanges(
+    bd(),
+    changes.map((c) => ({
+      entity: DATASET_ENTRY_ENTITY,
+      rowId: (c.after ?? c.before)?.id,
+      action: c.action,
+      before: c.before ?? null,
+      after: c.after ?? null,
+      user,
+      diff: { nested: "data", skip: ["id", "dataSetId", "createdById"] },
+    })),
+    (err) => logger.warn({ err: messageOf(err) }, "[mcp] could not record an entry's history"),
+    tx
+      ? (insert) =>
+          tx.transaction(async (sp) => {
+            await sp.execute(sql`SELECT set_config('app.current_user_id', '', true)`);
+            await sp.execute(sql`SELECT set_config('app.current_user_role', '', true)`);
+            await insert();
+            await setRlsContext(sp as never, user);
+          })
+      : undefined
+  );
+}
 
 /** An agent facing a dataset's policy (as kon-datasets sees it over REST). */
 const asAgent = () => ({ id: actor().id || "agent", role: "agent" });
@@ -1495,6 +1554,7 @@ async function kitsudenCreateRecord(
         createdById: actor().id || null,
       } as any)
       .returning();
+    await rememberEntries([{ action: "create", after: record as EntryRow }]);
     await callbacks?.onMutate?.();
     return `Created dataset record: ${record.id}`;
   }
@@ -1544,6 +1604,7 @@ async function kitsudenUpdateRecord(
       .set(updates)
       .where(eq(dataEntries.id, recordId))
       .returning();
+    await rememberEntries([{ action: "update", before: existing, after: updated }]);
     await callbacks?.onMutate?.();
     return `Updated dataset record: ${updated.id}`;
   }
@@ -1563,6 +1624,7 @@ async function kitsudenUpdateRecord(
       .set({ data: mergedData, updatedAt: new Date() })
       .where(eq(dataEntries.id, recordId))
       .returning();
+    await rememberEntries([{ action: "update", before: existing as EntryRow, after: updated }]);
     await callbacks?.onMutate?.();
     return `Updated dataset record: ${updated.id}`;
   }
@@ -1606,8 +1668,9 @@ async function kitsudenDeleteRecord(
     const [deleted] = await bd()
       .delete(dataEntries)
       .where(eq(dataEntries.id, recordId))
-      .returning({ id: dataEntries.id });
+      .returning();
     if (!deleted) return `Record not found: ${recordId}`;
+    await rememberEntries([{ action: "delete", before: deleted }]);
     await callbacks?.onMutate?.();
     return `Deleted dataset record: ${deleted.id}`;
   }
@@ -1623,8 +1686,9 @@ async function kitsudenDeleteRecord(
     const [deleted] = await bd()
       .delete(dataEntries)
       .where(and(eq(dataEntries.id, recordId), eq(dataEntries.dataSetId, ds.id)))
-      .returning({ id: dataEntries.id });
+      .returning();
     if (!deleted) return `Record not found: ${recordId}`;
+    await rememberEntries([{ action: "delete", before: deleted }]);
     await callbacks?.onMutate?.();
     return `Deleted dataset record: ${deleted.id}`;
   }

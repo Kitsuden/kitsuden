@@ -4,7 +4,7 @@
    * MdxEditor.svelte — Split-screen MDX editor with content preview
    * CodeMirror 6 integration for Svelte
    */
-  import { Loader2 } from "lucide-svelte";
+  import { Alert, Spinner } from "$lib/tallao";
   import { marked } from "marked";
   import DOMPurify from "dompurify";
   import { onMount, tick } from "svelte";
@@ -282,7 +282,7 @@
         {t("common.contentPreview")}
       </h3>
       {#if isCompiling}
-        <Loader2 class="w-4 h-4 text-kitsuden-accent animate-spin" />
+        <Spinner size="sm" class="text-kitsuden-accent" />
       {/if}
     </div>
 
@@ -293,11 +293,7 @@
         to know.
       -->
       {#if previewError}
-        <p
-          class="mb-4 rounded-md border border-kitsuden-amber/30 bg-kitsuden-amber/10 px-3 py-2 text-xs text-kitsuden-text-dim"
-        >
-          {previewError}
-        </p>
+        <Alert variant="warning" class="mb-4">{previewError}</Alert>
       {/if}
 
       <article

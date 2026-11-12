@@ -1,14 +1,24 @@
 <script lang="ts">
   import Page from "$lib/components/layout/Page.svelte";
   import {
+    Alert,
+    Badge,
     Button,
+    Card,
+    CardContent,
+    Checkbox,
     EmptyState,
+    Field,
+    Input,
+    Select,
+    Spinner,
     Table,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    toast,
   } from "$lib/tallao";
   import { confirmDialog } from "$lib/confirm.svelte";
   import { t as tr } from "$lib/i18n";
@@ -20,20 +30,7 @@
    * Vault is the opt-in path when you need native types and indexes.
    * Data reads via the Graphify Engine (/api/graph/vault_<collection>).
    */
-  import {
-    Archive,
-    Plus,
-    Trash2,
-    RefreshCw,
-    AlertCircle,
-    CheckCircle2,
-    ChevronDown,
-    ChevronRight,
-    Copy,
-    Columns3,
-    X,
-    ShieldCheck,
-  } from "lucide-svelte";
+  import { Plus, Trash2, ChevronDown, ChevronRight, Copy, X } from "lucide-svelte";
   import { onMount } from "svelte";
 
   const API_URL = import.meta.env.VITE_API_URL ?? "";
@@ -77,7 +74,6 @@
   let loading = $state(true);
   let vaultDisabled = $state(false);
   let error = $state<string | null>(null);
-  let successMsg = $state<string | null>(null);
   let expanded = $state<Set<string>>(new Set());
 
   // Create collection
@@ -105,9 +101,13 @@
   const NAME_RE = /^[a-z][a-z0-9_]{0,50}$/;
   const RESERVED = new Set(["id", "owner_id", "created_at", "updated_at"]);
 
+  const typeOptions = COLUMN_TYPES.map((type) => ({ value: type, label: type }));
+  const columnType = (e: Event) =>
+    (e.currentTarget as HTMLSelectElement).value as DraftColumn["type"];
+  const nameOk = (name: string) => name === "" || (NAME_RE.test(name) && !RESERVED.has(name));
+
   function flash(msg: string) {
-    successMsg = msg;
-    setTimeout(() => (successMsg = null), 3500);
+    toast.success(msg);
   }
 
   function toggleExpand(collection: string) {
@@ -235,7 +235,7 @@
       );
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
-      flash(`vault_${collection} deleted (DROP TABLE)`);
+      flash(tr("vaultView.tableDropped", { collection }));
       dropTarget = null;
       dropConfirmText = "";
       await fetchCollections();
@@ -261,35 +261,22 @@
       </Button>
     {/if}
   {/snippet}
-  <div class="space-y-6">
+  <div class="flex min-w-0 flex-col gap-6">
     <p class="text-sm text-kitsuden-text-dim">
       {tr("vaultView.dynamicSchemasWith")}
-      <code class="text-kitsuden-accent text-xs">CREATE/ALTER TABLE</code>
+      <code class="text-xs text-kitsuden-accent">CREATE/ALTER TABLE</code>
       {tr("vaultView.realRlsAutomaticServedData")}
     </p>
 
     {#if error}
-      <div
-        class="flex items-center gap-2 p-3 rounded-lg bg-kitsuden-accent-2/10 border border-kitsuden-accent-2/30 text-kitsuden-accent-2 text-sm"
-      >
-        <AlertCircle class="w-4 h-4 shrink-0" />
+      <Alert variant="error" onDismiss={() => (error = null)}>
         {error}
-        <button class="ml-auto" onclick={() => (error = null)}><X class="w-4 h-4" /></button>
-      </div>
-    {/if}
-    {#if successMsg}
-      <div
-        class="flex items-center gap-2 p-3 rounded-lg bg-kitsuden-green/10 border border-kitsuden-green/30 text-kitsuden-green text-sm"
-      >
-        <CheckCircle2 class="w-4 h-4 shrink-0" />
-        {successMsg}
-      </div>
+      </Alert>
     {/if}
 
     {#if loading}
-      <div class="flex items-center justify-center py-16 text-kitsuden-subtle text-sm">
-        <RefreshCw class="w-4 h-4 animate-spin mr-2" />
-        {tr("vaultView.loadingVault")}
+      <div class="flex justify-center py-16">
+        <Spinner size="lg" label={tr("vaultView.loadingVault")} />
       </div>
     {:else if loadError}
       <EmptyState
@@ -300,290 +287,297 @@
       />
     {:else if vaultDisabled}
       <!-- Feature flag off: discovery screen -->
-      <div class="rounded-xl border border-dashed border-kitsuden-border p-8 text-center space-y-3">
-        <Archive class="w-10 h-10 text-kitsuden-subtle mx-auto" />
-        <h2 class="text-kitsuden-text font-medium">{tr("vaultView.kitsudenVaultIsDisabled")}</h2>
-        <p class="text-sm text-kitsuden-subtle max-w-lg mx-auto">
-          {tr("vaultView.vaultCreatesPostgresqlTables")} <strong>{tr("vaultView.real")}</strong>
-          {tr("vaultView.withIndexesNativeTypesAnd")}
-        </p>
-        <div
-          class="inline-block text-left rounded-lg bg-kitsuden-card border border-kitsuden-border px-4 py-3 font-mono text-xs text-kitsuden-accent"
-        >
-          {tr("vaultView.env")}<br />{tr("vaultView.kitsudenVaultEnabledTrue")}
-        </div>
-        <p class="text-xs text-kitsuden-subtle">{tr("vaultView.restartsApiAndReloads")}</p>
-      </div>
+      <EmptyState
+        icon="info"
+        title={tr("vaultView.kitsudenVaultIsDisabled")}
+        description={`${tr("vaultView.vaultCreatesPostgresqlTables")} ${tr("vaultView.real")} ${tr("vaultView.withIndexesNativeTypesAnd")}`}
+      >
+        <pre
+          class="mx-auto mt-3 inline-block rounded-lg border border-kitsuden-border bg-kitsuden-card px-4 py-3 text-left font-mono text-xs text-kitsuden-accent">{tr(
+            "vaultView.env"
+          )}
+{tr("vaultView.kitsudenVaultEnabledTrue")}</pre>
+        <p class="mt-3 text-xs text-kitsuden-subtle">{tr("vaultView.restartsApiAndReloads")}</p>
+      </EmptyState>
     {:else}
       <!-- Create collection -->
       {#if showCreate}
-        <div class="p-4 rounded-xl bg-kitsuden-card border border-kitsuden-border space-y-4">
-          <div>
-            <label class="block text-xs text-kitsuden-subtle mb-1" for="vault-name"
-              >{tr("vaultView.snakeCollectionName")} <code>vault_&lt;name&gt;</code>)</label
-            >
-            <input
-              id="vault-name"
-              class="w-full md:w-72 px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border {newCollection ===
-                '' || NAME_RE.test(newCollection)
-                ? 'border-kitsuden-input'
-                : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
-              placeholder={tr("vaultView.exampleCollection")}
-              bind:value={newCollection}
-            />
-          </div>
-
-          <div class="space-y-2">
-            <div class="text-xs text-kitsuden-subtle flex items-center gap-2">
-              <Columns3 class="w-4 h-4" />
-              {tr("vaultView.columns")}
-              <span class="text-kitsuden-subtle">{tr("vaultView.idOwnerIdCreatedAt")}</span>
-            </div>
-            {#each draftColumns as col, i (i)}
-              <div class="flex flex-wrap items-center gap-2">
-                <input
-                  class="w-44 px-3 py-1.5 text-sm rounded-lg bg-kitsuden-bg border {col.name ===
-                    '' ||
-                  (NAME_RE.test(col.name) && !RESERVED.has(col.name))
-                    ? 'border-kitsuden-input'
-                    : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
-                  placeholder={tr("vaultView.exampleColumn")}
-                  bind:value={col.name}
+        <Card>
+          <CardContent>
+            <div class="flex flex-col gap-4">
+              <Field
+                label={`${tr("vaultView.snakeCollectionName")} vault_<name>)`}
+                class="md:max-w-xs"
+                error={NAME_RE.test(newCollection) || newCollection === ""
+                  ? undefined
+                  : tr("vaultView.invalidName")}
+              >
+                <Input
+                  id="vault-name"
+                  class="font-mono"
+                  placeholder={tr("vaultView.exampleCollection")}
+                  bind:value={newCollection}
                 />
-                <select
-                  class="px-2 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
-                  bind:value={col.type}
-                >
-                  {#each COLUMN_TYPES as t (t)}
-                    <option value={t}>{t}</option>
-                  {/each}
-                </select>
-                <label class="flex items-center gap-1 text-xs text-kitsuden-subtle cursor-pointer">
-                  <input type="checkbox" bind:checked={col.required} class="accent-[#a855f7]" />
-                  {tr("vaultView.notNull")}
-                </label>
-                <label class="flex items-center gap-1 text-xs text-kitsuden-subtle cursor-pointer">
-                  <input type="checkbox" bind:checked={col.unique} class="accent-[#a855f7]" />
-                  {tr("vaultView.unique")}
-                </label>
-                <label class="flex items-center gap-1 text-xs text-kitsuden-subtle cursor-pointer">
-                  <input type="checkbox" bind:checked={col.indexed} class="accent-[#a855f7]" />
-                  {tr("vaultView.index")}
-                </label>
-                {#if draftColumns.length > 1}
-                  <button
-                    class="p-1 text-kitsuden-subtle hover:text-kitsuden-accent-2"
-                    onclick={() => removeDraftColumn(i)}
-                  >
-                    <X class="w-4 h-4" />
-                  </button>
-                {/if}
-              </div>
-            {/each}
-            <button
-              class="text-xs text-kitsuden-accent hover:underline flex items-center gap-1"
-              onclick={addDraftColumn}
-            >
-              <Plus class="w-3 h-3" />
-              {tr("vaultView.addColumn")}
-            </button>
-          </div>
+              </Field>
 
-          <div class="flex items-center gap-2">
-            <button
-              class="px-4 py-2 text-sm rounded-lg bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/30 hover:bg-kitsuden-accent/20 transition-colors disabled:opacity-50"
-              onclick={createCollection}
-              disabled={creating || !draftValid}
-            >
-              {creating ? tr("vaultView.creating") : tr("vaultView.createTableRls")}
-            </button>
-            <button
-              class="px-4 py-2 text-sm rounded-lg text-kitsuden-subtle hover:text-kitsuden-text"
-              onclick={() => (showCreate = false)}
-            >
-              {tr("common.cancel")}
-            </button>
-          </div>
-        </div>
+              <fieldset class="flex min-w-0 flex-col gap-3">
+                <legend class="mb-2 text-sm font-medium text-kitsuden-text">
+                  {tr("vaultView.columns")}
+                  <span class="text-xs font-normal text-kitsuden-subtle"
+                    >{tr("vaultView.idOwnerIdCreatedAt")}</span
+                  >
+                </legend>
+                {#each draftColumns as col, i (i)}
+                  <div class="flex flex-wrap items-center gap-2">
+                    <Input
+                      class="min-w-0 flex-1 basis-40 font-mono {nameOk(col.name)
+                        ? ''
+                        : 'border-kitsuden-danger'}"
+                      aria-label={tr("vaultView.columnN", { n: i + 1 })}
+                      aria-invalid={nameOk(col.name) ? undefined : "true"}
+                      placeholder={tr("vaultView.exampleColumn")}
+                      bind:value={col.name}
+                    />
+                    <Select
+                      width="auto"
+                      aria-label={tr("vaultView.type")}
+                      value={col.type}
+                      onchange={(e: Event) => (col.type = columnType(e))}
+                      options={typeOptions}
+                    />
+                    <Checkbox bind:checked={col.required} label={tr("vaultView.notNull")} />
+                    <Checkbox bind:checked={col.unique} label={tr("vaultView.unique")} />
+                    <Checkbox bind:checked={col.indexed} label={tr("vaultView.index")} />
+                    {#if draftColumns.length > 1}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        ariaLabel={tr("vaultView.removeDraftColumn", { n: i + 1 })}
+                        title={tr("common.remove")}
+                        onclick={() => removeDraftColumn(i)}
+                      >
+                        <X class="w-4 h-4" />
+                      </Button>
+                    {/if}
+                  </div>
+                {/each}
+                <div>
+                  <Button variant="ghost" size="sm" onclick={addDraftColumn}>
+                    <Plus class="w-3.5 h-3.5" />
+                    {tr("vaultView.addColumn")}
+                  </Button>
+                </div>
+              </fieldset>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <Button
+                  onclick={createCollection}
+                  loading={creating}
+                  disabled={creating || !draftValid}
+                >
+                  {creating ? tr("vaultView.creating") : tr("vaultView.createTableRls")}
+                </Button>
+                <Button variant="ghost" onclick={() => (showCreate = false)}>
+                  {tr("common.cancel")}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       {/if}
 
       <!-- Collections list -->
       {#if collections.length === 0}
-        <div
-          class="flex flex-col items-center justify-center py-12 rounded-xl border border-dashed border-kitsuden-border text-center"
-        >
-          <Archive class="w-8 h-8 text-kitsuden-subtle mb-3" />
-          <p class="text-sm text-kitsuden-text font-medium">
-            {tr("vaultView.withoutVaultCollections")}
-          </p>
-          <p class="text-xs text-kitsuden-subtle mt-1">
-            {tr("vaultView.createsTheFirstAndConsumeIt")}
-            <code>/api/graph/vault_&lt;name&gt;</code>.
-          </p>
-        </div>
+        <EmptyState
+          title={tr("vaultView.withoutVaultCollections")}
+          description={`${tr("vaultView.createsTheFirstAndConsumeIt")} /api/graph/vault_<name>.`}
+          actionLabel={tr("vaultView.newCollection")}
+          onAction={() => (showCreate = true)}
+        />
       {:else}
-        <div class="space-y-3">
+        <div class="flex flex-col gap-3">
           {#each collections as col (col.table)}
-            <div class="rounded-xl border border-kitsuden-border bg-kitsuden-card overflow-hidden">
-              <div class="flex items-center gap-3 px-4 py-3">
-                <button class="text-kitsuden-subtle" onclick={() => toggleExpand(col.collection)}>
-                  {#if expanded.has(col.collection)}
-                    <ChevronDown class="w-4 h-4" />
-                  {:else}
-                    <ChevronRight class="w-4 h-4" />
-                  {/if}
-                </button>
-                <div class="flex-1 min-w-0">
-                  <div class="font-mono text-sm text-kitsuden-text">{col.table}</div>
-                  <div class="text-xs text-kitsuden-subtle">
-                    {tr("vaultView.columnsRows", {
-                      columnsCount: col.columns.length,
-                      estimatedRowCount: col.estimatedRowCount,
-                    })}
-                    <ShieldCheck class="w-3 h-3 inline text-kitsuden-green" />
-                    {tr("vaultView.rlsEnabled")}
+            {@const open = expanded.has(col.collection)}
+            <Card>
+              <CardContent>
+                <div class="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    ariaLabel={open
+                      ? tr("vaultView.collapse", { table: col.table })
+                      : tr("vaultView.expand", { table: col.table })}
+                    aria-expanded={open}
+                    onclick={() => toggleExpand(col.collection)}
+                  >
+                    {#if open}
+                      <ChevronDown class="w-4 h-4" />
+                    {:else}
+                      <ChevronRight class="w-4 h-4" />
+                    {/if}
+                  </Button>
+                  <div class="min-w-0 flex-1 basis-40">
+                    <div class="truncate font-mono text-sm text-kitsuden-text">{col.table}</div>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-kitsuden-subtle">
+                      {tr("vaultView.columnsRows", {
+                        columnsCount: col.columns.length,
+                        estimatedRowCount: col.estimatedRowCount,
+                      })}
+                      <Badge variant="success" dot>{tr("vaultView.rlsEnabled")}</Badge>
+                    </div>
                   </div>
-                </div>
-                <button
-                  class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-kitsuden-accent hover:bg-kitsuden-accent/10 font-mono"
-                  title={tr("vaultView.copyGraphifyEndpoint")}
-                  onclick={() => copyEndpoint(col.table)}
-                >
-                  <Copy class="w-3 h-3" />
-                  {tr("vaultView.apiGraph", { table: col.table })}
-                </button>
-                {#if dropTarget === col.collection}
-                  <input
-                    class="w-36 px-2 py-1 text-xs rounded-lg bg-kitsuden-bg border border-kitsuden-accent-2/50 text-kitsuden-text font-mono outline-hidden"
-                    placeholder={tr("vaultView.writes", { collection: col.collection })}
-                    bind:value={dropConfirmText}
-                  />
-                  <button
-                    class="px-2 py-1 rounded-lg text-xs bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border border-kitsuden-accent-2/30 disabled:opacity-40"
-                    disabled={dropConfirmText !== col.collection}
-                    onclick={() => dropCollection(col.collection)}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="min-w-0 font-mono"
+                    title={tr("vaultView.copyGraphifyEndpoint")}
+                    onclick={() => copyEndpoint(col.table)}
                   >
-                    {tr("vaultView.drop")}
-                  </button>
-                  <button
-                    class="p-1 text-kitsuden-subtle hover:text-kitsuden-text"
-                    onclick={() => {
-                      dropTarget = null;
-                      dropConfirmText = "";
-                    }}
-                  >
-                    <X class="w-4 h-4" />
-                  </button>
-                {:else}
-                  <button
-                    class="p-1.5 rounded-lg text-kitsuden-subtle hover:text-kitsuden-accent-2 hover:bg-kitsuden-accent-2/10 transition-colors"
-                    title={tr("vaultView.dropTableConfirmationByName")}
-                    onclick={() => (dropTarget = col.collection)}
-                  >
-                    <Trash2 class="w-4 h-4" />
-                  </button>
-                {/if}
-              </div>
-
-              {#if expanded.has(col.collection)}
-                <div class="border-t border-kitsuden-border px-4 py-3 space-y-3">
-                  <Table density="compact">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead class="text-left">{tr("vaultView.column")}</TableHead>
-                        <TableHead class="text-left">{tr("vaultView.type")}</TableHead>
-                        <TableHead class="text-left">{tr("vaultView.nullable")}</TableHead>
-                        <TableHead class="text-right"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {#each col.columns as c (c.name)}
-                        <TableRow>
-                          <TableCell class="font-mono">
-                            {c.name}
-                            {#if c.isPrimaryKey}<span class="text-kitsuden-amber ml-1"
-                                >{tr("vaultView.pk")}</span
-                              >{/if}
-                          </TableCell>
-                          <TableCell class="font-mono">{c.type}</TableCell>
-                          <TableCell>{c.nullable ? tr("vaultView.si") : "no"}</TableCell>
-                          <TableCell class="text-right">
-                            {#if !RESERVED.has(c.name)}
-                              <button
-                                class="text-kitsuden-subtle hover:text-kitsuden-accent-2"
-                                title={tr("vaultView.dropColumn")}
-                                onclick={() => dropColumn(col.collection, c.name)}
-                              >
-                                <Trash2 class="w-3.5 h-3.5" />
-                              </button>
-                            {/if}
-                          </TableCell>
-                        </TableRow>
-                      {/each}
-                    </TableBody>
-                  </Table>
-
-                  {#if addColTarget === col.collection}
-                    <div class="flex flex-wrap items-center gap-2">
-                      <input
-                        class="w-44 px-3 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
-                        placeholder={tr("vaultView.exampleNewColumn")}
-                        bind:value={addColDraft.name}
+                    <Copy class="w-3.5 h-3.5 shrink-0" />
+                    <span class="truncate">{tr("vaultView.apiGraph", { table: col.table })}</span>
+                  </Button>
+                  {#if dropTarget === col.collection}
+                    <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                      <Input
+                        class="min-w-0 flex-1 basis-36 font-mono"
+                        aria-label={tr("vaultView.writes", { collection: col.collection })}
+                        placeholder={tr("vaultView.writes", { collection: col.collection })}
+                        autocomplete="off"
+                        bind:value={dropConfirmText}
                       />
-                      <select
-                        class="px-2 py-1.5 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text outline-hidden"
-                        bind:value={addColDraft.type}
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        disabled={dropConfirmText !== col.collection}
+                        onclick={() => dropCollection(col.collection)}
                       >
-                        {#each COLUMN_TYPES as t (t)}
-                          <option value={t}>{t}</option>
-                        {/each}
-                      </select>
-                      <label
-                        class="flex items-center gap-1 text-xs text-kitsuden-subtle cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          bind:checked={addColDraft.unique}
-                          class="accent-[#a855f7]"
-                        />
-                        {tr("vaultView.unique")}
-                      </label>
-                      <label
-                        class="flex items-center gap-1 text-xs text-kitsuden-subtle cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          bind:checked={addColDraft.indexed}
-                          class="accent-[#a855f7]"
-                        />
-                        {tr("vaultView.index")}
-                      </label>
-                      <button
-                        class="px-3 py-1.5 text-xs rounded-lg bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/30 disabled:opacity-40"
-                        disabled={!NAME_RE.test(addColDraft.name) || RESERVED.has(addColDraft.name)}
-                        onclick={() => addColumn(col.collection)}
-                      >
-                        {tr("vaultView.alterTableAdd")}
-                      </button>
-                      <button
-                        class="p-1 text-kitsuden-subtle hover:text-kitsuden-text"
-                        onclick={() => (addColTarget = null)}
+                        {tr("vaultView.drop")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        ariaLabel={tr("common.cancel")}
+                        title={tr("common.cancel")}
+                        onclick={() => {
+                          dropTarget = null;
+                          dropConfirmText = "";
+                        }}
                       >
                         <X class="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   {:else}
-                    <button
-                      class="text-xs text-kitsuden-accent hover:underline flex items-center gap-1"
-                      onclick={() => (addColTarget = col.collection)}
+                    <Button
+                      variant="danger-ghost"
+                      size="icon"
+                      ariaLabel={tr("vaultView.dropTableConfirmationByName")}
+                      title={tr("vaultView.dropTableConfirmationByName")}
+                      onclick={() => (dropTarget = col.collection)}
                     >
-                      <Plus class="w-3 h-3" />
-                      {tr("vaultView.addColumnAlterTableIn")}
-                    </button>
+                      <Trash2 class="w-4 h-4" />
+                    </Button>
                   {/if}
                 </div>
-              {/if}
-            </div>
+
+                {#if open}
+                  <div class="mt-3 flex flex-col gap-3 border-t border-kitsuden-border pt-3">
+                    <Table density="compact">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{tr("vaultView.column")}</TableHead>
+                          <TableHead>{tr("vaultView.type")}</TableHead>
+                          <TableHead>{tr("vaultView.nullable")}</TableHead>
+                          <TableHead class="text-right"
+                            ><span class="sr-only">{tr("common.actions")}</span></TableHead
+                          >
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {#each col.columns as c (c.name)}
+                          <TableRow>
+                            <TableCell class="font-mono">
+                              {c.name}
+                              {#if c.isPrimaryKey}<Badge variant="warning" class="ml-1"
+                                  >{tr("vaultView.pk")}</Badge
+                                >{/if}
+                            </TableCell>
+                            <TableCell class="font-mono">{c.type}</TableCell>
+                            <TableCell>{c.nullable ? tr("vaultView.si") : "no"}</TableCell>
+                            <TableCell class="text-right">
+                              {#if !RESERVED.has(c.name)}
+                                <Button
+                                  variant="danger-ghost"
+                                  size="icon"
+                                  ariaLabel={`${tr("vaultView.dropColumn")} ${c.name}`}
+                                  title={tr("vaultView.dropColumn")}
+                                  onclick={() => dropColumn(col.collection, c.name)}
+                                >
+                                  <Trash2 class="w-4 h-4" />
+                                </Button>
+                              {/if}
+                            </TableCell>
+                          </TableRow>
+                        {/each}
+                      </TableBody>
+                    </Table>
+
+                    {#if addColTarget === col.collection}
+                      <div class="flex flex-wrap items-center gap-2">
+                        <Input
+                          class="min-w-0 flex-1 basis-40 font-mono"
+                          aria-label={tr("vaultView.column")}
+                          placeholder={tr("vaultView.exampleNewColumn")}
+                          bind:value={addColDraft.name}
+                        />
+                        <Select
+                          width="auto"
+                          aria-label={tr("vaultView.type")}
+                          value={addColDraft.type}
+                          onchange={(e: Event) => (addColDraft.type = columnType(e))}
+                          options={typeOptions}
+                        />
+                        <Checkbox
+                          bind:checked={addColDraft.unique}
+                          label={tr("vaultView.unique")}
+                        />
+                        <Checkbox
+                          bind:checked={addColDraft.indexed}
+                          label={tr("vaultView.index")}
+                        />
+                        <Button
+                          size="sm"
+                          disabled={!NAME_RE.test(addColDraft.name) ||
+                            RESERVED.has(addColDraft.name)}
+                          onclick={() => addColumn(col.collection)}
+                        >
+                          {tr("vaultView.alterTableAdd")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          ariaLabel={tr("common.cancel")}
+                          title={tr("common.cancel")}
+                          onclick={() => (addColTarget = null)}
+                        >
+                          <X class="w-4 h-4" />
+                        </Button>
+                      </div>
+                    {:else}
+                      <div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onclick={() => (addColTarget = col.collection)}
+                        >
+                          <Plus class="w-3.5 h-3.5" />
+                          {tr("vaultView.addColumnAlterTableIn")}
+                        </Button>
+                      </div>
+                    {/if}
+                  </div>
+                {/if}
+              </CardContent>
+            </Card>
           {/each}
         </div>
         <p class="text-xs text-kitsuden-subtle">

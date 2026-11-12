@@ -1,4 +1,11 @@
-import { asSystem, withSavepoint, resolveExecutor, isUuid } from "@kitsuden/engine";
+import {
+  asSystem,
+  withSavepoint,
+  resolveExecutor,
+  isUuid,
+  recordChanges,
+  DATASET_ENTRY_ENTITY,
+} from "@kitsuden/engine";
 import {
   accessToDataset,
   agentWritesByPolicy,
@@ -507,6 +514,19 @@ dataSetsRoutes.post("/:id/entries", requireAuth, async (c) => {
     }
     throw error;
   }
+  // The record history (core migration 0076), as the kon-datasets routes write it.
+  await recordChanges(
+    executor,
+    rows.map((row) => ({
+      entity: DATASET_ENTRY_ENTITY,
+      rowId: row.id,
+      action: "create" as const,
+      after: row,
+      user: c.get("user"),
+      diff: { nested: "data", skip: ["id", "dataSetId", "createdById"] },
+    })),
+    (err) => console.warn("[datasets-lite] could not record the entries' history:", err)
+  );
   await invalidateGraphQLCache();
   return c.json(rows, 201);
 });

@@ -3,6 +3,8 @@
   import { ChevronLeft, ChevronRight } from "lucide-svelte";
   import { onMount } from "svelte";
 
+  import { Button, Card, EmptyState, Spinner } from "$lib/tallao";
+
   import type { CalendarView as CalendarViewType } from "$lib/types/admin";
 
   interface Props {
@@ -148,51 +150,56 @@
 
 <div class="space-y-4">
   <!-- Header -->
-  <div class="flex items-center justify-between">
+  <div class="flex flex-wrap items-center justify-between gap-2">
     <h2 class="text-xl font-semibold text-kitsuden-text">{view.title}</h2>
     <div class="flex items-center gap-2">
-      <button class="btn-secondary-sm" onclick={goToday}>{t("calendarView.today")}</button>
-      <button class="p-2 rounded-sm hover:bg-kitsuden-border/30" onclick={prevMonth}>
-        <ChevronLeft class="w-4 h-4 text-kitsuden-text-dim" />
-      </button>
-      <span class="text-sm font-medium text-kitsuden-text min-w-[140px] text-center">
+      <Button variant="secondary" size="sm" onclick={goToday}>{t("calendarView.today")}</Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        ariaLabel={t("calendarView.previousMonth")}
+        title={t("calendarView.previousMonth")}
+        onclick={prevMonth}
+      >
+        <ChevronLeft class="w-4 h-4" />
+      </Button>
+      <span
+        class="text-sm font-medium text-kitsuden-text min-w-[120px] text-center"
+        aria-live="polite"
+      >
         {MONTHS[currentMonth]}
         {currentYear}
       </span>
-      <button class="p-2 rounded-sm hover:bg-kitsuden-border/30" onclick={nextMonth}>
-        <ChevronRight class="w-4 h-4 text-kitsuden-text-dim" />
-      </button>
+      <Button
+        variant="ghost"
+        size="icon"
+        ariaLabel={t("calendarView.nextMonth")}
+        title={t("calendarView.nextMonth")}
+        onclick={nextMonth}
+      >
+        <ChevronRight class="w-4 h-4" />
+      </Button>
     </div>
   </div>
 
   {#if loading}
-    <div class="flex items-center justify-center h-64">
-      <div
-        class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-      ></div>
+    <div class="flex items-center justify-center h-64 text-kitsuden-accent">
+      <Spinner size="lg" />
     </div>
   {:else if !hasValidDateField}
-    <div
-      class="flex items-center justify-center h-64 bg-kitsuden-bg/50 border border-kitsuden-border border-dashed rounded-xl"
-    >
-      <div class="text-center max-w-md p-6">
-        <div class="text-4xl mb-4">⚠️</div>
-        <h3 class="text-lg font-semibold text-kitsuden-text mb-2">
-          {t("calendarView.incompatibleCalendarView")}
-        </h3>
-        <p class="text-sm text-kitsuden-subtle mb-4">
-          {t("calendarView.thisCalendarViewIsConfigured")}
-          <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded-sm text-kitsuden-accent"
-            >'{view.dateField}'</code
-          >{t("calendarView.butTheUnderlyingTableDoes")}
-        </p>
-        <p class="text-xs text-kitsuden-text-dim">
-          {t("calendarView.pleaseUpdateTheGrimoireConfig")}
-        </p>
-      </div>
-    </div>
+    <EmptyState icon="alert" title={t("calendarView.incompatibleCalendarView")}>
+      <p class="text-sm text-kitsuden-subtle mb-2">
+        {t("calendarView.thisCalendarViewIsConfigured")}
+        <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded-sm text-kitsuden-accent"
+          >'{view.dateField}'</code
+        >{t("calendarView.butTheUnderlyingTableDoes")}
+      </p>
+      <p class="text-xs text-kitsuden-text-dim">
+        {t("calendarView.pleaseUpdateTheGrimoireConfig")}
+      </p>
+    </EmptyState>
   {:else}
-    <div class="border border-kitsuden-border rounded-xl overflow-hidden bg-kitsuden-card">
+    <Card class="overflow-hidden">
       <!-- Day Headers -->
       <div class="grid grid-cols-7 border-b border-kitsuden-border">
         {#each DAYS as day}
@@ -246,10 +253,10 @@
           </div>
         {/each}
       </div>
-    </div>
+    </Card>
 
     <!-- Legend -->
-    <div class="flex items-center gap-4 text-xs text-kitsuden-text-dim">
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-kitsuden-text-dim">
       <span>{data.length} {t("calendarView.eventsTotal")}</span>
       <span>·</span>
       <span

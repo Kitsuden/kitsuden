@@ -8,7 +8,7 @@
   import { signOut, type AuthUser } from "$lib/auth.svelte";
   import { getLocale, setLocale, t } from "$lib/i18n";
   import { LANGUAGES } from "$lib/i18n/locale.svelte";
-  import { Avatar, DropdownMenu, MenuItem, MenuLabel, MenuSeparator } from "$lib/tallao";
+  import { Avatar, Button, DropdownMenu, MenuItem, MenuLabel, MenuSeparator } from "$lib/tallao";
   import { currentTheme, setTheme, themes } from "$lib/theme.svelte";
 
   const API_URL = import.meta.env.VITE_API_URL ?? "";
@@ -62,12 +62,12 @@
 
 <DropdownMenu label={t("shell.userMenu")} placement={row ? "top-start" : "bottom-end"}>
   {#snippet trigger(props)}
-    <button
+    <Button
       {...props}
-      type="button"
-      class="kitsuden-user"
-      class:kitsuden-user--row={row && !collapsed}
-      aria-label={t("shell.userMenuOf", { name: description })}
+      variant="ghost"
+      size={row && !collapsed ? "md" : "icon"}
+      class={row && !collapsed ? "kitsuden-user kitsuden-user--row" : "kitsuden-user"}
+      ariaLabel={t("shell.userMenuOf", { name: description })}
       data-testid={row ? "sidebar-user" : "current-user"}
     >
       <Avatar {name} src={avatar} size="sm" initials={1} decorative data-testid="user-avatar" />
@@ -78,7 +78,7 @@
         </span>
         <ChevronsUpDown size={14} aria-hidden="true" />
       {/if}
-    </button>
+    </Button>
   {/snippet}
 
   <MenuLabel>{name} · {role}</MenuLabel>
@@ -109,30 +109,17 @@
 </DropdownMenu>
 
 <style>
-  .kitsuden-user {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
+  /* The trigger is tallao's ghost Button; the row (the sidebar's foot) fills its width. */
+  :global(.kitsuden-user) {
     min-width: 0;
-    padding: 0;
-    color: rgb(var(--ta-text-dim));
-    background: none;
-    border: none;
     border-radius: 999px;
-    cursor: pointer;
   }
-  .kitsuden-user--row {
+  :global(.kitsuden-user.kitsuden-user--row) {
     width: 100%;
+    justify-content: flex-start;
     padding: 0.375rem 0.5rem;
     text-align: left;
     border-radius: var(--ta-radius);
-  }
-  .kitsuden-user--row:hover {
-    background: rgb(var(--ta-elevated));
-  }
-  .kitsuden-user:focus-visible {
-    outline: 2px solid rgb(var(--ta-accent) / 0.6);
-    outline-offset: 2px;
   }
   .kitsuden-user-text {
     display: flex;
@@ -152,14 +139,9 @@
   .kitsuden-user-role {
     overflow: hidden;
     font-size: 0.75rem;
+    font-weight: 400;
+    color: rgb(var(--ta-text-dim));
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  @media (pointer: coarse) {
-    .kitsuden-user {
-      min-width: 2.75rem;
-      min-height: 2.75rem;
-      justify-content: center;
-    }
   }
 </style>

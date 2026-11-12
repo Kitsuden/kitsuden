@@ -107,11 +107,36 @@ const filtered = await kitsuden.from("recipes").list({
   page: 1,
   sort: "title",
   dir: "asc",
-  filter_field: "status",
-  filter_op: "equals",
-  filter_value: "published",
+  // Text in any textual column, or only in these
+  search: "lentil",
+  search_fields: ["title", "summary"],
+  // Every condition must hold: a value is `equals`; or one of
+  // contains, equals, gt, lt, gte, lte
+  filters: { status: "published", created_at: { gte: "2026-01-01" } },
 });
 ```
+
+On the wire this is
+`?search=lentil&search_fields=title,summary&filter[status]=published&filter[created_at][gte]=2026-01-01`.
+At most 20 conditions and 30 search fields; an unknown operator or column is a 400, and a
+secret column (a name ending in token, password, secret or a hash) can be neither filtered nor
+searched. The older single filter (`filter_field`, `filter_op`, `filter_value`) still works and
+is combined with the others by AND.
+
+#### Change history of a record
+
+```typescript
+const { history } = await kitsuden.from("recipes").history("uuid-123");
+// [{ action: "update", at, actor: { type: "user" | "agent" | "system", id, name },
+//    changes: [{ field, before, after } | { field, redacted: true }], proposalId, approvedBy }, ...]
+```
+
+It calls `GET /api/history/:table/:id` (admin only). Newest first, with `limit` (1-200,
+default 50) and `offset`. Every create, update and delete
+made through the explorer, a model's routes or a dataset's entry routes is recorded; secret
+columns are listed as `redacted` without values, and long values are cut to a preview. A
+dataset entry's history is also at `GET /api/datasets/:id/entries/:entryId/history`, with the
+same visibility as the entry.
 
 #### Get by ID
 

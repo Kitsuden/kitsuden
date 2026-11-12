@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button } from "$lib/tallao";
+  import { Badge, Button, Card, EmptyState, Spinner } from "$lib/tallao";
   import ViewPage from "$lib/components/admin/ViewPage.svelte";
   import { t } from "$lib/i18n";
   import { Plus, Database } from "lucide-svelte";
@@ -54,16 +54,16 @@
     }
   });
 
-  function statusColor(status: string): string {
+  function statusVariant(status: string): "success" | "warning" | "secondary" | "default" {
     switch (status) {
       case "published":
-        return "bg-kitsuden-green/10 text-kitsuden-green border-kitsuden-green/20";
+        return "success";
       case "draft":
-        return "bg-kitsuden-yellow/10 text-kitsuden-yellow border-kitsuden-yellow/20";
+        return "warning";
       case "archived":
-        return "bg-kitsuden-subtle/10 text-kitsuden-subtle border-kitsuden-subtle/20";
+        return "secondary";
       default:
-        return "bg-kitsuden-surface text-kitsuden-text-dim";
+        return "default";
     }
   }
 
@@ -126,45 +126,45 @@
   <div class="space-y-4">
     {#if loading}
       <div class="flex justify-center py-20">
-        <div
-          class="w-6 h-6 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-        ></div>
+        <Spinner />
       </div>
     {:else if pages.length === 0}
-      <div class="card p-16 text-center">
-        <div class="text-4xl mb-3">🎯</div>
-        <p class="text-kitsuden-text-dim">{t("blocksView.noPagesYet")}</p>
-        <p class="text-xs text-kitsuden-subtle mt-1">
-          {t("blocksView.createYourFirstLandingPage")}
-        </p>
-      </div>
+      <Card>
+        <EmptyState
+          title={t("blocksView.noPagesYet")}
+          description={t("blocksView.createYourFirstLandingPage")}
+          actionLabel={t("blocksView.newPage")}
+          actionHref="/g/system-tools/builder"
+        />
+      </Card>
     {:else}
       <div class="space-y-3">
         {#each pages as page}
-          <a
-            href="/g/system-tools/builder?id={page.id}"
-            class="card p-4 flex items-center justify-between group hover:border-kitsuden-accent/30 transition-colors"
-          >
-            <div class="flex items-center gap-4">
-              <div
-                class="w-10 h-10 rounded-lg bg-kitsuden-surface flex items-center justify-center text-xl"
-              >
-                {layoutIcon(page.layout)}
-              </div>
-              <div>
-                <h3
-                  class="font-semibold text-kitsuden-text group-hover:text-kitsuden-accent transition-colors"
+          <a href="/g/system-tools/builder?id={page.id}" class="block group rounded-xl">
+            <Card
+              class="p-4 flex items-center justify-between gap-3 group-hover:border-kitsuden-accent/30 transition-colors"
+            >
+              <div class="flex items-center gap-4 min-w-0">
+                <div
+                  class="w-10 h-10 rounded-lg bg-kitsuden-surface flex items-center justify-center text-xl"
                 >
-                  {page.title}
-                </h3>
-                <p class="text-xs text-kitsuden-subtle mt-0.5">
-                  /{page.slug} · {page.layout}
-                </p>
+                  {layoutIcon(page.layout)}
+                </div>
+                <div class="min-w-0">
+                  <h3
+                    class="font-semibold text-kitsuden-text group-hover:text-kitsuden-accent transition-colors"
+                  >
+                    {page.title}
+                  </h3>
+                  <p class="text-xs text-kitsuden-subtle mt-0.5">
+                    /{page.slug} · {page.layout}
+                  </p>
+                </div>
               </div>
-            </div>
-            <span class="px-2 py-1 text-xs rounded-full border {statusColor(page.status)}">
-              {STATUSES[page.status] ?? page.status}
-            </span>
+              <Badge variant={statusVariant(page.status)}>
+                {STATUSES[page.status] ?? page.status}
+              </Badge>
+            </Card>
           </a>
         {/each}
       </div>

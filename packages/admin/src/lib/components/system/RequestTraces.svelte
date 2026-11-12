@@ -5,7 +5,15 @@
 -->
 <script lang="ts">
   import {
+    Alert,
+    Badge,
     Button,
+    Checkbox,
+    EmptyState,
+    Input,
+    Select,
+    Spinner,
+    Tabs,
     Table,
     TableBody,
     TableCell,
@@ -83,86 +91,78 @@
   <p class="text-xs text-kitsuden-subtle">{t("systemTraces.help")}</p>
 
   <div class="flex flex-wrap items-center gap-2">
-    <div class="flex items-center gap-1 bg-kitsuden-card p-1 rounded-lg" role="tablist">
-      <button
-        role="tab"
-        aria-selected={view === "list"}
-        class="px-3 py-1 text-xs rounded-md {view === 'list'
-          ? 'bg-kitsuden-border text-kitsuden-text'
-          : 'text-kitsuden-subtle'}"
-        onclick={() => {
-          view = "list";
-          load();
-        }}>{t("systemTraces.viewList")}</button
-      >
-      <button
-        role="tab"
-        aria-selected={view === "summary"}
-        class="px-3 py-1 text-xs rounded-md {view === 'summary'
-          ? 'bg-kitsuden-border text-kitsuden-text'
-          : 'text-kitsuden-subtle'}"
-        onclick={() => {
-          view = "summary";
-          load();
-        }}>{t("systemTraces.viewSummary")}</button
-      >
-    </div>
+    <Tabs
+      items={[
+        { id: "list", label: t("systemTraces.viewList") },
+        { id: "summary", label: t("systemTraces.viewSummary") },
+      ]}
+      value={view}
+      variant="pills"
+      panels={false}
+      ariaLabel={t("systemTraces.viewLabel")}
+      onchange={(id) => {
+        view = id as typeof view;
+        load();
+      }}
+    />
     <label class="text-xs text-kitsuden-text-dim flex items-center gap-1">
       {t("systemTraces.window")}
-      <select
-        bind:value={hours}
-        onchange={load}
-        class="bg-kitsuden-card border border-kitsuden-input rounded-sm px-1 py-0.5"
-      >
-        <option value={1}>1 h</option>
-        <option value={24}>24 h</option>
-        <option value={168}>7 d</option>
-      </select>
+      <Select
+        size="sm"
+        width="auto"
+        value={String(hours)}
+        onchange={(e: Event) => {
+          hours = Number((e.currentTarget as HTMLSelectElement).value);
+          load();
+        }}
+        options={[
+          { value: "1", label: "1 h" },
+          { value: "24", label: "24 h" },
+          { value: "168", label: "7 d" },
+        ]}
+      />
     </label>
     {#if view === "list"}
-      <label class="text-xs text-kitsuden-text-dim flex items-center gap-1">
-        <input
-          type="checkbox"
-          bind:checked={onlyBlockers}
-          onchange={load}
-          data-testid="only-blocked"
-        />
-        {t("systemTraces.onlyBlocked")}
-      </label>
-      <label class="text-xs text-kitsuden-text-dim flex items-center gap-1">
-        <input type="checkbox" bind:checked={onlyErrors} onchange={load} />
-        {t("systemTraces.onlyErrors")}
-      </label>
-      <input
-        class="text-xs bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 w-56"
+      <Checkbox
+        class="text-xs text-kitsuden-text-dim"
+        bind:checked={onlyBlockers}
+        onchange={load}
+        data-testid="only-blocked"
+        label={t("systemTraces.onlyBlocked")}
+      />
+      <Checkbox
+        class="text-xs text-kitsuden-text-dim"
+        bind:checked={onlyErrors}
+        onchange={load}
+        label={t("systemTraces.onlyErrors")}
+      />
+      <Input
+        class="w-full sm:w-56"
         placeholder={t("systemTraces.actorPlaceholder")}
+        aria-label={t("systemTraces.actorPlaceholder")}
         bind:value={actor}
-        onkeydown={(e) => e.key === "Enter" && load()}
+        onkeydown={(e: KeyboardEvent) => e.key === "Enter" && load()}
       />
     {/if}
     <div class="flex-1"></div>
     <Button variant="ghost" size="sm" onclick={load}>
-      <RefreshCw size={14} class="mr-1" />{t("systemTraces.refresh")}
+      <RefreshCw size={14} aria-hidden="true" />{t("systemTraces.refresh")}
     </Button>
   </div>
 
   {#if loading}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
+      <Spinner />
     </div>
   {:else if error}
-    <div
-      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
-    >
-      {error}
-    </div>
+    <Alert variant="error">{error}</Alert>
   {:else if !turnedOnItems}
-    <p class="text-sm text-kitsuden-subtle">{t("systemTraces.disabled")}</p>
+    <Alert variant="info">{t("systemTraces.disabled")}</Alert>
   {:else if view === "list"}
     {#if traces.length === 0}
-      <p class="text-sm text-kitsuden-subtle">{t("systemTraces.empty")}</p>
+      <EmptyState size="sm" title={t("systemTraces.empty")} />
     {:else}
-      <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
+      <div class="min-w-0">
         <Table density="compact">
           <TableHeader>
             <TableRow>
@@ -202,9 +202,8 @@
                 <TableCell class="text-right">{tr.rows_affected ?? "—"}</TableCell>
                 <TableCell>
                   {#each tr.denial_details ?? [] as b}
-                    <span
-                      class="inline-block mr-1 px-1.5 py-0.5 rounded-sm bg-kitsuden-amber/15 text-kitsuden-amber"
-                      >{b.operation} {b.table}: {reason(b.reason)}</span
+                    <Badge variant="warning" class="mr-1"
+                      >{b.operation} {b.table}: {reason(b.reason)}</Badge
                     >
                   {/each}
                 </TableCell>
@@ -215,9 +214,9 @@
       </div>
     {/if}
   {:else if summary.length === 0}
-    <p class="text-sm text-kitsuden-subtle">{t("systemTraces.empty")}</p>
+    <EmptyState size="sm" title={t("systemTraces.empty")} />
   {:else}
-    <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
+    <div class="min-w-0">
       <Table density="compact">
         <TableHeader>
           <TableRow>

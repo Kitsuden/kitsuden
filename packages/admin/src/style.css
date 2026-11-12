@@ -304,3 +304,19 @@ layer(base);
 :root .ta-avatar {
   background: hsl(var(--ta-avatar-tone) 45% 32%);
 }
+
+/* A Progress whose name is already written beside it (a stat card, a table cell): the
+   kit always prints its label, so here it stays only for the screen reader. */
+.kitsuden-progress-quiet {
+  /* Keeps the hidden label inside the bar: an absolute box with no positioned parent
+     escapes a scrolling table and widens the page. */
+  position: relative;
+}
+.kitsuden-progress-quiet .ta-progress-header {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

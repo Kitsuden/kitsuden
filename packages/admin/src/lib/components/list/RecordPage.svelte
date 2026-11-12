@@ -5,8 +5,10 @@
     Fields       the model's form (DynamicForm) beside an "About" DescriptionList: id,
                  created, updated, by whom, the API path with a copy button
     Related      the rows of the kon's other tables that point at this record
-    History      a Timeline of what the API keeps (see `$lib/list/history`), with a DiffView
-                 for each change; an agent's change names the agent and who approved it
+    History      a Timeline of what the API keeps (see `$lib/list/history`): its change
+                 history (who, a person or an agent, created / changed / deleted which fields),
+                 snapshots and approval proposals, with a DiffView for each change; an
+                 agent's proposal names the agent and who approved it
     SaveBar      sticky, with the unsaved state: Save (back to the list), "Save and continue
                  editing", "Save and add another"; leaving with changes asks first
 -->
@@ -24,6 +26,7 @@
   import {
     historyLine,
     recordHistory,
+    type ChangeLike,
     type HistoryEvent,
     type ProposalLike,
     type SnapshotLike,
@@ -259,7 +262,12 @@
     const apiPath = source.apiPath(id);
     let snapshots: SnapshotLike[] = [];
     let proposals: ProposalLike[] = [];
+    let changes: ChangeLike[] = [];
     await Promise.all([
+      source
+        .history?.(id)
+        .then((list) => (changes = list))
+        .catch(() => {}),
       source
         .snapshots?.(id)
         .then((list) => (snapshots = list))
@@ -284,7 +292,16 @@
         : undefined,
     ]);
     const labels = Object.fromEntries(source.fields.map((f) => [f.key, f.label]));
-    events = recordHistory({ id, apiPath, about, snapshots, proposals, labels });
+    events = recordHistory({
+      id,
+      apiPath,
+      about,
+      snapshots,
+      proposals,
+      changes,
+      labels,
+      redactedText: t("record.redacted"),
+    });
     historyLoading = false;
   }
 

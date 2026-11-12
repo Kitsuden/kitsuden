@@ -1,6 +1,6 @@
 <script lang="ts">
   import Page from "$lib/components/layout/Page.svelte";
-  import { Alert, Card, CardContent, toast } from "$lib/tallao";
+  import { Alert, toast } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import type { DatasetDefinition } from "@kitsuden/shared";
 
@@ -59,14 +59,6 @@
       <Alert variant="error" onDismiss={() => (error = null)}>{error}</Alert>
     {/if}
 
-    <Card>
-      <CardContent>
-        <SchemaBuilder
-          definition={initialDatasetData}
-          onSave={handleSave}
-          onCancel={handleCancel}
-        />
-      </CardContent>
-    </Card>
+    <SchemaBuilder definition={initialDatasetData} onSave={handleSave} onCancel={handleCancel} />
   </div>
 </Page>

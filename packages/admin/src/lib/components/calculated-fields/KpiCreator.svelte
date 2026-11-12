@@ -24,6 +24,22 @@
     Plus,
   } from "lucide-svelte";
 
+  import {
+    Button,
+    Card,
+    CardContent,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+    Checkbox,
+    Field,
+    Input,
+    NumberInput,
+    Progress,
+    Select,
+    ToggleGroup,
+  } from "$lib/tallao";
+
   import FormulaBuilder from "./FormulaBuilder.svelte";
 
   import type { CalculatedField, CalculatedFieldType } from "./index";
@@ -55,6 +71,9 @@
   });
 
   let errors = $state<Record<string, string>>({});
+
+  /** The text of a native control's event (tallao's Input and Select pass events through). */
+  const textOf = (e: Event) => (e.currentTarget as HTMLInputElement | HTMLSelectElement).value;
 
   const fieldTypes: Array<{
     id: CalculatedFieldType;
@@ -210,199 +229,162 @@
   });
 </script>
 
-<div
-  class="w-full max-w-2xl bg-kitsuden-card border border-kitsuden-border rounded-xl overflow-hidden"
->
-  <!-- Header -->
-  <div
-    class="flex items-center justify-between px-6 py-4 border-b border-kitsuden-border bg-kitsuden-surface/50"
-  >
-    <div>
-      <h2 class="text-lg font-bold text-kitsuden-text flex items-center gap-2">
-        <Calculator class="w-5 h-5 text-kitsuden-accent" />
-        {value?.id ? t("common.edit") : t("common.create")}
-        {t("kpiCreator.calculatedField")}
-      </h2>
-      <p class="text-sm text-kitsuden-subtle">{t("kpiCreator.stepOf3", { step })}</p>
+<Card class="w-full max-w-2xl overflow-hidden">
+  <CardHeader>
+    <div class="min-w-0">
+      <CardTitle level={2}>
+        <span class="flex items-center gap-2">
+          <Calculator class="w-5 h-5 text-kitsuden-accent" />
+          {value?.id ? t("common.edit") : t("common.create")}
+          {t("kpiCreator.calculatedField")}
+        </span>
+      </CardTitle>
     </div>
-    <button
-      class="p-2 rounded-lg hover:bg-kitsuden-surface text-kitsuden-subtle"
-      onclick={onCancel}
-    >
+    <Button variant="ghost" size="icon" ariaLabel={t("common.close")} onclick={onCancel}>
       <X class="w-5 h-5" />
-    </button>
-  </div>
+    </Button>
+  </CardHeader>
 
-  <!-- Progress -->
-  <div class="flex h-1 bg-kitsuden-border">
-    <div class="h-full bg-kitsuden-accent transition-all" style="width: {(step / 3) * 100}%"></div>
-  </div>
+  <CardContent>
+    <Progress value={step} max={3} label={t("kpiCreator.stepOf3", { step })} class="mb-6" />
 
-  <!-- Content -->
-  <div class="p-6">
     {#if step === 1}
       <!-- Step 1: Basic Info -->
       <div class="space-y-6">
-        <div>
-          <label for="label" class="block text-sm font-medium text-kitsuden-text mb-2">
-            {t("kpiCreator.fieldLabel")} <span class="text-kitsuden-accent-2">*</span>
-          </label>
-          <input
-            id="label"
-            type="text"
-            bind:value={field.label}
-            placeholder={t("kpiCreator.eGTotalRevenue")}
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent"
-          />
-          {#if errors.label}
-            <p class="mt-1 text-sm text-kitsuden-accent-2">{errors.label}</p>
-          {/if}
-        </div>
+        <Field label={t("kpiCreator.fieldLabel")} required error={errors.label}>
+          <Input bind:value={field.label} placeholder={t("kpiCreator.eGTotalRevenue")} />
+        </Field>
 
         <div>
-          <label for="name" class="block text-sm font-medium text-kitsuden-text mb-2">
-            {t("kpiCreator.fieldName")} <span class="text-kitsuden-accent-2">*</span>
-          </label>
-          <input
-            id="name"
-            type="text"
-            bind:value={field.name}
-            placeholder={t("kpiCreator.eGTotalRevenue2")}
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent font-mono"
-          />
+          <Field label={t("kpiCreator.fieldName")} required error={errors.name}>
+            <Input
+              bind:value={field.name}
+              placeholder={t("kpiCreator.eGTotalRevenue2")}
+              class="font-mono"
+            />
+          </Field>
           <p class="mt-1 text-xs text-kitsuden-subtle">
             {t("kpiCreator.usedInApiAndFormulas")}
           </p>
-          {#if errors.name}
-            <p class="mt-1 text-sm text-kitsuden-accent-2">{errors.name}</p>
-          {/if}
         </div>
 
-        <div>
-          <label class="block text-sm font-medium text-kitsuden-text mb-3">
-            {t("kpiCreator.calculationType")} <span class="text-kitsuden-accent-2">*</span>
-          </label>
-          <div class="grid grid-cols-2 gap-3">
+        <div role="group" aria-labelledby="kpi-type-label">
+          <p id="kpi-type-label" class="block text-sm font-medium text-kitsuden-text mb-3">
+            {t("kpiCreator.calculationType")}
+            <span class="text-kitsuden-danger" aria-hidden="true">*</span>
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {#each fieldTypes as type}
+              {@const Icon = type.icon}
+              <!-- A whole card as one choice: the kit has no card-shaped radio. -->
               <button
+                type="button"
+                aria-pressed={field.type === type.id}
                 class="flex items-start gap-3 p-3 rounded-lg border text-left transition-all {field.type ===
                 type.id
                   ? 'border-kitsuden-accent bg-kitsuden-accent/10'
                   : 'border-kitsuden-border hover:border-kitsuden-accent/50'}"
                 onclick={() => (field.type = type.id)}
               >
-                <div
+                <span
                   class="w-10 h-10 rounded-lg bg-kitsuden-surface flex items-center justify-center shrink-0"
                 >
-                  <svelte:component this={type.icon} class="w-5 h-5 text-kitsuden-accent" />
-                </div>
-                <div>
-                  <p class="font-medium text-kitsuden-text">{type.label}</p>
-                  <p class="text-xs text-kitsuden-subtle">{type.description}</p>
-                </div>
+                  <Icon class="w-5 h-5 text-kitsuden-accent" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-medium text-kitsuden-text">{type.label}</span>
+                  <span class="block text-xs text-kitsuden-subtle">{type.description}</span>
+                </span>
               </button>
             {/each}
           </div>
           {#if errors.type}
-            <p class="mt-2 text-sm text-kitsuden-accent-2">{errors.type}</p>
+            <p class="mt-2 text-sm text-kitsuden-danger" role="alert">{errors.type}</p>
           {/if}
         </div>
 
-        <label class="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            bind:checked={field.isKpi}
-            class="w-5 h-5 rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
-          />
-          <div>
-            <p class="font-medium text-kitsuden-text">{t("kpiCreator.markAsKpi")}</p>
-            <p class="text-xs text-kitsuden-subtle">{t("kpiCreator.showInDashboardsAndEnable")}</p>
-          </div>
-        </label>
+        <Checkbox bind:checked={field.isKpi}>
+          <span>
+            <span class="block font-medium text-kitsuden-text">{t("kpiCreator.markAsKpi")}</span>
+            <span class="block text-xs text-kitsuden-subtle"
+              >{t("kpiCreator.showInDashboardsAndEnable")}</span
+            >
+          </span>
+        </Checkbox>
       </div>
     {:else if step === 2}
       <!-- Step 2: Configuration -->
       <div class="space-y-6">
         {#if field.type === "formula"}
           <div>
-            <label class="block text-sm font-medium text-kitsuden-text mb-3">
+            <p class="block text-sm font-medium text-kitsuden-text mb-3">
               {t("kpiCreator.formula")}
-            </label>
+            </p>
             <FormulaBuilder
               {availableFields}
               value={field.config?.expression}
               onChange={(expr) => (field.config = { ...field.config, expression: expr })}
             />
             {#if errors.expression}
-              <p class="mt-2 text-sm text-kitsuden-accent-2">{errors.expression}</p>
+              <p class="mt-2 text-sm text-kitsuden-danger" role="alert">{errors.expression}</p>
             {/if}
           </div>
         {:else if field.type === "count" || field.type === "sum" || field.type === "average"}
           <div class="space-y-4">
-            <div>
-              <label for="sourcetable" class="block text-sm font-medium text-kitsuden-text mb-2">
-                {t("kpiCreator.sourceTable")}
-              </label>
-              <select
-                id="sourcetable"
-                bind:value={field.config.sourceTable}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
-              >
-                <option value="">{t("kpiCreator.selectTable")}</option>
-                {#each availableTables as table}
-                  <option value={table.name}>{table.label}</option>
-                {/each}
-              </select>
-              {#if errors.sourceTable}
-                <p class="mt-1 text-sm text-kitsuden-accent-2">{errors.sourceTable}</p>
-              {/if}
-            </div>
+            <Field label={t("kpiCreator.sourceTable")} error={errors.sourceTable}>
+              <Select
+                value={field.config.sourceTable ?? ""}
+                onchange={(e: Event) => (field.config.sourceTable = textOf(e))}
+                placeholder={t("kpiCreator.selectTable")}
+                options={availableTables.map((table) => ({
+                  value: table.name,
+                  label: table.label,
+                }))}
+              />
+            </Field>
 
             {#if field.type !== "count"}
-              <div>
-                <label for="sourcefield" class="block text-sm font-medium text-kitsuden-text mb-2">
-                  {t("kpiCreator.fieldTo", { type: field.type })}
-                </label>
-                <select
-                  id="sourcefield"
-                  bind:value={field.config.sourceField}
-                  class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
-                >
-                  <option value="">{t("kpiCreator.selectField")}</option>
-                  {#each availableFields.filter((f) => f.type === "number") as field}
-                    <option value={field.name}>{field.label}</option>
-                  {/each}
-                </select>
-                {#if errors.sourceField}
-                  <p class="mt-1 text-sm text-kitsuden-accent-2">{errors.sourceField}</p>
-                {/if}
-              </div>
+              <Field
+                label={t("kpiCreator.fieldTo", { type: field.type })}
+                error={errors.sourceField}
+              >
+                <Select
+                  value={field.config.sourceField ?? ""}
+                  onchange={(e: Event) => (field.config.sourceField = textOf(e))}
+                  placeholder={t("kpiCreator.selectField")}
+                  options={availableFields
+                    .filter((f) => f.type === "number")
+                    .map((f) => ({ value: f.name, label: f.label }))}
+                />
+              </Field>
             {/if}
           </div>
         {:else if field.type === "concat"}
           <div>
-            <label class="block text-sm font-medium text-kitsuden-text mb-2">
+            <p class="block text-sm font-medium text-kitsuden-text mb-2">
               {t("kpiCreator.fieldsToConcatenate")}
-            </label>
+            </p>
             <div class="space-y-2">
               {#each field.config?.fields || [] as selectedField, index}
                 <div class="flex items-center gap-2">
-                  <select
-                    value={selectedField}
-                    onchange={(e) => {
+                  <Select
+                    class="min-w-0 flex-1"
+                    value={selectedField ?? ""}
+                    aria-label={t("kpiCreator.selectField")}
+                    onchange={(e: Event) => {
                       const fields = [...(field.config?.fields || [])];
-                      fields[index] = e.currentTarget.value;
+                      fields[index] = textOf(e);
                       field.config = { ...field.config, fields };
                     }}
-                    class="flex-1 px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
-                  >
-                    <option value="">{t("kpiCreator.selectField")}</option>
-                    {#each availableFields.filter((f) => f.type === "text") as f}
-                      <option value={f.name}>{f.label}</option>
-                    {/each}
-                  </select>
-                  <button
-                    class="p-2 rounded-lg hover:bg-kitsuden-accent-2/20 text-kitsuden-subtle hover:text-kitsuden-accent-2"
+                    placeholder={t("kpiCreator.selectField")}
+                    options={availableFields
+                      .filter((f) => f.type === "text")
+                      .map((f) => ({ value: f.name, label: f.label }))}
+                  />
+                  <Button
+                    variant="danger-ghost"
+                    size="icon"
+                    ariaLabel={t("common.remove")}
                     onclick={() => {
                       const fields = (field.config?.fields || []).filter(
                         (_f: any, i: number) => i !== index
@@ -411,11 +393,12 @@
                     }}
                   >
                     <X class="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               {/each}
-              <button
-                class="flex items-center gap-2 px-3 py-2 text-sm text-kitsuden-accent hover:bg-kitsuden-accent/10 rounded-lg transition-colors"
+              <Button
+                variant="ghost"
+                size="sm"
                 onclick={() => {
                   field.config = {
                     ...field.config,
@@ -425,71 +408,53 @@
               >
                 <Plus class="w-4 h-4" />
                 {t("kpiCreator.addField")}
-              </button>
+              </Button>
             </div>
 
-            <div class="mt-4">
-              <label for="separator" class="block text-sm font-medium text-kitsuden-text mb-2">
-                {t("kpiCreator.separator")}
-              </label>
-              <input
-                id="separator"
-                type="text"
-                bind:value={field.config.separator}
+            <Field label={t("kpiCreator.separator")} class="mt-4">
+              <Input
+                value={field.config.separator ?? ""}
+                oninput={(e: Event) => (field.config.separator = textOf(e))}
                 placeholder={t("kpiCreator.eGOr")}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
               />
-            </div>
+            </Field>
           </div>
         {:else if field.type === "date_diff"}
           <div class="space-y-4">
-            <div>
-              <label for="startfield" class="block text-sm font-medium text-kitsuden-text mb-2">
-                {t("kpiCreator.startDateField")}
-              </label>
-              <select
-                id="startfield"
-                bind:value={field.config.startField}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
-              >
-                <option value="">{t("kpiCreator.selectField")}</option>
-                {#each availableFields.filter((f) => f.type === "date") as f}
-                  <option value={f.name}>{f.label}</option>
-                {/each}
-              </select>
-            </div>
+            <Field label={t("kpiCreator.startDateField")}>
+              <Select
+                value={field.config.startField ?? ""}
+                onchange={(e: Event) => (field.config.startField = textOf(e))}
+                placeholder={t("kpiCreator.selectField")}
+                options={availableFields
+                  .filter((f) => f.type === "date")
+                  .map((f) => ({ value: f.name, label: f.label }))}
+              />
+            </Field>
 
-            <div>
-              <label for="endfield" class="block text-sm font-medium text-kitsuden-text mb-2">
-                {t("kpiCreator.endDateField")}
-              </label>
-              <select
-                id="endfield"
-                bind:value={field.config.endField}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
-              >
-                <option value="">{t("kpiCreator.nowCurrentTime")}</option>
-                {#each availableFields.filter((f) => f.type === "date") as f}
-                  <option value={f.name}>{f.label}</option>
-                {/each}
-              </select>
-            </div>
+            <Field label={t("kpiCreator.endDateField")}>
+              <Select
+                value={field.config.endField ?? ""}
+                onchange={(e: Event) => (field.config.endField = textOf(e))}
+                placeholder={t("kpiCreator.nowCurrentTime")}
+                options={availableFields
+                  .filter((f) => f.type === "date")
+                  .map((f) => ({ value: f.name, label: f.label }))}
+              />
+            </Field>
 
-            <div>
-              <label for="unit" class="block text-sm font-medium text-kitsuden-text mb-2">
-                {t("kpiCreator.outputUnit")}
-              </label>
-              <select
-                id="unit"
-                bind:value={field.config.unit}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
-              >
-                <option value="days">{t("kpiCreator.days")}</option>
-                <option value="hours">{t("kpiCreator.hours")}</option>
-                <option value="minutes">{t("kpiCreator.minutes")}</option>
-                <option value="seconds">{t("kpiCreator.seconds")}</option>
-              </select>
-            </div>
+            <Field label={t("kpiCreator.outputUnit")}>
+              <Select
+                value={field.config.unit ?? "days"}
+                onchange={(e: Event) => (field.config.unit = textOf(e))}
+                options={[
+                  { value: "days", label: t("kpiCreator.days") },
+                  { value: "hours", label: t("kpiCreator.hours") },
+                  { value: "minutes", label: t("kpiCreator.minutes") },
+                  { value: "seconds", label: t("kpiCreator.seconds") },
+                ]}
+              />
+            </Field>
           </div>
         {:else if field.type === "conditional"}
           <div class="space-y-4">
@@ -498,66 +463,58 @@
             <div
               class="p-4 rounded-lg bg-kitsuden-surface/50 border border-kitsuden-border space-y-4"
             >
-              <div class="flex items-center gap-2 text-kitsuden-accent font-medium">
-                <span>{t("kpiCreator.if")}</span>
-              </div>
+              <p class="text-kitsuden-accent font-medium">{t("kpiCreator.if")}</p>
 
-              <div class="grid grid-cols-3 gap-2">
-                <select
-                  bind:value={field.config.condition.field}
-                  class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
-                >
-                  <option value="">{t("kpiCreator.selectField")}</option>
-                  {#each availableFields as f}
-                    <option value={f.name}>{f.label}</option>
-                  {/each}
-                </select>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <Select
+                  value={field.config.condition.field ?? ""}
+                  aria-label={t("kpiCreator.selectField")}
+                  onchange={(e: Event) => (field.config.condition.field = textOf(e))}
+                  placeholder={t("kpiCreator.selectField")}
+                  options={availableFields.map((f) => ({ value: f.name, label: f.label }))}
+                />
 
-                <select
-                  bind:value={field.config.condition.operator}
-                  class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
-                >
-                  <option value="eq">{t("kpiCreator.equals")}</option>
-                  <option value="neq">{t("kpiCreator.notEquals")}</option>
-                  <option value="gt">{t("kpiCreator.greaterThan")}</option>
-                  <option value="gte">{t("kpiCreator.greaterOrEqual")}</option>
-                  <option value="lt">{t("kpiCreator.lessThan")}</option>
-                  <option value="lte">{t("kpiCreator.lessOrEqual")}</option>
-                  <option value="contains">{t("kpiCreator.contains")}</option>
-                  <option value="empty">{t("kpiCreator.isEmpty")}</option>
-                </select>
+                <Select
+                  value={field.config.condition.operator ?? "eq"}
+                  aria-label={t("kpiCreator.equals")}
+                  onchange={(e: Event) => (field.config.condition.operator = textOf(e))}
+                  options={[
+                    { value: "eq", label: t("kpiCreator.equals") },
+                    { value: "neq", label: t("kpiCreator.notEquals") },
+                    { value: "gt", label: t("kpiCreator.greaterThan") },
+                    { value: "gte", label: t("kpiCreator.greaterOrEqual") },
+                    { value: "lt", label: t("kpiCreator.lessThan") },
+                    { value: "lte", label: t("kpiCreator.lessOrEqual") },
+                    { value: "contains", label: t("kpiCreator.contains") },
+                    { value: "empty", label: t("kpiCreator.isEmpty") },
+                  ]}
+                />
 
                 {#if field.config.condition.operator !== "empty"}
-                  <input
-                    type="text"
-                    bind:value={field.config.condition.value}
+                  <Input
+                    value={field.config.condition.value ?? ""}
+                    aria-label={t("kpiCreator.value")}
+                    oninput={(e: Event) => (field.config.condition.value = textOf(e))}
                     placeholder={t("kpiCreator.value")}
-                    class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
                   />
                 {/if}
               </div>
 
-              <div class="flex items-center gap-2 text-kitsuden-green font-medium">
-                <span>{t("kpiCreator.then")}</span>
-              </div>
+              <Field label={t("kpiCreator.then")}>
+                <Input
+                  value={field.config.trueValue ?? ""}
+                  oninput={(e: Event) => (field.config.trueValue = textOf(e))}
+                  placeholder={t("kpiCreator.valueIfTrue")}
+                />
+              </Field>
 
-              <input
-                type="text"
-                bind:value={field.config.trueValue}
-                placeholder={t("kpiCreator.valueIfTrue")}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
-              />
-
-              <div class="flex items-center gap-2 text-kitsuden-accent-2 font-medium">
-                <span>{t("kpiCreator.else")}</span>
-              </div>
-
-              <input
-                type="text"
-                bind:value={field.config.falseValue}
-                placeholder={t("kpiCreator.valueIfFalse")}
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
-              />
+              <Field label={t("kpiCreator.else")}>
+                <Input
+                  value={field.config.falseValue ?? ""}
+                  oninput={(e: Event) => (field.config.falseValue = textOf(e))}
+                  placeholder={t("kpiCreator.valueIfFalse")}
+                />
+              </Field>
             </div>
           </div>
         {/if}
@@ -566,83 +523,59 @@
       <!-- Step 3: Format & KPI Settings -->
       <div class="space-y-6">
         <div>
-          <label class="block text-sm font-medium text-kitsuden-text mb-3">
+          <p class="block text-sm font-medium text-kitsuden-text mb-3">
             {t("kpiCreator.outputFormat")}
-          </label>
-          <div class="grid grid-cols-3 gap-2">
-            {#each formatTypes as fmt}
-              <button
-                class="p-3 rounded-lg border text-sm font-medium transition-all {field.format
-                  ?.type === fmt.id
-                  ? 'border-kitsuden-accent bg-kitsuden-accent/10 text-kitsuden-accent'
-                  : 'border-kitsuden-border text-kitsuden-text hover:border-kitsuden-accent/50'}"
-                onclick={() => (field.format = { ...field.format, type: fmt.id as any })}
-              >
-                {fmt.label}
-              </button>
-            {/each}
-          </div>
+          </p>
+          <ToggleGroup
+            ariaLabel={t("kpiCreator.outputFormat")}
+            required
+            options={formatTypes.map((fmt) => ({ value: fmt.id, label: fmt.label }))}
+            value={field.format?.type ?? ""}
+            onchange={(v) => (field.format = { ...field.format, type: v as any })}
+          />
         </div>
 
         {#if field.format?.type === "currency"}
-          <div>
-            <label for="currency" class="block text-sm font-medium text-kitsuden-text mb-2">
-              {t("common.currency")}
-            </label>
-            <select
-              id="currency"
-              bind:value={field.format.currency}
-              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
-            >
-              <option value="USD">{t("kpiCreator.usd")}</option>
-              <option value="EUR">{t("kpiCreator.eur")}</option>
-              <option value="GBP">{t("kpiCreator.gbp")}</option>
-              <option value="MXN">{t("kpiCreator.mxn")}</option>
-            </select>
-          </div>
+          <Field label={t("common.currency")}>
+            <Select
+              value={field.format.currency ?? "USD"}
+              onchange={(e: Event) => (field.format.currency = textOf(e))}
+              options={[
+                { value: "USD", label: t("kpiCreator.usd") },
+                { value: "EUR", label: t("kpiCreator.eur") },
+                { value: "GBP", label: t("kpiCreator.gbp") },
+                { value: "MXN", label: t("kpiCreator.mxn") },
+              ]}
+            />
+          </Field>
         {/if}
 
         {#if field.format?.type === "number" || field.format?.type === "currency" || field.format?.type === "percentage"}
-          <div>
-            <label for="decimals" class="block text-sm font-medium text-kitsuden-text mb-2">
-              {t("kpiCreator.decimalPlaces")}
-            </label>
-            <input
-              id="decimals"
-              type="number"
-              bind:value={field.format.decimals}
-              min="0"
-              max="10"
-              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
+          <Field label={t("kpiCreator.decimalPlaces")}>
+            <NumberInput
+              value={field.format.decimals ?? null}
+              onchange={(n) => (field.format.decimals = n)}
+              min={0}
+              max={10}
             />
-          </div>
+          </Field>
         {/if}
 
         <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="prefix" class="block text-sm font-medium text-kitsuden-text mb-2">
-              {t("kpiCreator.prefix")}
-            </label>
-            <input
-              id="prefix"
-              type="text"
-              bind:value={field.format.prefix}
+          <Field label={t("kpiCreator.prefix")}>
+            <Input
+              value={field.format.prefix ?? ""}
+              oninput={(e: Event) => (field.format.prefix = textOf(e))}
               placeholder="e.g., $"
-              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
             />
-          </div>
-          <div>
-            <label for="suffix" class="block text-sm font-medium text-kitsuden-text mb-2">
-              {t("kpiCreator.suffix")}
-            </label>
-            <input
-              id="suffix"
-              type="text"
-              bind:value={field.format.suffix}
+          </Field>
+          <Field label={t("kpiCreator.suffix")}>
+            <Input
+              value={field.format.suffix ?? ""}
+              oninput={(e: Event) => (field.format.suffix = textOf(e))}
               placeholder="e.g., %"
-              class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
             />
-          </div>
+          </Field>
         </div>
 
         {#if field.isKpi}
@@ -654,35 +587,24 @@
               {t("kpiCreator.kpiTargets")}
             </h4>
 
-            <div>
-              <label for="target" class="block text-sm font-medium text-kitsuden-text mb-2">
-                {t("kpiCreator.targetValue")}
-              </label>
-              <input
-                id="target"
-                type="number"
-                bind:value={field.target}
+            <Field label={t("kpiCreator.targetValue")}>
+              <NumberInput
+                value={field.target ?? null}
+                onchange={(n) => (field.target = n)}
                 placeholder="e.g., 1000"
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
               />
-            </div>
+            </Field>
 
             <div>
-              <label
-                for="warningthreshold"
-                class="block text-sm font-medium text-kitsuden-text mb-2 flex items-center gap-2"
-              >
-                <AlertTriangle class="w-4 h-4 text-kitsuden-amber" />
-                {t("kpiCreator.warningThreshold")}
-              </label>
-              <input
-                id="warningthreshold"
-                type="number"
-                bind:value={field.warningThreshold}
-                placeholder="e.g., 500"
-                class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-kitsuden-text"
-              />
-              <p class="mt-1 text-xs text-kitsuden-subtle">
+              <Field label={t("kpiCreator.warningThreshold")}>
+                <NumberInput
+                  value={field.warningThreshold ?? null}
+                  onchange={(n) => (field.warningThreshold = n)}
+                  placeholder="e.g., 500"
+                />
+              </Field>
+              <p class="mt-1 text-xs text-kitsuden-subtle flex items-center gap-1.5">
+                <AlertTriangle class="w-3.5 h-3.5 text-kitsuden-amber shrink-0" />
                 {t("kpiCreator.valueAtWhichToShow")}
               </p>
             </div>
@@ -715,44 +637,27 @@
         </div>
       </div>
     {/if}
-  </div>
+  </CardContent>
 
-  <!-- Footer -->
-  <div class="flex items-center justify-between pt-6 border-t border-kitsuden-border">
-    <button
-      class="px-4 py-2 text-kitsuden-subtle hover:text-kitsuden-text transition-colors"
-      onclick={onCancel}
-    >
-      {t("common.cancel")}
-    </button>
+  <CardFooter class="flex-wrap justify-between">
+    <Button variant="ghost" onclick={onCancel}>{t("common.cancel")}</Button>
 
     <div class="flex items-center gap-2">
       {#if step > 1}
-        <button class="px-4 py-2 btn-secondary" onclick={prevStep}> {t("common.back")} </button>
+        <Button variant="secondary" onclick={prevStep}>{t("common.back")}</Button>
       {/if}
 
       {#if step < 3}
-        <button class="px-4 py-2 btn-primary flex items-center gap-2" onclick={nextStep}>
+        <Button onclick={nextStep}>
           {t("common.next")}
           <ChevronRight class="w-4 h-4" />
-        </button>
+        </Button>
       {:else}
-        <button class="px-4 py-2 btn-primary flex items-center gap-2" onclick={handleSave}>
+        <Button onclick={handleSave}>
           <Check class="w-4 h-4" />
           {t("kpiCreator.saveField")}
-        </button>
+        </Button>
       {/if}
     </div>
-  </div>
-</div>
-
-<style>
-  @reference "../../../style.css";
-
-  .btn-primary {
-    @apply bg-kitsuden-accent text-kitsuden-on-accent font-medium rounded-lg hover:brightness-110 transition-all;
-  }
-  .btn-secondary {
-    @apply bg-kitsuden-surface border border-kitsuden-border text-kitsuden-text rounded-lg hover:border-kitsuden-accent/50 transition-all;
-  }
-</style>
+  </CardFooter>
+</Card>

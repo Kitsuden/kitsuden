@@ -32,7 +32,6 @@
     CheckCircle2,
     X,
     Plus,
-    Loader2,
     Database,
     LayoutGrid,
     FolderTree,
@@ -61,8 +60,15 @@
     Alert,
     Badge,
     Button,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
     Checkbox,
+    Label,
+    Progress,
     Select,
+    Spinner,
     Tabs,
     Toggle,
     ToggleGroup,
@@ -1072,9 +1078,8 @@
           {tr("common.delete")}
         </Button>
       {/if}
-      <Button size="sm" onclick={handleSave} disabled={saving}>
+      <Button size="sm" onclick={handleSave} loading={saving} disabled={saving}>
         {#if saving}
-          <Loader2 class="w-4 h-4 animate-spin" />
           {tr("common.saving")}
         {:else}
           <Save class="w-4 h-4" />
@@ -1090,23 +1095,25 @@
       by itself: overwriting what the person just opened without asking is
       exactly the class of loss this comes to prevent.
     -->
-    <div
-      class="flex items-center justify-between gap-4 px-6 py-3 border-b border-kitsuden-amber/30 bg-kitsuden-amber/10 shrink-0"
-    >
-      <div class="flex items-center gap-2 text-sm text-kitsuden-amber">
-        <History class="w-4 h-4 shrink-0" />
-        <span>
-          {tr("blogPostEditor.hasUnsavedChangesOf")}
-          <strong>{new Date(pendingDraft.when).toLocaleString(localeFormat())}</strong>
-          {tr("blogPostEditor.inThisBrowserRecoverThem")}
-        </span>
-      </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <Button size="sm" onclick={recoverDraft}>{tr("blogPostEditor.recover")}</Button>
-        <Button variant="ghost" size="sm" onclick={discardDraft}
-          >{tr("blogPostEditor.discard")}</Button
-        >
-      </div>
+    <div class="px-4 sm:px-6 pt-3 shrink-0">
+      <Alert variant="warning">
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <span class="flex min-w-0 items-start gap-2">
+            <History class="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+            <span>
+              {tr("blogPostEditor.hasUnsavedChangesOf")}
+              <strong>{new Date(pendingDraft.when).toLocaleString(localeFormat())}</strong>
+              {tr("blogPostEditor.inThisBrowserRecoverThem")}
+            </span>
+          </span>
+          <span class="flex items-center gap-2 shrink-0">
+            <Button size="sm" onclick={recoverDraft}>{tr("blogPostEditor.recover")}</Button>
+            <Button variant="ghost" size="sm" onclick={discardDraft}
+              >{tr("blogPostEditor.discard")}</Button
+            >
+          </span>
+        </div>
+      </Alert>
     </div>
   {/if}
 
@@ -1116,32 +1123,22 @@
       written. The editor's text is still on screen and in the local draft,
       so nothing is lost on reloading in another tab.
     -->
-    <div
-      class="flex items-start justify-between gap-4 px-6 py-3 border-b border-kitsuden-accent-2/40 bg-kitsuden-accent-2/10 shrink-0"
-    >
-      <div class="flex items-start gap-2 text-sm text-kitsuden-accent-2">
-        <AlertTriangle class="w-4 h-4 shrink-0 mt-0.5" />
-        <div>
-          <p class="font-medium">{tr("blogPostEditor.thePostHasChangedSince")}</p>
-          <p class="text-xs opacity-90 mt-0.5">
-            {conflict.message}
-            {#if conflict.when}
-              {tr("blogPostEditor.lastSaved", {
-                v: new Date(conflict.when).toLocaleString(localeFormat()),
-              })}
-            {/if}
-          </p>
-        </div>
-      </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        class="shrink-0"
-        onclick={() => (conflict = null)}
-        ariaLabel={tr("sidebarLayout.closeNotification")}
+    <div class="px-4 sm:px-6 pt-3 shrink-0">
+      <Alert
+        variant="error"
+        title={tr("blogPostEditor.thePostHasChangedSince")}
+        onDismiss={() => (conflict = null)}
+        dismissLabel={tr("sidebarLayout.closeNotification")}
       >
-        <X class="w-4 h-4" />
-      </Button>
+        <p class="text-xs mt-0.5">
+          {conflict.message}
+          {#if conflict.when}
+            {tr("blogPostEditor.lastSaved", {
+              v: new Date(conflict.when).toLocaleString(localeFormat()),
+            })}
+          {/if}
+        </p>
+      </Alert>
     </div>
   {/if}
 
@@ -1180,8 +1177,14 @@
   {#if loading}
     <div class="flex-1 flex items-center justify-center">
       <div class="flex flex-col items-center gap-3">
-        <Loader2 class="w-8 h-8 text-kitsuden-accent animate-spin" />
-        <p class="text-kitsuden-subtle text-sm">{tr("blogPostEditor.loadingEditor")}</p>
+        <Spinner
+          size="lg"
+          label={tr("blogPostEditor.loadingEditor")}
+          class="text-kitsuden-accent"
+        />
+        <p class="text-kitsuden-subtle text-sm" aria-hidden="true">
+          {tr("blogPostEditor.loadingEditor")}
+        </p>
       </div>
     </div>
   {:else}
@@ -1200,12 +1203,9 @@
             <div class="max-w-3xl mx-auto space-y-6">
               <!-- Title -->
               <div>
-                <label
-                  for="title"
-                  class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider mb-2"
-                >
+                <Label for="title" class="mb-2 block">
                   {tr("blogPostEditor.postTitle")}
-                </label>
+                </Label>
                 <Input
                   class="text-2xl! font-bold! py-3!"
                   id="title"
@@ -1230,22 +1230,17 @@
 
               <!-- Slug -->
               <div>
-                <label
-                  class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider mb-2"
-                >
-                  {tr("blogPostEditor.urlSlug")}
-                </label>
-                <div
-                  class="flex items-center gap-2 px-3 py-2 rounded-xl border border-kitsuden-border bg-kitsuden-bg"
-                >
-                  <span class="text-kitsuden-subtle text-sm font-mono"
+                <Label for="slug" class="mb-2 block">{tr("blogPostEditor.urlSlug")}</Label>
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="text-kitsuden-subtle text-sm font-mono shrink-0"
                     >{tr("blogPostEditor.blog")}</span
                   >
-                  <input
+                  <Input
+                    id="slug"
                     type="text"
                     bind:value={slug}
                     placeholder="your-post-slug"
-                    class="flex-1 bg-transparent text-sm text-kitsuden-accent font-mono outline-hidden"
+                    class="flex-1 min-w-0 font-mono"
                   />
                 </div>
               </div>
@@ -1253,11 +1248,9 @@
               <!-- Content Editor -->
               <div>
                 <div class="mb-2 flex items-center justify-between gap-3">
-                  <label
-                    class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider"
-                  >
+                  <Label class="block">
                     {tr("common.content")}
-                  </label>
+                  </Label>
 
                   <div class="flex items-center gap-2">
                     <!--
@@ -1333,8 +1326,8 @@
                   <div class="mt-2 text-xs">
                     {#if uploadingImage}
                       <span class="flex items-center gap-1.5 text-kitsuden-subtle">
-                        <Loader2 class="h-3.5 w-3.5 animate-spin" />
-                        {tr("blogPostEditor.uploadingImage")}
+                        <Spinner size="sm" label={tr("blogPostEditor.uploadingImage")} />
+                        <span aria-hidden="true">{tr("blogPostEditor.uploadingImage")}</span>
                       </span>
                     {:else}
                       <span class="flex items-center gap-1.5 text-kitsuden-danger">
@@ -1356,11 +1349,9 @@
               -->
               <!-- Featured Image -->
               <div>
-                <label
-                  class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider mb-2"
-                >
+                <Label class="mb-2 block">
                   {tr("blogPostEditor.featuredImage")}
-                </label>
+                </Label>
                 {#if featuredImageUrl}
                   <div class="relative rounded-xl overflow-hidden border border-kitsuden-border">
                     <img
@@ -1398,12 +1389,9 @@
 
               <!-- Excerpt -->
               <div>
-                <label
-                  for="excerpt"
-                  class="label block text-xs font-semibold uppercase text-kitsuden-subtle tracking-wider mb-2"
-                >
+                <Label for="excerpt" class="mb-2 block">
                   {tr("blogPostEditor.excerptSummary")}
-                </label>
+                </Label>
                 <Textarea
                   class="resize-none!"
                   id="excerpt"
@@ -1433,26 +1421,26 @@
           >
             <div class="space-y-6">
               <!-- Status -->
-              <div class="card p-4">
-                <h3 class="font-semibold text-kitsuden-text mb-4 flex items-center gap-2">
-                  <Settings class="w-4 h-4" />
-                  {tr("blogPostEditor.publishing")}
-                </h3>
+              <Card>
+                <CardHeader>
+                  <CardTitle level={3} class="flex items-center gap-2">
+                    <Settings class="w-4 h-4" />
+                    {tr("blogPostEditor.publishing")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div class="space-y-4">
+                    <div>
+                      <Label for="status" class="mb-1.5 block">{tr("common.status")}</Label>
+                      <Select id="status" bind:value={status}>
+                        <option value="draft">{tr("blogPostEditor.draft")}</option>
+                        <option value="scheduled">{tr("blogPostEditor.scheduled")}</option>
+                        <option value="published">{tr("blogPostEditor.published")}</option>
+                        <option value="archived">{tr("blogPostEditor.archived")}</option>
+                      </Select>
+                    </div>
 
-                <div class="space-y-4">
-                  <div>
-                    <label for="status" class="label block text-xs mb-1.5"
-                      >{tr("common.status")}</label
-                    >
-                    <Select id="status" bind:value={status}>
-                      <option value="draft">{tr("blogPostEditor.draft")}</option>
-                      <option value="scheduled">{tr("blogPostEditor.scheduled")}</option>
-                      <option value="published">{tr("blogPostEditor.published")}</option>
-                      <option value="archived">{tr("blogPostEditor.archived")}</option>
-                    </Select>
-                  </div>
-
-                  <!--
+                    <!--
                     ── THE SWITCH THAT WAS MISSING ─────────────────────────────
 
                     The column, the API and the block existed, and there was no way to
@@ -1460,18 +1448,18 @@
                     with a manual PATCH. In WordPress this is the «Discussion» box
                     of old.
                   -->
-                  <div>
-                    <Checkbox bind:checked={commentsEnabled} class="text-xs!"
-                      >{tr("blogPostEditor.allowComments")}</Checkbox
-                    >
-                    <p class="text-xs text-kitsuden-subtle mt-1">
-                      {commentsEnabled
-                        ? tr("blogPostEditor.readersCanCommentAnd")
-                        : tr("blogPostEditor.closedThreadAlreadyWritten")}
-                    </p>
-                  </div>
+                    <div>
+                      <Checkbox bind:checked={commentsEnabled} class="text-xs!"
+                        >{tr("blogPostEditor.allowComments")}</Checkbox
+                      >
+                      <p class="text-xs text-kitsuden-subtle mt-1">
+                        {commentsEnabled
+                          ? tr("blogPostEditor.readersCanCommentAnd")
+                          : tr("blogPostEditor.closedThreadAlreadyWritten")}
+                      </p>
+                    </div>
 
-                  <!--
+                    <!--
                     Language and translations.
 
                     One entry per language, tied by a group. To translate
@@ -1479,256 +1467,246 @@
                     is pasted here; the button copies the group of the open article,
                     which is where you always start.
                   -->
-                  <div>
-                    <label for="locale" class="label block text-xs mb-1.5"
-                      >{tr("common.language")}</label
-                    >
-                    <Select id="locale" bind:value={locale}>
-                      {#each PANEL_LANGUAGES as language (language.code)}
-                        <option value={language.code}>{language.name}</option>
-                      {/each}
-                    </Select>
-                    <p class="text-xs text-kitsuden-subtle mt-1">
-                      {tr("blogPostEditor.theWebShowsAVersion")}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label for="translation-group" class="label block text-xs mb-1.5">
-                      {tr("blogPostEditor.groupTranslation")}
-                    </label>
-                    <Input
-                      class="font-mono! text-xs!"
-                      id="translation-group"
-                      type="text"
-                      bind:value={translationGroupId}
-                      placeholder={tr("blogPostEditor.emptyLooseArticle")}
-                    />
-                    <p class="text-xs text-kitsuden-subtle mt-1">
-                      {tr("blogPostEditor.pasteHereTheGroupOf")}
-                    </p>
-                    {#if postId}
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        class="mt-2"
-                        type="button"
-                        onclick={() => (translationGroupId = translationGroupId || postId)}
-                      >
-                        {tr("blogPostEditor.useThisArticleAsOriginal")}
-                      </Button>
-                    {/if}
-                  </div>
-
-                  <div>
-                    <label for="layout" class="label block text-xs mb-1.5"
-                      >{tr("blogPostEditor.template")}</label
-                    >
-                    <Select id="layout" bind:value={layout}>
-                      <option value="article">{tr("blogPostEditor.article")}</option>
-                      <option value="tips">{tr("blogPostEditor.tipsNumberedListWithIndex")}</option>
-                    </Select>
-                    <p class="text-xs text-kitsuden-subtle mt-1">
-                      {layout === "tips"
-                        ? tr("blogPostEditor.eachH2TitleOfContent")
-                        : tr("blogPostEditor.theUsualArticleTo")}
-                    </p>
-                  </div>
-
-                  {#if status === "scheduled"}
                     <div>
-                      <label
-                        for="publishedat"
-                        class="label block text-xs mb-1.5 flex items-center gap-1"
-                      >
-                        <Calendar class="w-3 h-3" />
-                        {tr("blogPostEditor.publishDate")}
-                      </label>
-                      <Input
-                        class="text-sm!"
-                        id="publishedat"
-                        type="datetime-local"
-                        bind:value={publishedAt}
-                      />
+                      <Label for="locale" class="mb-1.5 block">{tr("common.language")}</Label>
+                      <Select id="locale" bind:value={locale}>
+                        {#each PANEL_LANGUAGES as language (language.code)}
+                          <option value={language.code}>{language.name}</option>
+                        {/each}
+                      </Select>
+                      <p class="text-xs text-kitsuden-subtle mt-1">
+                        {tr("blogPostEditor.theWebShowsAVersion")}
+                      </p>
                     </div>
-                  {/if}
 
-                  <div>
-                    <label
-                      for="authorid"
-                      class="label block text-xs mb-1.5 flex items-center gap-1"
-                    >
-                      <User class="w-3 h-3" />
-                      {tr("common.author")}
-                    </label>
-                    <Select id="authorid" bind:value={authorId}>
-                      <option value="">{tr("blogPostEditor.selectAuthor")}</option>
-                      {#each availableAuthors as author}
-                        <option value={author.id}>{author.name}</option>
-                      {/each}
-                    </Select>
+                    <div>
+                      <Label for="translation-group" class="mb-1.5 block">
+                        {tr("blogPostEditor.groupTranslation")}
+                      </Label>
+                      <Input
+                        class="font-mono! text-xs!"
+                        id="translation-group"
+                        type="text"
+                        bind:value={translationGroupId}
+                        placeholder={tr("blogPostEditor.emptyLooseArticle")}
+                      />
+                      <p class="text-xs text-kitsuden-subtle mt-1">
+                        {tr("blogPostEditor.pasteHereTheGroupOf")}
+                      </p>
+                      {#if postId}
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          class="mt-2"
+                          type="button"
+                          onclick={() => (translationGroupId = translationGroupId || postId)}
+                        >
+                          {tr("blogPostEditor.useThisArticleAsOriginal")}
+                        </Button>
+                      {/if}
+                    </div>
+
+                    <div>
+                      <Label for="layout" class="mb-1.5 block"
+                        >{tr("blogPostEditor.template")}</Label
+                      >
+                      <Select id="layout" bind:value={layout}>
+                        <option value="article">{tr("blogPostEditor.article")}</option>
+                        <option value="tips"
+                          >{tr("blogPostEditor.tipsNumberedListWithIndex")}</option
+                        >
+                      </Select>
+                      <p class="text-xs text-kitsuden-subtle mt-1">
+                        {layout === "tips"
+                          ? tr("blogPostEditor.eachH2TitleOfContent")
+                          : tr("blogPostEditor.theUsualArticleTo")}
+                      </p>
+                    </div>
+
+                    {#if status === "scheduled"}
+                      <div>
+                        <Label for="publishedat" class="mb-1.5 flex items-center gap-1">
+                          <Calendar class="w-3 h-3" />
+                          {tr("blogPostEditor.publishDate")}
+                        </Label>
+                        <Input
+                          class="text-sm!"
+                          id="publishedat"
+                          type="datetime-local"
+                          bind:value={publishedAt}
+                        />
+                      </div>
+                    {/if}
+
+                    <div>
+                      <Label for="authorid" class="mb-1.5 flex items-center gap-1">
+                        <User class="w-3 h-3" />
+                        {tr("common.author")}
+                      </Label>
+                      <Select id="authorid" bind:value={authorId}>
+                        <option value="">{tr("blogPostEditor.selectAuthor")}</option>
+                        {#each availableAuthors as author}
+                          <option value={author.id}>{author.name}</option>
+                        {/each}
+                      </Select>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent></Card
+              >
 
               <!--
                 Categories: the HIERARCHICAL taxonomy. It goes above the tags
                 on purpose — it is what decides where the post lives; tags
                 only describe it.
               -->
-              <div class="card p-4">
-                <h3 class="font-semibold text-kitsuden-text mb-4 flex items-center gap-2">
-                  <FolderTree class="w-4 h-4" />
-                  {tr("blogPostEditor.categories")}
-                </h3>
+              <Card>
+                <CardHeader>
+                  <CardTitle level={3} class="flex items-center gap-2">
+                    <FolderTree class="w-4 h-4" />
+                    {tr("blogPostEditor.categories")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {#if availableCategories.length === 0}
+                    <p class="text-xs text-kitsuden-subtle italic mb-3">
+                      {tr("blogPostEditor.noCategoriesYet")}
+                    </p>
+                  {:else}
+                    <div class="space-y-1 mb-3 max-h-56 overflow-y-auto">
+                      {#each availableCategories as cat (cat.id)}
+                        <div class="py-1" style="padding-left: {depthOf(cat) * 16}px">
+                          <Checkbox
+                            checked={categoryIds.includes(cat.id)}
+                            onchange={() => toggleCategory(cat.id)}
+                          >
+                            <span>{cat.name}</span>
+                            {#if cat.postCount}
+                              <span class="text-xs text-kitsuden-subtle">({cat.postCount})</span>
+                            {/if}
+                          </Checkbox>
+                        </div>
+                      {/each}
+                    </div>
+                  {/if}
 
-                {#if availableCategories.length === 0}
-                  <p class="text-xs text-kitsuden-subtle italic mb-3">
-                    {tr("blogPostEditor.noCategoriesYet")}
-                  </p>
-                {:else}
-                  <div class="space-y-1 mb-3 max-h-56 overflow-y-auto">
-                    {#each availableCategories as cat (cat.id)}
-                      <label
-                        class="flex items-center gap-2 py-1 text-sm text-kitsuden-text cursor-pointer hover:text-kitsuden-accent"
-                        style="padding-left: {depthOf(cat) * 16}px"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={categoryIds.includes(cat.id)}
-                          onchange={() => toggleCategory(cat.id)}
-                          class="rounded-sm border-kitsuden-input"
-                        />
-                        <span>{cat.name}</span>
-                        {#if cat.postCount}
-                          <span class="text-xs text-kitsuden-subtle">({cat.postCount})</span>
-                        {/if}
-                      </label>
-                    {/each}
-                  </div>
-                {/if}
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full"
-                  onclick={() => (showCategoryModal = true)}
-                >
-                  <Plus class="w-3 h-3" />
-                  {tr("blogPostEditor.newCategory")}
-                </Button>
-              </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="w-full"
+                    onclick={() => (showCategoryModal = true)}
+                  >
+                    <Plus class="w-3 h-3" />
+                    {tr("blogPostEditor.newCategory")}
+                  </Button>
+                </CardContent></Card
+              >
 
               <!--
                 Games: this is where the heart the cover puts on the card comes from
                 and which leads to the game's screen. The relation already
                 existed in the API; what was missing was being able to choose it.
               -->
-              <div class="card p-4">
-                <h3 class="font-semibold text-kitsuden-text mb-4 flex items-center gap-2">
-                  <Gamepad2 class="w-4 h-4" />
-                  {tr("blogPostEditor.games")}
-                </h3>
-
-                {#if availableGames.length === 0}
-                  <p class="text-xs text-kitsuden-subtle italic">
-                    {tr("blogPostEditor.noGamesToChoose")}
-                  </p>
-                {:else}
-                  <div class="space-y-1 max-h-56 overflow-y-auto">
-                    {#each availableGames as game (game.id)}
-                      <label
-                        class="flex items-center gap-2 py-1 text-sm text-kitsuden-text cursor-pointer hover:text-kitsuden-accent"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={gameIds.includes(game.id)}
-                          onchange={() => toggleGame(game.id)}
-                          class="rounded-sm border-kitsuden-input"
-                        />
-                        <span>{game.title}</span>
-                      </label>
-                    {/each}
-                  </div>
-                  <p class="text-xs text-kitsuden-subtle mt-2">
-                    {tr("blogPostEditor.inHomeTheCard")}
-                  </p>
-                {/if}
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle level={3} class="flex items-center gap-2">
+                    <Gamepad2 class="w-4 h-4" />
+                    {tr("blogPostEditor.games")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {#if availableGames.length === 0}
+                    <p class="text-xs text-kitsuden-subtle italic">
+                      {tr("blogPostEditor.noGamesToChoose")}
+                    </p>
+                  {:else}
+                    <div class="space-y-1 max-h-56 overflow-y-auto">
+                      {#each availableGames as game (game.id)}
+                        <div class="py-1">
+                          <Checkbox
+                            checked={gameIds.includes(game.id)}
+                            onchange={() => toggleGame(game.id)}
+                          >
+                            {game.title}
+                          </Checkbox>
+                        </div>
+                      {/each}
+                    </div>
+                    <p class="text-xs text-kitsuden-subtle mt-2">
+                      {tr("blogPostEditor.inHomeTheCard")}
+                    </p>
+                  {/if}
+                </CardContent></Card
+              >
 
               <!-- Tags -->
-              <div class="card p-4">
-                <h3 class="font-semibold text-kitsuden-text mb-4 flex items-center gap-2">
-                  <Tag class="w-4 h-4" />
-                  {tr("common.tags")}
-                </h3>
-
-                <div class="flex flex-wrap gap-2 mb-3">
-                  {#each tags as tag}
-                    <Badge variant="accent">
-                      {tag.name}
-                      <button
-                        type="button"
-                        onclick={() => toggleTag(tag)}
-                        class="hover:text-kitsuden-accent-2"
-                        aria-label={tr("blogPostEditor.removeTag", { name: tag.name })}
+              <Card>
+                <CardHeader>
+                  <CardTitle level={3} class="flex items-center gap-2">
+                    <Tag class="w-4 h-4" />
+                    {tr("common.tags")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div class="flex flex-wrap gap-2 mb-3">
+                    {#each tags as tag}
+                      <Badge variant="accent">
+                        {tag.name}
+                        <button
+                          type="button"
+                          onclick={() => toggleTag(tag)}
+                          class="hover:text-kitsuden-accent-2"
+                          aria-label={tr("blogPostEditor.removeTag", { name: tag.name })}
+                        >
+                          <X class="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    {/each}
+                    {#if tags.length === 0}
+                      <span class="text-xs text-kitsuden-subtle italic"
+                        >{tr("blogPostEditor.noTagsSelected")}</span
                       >
-                        <X class="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  {/each}
-                  {#if tags.length === 0}
-                    <span class="text-xs text-kitsuden-subtle italic"
-                      >{tr("blogPostEditor.noTagsSelected")}</span
-                    >
-                  {/if}
-                </div>
+                    {/if}
+                  </div>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full"
-                  onclick={() => (showTagModal = true)}
-                >
-                  <Plus class="w-3 h-3" />
-                  {tr("blogPostEditor.addTags")}
-                </Button>
-              </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="w-full"
+                    onclick={() => (showTagModal = true)}
+                  >
+                    <Plus class="w-3 h-3" />
+                    {tr("blogPostEditor.addTags")}
+                  </Button>
+                </CardContent></Card
+              >
 
               <!-- SEO Summary -->
-              <div class="card p-4">
-                <h3 class="font-semibold text-kitsuden-text mb-3 flex items-center gap-2">
-                  <Search class="w-4 h-4" />
-                  {tr("blogPostEditor.seoSummary")}
-                </h3>
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-kitsuden-subtle">{tr("common.score")}</span>
-                    <span
-                      class={seoScore >= 80
-                        ? "text-kitsuden-green"
-                        : seoScore >= 50
-                          ? "text-kitsuden-amber"
-                          : "text-kitsuden-accent-2"}
+              <Card>
+                <CardHeader>
+                  <CardTitle level={3} class="flex items-center gap-2">
+                    <Search class="w-4 h-4" />
+                    {tr("blogPostEditor.seoSummary")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div class="space-y-2">
+                    <Progress
+                      value={seoScore}
+                      label={tr("common.score")}
+                      showValue
+                      variant={seoScore >= 80 ? "success" : seoScore >= 50 ? "warning" : "error"}
+                    />
+                    <Button
+                      variant="soft"
+                      size="sm"
+                      class="mt-2"
+                      onclick={() => (activeTab = "seo")}
                     >
-                      {seoScore}%
-                    </span>
+                      {tr("blogPostEditor.improveSeo")}
+                    </Button>
                   </div>
-                  <div class="w-full h-1.5 bg-kitsuden-border rounded-full overflow-hidden">
-                    <div
-                      class="h-full rounded-full transition-all {seoScore >= 80
-                        ? 'bg-kitsuden-green'
-                        : seoScore >= 50
-                          ? 'bg-kitsuden-amber'
-                          : 'bg-kitsuden-accent-2'}"
-                      style="width: {seoScore}%"
-                    ></div>
-                  </div>
-                  <Button variant="soft" size="sm" class="mt-2" onclick={() => (activeTab = "seo")}>
-                    {tr("blogPostEditor.improveSeo")}
-                  </Button>
-                </div>
-              </div>
+                </CardContent></Card
+              >
             </div>
           </div>
         </div>
@@ -1777,7 +1755,7 @@
               <!-- Meta Title -->
               <div>
                 <div class="flex items-center justify-between mb-2">
-                  <label class="label text-xs uppercase">{tr("blogPostEditor.metaTitle")}</label>
+                  <Label for="metatitle">{tr("blogPostEditor.metaTitle")}</Label>
                   <span
                     class="text-xs {(seoOverrides.metaTitle || title).length <= 60
                       ? 'text-kitsuden-green'
@@ -1786,7 +1764,12 @@
                     {(seoOverrides.metaTitle || title).length}/60
                   </span>
                 </div>
-                <Input type="text" bind:value={seoOverrides.metaTitle} placeholder={title} />
+                <Input
+                  id="metatitle"
+                  type="text"
+                  bind:value={seoOverrides.metaTitle}
+                  placeholder={title}
+                />
                 <p class="text-xs text-kitsuden-subtle mt-1">
                   {tr("blogPostEditor.leaveEmptyToUsePost")}
                 </p>
@@ -1795,9 +1778,7 @@
               <!-- Meta Description -->
               <div>
                 <div class="flex items-center justify-between mb-2">
-                  <label class="label text-xs uppercase"
-                    >{tr("blogPostEditor.metaDescription")}</label
-                  >
+                  <Label for="metadescription">{tr("blogPostEditor.metaDescription")}</Label>
                   <span
                     class="text-xs {(seoOverrides.metaDescription || excerpt).length <= 160
                       ? 'text-kitsuden-green'
@@ -1808,6 +1789,7 @@
                 </div>
                 <Textarea
                   class="resize-none!"
+                  id="metadescription"
                   bind:value={seoOverrides.metaDescription}
                   rows={3}
                   placeholder={excerpt}
@@ -1816,8 +1798,8 @@
 
               <!-- Canonical URL -->
               <div>
-                <label for="canonicalurl" class="label block text-xs uppercase mb-2"
-                  >{tr("blogPostEditor.canonicalUrl")}</label
+                <Label for="canonicalurl" class="mb-2 block"
+                  >{tr("blogPostEditor.canonicalUrl")}</Label
                 >
                 <Input
                   id="canonicalurl"
@@ -1828,60 +1810,68 @@
               </div>
 
               <!-- Robots -->
-              <div class="card p-4">
-                <h3 class="font-medium text-kitsuden-text mb-3 text-sm">
-                  {tr("blogPostEditor.robotsMeta")}
-                </h3>
-                <div class="space-y-3">
-                  <Checkbox
-                    bind:checked={
-                      () => seoOverrides.robotsIndex ?? true, (v) => (seoOverrides.robotsIndex = v)
-                    }>{tr("blogPostEditor.allowSearchEnginesToIndex")}</Checkbox
-                  >
-                  <Checkbox
-                    bind:checked={
-                      () => seoOverrides.robotsFollow ?? true,
-                      (v) => (seoOverrides.robotsFollow = v)
-                    }>{tr("blogPostEditor.allowSearchEnginesToFollow")}</Checkbox
-                  >
-                </div>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle level={3}>
+                    {tr("blogPostEditor.robotsMeta")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div class="space-y-3">
+                    <Checkbox
+                      bind:checked={
+                        () => seoOverrides.robotsIndex ?? true,
+                        (v) => (seoOverrides.robotsIndex = v)
+                      }>{tr("blogPostEditor.allowSearchEnginesToIndex")}</Checkbox
+                    >
+                    <Checkbox
+                      bind:checked={
+                        () => seoOverrides.robotsFollow ?? true,
+                        (v) => (seoOverrides.robotsFollow = v)
+                      }>{tr("blogPostEditor.allowSearchEnginesToFollow")}</Checkbox
+                    >
+                  </div>
+                </CardContent></Card
+              >
 
               <!-- OG Settings -->
-              <div class="card p-4">
-                <h3 class="font-medium text-kitsuden-text mb-3 text-sm flex items-center gap-2">
-                  <Share2 class="w-4 h-4" />
-                  {tr("blogPostEditor.socialSharingOpenGraph")}
-                </h3>
+              <Card>
+                <CardHeader>
+                  <CardTitle level={3} class="flex items-center gap-2">
+                    <Share2 class="w-4 h-4" />
+                    {tr("blogPostEditor.socialSharingOpenGraph")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div class="space-y-4">
+                    <div>
+                      <Label for="ogtitle" class="mb-1.5 block"
+                        >{tr("blogPostEditor.ogTitle")}</Label
+                      >
+                      <Input
+                        class="text-sm!"
+                        id="ogtitle"
+                        type="text"
+                        bind:value={seoOverrides.ogTitle}
+                        placeholder={seoOverrides.metaTitle || title}
+                      />
+                    </div>
 
-                <div class="space-y-4">
-                  <div>
-                    <label for="ogtitle" class="label block text-xs mb-1.5"
-                      >{tr("blogPostEditor.ogTitle")}</label
-                    >
-                    <Input
-                      class="text-sm!"
-                      id="ogtitle"
-                      type="text"
-                      bind:value={seoOverrides.ogTitle}
-                      placeholder={seoOverrides.metaTitle || title}
-                    />
+                    <div>
+                      <Label for="ogdescription" class="mb-1.5 block"
+                        >{tr("blogPostEditor.ogDescription")}</Label
+                      >
+                      <Textarea
+                        class="text-sm! resize-none!"
+                        id="ogdescription"
+                        bind:value={seoOverrides.ogDescription}
+                        rows={2}
+                        placeholder={seoOverrides.metaDescription || excerpt}
+                      />
+                    </div>
                   </div>
-
-                  <div>
-                    <label for="ogdescription" class="label block text-xs mb-1.5"
-                      >{tr("blogPostEditor.ogDescription")}</label
-                    >
-                    <Textarea
-                      class="text-sm! resize-none!"
-                      id="ogdescription"
-                      bind:value={seoOverrides.ogDescription}
-                      rows={2}
-                      placeholder={seoOverrides.metaDescription || excerpt}
-                    />
-                  </div>
-                </div>
-              </div>
+                </CardContent></Card
+              >
             </div>
 
             <!-- Previews -->
@@ -1950,26 +1940,30 @@
               </div>
 
               <!-- SEO Checklist -->
-              <div class="card p-4">
-                <h3 class="font-medium text-kitsuden-text mb-3 text-sm">
-                  {tr("blogPostEditor.seoChecklist")}
-                </h3>
-                <div class="space-y-2">
-                  {#each [{ label: tr("blogPostEditor.titleIsSet"), pass: title.length > 0 }, { label: tr("blogPostEditor.titleLengthOptimal3060"), pass: title.length >= 30 && title.length <= 60 }, { label: tr("blogPostEditor.slugIsSet"), pass: slug.length > 0 }, { label: tr("blogPostEditor.contentHas300Chars"), pass: content.length > 300 }, { label: tr("blogPostEditor.excerptIsSet"), pass: excerpt.length > 0 }, { label: tr("blogPostEditor.metaTitleOptimized"), pass: seoOverrides.metaTitle.length > 0 }, { label: tr("blogPostEditor.metaDescriptionOptimized"), pass: seoOverrides.metaDescription.length > 0 }, { label: tr("blogPostEditor.featuredImageSelected"), pass: !!featuredImageId }, { label: tr("blogPostEditor.hasAtLeastOneTag"), pass: tags.length > 0 }] as check}
-                    <div class="flex items-center gap-2 text-xs">
-                      {#if check.pass}
-                        <CheckCircle2 class="w-3.5 h-3.5 text-kitsuden-green shrink-0" />
-                        <span class="text-kitsuden-text-dim">{check.label}</span>
-                      {:else}
-                        <div
-                          class="w-3.5 h-3.5 rounded-full border border-kitsuden-subtle/30 shrink-0"
-                        ></div>
-                        <span class="text-kitsuden-subtle">{check.label}</span>
-                      {/if}
-                    </div>
-                  {/each}
-                </div>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle level={3}>
+                    {tr("blogPostEditor.seoChecklist")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div class="space-y-2">
+                    {#each [{ label: tr("blogPostEditor.titleIsSet"), pass: title.length > 0 }, { label: tr("blogPostEditor.titleLengthOptimal3060"), pass: title.length >= 30 && title.length <= 60 }, { label: tr("blogPostEditor.slugIsSet"), pass: slug.length > 0 }, { label: tr("blogPostEditor.contentHas300Chars"), pass: content.length > 300 }, { label: tr("blogPostEditor.excerptIsSet"), pass: excerpt.length > 0 }, { label: tr("blogPostEditor.metaTitleOptimized"), pass: seoOverrides.metaTitle.length > 0 }, { label: tr("blogPostEditor.metaDescriptionOptimized"), pass: seoOverrides.metaDescription.length > 0 }, { label: tr("blogPostEditor.featuredImageSelected"), pass: !!featuredImageId }, { label: tr("blogPostEditor.hasAtLeastOneTag"), pass: tags.length > 0 }] as check}
+                      <div class="flex items-center gap-2 text-xs">
+                        {#if check.pass}
+                          <CheckCircle2 class="w-3.5 h-3.5 text-kitsuden-green shrink-0" />
+                          <span class="text-kitsuden-text-dim">{check.label}</span>
+                        {:else}
+                          <div
+                            class="w-3.5 h-3.5 rounded-full border border-kitsuden-subtle/30 shrink-0"
+                          ></div>
+                          <span class="text-kitsuden-subtle">{check.label}</span>
+                        {/if}
+                      </div>
+                    {/each}
+                  </div>
+                </CardContent></Card
+              >
             </div>
           </div>
         </div>
@@ -1995,26 +1989,26 @@
             </div>
 
             <!-- Publishing Settings -->
-            <div class="card p-6 space-y-6">
-              <h3 class="font-medium text-kitsuden-text flex items-center gap-2">
-                <Calendar class="w-4 h-4" />
-                {tr("blogPostEditor.publishingSchedule")}
-              </h3>
+            <Card>
+              <CardHeader>
+                <CardTitle level={3} class="flex items-center gap-2">
+                  <Calendar class="w-4 h-4" />
+                  {tr("blogPostEditor.publishingSchedule")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label for="status-2" class="mb-2 block">{tr("common.status")}</Label>
+                    <Select id="status-2" bind:value={status}>
+                      <option value="draft">{tr("blogPostEditor.draft")}</option>
+                      <option value="scheduled">{tr("blogPostEditor.scheduled")}</option>
+                      <option value="published">{tr("blogPostEditor.published")}</option>
+                      <option value="archived">{tr("blogPostEditor.archived")}</option>
+                    </Select>
+                  </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label for="status-2" class="label block text-xs mb-2"
-                    >{tr("common.status")}</label
-                  >
-                  <Select id="status-2" bind:value={status}>
-                    <option value="draft">{tr("blogPostEditor.draft")}</option>
-                    <option value="scheduled">{tr("blogPostEditor.scheduled")}</option>
-                    <option value="published">{tr("blogPostEditor.published")}</option>
-                    <option value="archived">{tr("blogPostEditor.archived")}</option>
-                  </Select>
-                </div>
-
-                <!--
+                  <!--
                   ── THE SWITCH THAT WAS MISSING ─────────────────────────────
 
                   The column, the API and the block existed, and there was no way to
@@ -2022,114 +2016,122 @@
                   with a manual PATCH. In WordPress this is the «Discussion» box
                   of old.
                 -->
-                <div>
-                  <Checkbox bind:checked={commentsEnabled} class="text-xs!"
-                    >{tr("blogPostEditor.allowComments")}</Checkbox
-                  >
-                  <p class="text-xs text-kitsuden-subtle mt-1">
-                    {commentsEnabled
-                      ? tr("blogPostEditor.readersCanCommentAnd")
-                      : tr("blogPostEditor.closedThreadAlreadyWritten")}
-                  </p>
-                </div>
-
-                {#if status === "scheduled"}
                   <div>
-                    <label
-                      for="publishedat-2"
-                      class="label block text-xs mb-2 flex items-center gap-1"
+                    <Checkbox bind:checked={commentsEnabled} class="text-xs!"
+                      >{tr("blogPostEditor.allowComments")}</Checkbox
                     >
-                      <Clock class="w-3 h-3" />
-                      {tr("blogPostEditor.publishAt")}
-                    </label>
-                    <Input id="publishedat-2" type="datetime-local" bind:value={publishedAt} />
+                    <p class="text-xs text-kitsuden-subtle mt-1">
+                      {commentsEnabled
+                        ? tr("blogPostEditor.readersCanCommentAnd")
+                        : tr("blogPostEditor.closedThreadAlreadyWritten")}
+                    </p>
                   </div>
-                {/if}
-              </div>
-            </div>
+
+                  {#if status === "scheduled"}
+                    <div>
+                      <Label for="publishedat-2" class="mb-2 flex items-center gap-1">
+                        <Clock class="w-3 h-3" />
+                        {tr("blogPostEditor.publishAt")}
+                      </Label>
+                      <Input id="publishedat-2" type="datetime-local" bind:value={publishedAt} />
+                    </div>
+                  {/if}
+                </div>
+              </CardContent></Card
+            >
 
             <!-- Author Settings -->
-            <div class="card p-6 space-y-4">
-              <h3 class="font-medium text-kitsuden-text flex items-center gap-2">
-                <User class="w-4 h-4" />
-                {tr("common.author")}
-              </h3>
-
-              <Select bind:value={authorId}>
-                <option value="">{tr("blogPostEditor.selectAuthor")}</option>
-                {#each availableAuthors as author}
-                  <option value={author.id}
-                    >{author.name}{author.email ? ` (${author.email})` : ""}</option
-                  >
-                {/each}
-              </Select>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle level={3} class="flex items-center gap-2">
+                  <User class="w-4 h-4" />
+                  {tr("common.author")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent class="space-y-4">
+                <Select bind:value={authorId}>
+                  <option value="">{tr("blogPostEditor.selectAuthor")}</option>
+                  {#each availableAuthors as author}
+                    <option value={author.id}
+                      >{author.name}{author.email ? ` (${author.email})` : ""}</option
+                    >
+                  {/each}
+                </Select>
+              </CardContent></Card
+            >
 
             <!--
               Community groups of THIS entry: they show up as two cards
               («Join the Facebook group» / «WhatsApp group») at the end of the
               article. Empty = the site's general group (Settings → Networks).
             -->
-            <div class="card p-6 space-y-4">
-              <h3 class="font-medium text-kitsuden-text flex items-center gap-2">
-                <Users class="w-4 h-4" />
-                {tr("blogPostEditor.communityGroups")}
-              </h3>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label for="facebook-group" class="label block text-xs mb-2"
-                    >{tr("blogPostEditor.facebookGroup")}</label
-                  >
-                  <Input
-                    id="facebook-group"
-                    type="url"
-                    bind:value={seoOverrides.facebookGroupUrl}
-                    placeholder="https://www.facebook.com/groups/…"
-                  />
-                  {#if seoOverrides.facebookGroupUrl.trim() && !validFacebookLink(seoOverrides.facebookGroupUrl)}
-                    <p class="text-xs text-kitsuden-accent-2 mt-1">
-                      {tr("blogPostEditor.mustBeALink")}
-                    </p>
-                  {/if}
+            <Card>
+              <CardHeader>
+                <CardTitle level={3} class="flex items-center gap-2">
+                  <Users class="w-4 h-4" />
+                  {tr("blogPostEditor.communityGroups")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label for="facebook-group" class="mb-2 block"
+                      >{tr("blogPostEditor.facebookGroup")}</Label
+                    >
+                    <Input
+                      id="facebook-group"
+                      type="url"
+                      bind:value={seoOverrides.facebookGroupUrl}
+                      placeholder="https://www.facebook.com/groups/…"
+                    />
+                    {#if seoOverrides.facebookGroupUrl.trim() && !validFacebookLink(seoOverrides.facebookGroupUrl)}
+                      <p class="text-xs text-kitsuden-accent-2 mt-1">
+                        {tr("blogPostEditor.mustBeALink")}
+                      </p>
+                    {/if}
+                  </div>
+                  <div>
+                    <Label for="whatsapp-group" class="mb-2 block"
+                      >{tr("blogPostEditor.whatsappGroup")}</Label
+                    >
+                    <Input
+                      id="whatsapp-group"
+                      type="url"
+                      bind:value={seoOverrides.whatsappGroupUrl}
+                      placeholder="https://chat.whatsapp.com/…"
+                    />
+                    {#if seoOverrides.whatsappGroupUrl.trim() && !validWhatsappLink(seoOverrides.whatsappGroupUrl)}
+                      <p class="text-xs text-kitsuden-accent-2 mt-1">
+                        {tr("blogPostEditor.mustBeAnInvitation")}
+                      </p>
+                    {/if}
+                  </div>
                 </div>
-                <div>
-                  <label for="whatsapp-group" class="label block text-xs mb-2"
-                    >{tr("blogPostEditor.whatsappGroup")}</label
-                  >
-                  <Input
-                    id="whatsapp-group"
-                    type="url"
-                    bind:value={seoOverrides.whatsappGroupUrl}
-                    placeholder="https://chat.whatsapp.com/…"
-                  />
-                  {#if seoOverrides.whatsappGroupUrl.trim() && !validWhatsappLink(seoOverrides.whatsappGroupUrl)}
-                    <p class="text-xs text-kitsuden-accent-2 mt-1">
-                      {tr("blogPostEditor.mustBeAnInvitation")}
-                    </p>
-                  {/if}
-                </div>
-              </div>
-              <p class="text-xs text-kitsuden-subtle">
-                {tr("blogPostEditor.emptyTheGeneralGroupOf")}
-              </p>
-            </div>
+                <p class="text-xs text-kitsuden-subtle">
+                  {tr("blogPostEditor.emptyTheGeneralGroupOf")}
+                </p>
+              </CardContent></Card
+            >
 
             <!-- Danger Zone -->
             {#if postId}
-              <div class="card p-6 border-kitsuden-accent-2/30">
-                <h3 class="font-medium text-kitsuden-accent-2 flex items-center gap-2 mb-4">
-                  <Trash2 class="w-4 h-4" />
-                  {tr("blogPostEditor.dangerZone")}
-                </h3>
-                <p class="text-sm text-kitsuden-subtle mb-4">
-                  {tr("blogPostEditor.onceDeletedThisPostCannot")}
-                </p>
-                <Button variant="danger-ghost" onclick={handleDelete}>
-                  <Trash2 class="w-4 h-4" />
-                  {tr("blogPostEditor.deletePost")}
-                </Button>
-              </div>
+              <Card class="border-kitsuden-accent-2/30">
+                <CardHeader>
+                  <CardTitle level={3} class="text-kitsuden-accent-2 flex items-center gap-2">
+                    <Trash2 class="w-4 h-4" />
+                    {tr("blogPostEditor.dangerZone")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p class="text-sm text-kitsuden-subtle mb-4">
+                    {tr("blogPostEditor.onceDeletedThisPostCannot")}
+                  </p>
+                  <Button variant="danger-ghost" onclick={handleDelete}>
+                    <Trash2 class="w-4 h-4" />
+                    {tr("blogPostEditor.deletePost")}
+                  </Button>
+                </CardContent></Card
+              >
             {/if}
           </div>
         </div>
@@ -2179,7 +2181,7 @@
   title={tr("blogPostEditor.manageTags")}
   onClose={() => (showTagModal = false)}
 >
-  <div class="p-4 space-y-4">
+  <div class="space-y-4">
     <!-- New Tag Input -->
     <div class="flex gap-2">
       <Input
@@ -2227,9 +2229,9 @@
 >
   <div class="space-y-4">
     <div>
-      <label for="cat-name" class="block text-sm font-medium text-kitsuden-text mb-1.5">
+      <Label for="cat-name" class="mb-1.5 block">
         {tr("common.name")}
-      </label>
+      </Label>
       <Input
         id="cat-name"
         type="text"
@@ -2244,9 +2246,9 @@
     </div>
 
     <div>
-      <label for="cat-parent" class="block text-sm font-medium text-kitsuden-text mb-1.5">
+      <Label for="cat-parent" class="mb-1.5 block">
         {tr("blogPostEditor.insideOf")}
-      </label>
+      </Label>
       <Select id="cat-parent" bind:value={newCategory.parentId}>
         <option value="">{tr("blogPostEditor.withoutParentCategory")}</option>
         {#each availableCategories as cat (cat.id)}
@@ -2254,38 +2256,19 @@
         {/each}
       </Select>
     </div>
-
-    <div class="flex justify-end gap-2 pt-2">
-      <Button variant="ghost" size="sm" onclick={() => (showCategoryModal = false)}>
-        {tr("common.cancel")}
-      </Button>
-      <Button
-        size="sm"
-        onclick={async () => {
-          await createCategory();
-          showCategoryModal = false;
-        }}
-        disabled={!newCategory.name.trim()}
-      >
-        {tr("common.create")}
-      </Button>
-    </div>
   </div>
+  {#snippet footer()}
+    <Button variant="ghost" onclick={() => (showCategoryModal = false)}>
+      {tr("common.cancel")}
+    </Button>
+    <Button
+      onclick={async () => {
+        await createCategory();
+        showCategoryModal = false;
+      }}
+      disabled={!newCategory.name.trim()}
+    >
+      {tr("common.create")}
+    </Button>
+  {/snippet}
 </Dialog>
-
-<style>
-  /* Custom scrollbar for the editor */
-  :global(.overflow-y-auto::-webkit-scrollbar) {
-    width: 6px;
-  }
-  :global(.overflow-y-auto::-webkit-scrollbar-track) {
-    background: transparent;
-  }
-  :global(.overflow-y-auto::-webkit-scrollbar-thumb) {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-  }
-  :global(.overflow-y-auto::-webkit-scrollbar-thumb:hover) {
-    background: rgba(255, 255, 255, 0.2);
-  }
-</style>

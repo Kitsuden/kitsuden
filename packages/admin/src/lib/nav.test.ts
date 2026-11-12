@@ -66,17 +66,20 @@ describe("sidebar groups", () => {
     expect(ids(off).data).toEqual(["models", "media", "pages"]);
   });
 
-  it("generic kons go under Data; kons with their own screens under Apps", () => {
+  it("every installed kon that is not core goes under Apps, generic or with its own screens", () => {
     const ctx = admin({
       kons: [
-        { key: "kon-roastery", name: "Roastery", source: "filesystem" },
-        { key: "kon-tierlist", name: "Tier lists", icon: "Trophy" },
-        { key: "kon-webhooks", name: "Webhooks" },
-        { key: "kon-blog", name: "Blog" },
+        { key: "kon-roastery", name: "Roastery", source: "filesystem", category: "optional" },
+        { key: "kon-directory", name: "Employee Directory", category: "grimoire" },
+        { key: "kon-tierlist", name: "Tier lists", icon: "Trophy", category: "optional" },
+        { key: "kon-webhooks", name: "Webhooks", category: "core" },
+        { key: "kon-blog", name: "Blog", category: "core" },
+        { key: "kon-search", name: "Search", category: "core" },
+        { key: "kon-themes", name: "Themes", category: "grimoire-core" },
         { key: "kon-off", name: "Off" },
       ],
       activeKon: (key) => key !== "kon-off",
-      hasOwnScreens: (key) => key === "kon-tierlist",
+      hasOwnScreens: (key) => key === "kon-tierlist" || key === "kon-themes",
     });
     const groups = buildNav(ctx);
     expect(groups.map((g) => g.id)).toEqual([
@@ -87,17 +90,30 @@ describe("sidebar groups", () => {
       "platform",
       "settings",
     ]);
+    // A core kon stays where it was: Data when the panel draws it, Apps when it has screens.
     expect(ids(ctx).data).toEqual([
       "datasets",
       "models",
       "media",
       "pages",
       "blog",
-      "kon:kon-roastery",
+      "kon:kon-search",
     ]);
-    expect(ids(ctx).apps).toEqual(["kon:kon-tierlist"]);
-    const kon = groups.find((g) => g.id === "apps")!.entries[0]!;
+    expect(ids(ctx).apps).toEqual([
+      "kon:kon-directory",
+      "kon:kon-roastery",
+      "kon:kon-themes",
+      "kon:kon-tierlist",
+    ]);
+    const kon = groups.find((g) => g.id === "apps")!.entries.at(-1)!;
     expect(kon).toMatchObject({ path: "/g/kon-tierlist", label: "Tier lists", icon: "Trophy" });
+  });
+
+  it("a kon without a category is an app; Apps is hidden when it is empty", () => {
+    const one = admin({ kons: [{ key: "kon-crm", name: "CRM" }] });
+    expect(ids(one).apps).toEqual(["kon:kon-crm"]);
+    const core = admin({ kons: [{ key: "kon-search", name: "Search", category: "core" }] });
+    expect(buildNav(core).some((g) => g.id === "apps")).toBe(false);
   });
 
   it("an editor sees what the API opens to the team, and no Settings", () => {

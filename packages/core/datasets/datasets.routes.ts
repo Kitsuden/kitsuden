@@ -20,6 +20,10 @@ import {
   isUuid,
   messageOf,
   operationsRouter,
+  readRecordHistory,
+  recordChange,
+  recordChanges,
+  DATASET_ENTRY_ENTITY,
   type AuthzUser,
   type AnyOperation,
 } from "@kitsuden/engine";
@@ -93,6 +97,7 @@ import {
   Success,
   Export,
   Generic,
+  HistoryQuery,
   Import,
   ImportPackage,
   IndicesAuto,
@@ -105,6 +110,7 @@ import {
   InputQuery,
   InputsQuery,
   LimitQuery,
+  RecordHistory,
   Restore,
   SnapshotManual,
 } from "./datasets.wire-schemas";
@@ -292,6 +298,15 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
     }
     return row;
   }
+
+  /**
+   * The record history of an entry (core migration 0076): its own fields are
+   * `data.<key>`, as in the agent data ledger. Written in the request's
+   * transaction; a failure to record is logged and never undoes the write.
+   */
+  const ENTRY_DIFF = { nested: "data", skip: ["id", "dataSetId", "createdById"] };
+  const historyFailed = (err: unknown) =>
+    ctx.logger.warn("Could not record the entry's history", { error: messageOf(err) });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DATASETS CRUD
@@ -922,6 +937,19 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
           .values(values as never)
           .returning();
 
+        await recordChanges(
+          ctx.db.instance,
+          (rows as Input[]).map((row) => ({
+            entity: DATASET_ENTRY_ENTITY,
+            rowId: row.id,
+            action: "create" as const,
+            after: row,
+            user,
+            diff: ENTRY_DIFF,
+          })),
+          historyFailed
+        );
+
         ctx.events.emit("entry:created", { datasetId: dataSetId, entries: rows });
 
         return c.json(Array.isArray(body) ? rows : rows[0], 201);
@@ -1030,6 +1058,19 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
           .where(and(eq(dataEntries.id, entryId), eq(dataEntries.dataSetId, dataset.id)))
           .returning();
 
+        if (updated) {
+          await recordChange(ctx.db.instance, {
+            entity: DATASET_ENTRY_ENTITY,
+            rowId: entryId,
+            action: "update",
+            before: existing,
+            after: updated as Input,
+            user,
+            diff: ENTRY_DIFF,
+            onFailure: historyFailed,
+          });
+        }
+
         ctx.events.emit("entry:updated", updated);
 
         return c.json(updated);
@@ -1071,6 +1112,16 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
         await ctx.db.instance
           .delete(dataEntries)
           .where(and(eq(dataEntries.id, entryId), eq(dataEntries.dataSetId, dataset.id)));
+
+        await recordChange(ctx.db.instance, {
+          entity: DATASET_ENTRY_ENTITY,
+          rowId: entryId,
+          action: "delete",
+          before: existing,
+          user,
+          diff: ENTRY_DIFF,
+          onFailure: historyFailed,
+        });
 
         ctx.events.emit("entry:deleted", { id: entryId });
 
@@ -1269,6 +1320,40 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
   );
 
   /**
+   * GET /:id/entries/:entryId/history - Who changed the entry, when, and what
+   */
+  ops.push(
+    defineOperation({
+      id: "entry-history",
+      method: "GET",
+      route: "/:id/entries/:entryId/history",
+      summary: "Change history of an entry",
+      description:
+        "Who created, changed or deleted an entry, newest first: the actor (a person or an agent), the action (create, update, delete) and the fields that changed, with their value before and after. A field named like a secret (token, password, hash) is listed as `redacted` without values, and long values are cut to a preview. Same visibility as reading the entry (otherwise 404). Changes made before this history existed are not listed.",
+      access: "public",
+      input: { params: InputParam, query: HistoryQuery },
+      output: { schema: RecordHistory },
+      errors: ["KITSUDEN_E_NOT_FOUND"],
+      handle: async (input, { c }) => {
+        const entryId = input.params.entryId;
+        // The history tells what the entry held: same policy as reading it.
+        const dataset = await datasetVisible(c, input.params.id);
+        if (!dataset || !(await inputOf(dataset, entryId, userOf(c)))) {
+          return c.json({ error: "Entry not found" }, 404);
+        }
+        const query = (input.query ?? {}) as { limit?: string; offset?: string };
+        // On the request's transaction: the table's RLS is the second wall.
+        return c.json(
+          await readRecordHistory(ctx.db.instance, DATASET_ENTRY_ENTITY, entryId, {
+            limit: Number(query.limit),
+            offset: Number(query.offset),
+          })
+        );
+      },
+    })
+  );
+
+  /**
    * POST /:id/entries/:entryId/snapshots - Create manual snapshot
    */
   ops.push(
@@ -1349,7 +1434,8 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
         // Restoring REWRITES the entry with a snapshot: team only, and only
         // entries of THIS dataset.
         const dataset = await datasetVisible(c, input.params.id);
-        if (!dataset || !(await inputOf(dataset, entryId))) {
+        const before = dataset ? await inputOf(dataset, entryId) : null;
+        if (!dataset || !before) {
           return c.json({ error: "Entry not found" }, 404);
         }
         await authorize(dataset);
@@ -1360,6 +1446,17 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
 
         try {
           await restoreToSnapshot(ctx, entryId, body.timestamp);
+
+          await recordChange(ctx.db.instance, {
+            entity: DATASET_ENTRY_ENTITY,
+            rowId: entryId,
+            action: "update",
+            before,
+            after: await inputOf(dataset, entryId),
+            user,
+            diff: ENTRY_DIFF,
+            onFailure: historyFailed,
+          });
 
           return c.json({ success: true, restored: true });
         } catch (error: unknown) {

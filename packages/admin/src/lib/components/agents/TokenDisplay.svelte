@@ -66,26 +66,34 @@
         <div
           class="flex items-center gap-2 p-4 bg-kitsuden-bg border border-kitsuden-border rounded-lg font-mono text-sm"
         >
-          <button
-            class="p-1 hover:bg-kitsuden-border rounded-sm transition-colors"
+          <Button
+            variant="ghost"
+            size="icon"
+            ariaLabel={showToken ? tr("tokenDisplay.hideToken") : tr("tokenDisplay.showToken")}
+            aria-pressed={showToken}
             onclick={() => (showToken = !showToken)}
           >
             {#if showToken}
-              <EyeOff size={16} class="text-kitsuden-subtle" />
+              <EyeOff size={16} aria-hidden="true" />
             {:else}
-              <Eye size={16} class="text-kitsuden-subtle" />
+              <Eye size={16} aria-hidden="true" />
             {/if}
-          </button>
+          </Button>
 
-          <span class={cn("flex-1", !showToken && "tracking-wider")}>
+          <span class={cn("flex-1 min-w-0 break-all", !showToken && "tracking-wider")}>
             {showToken ? displayToken : maskToken(displayToken)}
           </span>
 
-          <Button variant="ghost" size="sm" onclick={copyToClipboard}>
+          <Button
+            variant="ghost"
+            size="icon"
+            ariaLabel={copied ? tr("tokenDisplay.copied") : tr("tokenDisplay.copyToken")}
+            onclick={copyToClipboard}
+          >
             {#if copied}
-              <Check size={16} class="text-kitsuden-green" />
+              <Check size={16} class="text-kitsuden-green" aria-hidden="true" />
             {:else}
-              <Copy size={16} />
+              <Copy size={16} aria-hidden="true" />
             {/if}
           </Button>
         </div>

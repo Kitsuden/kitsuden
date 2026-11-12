@@ -3,19 +3,13 @@
   import { confirmDialog } from "$lib/confirm.svelte";
   import { t as tr, localeFormat } from "$lib/i18n";
   import {
-    Gamepad2,
-    CheckCircle,
-    FileEdit,
     Layers,
-    Search,
     Plus,
     ChevronLeft,
     ChevronRight,
     Pencil,
     Trash2,
-    Loader2,
     Star,
-    PackageOpen,
     Monitor,
     Tag,
     Save,
@@ -33,7 +27,23 @@
     TableRow,
     TableHead,
     TableCell,
+    Badge,
     Button,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    Checkbox,
+    EmptyState,
+    Field,
+    Input,
+    NumberInput,
+    SearchInput,
+    Select,
+    Skeleton,
+    Spinner,
+    Stat,
+    Tabs,
   } from "$lib/tallao";
 
   import { api } from "$lib/api";
@@ -419,23 +429,17 @@
     }
   }
 
-  function statusClasses(status: string) {
+  function statusVariant(status: string): "success" | "warning" | "accent-2" | "default" {
     return status === "published"
-      ? "bg-kitsuden-green/10 text-kitsuden-green border-kitsuden-green/20"
+      ? "success"
       : status === "draft"
-        ? "bg-kitsuden-amber/10 text-kitsuden-amber border-kitsuden-amber/20"
+        ? "warning"
         : status === "archived"
-          ? "bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border-kitsuden-accent-2/20"
-          : "bg-kitsuden-muted/20 text-kitsuden-text-dim border-kitsuden-border";
+          ? "accent-2"
+          : "default";
   }
-  function metacriticClass(s?: number) {
-    return s == null
-      ? "bg-kitsuden-muted/20 text-kitsuden-text-dim"
-      : s >= 75
-        ? "bg-kitsuden-green/10 text-kitsuden-green"
-        : s >= 50
-          ? "bg-kitsuden-amber/10 text-kitsuden-amber"
-          : "bg-kitsuden-accent-2/10 text-kitsuden-accent-2";
+  function metacriticVariant(s?: number): "default" | "success" | "warning" | "accent-2" {
+    return s == null ? "default" : s >= 75 ? "success" : s >= 50 ? "warning" : "accent-2";
   }
   function formatDate(d?: string) {
     return d ? new Date(d).toLocaleDateString(localeFormat()) : "-";
@@ -504,117 +508,77 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {#if statsLoading}
         {#each [1, 2, 3, 4] as _}
-          <div class="card p-4 animate-pulse">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg bg-kitsuden-muted/20"></div>
-              <div class="space-y-2">
-                <div class="h-3 w-16 bg-kitsuden-muted/20 rounded-sm"></div>
-                <div class="h-5 w-10 bg-kitsuden-muted/20 rounded-sm"></div>
-              </div>
-            </div>
-          </div>
+          <Skeleton height="4rem" />
         {/each}
       {:else}
-        <div class="card p-4 flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-kitsuden-accent/10 flex items-center justify-center">
-            <Gamepad2 class="w-4 h-4 text-kitsuden-accent" />
-          </div>
-          <div>
-            <p class="text-xs text-kitsuden-subtle">{tr("gamesView.totalGames")}</p>
-            <p class="text-xl font-semibold text-kitsuden-text">
-              {totalGames.toLocaleString(localeFormat())}
-            </p>
-          </div>
-        </div>
-        <div class="card p-4 flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-kitsuden-green/10 flex items-center justify-center">
-            <CheckCircle class="w-4 h-4 text-kitsuden-green" />
-          </div>
-          <div>
-            <p class="text-xs text-kitsuden-subtle">{tr("common.published")}</p>
-            <p class="text-xl font-semibold text-kitsuden-text">
-              {publishedGames.toLocaleString(localeFormat())}
-            </p>
-          </div>
-        </div>
-        <div class="card p-4 flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-kitsuden-amber/10 flex items-center justify-center">
-            <FileEdit class="w-4 h-4 text-kitsuden-amber" />
-          </div>
-          <div>
-            <p class="text-xs text-kitsuden-subtle">{tr("gamesView.drafts")}</p>
-            <p class="text-xl font-semibold text-kitsuden-text">
-              {draftGames.toLocaleString(localeFormat())}
-            </p>
-          </div>
-        </div>
-        <div class="card p-4 flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-kitsuden-purple/10 flex items-center justify-center">
-            <Layers class="w-4 h-4 text-kitsuden-purple" />
-          </div>
-          <div>
-            <p class="text-xs text-kitsuden-subtle">{tr("gamesView.collections")}</p>
-            <p class="text-xl font-semibold text-kitsuden-text">
-              {totalCollections.toLocaleString(localeFormat())}
-            </p>
-          </div>
-        </div>
+        <Stat
+          label={tr("gamesView.totalGames")}
+          value={totalGames.toLocaleString(localeFormat())}
+        />
+        <Stat
+          label={tr("common.published")}
+          value={publishedGames.toLocaleString(localeFormat())}
+          variant="success"
+        />
+        <Stat
+          label={tr("gamesView.drafts")}
+          value={draftGames.toLocaleString(localeFormat())}
+          variant="warning"
+        />
+        <Stat
+          label={tr("gamesView.collections")}
+          value={totalCollections.toLocaleString(localeFormat())}
+        />
       {/if}
     </div>
 
     <!-- Tabs -->
-    <div class="flex items-center gap-1 border-b border-kitsuden-border pb-0">
-      {#each [{ id: "games" as const, label: tr("gamesView.games") }, { id: "collections" as const, label: tr("gamesView.collections2") }, { id: "platforms" as const, label: tr("gamesView.platforms") }, { id: "tags" as const, label: tr("gamesView.tags") }] as t}
-        <button
-          class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2 {activeTab ===
-          t.id
-            ? 'text-kitsuden-accent border-kitsuden-accent bg-kitsuden-accent/5'
-            : 'text-kitsuden-text-dim border-transparent hover:text-kitsuden-text hover:bg-kitsuden-card'}"
-          onclick={() => (activeTab = t.id)}>{t.label}</button
-        >
-      {/each}
-    </div>
+    <Tabs
+      items={[
+        { id: "games", label: tr("gamesView.games") },
+        { id: "collections", label: tr("gamesView.collections2") },
+        { id: "platforms", label: tr("gamesView.platforms") },
+        { id: "tags", label: tr("gamesView.tags") },
+      ]}
+      value={activeTab}
+      onchange={(id) => (activeTab = id as Tab)}
+      panels={false}
+      ariaLabel={tr("gamesView.sections")}
+    />
 
     {#if activeTab === "games"}
       <div class="space-y-3 animate-fade-in">
         <div class="flex flex-wrap items-center gap-3">
-          <div class="relative flex-1 min-w-48">
-            <Search class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-kitsuden-subtle" />
-            <input
-              type="text"
-              placeholder={tr("gamesView.searchByTitleOrDeveloper")}
-              class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg pl-9 pr-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-              bind:value={gamesSearch}
-              onkeydown={(e) => {
-                if (e.key === "Enter") {
-                  gamesPage = 1;
-                  loadGames();
-                }
-              }}
-            />
-          </div>
-          <select
-            class="bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-            bind:value={gamesStatus}
-            onchange={() => {
+          <form
+            class="flex flex-1 flex-wrap items-center gap-3 min-w-0"
+            onsubmit={(e) => {
+              e.preventDefault();
               gamesPage = 1;
               loadGames();
             }}
           >
-            <option value="">{tr("gamesView.allStatuses")}</option><option value="published"
-              >{tr("common.published")}</option
-            ><option value="draft">{tr("gamesView.draft")}</option><option value="archived"
-              >{tr("common.archived")}</option
-            >
-          </select>
-          <Button
-            variant="secondary"
-            size="sm"
-            onclick={() => {
-              gamesPage = 1;
-              loadGames();
-            }}>{tr("common.filter")}</Button
-          >
+            <SearchInput
+              class="flex-1 min-w-48"
+              placeholder={tr("gamesView.searchByTitleOrDeveloper")}
+              bind:value={gamesSearch}
+            />
+            <Select
+              width="auto"
+              aria-label={tr("common.status")}
+              bind:value={gamesStatus}
+              onchange={() => {
+                gamesPage = 1;
+                loadGames();
+              }}
+              options={[
+                { value: "", label: tr("gamesView.allStatuses") },
+                { value: "published", label: tr("common.published") },
+                { value: "draft", label: tr("gamesView.draft") },
+                { value: "archived", label: tr("common.archived") },
+              ]}
+            />
+            <Button variant="secondary" size="sm" type="submit">{tr("common.filter")}</Button>
+          </form>
           {#if selectedGameIds.size > 0}
             <div class="flex items-center gap-2 ml-auto">
               <span class="text-xs text-kitsuden-subtle"
@@ -634,111 +598,110 @@
           {/if}
         </div>
 
-        <div class="card overflow-x-auto">
-          <Table class="w-full text-sm">
-            <TableHeader>
-              <TableRow
-                class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
+        <Table class="w-full text-sm">
+          <TableHeader>
+            <TableRow
+              class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
+            >
+              <TableHead class="px-4 py-3 w-10"
+                ><Checkbox
+                  ariaLabel={tr("gamesView.selectAll")}
+                  checked={selectedGameIds.size === games.length && games.length > 0}
+                  onchange={toggleAll}
+                /></TableHead
               >
-                <TableHead class="px-4 py-3 w-10"
-                  ><input
-                    type="checkbox"
-                    class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
-                    checked={selectedGameIds.size === games.length && games.length > 0}
-                    onchange={toggleAll}
-                  /></TableHead
+              <TableHead class="px-4 py-3 w-12">{tr("gamesView.cover")}</TableHead>
+              <TableHead
+                class="px-4 py-3 cursor-pointer select-none"
+                onclick={() => toggleSort("title")}
+              >
+                <span class="flex items-center gap-1"
+                  >{tr("common.title")}
+                  {#if gamesSort.field === "title"}{#if gamesSort.dir === "asc"}<ArrowUp
+                        class="w-3 h-3"
+                      />{:else}<ArrowDown class="w-3 h-3" />{/if}{:else}<ArrowUpDown
+                      class="w-3 h-3 opacity-50"
+                    />{/if}</span
                 >
-                <TableHead class="px-4 py-3 w-12">{tr("gamesView.cover")}</TableHead>
-                <TableHead
-                  class="px-4 py-3 cursor-pointer select-none"
-                  onclick={() => toggleSort("title")}
+              </TableHead>
+              <TableHead class="px-4 py-3">{tr("common.status")}</TableHead>
+              <TableHead class="px-4 py-3">{tr("gamesView.developer")}</TableHead>
+              <TableHead
+                class="px-4 py-3 cursor-pointer select-none"
+                onclick={() => toggleSort("releaseDate")}
+              >
+                <span class="flex items-center gap-1"
+                  >{tr("gamesView.released")}
+                  {#if gamesSort.field === "releaseDate"}{#if gamesSort.dir === "asc"}<ArrowUp
+                        class="w-3 h-3"
+                      />{:else}<ArrowDown class="w-3 h-3" />{/if}{:else}<ArrowUpDown
+                      class="w-3 h-3 opacity-50"
+                    />{/if}</span
                 >
-                  <span class="flex items-center gap-1"
-                    >{tr("common.title")}
-                    {#if gamesSort.field === "title"}{#if gamesSort.dir === "asc"}<ArrowUp
-                          class="w-3 h-3"
-                        />{:else}<ArrowDown class="w-3 h-3" />{/if}{:else}<ArrowUpDown
-                        class="w-3 h-3 opacity-50"
-                      />{/if}</span
-                  >
-                </TableHead>
-                <TableHead class="px-4 py-3">{tr("common.status")}</TableHead>
-                <TableHead class="px-4 py-3">{tr("gamesView.developer")}</TableHead>
-                <TableHead
-                  class="px-4 py-3 cursor-pointer select-none"
-                  onclick={() => toggleSort("releaseDate")}
+              </TableHead>
+              <TableHead
+                class="px-4 py-3 cursor-pointer select-none"
+                onclick={() => toggleSort("metacriticScore")}
+              >
+                <span class="flex items-center gap-1"
+                  >{tr("gamesView.metacritic")}
+                  {#if gamesSort.field === "metacriticScore"}{#if gamesSort.dir === "asc"}<ArrowUp
+                        class="w-3 h-3"
+                      />{:else}<ArrowDown class="w-3 h-3" />{/if}{:else}<ArrowUpDown
+                      class="w-3 h-3 opacity-50"
+                    />{/if}</span
                 >
-                  <span class="flex items-center gap-1"
-                    >{tr("gamesView.released")}
-                    {#if gamesSort.field === "releaseDate"}{#if gamesSort.dir === "asc"}<ArrowUp
-                          class="w-3 h-3"
-                        />{:else}<ArrowDown class="w-3 h-3" />{/if}{:else}<ArrowUpDown
-                        class="w-3 h-3 opacity-50"
-                      />{/if}</span
-                  >
-                </TableHead>
-                <TableHead
-                  class="px-4 py-3 cursor-pointer select-none"
-                  onclick={() => toggleSort("metacriticScore")}
-                >
-                  <span class="flex items-center gap-1"
-                    >{tr("gamesView.metacritic")}
-                    {#if gamesSort.field === "metacriticScore"}{#if gamesSort.dir === "asc"}<ArrowUp
-                          class="w-3 h-3"
-                        />{:else}<ArrowDown class="w-3 h-3" />{/if}{:else}<ArrowUpDown
-                        class="w-3 h-3 opacity-50"
-                      />{/if}</span
-                  >
-                </TableHead>
-                <TableHead class="px-4 py-3 text-center">{tr("gamesView.featured")}</TableHead>
-                <TableHead class="px-4 py-3 text-right">{tr("common.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {#if gamesLoading}
+              </TableHead>
+              <TableHead class="px-4 py-3 text-center">{tr("gamesView.featured")}</TableHead>
+              <TableHead class="px-4 py-3 text-right">{tr("common.actions")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {#if gamesLoading}
+              <TableRow
+                ><TableCell colspan={9} class="px-4 py-12 text-center text-kitsuden-subtle"
+                  ><span class="flex justify-center"><Spinner /></span></TableCell
+                ></TableRow
+              >
+            {:else if sortedGames().length === 0}
+              <TableRow
+                ><TableCell colspan={9} class="px-4 py-12 text-center text-kitsuden-subtle"
+                  ><EmptyState
+                    size="sm"
+                    level={null}
+                    title={tr("gamesView.noGamesFound")}
+                  /></TableCell
+                ></TableRow
+              >
+            {:else}
+              {#each sortedGames() as game (game.id)}
                 <TableRow
-                  ><TableCell colspan={9} class="px-4 py-12 text-center text-kitsuden-subtle"
-                    ><Loader2 class="w-6 h-6 animate-spin mx-auto" /></TableCell
-                  ></TableRow
+                  class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
                 >
-              {:else if sortedGames().length === 0}
-                <TableRow
-                  ><TableCell colspan={9} class="px-4 py-12 text-center text-kitsuden-subtle"
-                    ><PackageOpen class="w-8 h-8 mx-auto mb-2 opacity-50" />{tr(
-                      "gamesView.noGamesFound"
-                    )}</TableCell
-                  ></TableRow
-                >
-              {:else}
-                {#each sortedGames() as game (game.id)}
-                  <TableRow
-                    class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
+                  <TableCell class="px-4 py-2.5"
+                    ><Checkbox
+                      ariaLabel={tr("gamesView.selectGame", { name: game.title })}
+                      checked={selectedGameIds.has(game.id)}
+                      onchange={() => toggleSelection(game.id)}
+                    /></TableCell
                   >
-                    <TableCell class="px-4 py-2.5"
-                      ><input
-                        type="checkbox"
-                        class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
-                        checked={selectedGameIds.has(game.id)}
-                        onchange={() => toggleSelection(game.id)}
-                      /></TableCell
+                  <TableCell class="px-4 py-2.5">
+                    <div
+                      class="w-8 h-10 rounded-sm bg-kitsuden-muted/20 overflow-hidden border border-kitsuden-border"
                     >
-                    <TableCell class="px-4 py-2.5">
-                      <div
-                        class="w-8 h-10 rounded-sm bg-kitsuden-muted/20 overflow-hidden border border-kitsuden-border"
-                      >
-                        {#if game.coverArtId}<img
-                            src={`/api/media/preset/${game.coverArtId}/thumbnail`}
-                            alt={game.title}
-                            class="w-full h-full object-cover"
-                            loading="lazy"
-                          />{:else}<div
-                            class="w-full h-full flex items-center justify-center text-xs"
-                          >
-                            🎮
-                          </div>{/if}
-                      </div>
-                    </TableCell>
-                    <!--
+                      {#if game.coverArtId}<img
+                          src={`/api/media/preset/${game.coverArtId}/thumbnail`}
+                          alt={game.title}
+                          class="w-full h-full object-cover"
+                          loading="lazy"
+                        />{:else}<div
+                          class="w-full h-full flex items-center justify-center text-xs"
+                        >
+                          🎮
+                        </div>{/if}
+                    </div>
+                  </TableCell>
+                  <!--
                     ── THESE TWO LINKS POINTED TO `/games/<id>`, WHICH DOES NOT EXIST ──
 
                     There is no `/games` route in the panel. And it did not give a visible
@@ -755,61 +718,55 @@
                     points to the kon's screen, which does exist. When there is an
                     editor of its own, these are the links to change.
                   -->
-                    <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text"
-                      ><a href={"/g/kon-games"} class="hover:text-kitsuden-accent transition-colors"
-                        >{game.title}</a
+                  <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text"
+                    ><a href={"/g/kon-games"} class="hover:text-kitsuden-accent transition-colors"
+                      >{game.title}</a
+                    >
+                    <div class="text-xs text-kitsuden-subtle">/{game.slug}</div></TableCell
+                  >
+                  <TableCell class="px-4 py-2.5"
+                    ><Badge variant={statusVariant(game.status)}>{game.status}</Badge></TableCell
+                  >
+                  <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
+                    >{game.developer || "-"}</TableCell
+                  >
+                  <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
+                    >{formatDate(game.releaseDate)}</TableCell
+                  >
+                  <TableCell class="px-4 py-2.5"
+                    ><Badge variant={metacriticVariant(game.metacriticScore)}
+                      >{game.metacriticScore ?? "-"}</Badge
+                    ></TableCell
+                  >
+                  <TableCell class="px-4 py-2.5 text-center"
+                    ><Checkbox
+                      ariaLabel={tr("gamesView.featureGame", { name: game.title })}
+                      checked={!!game.isFeaturedOnHome}
+                      onchange={() => toggleFeatured(game)}
+                    /></TableCell
+                  >
+                  <TableCell class="px-4 py-2.5 text-right"
+                    ><div class="flex items-center justify-end gap-1">
+                      <Button
+                        href={"/g/kon-games"}
+                        variant="ghost"
+                        size="icon"
+                        title={tr("common.edit")}
+                        ariaLabel={tr("common.edit")}><Pencil class="w-3.5 h-3.5" /></Button
+                      ><Button
+                        variant="danger-ghost"
+                        size="icon"
+                        title={tr("common.delete")}
+                        ariaLabel={tr("common.delete")}
+                        onclick={() => deleteGame(game.id)}><Trash2 class="w-3.5 h-3.5" /></Button
                       >
-                      <div class="text-xs text-kitsuden-subtle">/{game.slug}</div></TableCell
-                    >
-                    <TableCell class="px-4 py-2.5"
-                      ><span
-                        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border {statusClasses(
-                          game.status
-                        )}">{game.status}</span
-                      ></TableCell
-                    >
-                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                      >{game.developer || "-"}</TableCell
-                    >
-                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                      >{formatDate(game.releaseDate)}</TableCell
-                    >
-                    <TableCell class="px-4 py-2.5"
-                      ><span
-                        class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold {metacriticClass(
-                          game.metacriticScore
-                        )}">{game.metacriticScore ?? "-"}</span
-                      ></TableCell
-                    >
-                    <TableCell class="px-4 py-2.5 text-center"
-                      ><input
-                        type="checkbox"
-                        class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
-                        checked={!!game.isFeaturedOnHome}
-                        onchange={() => toggleFeatured(game)}
-                      /></TableCell
-                    >
-                    <TableCell class="px-4 py-2.5 text-right"
-                      ><div class="flex items-center justify-end gap-1">
-                        <Button
-                          href={"/g/kon-games"}
-                          variant="ghost"
-                          size="icon"
-                          title={tr("common.edit")}><Pencil class="w-3.5 h-3.5" /></Button
-                        ><Button
-                          variant="danger-ghost"
-                          size="icon"
-                          title={tr("common.delete")}
-                          onclick={() => deleteGame(game.id)}><Trash2 class="w-3.5 h-3.5" /></Button
-                        >
-                      </div></TableCell
-                    >
-                  </TableRow>
-                {/each}
-              {/if}
-            </TableBody>
-          </Table>
-        </div>
+                    </div></TableCell
+                  >
+                </TableRow>
+              {/each}
+            {/if}
+          </TableBody>
+        </Table>
 
         <div class="flex items-center justify-between">
           <p class="text-xs text-kitsuden-subtle">
@@ -818,7 +775,8 @@
           <div class="flex items-center gap-2">
             <Button
               variant="secondary"
-              size="sm"
+              size="icon"
+              ariaLabel={tr("gamesView.previousPage")}
               disabled={gamesPage <= 1}
               onclick={() => {
                 gamesPage -= 1;
@@ -827,7 +785,8 @@
             >
             <Button
               variant="secondary"
-              size="sm"
+              size="icon"
+              ariaLabel={tr("gamesView.nextPage")}
               disabled={gamesPage >= gamesTotalPages}
               onclick={() => {
                 gamesPage += 1;
@@ -839,354 +798,338 @@
       </div>
     {:else if activeTab === "collections"}
       <div class="space-y-4 animate-fade-in">
-        <div class="card p-4">
-          <h3 class="text-sm font-semibold text-kitsuden-text mb-3 flex items-center gap-2">
-            <Layers class="w-4 h-4 text-kitsuden-accent" />
-            {tr("gamesView.newCollection")}
-          </h3>
-          <div class="flex flex-wrap items-end gap-3">
-            <div class="flex-1 min-w-48">
-              <label for="coll-name" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.name")}</label
-              ><input
-                id="coll-name"
-                type="text"
-                class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-                placeholder={tr("gamesView.eGIndieGems")}
-                value={newCollectionName}
-                oninput={(e) => onCollName(e.currentTarget.value)}
-              />
-            </div>
-            <div class="flex-1 min-w-48">
-              <label for="coll-slug" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.slug")}</label
-              ><input
-                id="coll-slug"
-                type="text"
-                class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-                placeholder={tr("gamesView.exampleTagSlug")}
-                bind:value={newCollectionSlug}
-              />
-            </div>
-            <Button size="sm" onclick={createCollection}
-              ><Plus class="w-4 h-4" /> {tr("common.create")}</Button
-            >
-          </div>
-        </div>
+        <Card
+          ><CardHeader
+            ><CardTitle class="flex items-center gap-2">
+              <Layers class="w-4 h-4 text-kitsuden-accent" />
+              {tr("gamesView.newCollection")}
+            </CardTitle></CardHeader
+          ><CardContent>
+            <div class="flex flex-wrap items-end gap-3">
+              <div class="flex-1 min-w-48">
+                <Field label={tr("common.name")}
+                  ><Input
+                    id="coll-name"
+                    placeholder={tr("gamesView.eGIndieGems")}
+                    value={newCollectionName}
+                    oninput={(e: Event) => onCollName((e.currentTarget as HTMLInputElement).value)}
+                  /></Field
+                >
+              </div>
+              <div class="flex-1 min-w-48">
+                <Field label={tr("common.slug")}
+                  ><Input
+                    id="coll-slug"
+                    placeholder={tr("gamesView.exampleTagSlug")}
+                    bind:value={newCollectionSlug}
+                  /></Field
+                >
+              </div>
+              <Button size="sm" onclick={createCollection}
+                ><Plus class="w-4 h-4" /> {tr("common.create")}</Button
+              >
+            </div></CardContent
+          ></Card
+        >
 
-        <div class="card overflow-x-auto">
-          <Table class="w-full text-sm">
-            <TableHeader
-              ><TableRow
-                class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
-                ><TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
-                  class="px-4 py-3">{tr("common.slug")}</TableHead
-                ><TableHead class="px-4 py-3">{tr("gamesView.order")}</TableHead><TableHead
-                  class="px-4 py-3">{tr("common.games")}</TableHead
-                ><TableHead class="px-4 py-3 text-right">{tr("common.actions")}</TableHead
+        <Table class="w-full text-sm">
+          <TableHeader
+            ><TableRow
+              class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
+              ><TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
+                class="px-4 py-3">{tr("common.slug")}</TableHead
+              ><TableHead class="px-4 py-3">{tr("gamesView.order")}</TableHead><TableHead
+                class="px-4 py-3">{tr("common.games")}</TableHead
+              ><TableHead class="px-4 py-3 text-right">{tr("common.actions")}</TableHead></TableRow
+            ></TableHeader
+          >
+          <TableBody>
+            {#if collectionsLoading}<TableRow
+                ><TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-subtle"
+                  ><span class="flex justify-center"><Spinner /></span></TableCell
                 ></TableRow
-              ></TableHeader
-            >
-            <TableBody>
-              {#if collectionsLoading}<TableRow
-                  ><TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-subtle"
-                    ><Loader2 class="w-6 h-6 animate-spin mx-auto" /></TableCell
-                  ></TableRow
+              >
+            {:else if collections.length === 0}<TableRow
+                ><TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-subtle"
+                  ><EmptyState
+                    size="sm"
+                    level={null}
+                    title={tr("gamesView.noCollectionsYet")}
+                  /></TableCell
+                ></TableRow
+              >
+            {:else}
+              {#each collections as c (c.id)}
+                <TableRow
+                  class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
                 >
-              {:else if collections.length === 0}<TableRow
-                  ><TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-subtle"
-                    ><PackageOpen class="w-8 h-8 mx-auto mb-2 opacity-50" />{tr(
-                      "gamesView.noCollectionsYet"
-                    )}</TableCell
-                  ></TableRow
-                >
-              {:else}
-                {#each collections as c (c.id)}
-                  <TableRow
-                    class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
-                  >
-                    {#if editingCollectionId === c.id}
-                      <TableCell class="px-4 py-2.5"
-                        ><input
-                          class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
-                          bind:value={editCollectionName}
-                        /></TableCell
-                      >
-                      <TableCell class="px-4 py-2.5"
-                        ><input
-                          class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
-                          bind:value={editCollectionSlug}
-                        /></TableCell
-                      >
-                      <TableCell class="px-4 py-2.5"
-                        ><input
-                          type="number"
-                          class="w-20 bg-kitsuden-bg border border-kitsuden-input rounded-sm px-2 py-1 text-sm"
-                          bind:value={editCollectionOrder}
-                        /></TableCell
-                      >
-                      <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                        >{c.games?.length ?? 0}</TableCell
-                      >
-                      <TableCell class="px-4 py-2.5 text-right"
-                        ><div class="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            class="text-kitsuden-green"
-                            onclick={() => updateCollection(c)}><Save class="w-3.5 h-3.5" /></Button
-                          ><Button
-                            variant="ghost"
-                            size="icon"
-                            onclick={() => (editingCollectionId = null)}
-                            ><X class="w-3.5 h-3.5" /></Button
-                          >
-                        </div></TableCell
-                      >
-                    {:else}
-                      <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text"
-                        >{c.title}</TableCell
-                      >
-                      <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">/{c.slug}</TableCell>
-                      <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                        >{c.displayOrder ?? 0}</TableCell
-                      >
-                      <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                        >{c.games?.length ?? 0}</TableCell
-                      >
-                      <TableCell class="px-4 py-2.5 text-right"
-                        ><div class="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" onclick={() => startEditColl(c)}
-                            ><Pencil class="w-3.5 h-3.5" /></Button
-                          ><Button
-                            variant="danger-ghost"
-                            size="icon"
-                            onclick={() => deleteCollection(c.id)}
-                            ><Trash2 class="w-3.5 h-3.5" /></Button
-                          >
-                        </div></TableCell
-                      >
-                    {/if}
-                  </TableRow>
-                {/each}
-              {/if}
-            </TableBody>
-          </Table>
-        </div>
+                  {#if editingCollectionId === c.id}
+                    <TableCell class="px-4 py-2.5"
+                      ><Input
+                        aria-label={tr("common.name")}
+                        bind:value={editCollectionName}
+                      /></TableCell
+                    >
+                    <TableCell class="px-4 py-2.5"
+                      ><Input
+                        aria-label={tr("common.slug")}
+                        bind:value={editCollectionSlug}
+                      /></TableCell
+                    >
+                    <TableCell class="px-4 py-2.5"
+                      ><NumberInput
+                        width="auto"
+                        ariaLabel={tr("gamesView.order")}
+                        value={editCollectionOrder}
+                        onchange={(n) => (editCollectionOrder = n ?? 0)}
+                      /></TableCell
+                    >
+                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
+                      >{c.games?.length ?? 0}</TableCell
+                    >
+                    <TableCell class="px-4 py-2.5 text-right"
+                      ><div class="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          class="text-kitsuden-green"
+                          ariaLabel={tr("gamesView.saveCollection")}
+                          onclick={() => updateCollection(c)}><Save class="w-3.5 h-3.5" /></Button
+                        ><Button
+                          variant="ghost"
+                          size="icon"
+                          ariaLabel={tr("common.cancel")}
+                          onclick={() => (editingCollectionId = null)}
+                          ><X class="w-3.5 h-3.5" /></Button
+                        >
+                      </div></TableCell
+                    >
+                  {:else}
+                    <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text"
+                      >{c.title}</TableCell
+                    >
+                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">/{c.slug}</TableCell>
+                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
+                      >{c.displayOrder ?? 0}</TableCell
+                    >
+                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
+                      >{c.games?.length ?? 0}</TableCell
+                    >
+                    <TableCell class="px-4 py-2.5 text-right"
+                      ><div class="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          ariaLabel={tr("common.edit")}
+                          onclick={() => startEditColl(c)}><Pencil class="w-3.5 h-3.5" /></Button
+                        ><Button
+                          variant="danger-ghost"
+                          size="icon"
+                          ariaLabel={tr("common.delete")}
+                          onclick={() => deleteCollection(c.id)}
+                          ><Trash2 class="w-3.5 h-3.5" /></Button
+                        >
+                      </div></TableCell
+                    >
+                  {/if}
+                </TableRow>
+              {/each}
+            {/if}
+          </TableBody>
+        </Table>
       </div>
     {:else if activeTab === "platforms"}
       <div class="space-y-4 animate-fade-in">
-        <div class="card p-4">
-          <h3 class="text-sm font-semibold text-kitsuden-text mb-3 flex items-center gap-2">
-            <Monitor class="w-4 h-4 text-kitsuden-accent" />
-            {tr("gamesView.newPlatform")}
-          </h3>
-          <div class="flex flex-wrap items-end gap-3">
-            <div class="flex-1 min-w-40">
-              <label for="plat-name" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.name")}</label
-              ><input
-                id="plat-name"
-                type="text"
-                class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-                placeholder={tr("gamesView.eGPlaystation5")}
-                value={newPlatformName}
-                oninput={(e) => onPlatName(e.currentTarget.value)}
-              />
-            </div>
-            <div class="flex-1 min-w-40">
-              <label for="plat-slug" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.slug")}</label
-              ><input
-                id="plat-slug"
-                type="text"
-                class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-                placeholder={tr("gamesView.eGPs5")}
-                bind:value={newPlatformSlug}
-              />
-            </div>
-            <div class="flex-1 min-w-40">
-              <label for="plat-mfr" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("gamesView.manufacturer")}</label
-              ><input
-                id="plat-mfr"
-                type="text"
-                class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-                placeholder={tr("gamesView.eGSony")}
-                bind:value={newPlatformManufacturer}
-              />
-            </div>
-            <div class="w-24">
-              <label for="plat-short" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("gamesView.short")}</label
-              ><input
-                id="plat-short"
-                type="text"
-                class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-                placeholder="PS5"
-                bind:value={newPlatformShort}
-              />
-            </div>
-            <Button size="sm" onclick={createPlatform}
-              ><Plus class="w-4 h-4" /> {tr("gamesView.add")}</Button
-            >
-          </div>
-        </div>
+        <Card
+          ><CardHeader
+            ><CardTitle class="flex items-center gap-2">
+              <Monitor class="w-4 h-4 text-kitsuden-accent" />
+              {tr("gamesView.newPlatform")}
+            </CardTitle></CardHeader
+          ><CardContent>
+            <div class="flex flex-wrap items-end gap-3">
+              <div class="flex-1 min-w-40">
+                <Field label={tr("common.name")}
+                  ><Input
+                    id="plat-name"
+                    placeholder={tr("gamesView.eGPlaystation5")}
+                    value={newPlatformName}
+                    oninput={(e: Event) => onPlatName((e.currentTarget as HTMLInputElement).value)}
+                  /></Field
+                >
+              </div>
+              <div class="flex-1 min-w-40">
+                <Field label={tr("common.slug")}
+                  ><Input
+                    id="plat-slug"
+                    placeholder={tr("gamesView.eGPs5")}
+                    bind:value={newPlatformSlug}
+                  /></Field
+                >
+              </div>
+              <div class="flex-1 min-w-40">
+                <Field label={tr("gamesView.manufacturer")}
+                  ><Input
+                    id="plat-mfr"
+                    placeholder={tr("gamesView.eGSony")}
+                    bind:value={newPlatformManufacturer}
+                  /></Field
+                >
+              </div>
+              <div class="w-24">
+                <Field label={tr("gamesView.short")}
+                  ><Input id="plat-short" placeholder="PS5" bind:value={newPlatformShort} /></Field
+                >
+              </div>
+              <Button size="sm" onclick={createPlatform}
+                ><Plus class="w-4 h-4" /> {tr("gamesView.add")}</Button
+              >
+            </div></CardContent
+          ></Card
+        >
 
-        <div class="card overflow-x-auto">
-          <Table class="w-full text-sm">
-            <TableHeader
-              ><TableRow
-                class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
-                ><TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
-                  class="px-4 py-3">{tr("common.slug")}</TableHead
-                ><TableHead class="px-4 py-3">{tr("gamesView.manufacturer")}</TableHead><TableHead
-                  class="px-4 py-3">{tr("gamesView.short")}</TableHead
+        <Table class="w-full text-sm">
+          <TableHeader
+            ><TableRow
+              class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
+              ><TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
+                class="px-4 py-3">{tr("common.slug")}</TableHead
+              ><TableHead class="px-4 py-3">{tr("gamesView.manufacturer")}</TableHead><TableHead
+                class="px-4 py-3">{tr("gamesView.short")}</TableHead
+              ></TableRow
+            ></TableHeader
+          >
+          <TableBody>
+            {#if platformsLoading}<TableRow
+                ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
+                  ><span class="flex justify-center"><Spinner /></span></TableCell
                 ></TableRow
-              ></TableHeader
-            >
-            <TableBody>
-              {#if platformsLoading}<TableRow
-                  ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
-                    ><Loader2 class="w-6 h-6 animate-spin mx-auto" /></TableCell
+              >
+            {:else if platforms.length === 0}<TableRow
+                ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
+                  ><EmptyState
+                    size="sm"
+                    level={null}
+                    title={tr("gamesView.noPlatformsYet")}
+                  /></TableCell
+                ></TableRow
+              >
+            {:else}
+              {#each platforms as p (p.id)}
+                <TableRow
+                  class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
+                  ><TableCell class="px-4 py-2.5 font-medium text-kitsuden-text">{p.name}</TableCell
+                  ><TableCell class="px-4 py-2.5 text-kitsuden-text-dim">/{p.slug}</TableCell
+                  ><TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
+                    >{p.manufacturer || "-"}</TableCell
+                  ><TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
+                    >{p.shortName || "-"}</TableCell
                   ></TableRow
                 >
-              {:else if platforms.length === 0}<TableRow
-                  ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
-                    ><PackageOpen class="w-8 h-8 mx-auto mb-2 opacity-50" />{tr(
-                      "gamesView.noPlatformsYet"
-                    )}</TableCell
-                  ></TableRow
-                >
-              {:else}
-                {#each platforms as p (p.id)}
-                  <TableRow
-                    class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
-                    ><TableCell class="px-4 py-2.5 font-medium text-kitsuden-text"
-                      >{p.name}</TableCell
-                    ><TableCell class="px-4 py-2.5 text-kitsuden-text-dim">/{p.slug}</TableCell
-                    ><TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                      >{p.manufacturer || "-"}</TableCell
-                    ><TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                      >{p.shortName || "-"}</TableCell
-                    ></TableRow
-                  >
-                {/each}
-              {/if}
-            </TableBody>
-          </Table>
-        </div>
+              {/each}
+            {/if}
+          </TableBody>
+        </Table>
       </div>
     {:else if activeTab === "tags"}
       <div class="space-y-4 animate-fade-in">
-        <div class="card p-4">
-          <h3 class="text-sm font-semibold text-kitsuden-text mb-3 flex items-center gap-2">
-            <Tag class="w-4 h-4 text-kitsuden-accent" />
-            {tr("gamesView.newTag")}
-          </h3>
-          <div class="flex flex-wrap items-end gap-3">
-            <div class="flex-1 min-w-40">
-              <label for="tag-name" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.name")}</label
-              ><input
-                id="tag-name"
-                type="text"
-                class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-                placeholder={tr("gamesView.eGRpg")}
-                value={newTagName}
-                oninput={(e) => onTagName(e.currentTarget.value)}
-              />
-            </div>
-            <div class="flex-1 min-w-40">
-              <label for="tag-slug" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.slug")}</label
-              ><input
-                id="tag-slug"
-                type="text"
-                class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-                placeholder={tr("gamesView.eGRpg2")}
-                bind:value={newTagSlug}
-              />
-            </div>
-            <div class="w-28">
-              <label for="tag-color" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("gamesView.color")}</label
-              ><input
-                id="tag-color"
-                type="text"
-                class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-                placeholder="#ff00ff"
-                bind:value={newTagColor}
-              />
-            </div>
-            <div class="flex-1 min-w-40">
-              <label for="tag-cat" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.category")}</label
-              ><input
-                id="tag-cat"
-                type="text"
-                class="w-full bg-kitsuden-bg border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50"
-                placeholder={tr("gamesView.eGGenre")}
-                bind:value={newTagCategory}
-              />
-            </div>
-            <Button size="sm" onclick={createTag}
-              ><Plus class="w-4 h-4" /> {tr("gamesView.add")}</Button
-            >
-          </div>
-        </div>
+        <Card
+          ><CardHeader
+            ><CardTitle class="flex items-center gap-2">
+              <Tag class="w-4 h-4 text-kitsuden-accent" />
+              {tr("gamesView.newTag")}
+            </CardTitle></CardHeader
+          ><CardContent>
+            <div class="flex flex-wrap items-end gap-3">
+              <div class="flex-1 min-w-40">
+                <Field label={tr("common.name")}
+                  ><Input
+                    id="tag-name"
+                    placeholder={tr("gamesView.eGRpg")}
+                    value={newTagName}
+                    oninput={(e: Event) => onTagName((e.currentTarget as HTMLInputElement).value)}
+                  /></Field
+                >
+              </div>
+              <div class="flex-1 min-w-40">
+                <Field label={tr("common.slug")}
+                  ><Input
+                    id="tag-slug"
+                    placeholder={tr("gamesView.eGRpg2")}
+                    bind:value={newTagSlug}
+                  /></Field
+                >
+              </div>
+              <div class="w-28">
+                <Field label={tr("gamesView.color")}
+                  ><Input id="tag-color" placeholder="#ff00ff" bind:value={newTagColor} /></Field
+                >
+              </div>
+              <div class="flex-1 min-w-40">
+                <Field label={tr("common.category")}
+                  ><Input
+                    id="tag-cat"
+                    placeholder={tr("gamesView.eGGenre")}
+                    bind:value={newTagCategory}
+                  /></Field
+                >
+              </div>
+              <Button size="sm" onclick={createTag}
+                ><Plus class="w-4 h-4" /> {tr("gamesView.add")}</Button
+              >
+            </div></CardContent
+          ></Card
+        >
 
-        <div class="card overflow-x-auto">
-          <Table class="w-full text-sm">
-            <TableHeader
-              ><TableRow
-                class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
-                ><TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
-                  class="px-4 py-3">{tr("common.slug")}</TableHead
-                ><TableHead class="px-4 py-3">{tr("gamesView.color")}</TableHead><TableHead
-                  class="px-4 py-3">{tr("common.category")}</TableHead
+        <Table class="w-full text-sm">
+          <TableHeader
+            ><TableRow
+              class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
+              ><TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
+                class="px-4 py-3">{tr("common.slug")}</TableHead
+              ><TableHead class="px-4 py-3">{tr("gamesView.color")}</TableHead><TableHead
+                class="px-4 py-3">{tr("common.category")}</TableHead
+              ></TableRow
+            ></TableHeader
+          >
+          <TableBody>
+            {#if tagsLoading}<TableRow
+                ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
+                  ><span class="flex justify-center"><Spinner /></span></TableCell
                 ></TableRow
-              ></TableHeader
-            >
-            <TableBody>
-              {#if tagsLoading}<TableRow
-                  ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
-                    ><Loader2 class="w-6 h-6 animate-spin mx-auto" /></TableCell
-                  ></TableRow
+              >
+            {:else if tags.length === 0}<TableRow
+                ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
+                  ><EmptyState
+                    size="sm"
+                    level={null}
+                    title={tr("gamesView.noTagsYet")}
+                  /></TableCell
+                ></TableRow
+              >
+            {:else}
+              {#each tags as t (t.id)}
+                <TableRow
+                  class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
                 >
-              {:else if tags.length === 0}<TableRow
-                  ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
-                    ><PackageOpen class="w-8 h-8 mx-auto mb-2 opacity-50" />{tr(
-                      "gamesView.noTagsYet"
-                    )}</TableCell
-                  ></TableRow
-                >
-              {:else}
-                {#each tags as t (t.id)}
-                  <TableRow
-                    class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
+                  <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text">{t.name}</TableCell>
+                  <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">/{t.slug}</TableCell>
+                  <TableCell class="px-4 py-2.5"
+                    >{#if t.color}<span class="inline-flex items-center gap-1.5"
+                        ><span
+                          class="w-3 h-3 rounded-full border border-kitsuden-border"
+                          style={`background-color:${t.color}`}
+                        ></span><span class="text-kitsuden-text-dim">{t.color}</span></span
+                      >{:else}<span class="text-kitsuden-text-dim">-</span>{/if}</TableCell
                   >
-                    <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text"
-                      >{t.name}</TableCell
-                    >
-                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">/{t.slug}</TableCell>
-                    <TableCell class="px-4 py-2.5"
-                      >{#if t.color}<span class="inline-flex items-center gap-1.5"
-                          ><span
-                            class="w-3 h-3 rounded-full border border-kitsuden-border"
-                            style={`background-color:${t.color}`}
-                          ></span><span class="text-kitsuden-text-dim">{t.color}</span></span
-                        >{:else}<span class="text-kitsuden-text-dim">-</span>{/if}</TableCell
-                    >
-                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                      >{t.category || "-"}</TableCell
-                    >
-                  </TableRow>
-                {/each}
-              {/if}
-            </TableBody>
-          </Table>
-        </div>
+                  <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
+                    >{t.category || "-"}</TableCell
+                  >
+                </TableRow>
+              {/each}
+            {/if}
+          </TableBody>
+        </Table>
       </div>
     {/if}
   </div>

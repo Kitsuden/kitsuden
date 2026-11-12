@@ -149,7 +149,9 @@
       >
         <!-- Header -->
         <button
-          class="w-full flex items-center gap-3 p-3 text-left"
+          type="button"
+          class="w-full flex items-center gap-3 p-3 text-left min-h-11"
+          aria-expanded={isExpanded}
           onclick={() => toggleStep(step.id)}
         >
           <div class={cn("p-2 rounded-lg", config.color)}>

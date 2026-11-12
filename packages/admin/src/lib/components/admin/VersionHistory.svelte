@@ -4,6 +4,7 @@
   import { History, Trash2, RotateCcw } from "lucide-svelte";
 
   import { autosaveStore } from "$lib/states/autosave.svelte";
+  import { Button } from "$lib/tallao";
 
   interface Props {
     onRestore?: () => void;
@@ -34,13 +35,10 @@
       {t("versionHistory.versionHistory")}
     </h3>
     {#if autosaveStore.versions.length > 0}
-      <button
-        class="text-xs text-kitsuden-danger hover:text-kitsuden-danger flex items-center gap-1 transition-colors"
-        onclick={handleDeleteAll}
-      >
+      <Button variant="danger-ghost" size="sm" onclick={handleDeleteAll}>
         <Trash2 class="w-3 h-3" />
         {t("versionHistory.deleteAll")}
-      </button>
+      </Button>
     {/if}
   </div>
 
@@ -62,13 +60,10 @@
               {formatTime(version.timestamp)}
             </p>
           </div>
-          <button
-            class="px-2 py-1 text-xs font-medium rounded-md bg-kitsuden-accent/10 text-kitsuden-accent hover:bg-kitsuden-accent/20 transition-colors flex items-center gap-1 shrink-0"
-            onclick={() => handleRestore(i)}
-          >
+          <Button variant="soft" size="sm" class="shrink-0" onclick={() => handleRestore(i)}>
             <RotateCcw class="w-3 h-3" />
             {t("versionHistory.restore")}
-          </button>
+          </Button>
         </div>
       {/each}
     </div>

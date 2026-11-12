@@ -25,7 +25,15 @@
   />
 -->
 <script lang="ts">
-  import { toast } from "$lib/tallao";
+  import {
+    Badge,
+    Button,
+    Tabs,
+    ToggleGroup,
+    toast,
+    type TabItem,
+    type ToggleOption,
+  } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   import {
     MessageCircle,
@@ -117,12 +125,30 @@
   // State
   type TabType = "whatsapp" | "telegram" | "facebook" | "twitter" | "linkedin";
   let activeTab = $state<TabType>("whatsapp");
+  const tabItems = $derived<TabItem[]>([
+    { id: "whatsapp", label: t("socialPreview.whatsapp") },
+    { id: "telegram", label: t("socialPreview.telegram") },
+    { id: "facebook", label: t("socialPreview.facebook") },
+    { id: "twitter", label: t("socialPreview.xTwitter") },
+    { id: "linkedin", label: t("socialPreview.linkedin") },
+  ]);
+  const tabIcons = {
+    whatsapp: MessageCircle,
+    telegram: Send,
+    facebook: Facebook,
+    twitter: Twitter,
+    linkedin: Linkedin,
+  } as const;
   let isRefreshing = $state(false);
   let showDebug = $state(false);
   let copied = $state(false);
   let isExporting = $state(false);
   const comparisonView = $state<"split" | "overlay">("split");
   let activeVariant = $state<"A" | "B">("A");
+  const variantOptions = $derived<ToggleOption[]>([
+    { value: "A", label: labelA },
+    { value: "B", label: labelB },
+  ]);
 
   // Refs for export
   let previewContainer: HTMLDivElement;
@@ -263,126 +289,86 @@
     </div>
 
     <div class="preview-actions">
-      <!-- A/B comparison button -->
+      <!-- A/B comparison -->
       {#if comparisonMode}
-        <div class="variant-toggle">
-          <button
-            class="variant-btn"
-            class:active={activeVariant === "A"}
-            onclick={() => (activeVariant = "A")}
-          >
-            {labelA}
-            {#if issuesA > 0}
-              <span class="variant-badge warning">{issuesA}</span>
-            {:else}
-              <span class="variant-badge success">✓</span>
-            {/if}
-          </button>
-          <button
-            class="variant-btn"
-            class:active={activeVariant === "B"}
-            onclick={() => (activeVariant = "B")}
-          >
-            {labelB}
-            {#if issuesB > 0}
-              <span class="variant-badge warning">{issuesB}</span>
-            {:else}
-              <span class="variant-badge success">✓</span>
-            {/if}
-          </button>
-        </div>
+        <ToggleGroup
+          options={variantOptions}
+          value={activeVariant}
+          ariaLabel={t("socialPreview.socialPreviewABComparison")}
+          size="sm"
+          required
+          onchange={(v) => (activeVariant = v === "B" ? "B" : "A")}
+        >
+          {#snippet item(option: ToggleOption)}
+            {@const issues = option.value === "A" ? issuesA : issuesB}
+            {option.label}
+            <Badge variant={issues > 0 ? "warning" : "success"}>{issues > 0 ? issues : "✓"}</Badge>
+          {/snippet}
+        </ToggleGroup>
       {/if}
 
       <!-- Export image -->
-      <button
-        class="action-btn"
+      <Button
+        variant="ghost"
+        size="icon"
         onclick={exportAsImage}
-        disabled={isExporting}
+        loading={isExporting}
+        ariaLabel={t("socialPreview.exportAsImage")}
         title={t("socialPreview.exportAsImage")}
       >
-        {#if isExporting}
-          <RefreshCw size={16} class="spin" />
-        {:else}
-          <Camera size={16} />
-        {/if}
-      </button>
+        <Camera size={16} aria-hidden="true" />
+      </Button>
 
       {#if postSlug}
-        <button
-          class="action-btn"
+        <Button
+          variant="ghost"
+          size="icon"
           onclick={refreshPreview}
-          disabled={isRefreshing}
+          loading={isRefreshing}
+          ariaLabel={t("socialPreview.refreshPreview")}
           title={t("socialPreview.refreshPreview")}
         >
-          <RefreshCw size={16} class={isRefreshing ? "spin" : ""} />
-        </button>
+          <RefreshCw size={16} aria-hidden="true" />
+        </Button>
       {/if}
 
-      <button
-        class="action-btn"
+      <Button
+        variant={showDebug ? "soft" : "ghost"}
+        size="icon"
         onclick={() => (showDebug = !showDebug)}
-        class:active={showDebug}
+        aria-pressed={showDebug}
+        ariaLabel={t("socialPreview.viewDiagnostic")}
         title={t("socialPreview.viewDiagnostic")}
       >
-        <AlertCircle size={16} />
-      </button>
+        <AlertCircle size={16} aria-hidden="true" />
+      </Button>
 
-      <button class="action-btn copy-btn" onclick={copyUrl} title={t("socialPreview.copyUrl")}>
+      <Button variant="secondary" size="sm" onclick={copyUrl} title={t("socialPreview.copyUrl")}>
         {copied ? "✓" : t("socialPreview.copy")}
-      </button>
+      </Button>
     </div>
   </div>
 
   <!-- Tabs -->
-  <div class="preview-tabs">
-    <button
-      class="tab"
-      class:active={activeTab === "whatsapp"}
-      onclick={() => (activeTab = "whatsapp")}
-    >
-      <MessageCircle size={16} />
-      <span>{t("socialPreview.whatsapp")}</span>
-      {#if hasWhatsAppIssues}
-        <span class="tab-warning">!</span>
-      {/if}
-    </button>
-
-    <button
-      class="tab"
-      class:active={activeTab === "telegram"}
-      onclick={() => (activeTab = "telegram")}
-    >
-      <Send size={16} />
-      <span>{t("socialPreview.telegram")}</span>
-    </button>
-
-    <button
-      class="tab"
-      class:active={activeTab === "facebook"}
-      onclick={() => (activeTab = "facebook")}
-    >
-      <Facebook size={16} />
-      <span>{t("socialPreview.facebook")}</span>
-    </button>
-
-    <button
-      class="tab"
-      class:active={activeTab === "twitter"}
-      onclick={() => (activeTab = "twitter")}
-    >
-      <Twitter size={16} />
-      <span>{t("socialPreview.xTwitter")}</span>
-    </button>
-
-    <button
-      class="tab"
-      class:active={activeTab === "linkedin"}
-      onclick={() => (activeTab = "linkedin")}
-    >
-      <Linkedin size={16} />
-      <span>{t("socialPreview.linkedin")}</span>
-    </button>
-  </div>
+  <Tabs
+    items={tabItems}
+    value={activeTab}
+    panels={false}
+    ariaLabel={t("socialPreview.socialMediaPreview")}
+    class="preview-tabs"
+    onchange={(id) => (activeTab = id as TabType)}
+  >
+    {#snippet tab(item: TabItem)}
+      {@const TabIcon = tabIcons[item.id as TabType]}
+      <span class="preview-tab">
+        <TabIcon size={16} aria-hidden="true" />
+        <span>{item.label}</span>
+        {#if item.id === "whatsapp" && hasWhatsAppIssues}
+          <Badge variant="error" tone="solid">!</Badge>
+        {/if}
+      </span>
+    {/snippet}
+  </Tabs>
 
   <!-- Content -->
   <div class="preview-content">
@@ -592,10 +578,10 @@
         </div>
 
         <div class="external-tools">
-          <button class="tool-link" onclick={openFacebookDebugger}>
-            <ExternalLink size={14} />
+          <Button variant="secondary" size="sm" onclick={openFacebookDebugger}>
+            <ExternalLink size={14} aria-hidden="true" />
             {t("socialPreview.openFacebookDebugger")}
-          </button>
+          </Button>
         </div>
       </div>
     {/if}
@@ -654,10 +640,10 @@
         </div>
 
         <div class="external-tools">
-          <button class="tool-link" onclick={openTwitterValidator}>
-            <ExternalLink size={14} />
+          <Button variant="secondary" size="sm" onclick={openTwitterValidator}>
+            <ExternalLink size={14} aria-hidden="true" />
             {t("socialPreview.openTwitterCardValidator")}
-          </button>
+          </Button>
         </div>
       </div>
     {/if}
@@ -692,10 +678,10 @@
         </div>
 
         <div class="external-tools">
-          <button class="tool-link" onclick={openLinkedInInspector}>
-            <ExternalLink size={14} />
+          <Button variant="secondary" size="sm" onclick={openLinkedInInspector}>
+            <ExternalLink size={14} aria-hidden="true" />
             {t("socialPreview.openLinkedinPostInspector")}
-          </button>
+          </Button>
         </div>
       </div>
     {/if}
@@ -818,10 +804,11 @@
 </div>
 
 <style>
+  /* The panel's own chrome follows the theme; the previews below imitate each network. */
   .social-preview-container {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    background: rgb(var(--ta-surface));
+    border: 1px solid rgb(var(--ta-border));
+    border-radius: var(--ta-radius-lg);
     overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
@@ -832,8 +819,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    border-bottom: 1px solid rgb(var(--ta-border));
+    color: rgb(var(--ta-text));
     flex-wrap: wrap;
     gap: 12px;
   }
@@ -842,6 +829,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
     font-weight: 600;
     font-size: 14px;
   }
@@ -849,158 +837,20 @@
   .preview-actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
-  /* Variant Toggle (A/B) */
-  .variant-toggle {
-    display: flex;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    padding: 2px;
-    margin-right: 8px;
+  /* Tabs */
+  .social-preview-container :global(.preview-tabs) {
+    padding-inline: 8px;
   }
 
-  .variant-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .variant-btn.active {
-    background: rgba(255, 255, 255, 0.9);
-    color: #667eea;
-  }
-
-  .variant-badge {
+  .preview-tab {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
-    font-size: 10px;
-    font-weight: bold;
-  }
-
-  .variant-badge.warning {
-    background: #fbbf24;
-    color: #92400e;
-  }
-
-  .variant-badge.success {
-    background: #10b981;
-    color: white;
-    font-size: 8px;
-  }
-
-  .action-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    border-radius: 6px;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .action-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
-
-  .action-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .action-btn.active {
-    background: rgba(255, 255, 255, 0.4);
-  }
-
-  .copy-btn {
-    width: auto;
-    padding: 0 12px;
-    font-size: 12px;
-    font-weight: 500;
-  }
-
-  .spin {
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  /* Tabs */
-  .preview-tabs {
-    display: flex;
-    border-bottom: 1px solid #e5e7eb;
-    background: #f9fafb;
-    overflow-x: auto;
-  }
-
-  .tab {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     gap: 6px;
-    padding: 12px 8px;
-    background: none;
-    border: none;
-    font-size: 13px;
-    font-weight: 500;
-    color: #6b7280;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
     white-space: nowrap;
-    min-width: 100px;
-  }
-
-  .tab:hover {
-    color: #374151;
-    background: #f3f4f6;
-  }
-
-  .tab.active {
-    color: #667eea;
-    background: white;
-    border-bottom: 2px solid #667eea;
-    margin-bottom: -1px;
-  }
-
-  .tab-warning {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    background: #ef4444;
-    color: white;
-    border-radius: 50%;
-    font-size: 10px;
-    font-weight: bold;
   }
 
   /* Content */
@@ -1639,25 +1489,6 @@
   .external-tools {
     margin-top: 16px;
     text-align: center;
-  }
-
-  .tool-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: white;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 13px;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .tool-link:hover {
-    background: #f9fafb;
-    border-color: #9ca3af;
   }
 
   /* Debug Panel */

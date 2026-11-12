@@ -214,6 +214,40 @@ class DeleteCalculatedFieldResponse(TypedDict):
     success: Literal[True]
 
 
+class EntryHistoryResponseHistoryItemActor(TypedDict):
+    type: Literal["user", "agent", "system"]
+    id: Optional[str]
+    name: Optional[str]
+
+
+class _EntryHistoryResponseHistoryItemChangesItemRequired(TypedDict):
+    field: str
+
+
+class EntryHistoryResponseHistoryItemChangesItem(_EntryHistoryResponseHistoryItemChangesItemRequired, total=False):
+    before: Any
+    after: Any
+    redacted: Literal[True]
+
+
+class EntryHistoryResponseHistoryItem(TypedDict):
+    id: str
+    action: Literal["create", "update", "delete"]
+    at: str
+    actor: EntryHistoryResponseHistoryItemActor
+    changes: List[EntryHistoryResponseHistoryItemChangesItem]
+    truncated: bool
+    proposalId: Optional[str]
+    approvedBy: Optional[str]
+
+
+class EntryHistoryResponse(TypedDict):
+    history: List[EntryHistoryResponseHistoryItem]
+    total: int
+    limit: int
+    offset: int
+
+
 class ExportDatasetsBodyFilter(TypedDict, total=False):
     status: str
     dateFrom: str
@@ -363,6 +397,7 @@ CreateSnapshotResult = Dict[str, Any]
 DeleteCalculatedFieldResult = DeleteCalculatedFieldResponse
 DeleteDatasetResult = DeleteCalculatedFieldResponse
 DeleteEntryResult = DeleteCalculatedFieldResponse
+EntryHistoryResult = EntryHistoryResponse
 ExportDatasetsResult = Dict[str, Any]
 GetCalculatedFieldResult = CreateCalculatedFieldResponse
 GetDatasetResult = CreateDatasetResponse
@@ -572,6 +607,24 @@ OPERATIONS: Dict[str, OperationInfo] = {
         scope="kon:datasets:delete-entry",
         mcp_tool="datasets__delete-entry",
         errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+    ),
+    "entry-history": OperationInfo(
+        kon="kon-datasets",
+        id="entry-history",
+        operation_id="datasets.entry-history",
+        method="GET",
+        path="/datasets/{id}/entries/{entryId}/history",
+        path_params=("id", "entryId"),
+        query_params=("limit", "offset"),
+        body=None,
+        responses={200: "json"},
+        idempotent=True,
+        read_only=True,
+        sensitive=False,
+        scope="kon:datasets:entry-history",
+        mcp_tool="datasets__entry-history",
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        pagination=PaginationInfo(style="offset", items="history", limit="limit"),
     ),
     "export-datasets": OperationInfo(
         kon="kon-datasets",
@@ -1077,6 +1130,30 @@ class DatasetsApi(KonApi):
         """
         return self._call(OPERATIONS["delete-entry"], {"id": id, "entryId": entry_id}, None, request_options)
 
+    def entry_history(self, *, id: Union[str, int], entry_id: Union[str, int], limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[EntryHistoryResult]:
+        """Change history of an entry
+
+        Who created, changed or deleted an entry, newest first: the actor (a person or an agent), the action (create, update, delete) and the fields that changed, with their value before and after. A field named like a secret (token, password, hash) is listed as `redacted` without values, and long values are cut to a preview. Same visibility as reading the entry (otherwise 404). Changes made before this history existed are not listed.
+
+        REST: `GET /api/datasets/{id}/entries/{entryId}/history` · scope `kon:datasets:entry-history`
+        idempotent (safe to retry) · MCP tool `datasets__entry-history`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+
+        Args:
+            id: Dataset id (uuid)
+            entry_id: Entry id (uuid)
+            limit: 1-200, default 50
+            offset: Entries to skip, default 0
+        """
+        return self._call(OPERATIONS["entry-history"], {"id": id, "entryId": entry_id, "limit": limit, "offset": offset}, None, request_options)
+
+    def iter_entry_history(self, *, id: Union[str, int], entry_id: Union[str, int], limit: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Iterator[EntryHistoryResponseHistoryItem]:
+        """Every item of `entry_history`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["entry-history"], {"id": id, "entryId": entry_id, "limit": limit}, request_options)
+
     def export_datasets(self, *, body: ExportDatasetsBody, request_options: Optional[RequestOptions] = None) -> Outcome[ExportDatasetsResult]:
         """Export datasets
 
@@ -1518,6 +1595,30 @@ class AsyncDatasetsApi(AsyncKonApi):
             entry_id: Entry id (uuid)
         """
         return await self._call(OPERATIONS["delete-entry"], {"id": id, "entryId": entry_id}, None, request_options)
+
+    async def entry_history(self, *, id: Union[str, int], entry_id: Union[str, int], limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[EntryHistoryResult]:
+        """Change history of an entry
+
+        Who created, changed or deleted an entry, newest first: the actor (a person or an agent), the action (create, update, delete) and the fields that changed, with their value before and after. A field named like a secret (token, password, hash) is listed as `redacted` without values, and long values are cut to a preview. Same visibility as reading the entry (otherwise 404). Changes made before this history existed are not listed.
+
+        REST: `GET /api/datasets/{id}/entries/{entryId}/history` · scope `kon:datasets:entry-history`
+        idempotent (safe to retry) · MCP tool `datasets__entry-history`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+
+        Args:
+            id: Dataset id (uuid)
+            entry_id: Entry id (uuid)
+            limit: 1-200, default 50
+            offset: Entries to skip, default 0
+        """
+        return await self._call(OPERATIONS["entry-history"], {"id": id, "entryId": entry_id, "limit": limit, "offset": offset}, None, request_options)
+
+    def iter_entry_history(self, *, id: Union[str, int], entry_id: Union[str, int], limit: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[EntryHistoryResponseHistoryItem]:
+        """Every item of `entry_history`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["entry-history"], {"id": id, "entryId": entry_id, "limit": limit}, request_options)
 
     async def export_datasets(self, *, body: ExportDatasetsBody, request_options: Optional[RequestOptions] = None) -> Outcome[ExportDatasetsResult]:
         """Export datasets

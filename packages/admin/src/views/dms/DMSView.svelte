@@ -1,13 +1,34 @@
 <script lang="ts">
   import {
-    Dialog,
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableHead,
-    TableCell,
+    Avatar,
+    Badge,
     Button,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    Checkbox,
+    Dialog,
+    EmptyState,
+    Field,
+    Input,
+    Pagination,
+    Progress,
+    SearchInput,
+    Select,
+    Sheet,
+    Spinner,
+    Stat,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+    Tabs,
+    Textarea,
+    toast,
+    type TabItem,
   } from "$lib/tallao";
   import ViewPage from "$lib/components/admin/ViewPage.svelte";
   import { t as tr, localeFormat } from "$lib/i18n";
@@ -24,10 +45,7 @@
   import {
     FileText,
     FolderTree,
-    GitBranch,
-    Activity,
     Plus,
-    Search,
     Eye,
     Edit2,
     Trash2,
@@ -38,27 +56,16 @@
     ChevronRight,
     ChevronDown,
     Download,
-    FileStack,
     ClipboardCheck,
     Archive,
-    Settings,
-    X,
-    ChevronLeft,
-    ChevronLast,
-    ChevronFirst,
     Save,
     Send,
     Check,
-    MessageSquare,
     GitCommit,
     Bell,
-    BarChart3,
     Layers,
     Link2,
     FileCode,
-    Sparkles,
-    Loader2,
-    Inbox,
     CheckCheck,
     Reply,
     Copy,
@@ -172,12 +179,6 @@
     title: string;
   }
 
-  interface Toast {
-    id: number;
-    message: string;
-    type: "success" | "error" | "info";
-  }
-
   // ═══════════════════════════════════════════════════════════════════════════
   // CONSTANTS
   // ═══════════════════════════════════════════════════════════════════════════
@@ -225,12 +226,11 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   // Global
-  let activeSection = $state<"documents" | "categories" | "templates" | "notifications" | "stats">(
-    "documents"
-  );
+  // "documents" | "categories" | "templates" | "notifications" | "stats"
+  let activeSection = $state<string>("documents");
+  const uid = $props.id();
   let loading = $state(true);
   let saving = $state(false);
-  let toasts = $state<Toast[]>([]);
 
   // Categories
   let categories = $state<Category[]>([]);
@@ -263,9 +263,8 @@
   // Drawer
   let drawerOpen = $state(false);
   let drawerDoc = $state<Doc | null>(null);
-  let drawerTab = $state<
-    "metadata" | "content" | "versions" | "comments" | "diagrams" | "audit" | "backlinks"
-  >("metadata");
+  // "metadata" | "content" | "versions" | "comments" | "diagrams" | "audit" | "backlinks"
+  let drawerTab = $state<string>("metadata");
   let drawerLoading = $state(false);
 
   // Drawer sub-state
@@ -276,7 +275,7 @@
   let backlinks = $state<Backlink[]>([]);
   let renderedHtml = $state("");
   let contentEditor = $state("");
-  let contentFormat = $state<"markdown" | "html">("markdown");
+  let contentFormat = $state<string>("markdown");
   let commentInput = $state("");
   let replyToId = $state<string | null>(null);
   let wikiQuery = $state("");
@@ -284,7 +283,7 @@
   let showWikiDropdown = $state(false);
   let wikiCaretPos = $state(0);
   let changelogInput = $state("");
-  let changeTypeInput = $state<"major" | "minor" | "patch">("minor");
+  let changeTypeInput = $state<string>("minor");
   let reviewNotes = $state("");
 
   // Modals
@@ -337,6 +336,63 @@
 
   const unreadCount = $derived.by(() => notifications.filter((n) => !n.read).length);
 
+  const sectionTabs = $derived<TabItem[]>([
+    { id: "documents", label: tr("dMSView.tabDocuments") },
+    { id: "categories", label: tr("dMSView.categories") },
+    { id: "templates", label: tr("dMSView.tabTemplates") },
+    { id: "notifications", label: tr("dMSView.tabNotifications"), count: unreadCount || undefined },
+    { id: "stats", label: tr("dMSView.tabStats") },
+  ]);
+
+  const drawerTabs = $derived<TabItem[]>([
+    { id: "metadata", label: tr("dMSView.tabMetadata") },
+    { id: "content", label: tr("common.content") },
+    { id: "versions", label: tr("dMSView.tabVersions"), count: versions.length || undefined },
+    { id: "comments", label: tr("dMSView.comments"), count: comments.length || undefined },
+    { id: "diagrams", label: tr("dMSView.diagrams") },
+    { id: "audit", label: tr("dMSView.tabAudit") },
+    { id: "backlinks", label: tr("dMSView.backlinks") },
+  ]);
+
+  /** Categories and their children, as the options of a Select. */
+  const categoryOptions = $derived(
+    categories.flatMap((c) => [
+      { value: c.id, label: c.name },
+      ...(c.children || []).map((child) => ({ value: child.id, label: `  ${child.name}` })),
+    ])
+  );
+
+  const changeTypeOptions = [
+    { value: "major", label: tr("dMSView.major") },
+    { value: "minor", label: tr("dMSView.minor") },
+    { value: "patch", label: tr("dMSView.patch") },
+  ];
+
+  // The document form: `formDoc` can lack any field, and a kit control cannot bind `undefined`.
+  type DocTextKey =
+    | "title"
+    | "code"
+    | "slug"
+    | "description"
+    | "type"
+    | "status"
+    | "categoryId"
+    | "visibility"
+    | "effectiveDate"
+    | "reviewDueDate"
+    | "expirationDate";
+  const setField = (key: DocTextKey) => (e: Event) => {
+    formDoc[key] = (
+      e.currentTarget as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    ).value;
+  };
+  const setList = (key: "tags" | "allowedUserIds" | "allowedRoleIds") => (e: Event) => {
+    formDoc[key] = (e.currentTarget as HTMLInputElement).value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
   // ═══════════════════════════════════════════════════════════════════════════
   // LIFECYCLE
   // ═══════════════════════════════════════════════════════════════════════════
@@ -360,12 +416,10 @@
   // TOASTS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  function showToast(message: string, type: Toast["type"] = "info") {
-    const id = Date.now() + Math.random();
-    toasts = [...toasts, { id, message, type }];
-    setTimeout(() => {
-      toasts = toasts.filter((t) => t.id !== id);
-    }, 4000);
+  function showToast(message: string, type: "success" | "error" | "info" = "info") {
+    if (type === "success") toast.success(message);
+    else if (type === "error") toast.error(message);
+    else toast.info(message);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -487,7 +541,7 @@
       const result = await apiFetch(`/api/dms/render/${slug}`);
       renderedHtml = result.content || result.html || result;
     } catch {
-      renderedHtml = '<p class="text-kitsuden-subtle">Preview not available</p>';
+      renderedHtml = "";
     }
   }
 
@@ -636,7 +690,7 @@
       await Promise.all(
         ids.map((id) => apiFetch(`/api/dms/documents/${id}`, { method: "DELETE" }))
       );
-      showToast(`${ids.length} document(s) deleted`, "success");
+      showToast(tr("dMSView.documentsDeleted", { n: ids.length }), "success");
       selectedIds = new Set();
       deleteTargetIds = [];
       showConfirmDeleteModal = false;
@@ -1040,51 +1094,23 @@
     return new Date(date) < new Date();
   }
 
-  function getInitials(name?: string) {
-    if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  }
-
-  function statusBadgeClass(status?: string) {
+  function statusVariant(
+    status?: string
+  ): "default" | "success" | "warning" | "error" | "info" | "purple" {
     switch (status) {
       case "published":
-        return "bg-kitsuden-info/10 text-kitsuden-info";
+        return "info";
       case "approved":
-        return "bg-kitsuden-green/10 text-kitsuden-green";
+        return "success";
       case "review_pending":
-        return "bg-kitsuden-amber/10 text-kitsuden-amber";
-      case "draft":
-        return "bg-kitsuden-subtle/10 text-kitsuden-text-dim";
-      case "archived":
-        return "bg-kitsuden-purple/10 text-kitsuden-purple";
-      case "deprecated":
-        return "bg-kitsuden-danger/10 text-kitsuden-danger";
       case "changes_requested":
-        return "bg-kitsuden-amber/10 text-kitsuden-amber";
+        return "warning";
+      case "archived":
+        return "purple";
+      case "deprecated":
+        return "error";
       default:
-        return "bg-kitsuden-subtle/10 text-kitsuden-text-dim";
-    }
-  }
-
-  function sectionLabel(section: string) {
-    switch (section) {
-      case "documents":
-        return "Documents";
-      case "categories":
-        return "Categories";
-      case "templates":
-        return "Templates";
-      case "notifications":
-        return "Notifications";
-      case "stats":
-        return "Stats";
-      default:
-        return "Documents";
+        return "default";
     }
   }
 
@@ -1100,9 +1126,6 @@
   }
 </script>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════ -->
-<!-- HEADER -->
-<!-- ═══════════════════════════════════════════════════════════════════════════ -->
 <ViewPage
   title={tr("dMSView.documentManagement")}
   description={tr("dMSView.versionedDocumentStorageWithApproval")}
@@ -1126,1080 +1149,701 @@
     {/if}
   {/snippet}
 
-  <div class="h-full flex flex-col bg-kitsuden-bg">
-    <div class="border-b border-kitsuden-border bg-kitsuden-card px-6 py-4 shrink-0">
-      <!-- Section Tabs -->
-      <div class="flex items-center gap-1 mt-4 border-t border-kitsuden-border pt-3">
-        {#each ["documents", "categories", "templates", "notifications", "stats"] as const as sec}
-          <button
-            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 {activeSection ===
-            sec
-              ? 'bg-kitsuden-accent/10 text-kitsuden-accent'
-              : 'text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-bg'}"
-            onclick={() => {
-              activeSection = sec;
-              selectedIds = new Set();
-            }}
-          >
-            {#if sec === "documents"}<FileText class="w-4 h-4" />{/if}
-            {#if sec === "categories"}<FolderTree class="w-4 h-4" />{/if}
-            {#if sec === "templates"}<Copy class="w-4 h-4" />{/if}
-            {#if sec === "notifications"}
-              <Bell class="w-4 h-4" />
-              {#if unreadCount > 0}
-                <span
-                  class="ml-0.5 px-1.5 py-0.5 rounded-full bg-kitsuden-accent-2 text-kitsuden-on-accent text-xs leading-none"
-                  >{unreadCount}</span
-                >
-              {/if}
-            {/if}
-            {#if sec === "stats"}<BarChart3 class="w-4 h-4" />{/if}
-            {sectionLabel(sec)}
-          </button>
-        {/each}
+  {#snippet tabs()}
+    <Tabs
+      items={sectionTabs}
+      bind:value={activeSection}
+      panels={false}
+      ariaLabel={tr("dMSView.sections")}
+      onchange={() => (selectedIds = new Set())}
+    />
+  {/snippet}
+
+  <div class="flex min-w-0 flex-col gap-4">
+    <!-- Totals (documents and templates) -->
+    {#if stats && (activeSection === "documents" || activeSection === "templates")}
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <Stat label={tr("dMSView.totalDocuments")} value={stats.documents?.total || 0} />
+        <Stat
+          label={tr("common.published")}
+          value={stats.documents?.published || 0}
+          variant="success"
+        />
+        <Stat label={tr("dMSView.drafts")} value={stats.documents?.draft || 0} />
+        <Stat
+          label={tr("dMSView.upForReview")}
+          value={stats.upcomingReviews?.length || 0}
+          variant={stats.upcomingReviews?.length ? "warning" : "default"}
+        />
+        <Stat label={tr("dMSView.pending")} value={stats.pendingApprovals || unreadCount || 0} />
       </div>
+    {/if}
 
-      <!-- Stats Row (visible on documents/templates tabs) -->
-      {#if stats && (activeSection === "documents" || activeSection === "templates")}
-        <div class="grid grid-cols-5 gap-4 mt-3 pt-3 border-t border-kitsuden-border">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-kitsuden-info/10 flex items-center justify-center">
-              <FileText class="w-4 h-4 text-kitsuden-info" />
-            </div>
-            <div>
-              <p class="text-lg font-bold text-kitsuden-text">{stats.documents?.total || 0}</p>
-              <p class="text-[11px] text-kitsuden-subtle">{tr("dMSView.totalDocuments")}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-kitsuden-green/10 flex items-center justify-center">
-              <CheckCircle class="w-4 h-4 text-kitsuden-green" />
-            </div>
-            <div>
-              <p class="text-lg font-bold text-kitsuden-text">{stats.documents?.published || 0}</p>
-              <p class="text-[11px] text-kitsuden-subtle">{tr("common.published")}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-kitsuden-amber/10 flex items-center justify-center">
-              <Clock class="w-4 h-4 text-kitsuden-amber" />
-            </div>
-            <div>
-              <p class="text-lg font-bold text-kitsuden-text">{stats.documents?.draft || 0}</p>
-              <p class="text-[11px] text-kitsuden-subtle">{tr("dMSView.drafts")}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-kitsuden-purple/10 flex items-center justify-center">
-              <AlertCircle class="w-4 h-4 text-kitsuden-purple" />
-            </div>
-            <div>
-              <p class="text-lg font-bold text-kitsuden-text">
-                {stats.upcomingReviews?.length || 0}
-              </p>
-              <p class="text-[11px] text-kitsuden-subtle">{tr("dMSView.upForReview")}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-kitsuden-accent/10 flex items-center justify-center">
-              <Inbox class="w-4 h-4 text-kitsuden-accent" />
-            </div>
-            <div>
-              <p class="text-lg font-bold text-kitsuden-text">
-                {stats.pendingApprovals || unreadCount || 0}
-              </p>
-              <p class="text-[11px] text-kitsuden-subtle">{tr("dMSView.pending")}</p>
-            </div>
-          </div>
-        </div>
-      {/if}
-    </div>
-
-    <!-- ═════════════════════════════════════════════════════════════════════════ -->
-    <!-- MAIN CONTENT -->
-    <!-- ═════════════════════════════════════════════════════════════════════════ -->
-    <div class="flex-1 flex overflow-hidden">
-      <!-- ───────────────────────────── Sidebar (Categories) ───────────────────────────── -->
-      {#if activeSection === "documents" || activeSection === "templates"}
-        <div class="w-64 border-r border-kitsuden-border bg-kitsuden-card flex flex-col shrink-0">
-          <div class="p-4 border-b border-kitsuden-border">
-            <h3 class="font-semibold text-kitsuden-text flex items-center gap-2 text-sm">
-              <FolderTree class="w-4 h-4" />
-              {tr("dMSView.categories")}
-            </h3>
-          </div>
-          <div class="flex-1 overflow-y-auto p-2">
-            <button
-              class="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 {selectedCategory ===
-              null
-                ? 'bg-kitsuden-accent/10 text-kitsuden-accent'
-                : 'text-kitsuden-text hover:bg-kitsuden-bg'}"
-              onclick={() => selectCategory(null)}
-            >
-              <FileText class="w-4 h-4" />
-              {tr("dMSView.allDocuments")}
-            </button>
-            {#each categories as category}
-              <div class="mt-1">
-                <div class="group flex items-center gap-1">
-                  {#if category.children && category.children.length > 0}
-                    <button
-                      class="p-1 hover:bg-kitsuden-bg rounded-sm shrink-0"
+    {#if activeSection === "documents" || activeSection === "templates"}
+      <div class="flex min-w-0 flex-col gap-4 md:flex-row md:items-start">
+        <!-- Categories -->
+        <Card class="md:w-64 md:shrink-0">
+          <CardHeader>
+            <CardTitle level={2}>{tr("dMSView.categories")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="flex flex-col gap-1">
+              <Button
+                variant={selectedCategory === null ? "soft" : "ghost"}
+                class="w-full justify-start"
+                aria-current={selectedCategory === null ? "true" : undefined}
+                onclick={() => selectCategory(null)}
+              >
+                <FileText class="w-4 h-4" />
+                {tr("dMSView.allDocuments")}
+              </Button>
+              {#each categories as category}
+                {@const hasChildren = !!category.children && category.children.length > 0}
+                {@const expanded = expandedCategories.has(category.id)}
+                <div class="flex min-w-0 items-center gap-1">
+                  {#if hasChildren}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      ariaLabel={expanded
+                        ? tr("dMSView.collapseCategory", { name: category.name })
+                        : tr("dMSView.expandCategory", { name: category.name })}
+                      aria-expanded={expanded}
                       onclick={() => toggleCategory(category)}
                     >
-                      {#if expandedCategories.has(category.id)}
-                        <ChevronDown class="w-3.5 h-3.5 text-kitsuden-text-dim" />
+                      {#if expanded}
+                        <ChevronDown class="w-4 h-4" />
                       {:else}
-                        <ChevronRight class="w-3.5 h-3.5 text-kitsuden-text-dim" />
+                        <ChevronRight class="w-4 h-4" />
                       {/if}
-                    </button>
-                  {:else}
-                    <span class="w-6 shrink-0"></span>
+                    </Button>
                   {/if}
-                  <button
-                    class="flex-1 text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 {selectedCategory?.id ===
-                    category.id
-                      ? 'bg-kitsuden-accent/10 text-kitsuden-accent'
-                      : 'text-kitsuden-text hover:bg-kitsuden-bg'}"
+                  <Button
+                    variant={selectedCategory?.id === category.id ? "soft" : "ghost"}
+                    class="min-w-0 flex-1 justify-start"
+                    aria-current={selectedCategory?.id === category.id ? "true" : undefined}
                     onclick={() => selectCategory(category)}
                   >
-                    <span class="text-lg shrink-0">{category.icon || "📁"}</span>
+                    <span aria-hidden="true">{category.icon || "📁"}</span>
                     <span class="truncate">{category.name}</span>
-                    <span class="ml-auto text-xs text-kitsuden-subtle shrink-0"
+                    <span class="ml-auto text-xs text-kitsuden-subtle"
                       >{category.documentCount || 0}</span
                     >
-                  </button>
+                  </Button>
                 </div>
-                {#if expandedCategories.has(category.id) && category.children && category.children.length > 0}
-                  <div class="ml-4 pl-2 border-l border-kitsuden-border">
-                    {#each category.children as child}
-                      <button
-                        class="w-full text-left px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 mt-0.5 {selectedCategory?.id ===
-                        child.id
-                          ? 'bg-kitsuden-accent/10 text-kitsuden-accent'
-                          : 'text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-bg'}"
+                {#if expanded && hasChildren}
+                  <div class="ml-4 flex flex-col gap-1 border-l border-kitsuden-border pl-2">
+                    {#each category.children ?? [] as child}
+                      <Button
+                        variant={selectedCategory?.id === child.id ? "soft" : "ghost"}
+                        size="sm"
+                        class="w-full justify-start"
+                        aria-current={selectedCategory?.id === child.id ? "true" : undefined}
                         onclick={() => selectCategory(child)}
                       >
-                        <span class="text-sm">{child.icon || "📂"}</span>
+                        <span aria-hidden="true">{child.icon || "📂"}</span>
                         <span class="truncate">{child.name}</span>
-                      </button>
+                      </Button>
                     {/each}
                   </div>
                 {/if}
-              </div>
-            {/each}
-          </div>
-        </div>
-      {/if}
-
-      <!-- ───────────────────────────── Content Area ───────────────────────────── -->
-      <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {#if activeSection === "documents" || activeSection === "templates"}
-          <!-- Filters Bar -->
-          <div class="p-4 border-b border-kitsuden-border bg-kitsuden-card shrink-0">
-            <div class="flex items-center gap-3 flex-wrap">
-              <div class="relative flex-1 min-w-[200px] max-w-md">
-                <Search
-                  class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-text-dim"
-                />
-                <input
-                  type="text"
-                  placeholder={tr("dMSView.searchDocuments")}
-                  class="w-full pl-10 pr-4 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-text-dim focus:outline-hidden focus:border-kitsuden-accent/50"
-                  bind:value={searchQuery}
-                  oninput={() => {
-                    currentPage = 1;
-                    loadDocuments();
-                  }}
-                />
-              </div>
-              <select
-                class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
-                bind:value={statusFilter}
-                onchange={() => {
-                  currentPage = 1;
-                  loadDocuments();
-                }}
-              >
-                <option value="">{tr("dMSView.allStatus")}</option>
-                {#each workflowStatuses as s}
-                  <option value={s.id}>{s.label}</option>
-                {/each}
-              </select>
-              <select
-                class="px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent/50"
-                bind:value={typeFilter}
-                onchange={() => {
-                  currentPage = 1;
-                  loadDocuments();
-                }}
-              >
-                <option value="">{tr("dMSView.allTypes")}</option>
-                {#each documentTypes as t}
-                  <option value={t.id}>{t.label}</option>
-                {/each}
-              </select>
-              {#if selectedIds.size > 0}
-                <div class="flex items-center gap-2 ml-auto">
-                  <span class="text-xs text-kitsuden-subtle"
-                    >{selectedIds.size} {tr("common.selected")}</span
-                  >
-                  <Button variant="danger" size="sm" onclick={promptBulkDelete}>
-                    <Trash2 class="w-3.5 h-3.5" />
-                    {tr("common.delete")}
-                  </Button>
-                </div>
-              {/if}
+              {/each}
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <!-- Document Table -->
-          <div class="flex-1 overflow-auto">
-            {#if loading}
-              <div class="flex items-center justify-center h-full">
-                <div
-                  class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-                ></div>
-              </div>
-            {:else if filteredDocuments.length === 0}
-              <div class="flex flex-col items-center justify-center h-full text-center">
-                <div
-                  class="w-16 h-16 rounded-full bg-kitsuden-bg flex items-center justify-center mb-4"
+        <!-- Documents -->
+        <div class="flex min-w-0 flex-1 flex-col gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <SearchInput
+              class="min-w-0 flex-1 basis-56"
+              placeholder={tr("dMSView.searchDocuments")}
+              bind:value={searchQuery}
+              oninput={() => {
+                currentPage = 1;
+                loadDocuments();
+              }}
+            />
+            <Select
+              width="auto"
+              aria-label={tr("common.status")}
+              placeholder={tr("dMSView.allStatus")}
+              options={workflowStatuses.map((s) => ({ value: s.id, label: s.label }))}
+              bind:value={statusFilter}
+              onchange={() => {
+                currentPage = 1;
+                loadDocuments();
+              }}
+            />
+            <Select
+              width="auto"
+              aria-label={tr("common.type")}
+              placeholder={tr("dMSView.allTypes")}
+              options={documentTypes.map((d) => ({ value: d.id, label: d.label }))}
+              bind:value={typeFilter}
+              onchange={() => {
+                currentPage = 1;
+                loadDocuments();
+              }}
+            />
+            {#if selectedIds.size > 0}
+              <div class="ml-auto flex items-center gap-2">
+                <span class="text-xs text-kitsuden-subtle"
+                  >{selectedIds.size} {tr("common.selected")}</span
                 >
-                  <FileText class="w-8 h-8 text-kitsuden-text-dim" />
-                </div>
-                <h3 class="text-lg font-semibold text-kitsuden-text mb-1">
-                  {tr("dMSView.noDocumentsFound")}
-                </h3>
-                <p class="text-sm text-kitsuden-subtle">
-                  {selectedCategory
-                    ? tr("dMSView.thisCategoryIsEmpty")
-                    : tr("dMSView.getStartedByCreatingYour")}
-                </p>
+                <Button variant="danger-ghost" size="sm" onclick={promptBulkDelete}>
+                  <Trash2 class="w-3.5 h-3.5" />
+                  {tr("common.delete")}
+                </Button>
               </div>
-            {:else}
-              <Table class="w-full text-left text-sm">
-                <TableHeader class="bg-kitsuden-bg sticky top-0 z-10">
-                  <TableRow class="border-b border-kitsuden-border">
-                    <TableHead class="px-4 py-3 w-10">
-                      <input
-                        type="checkbox"
-                        class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
-                        checked={allSelected}
-                        indeterminate={someSelected}
-                        onchange={toggleSelectAll}
-                      />
-                    </TableHead>
-                    {#each sortableColumns as col}
-                      <TableHead
-                        class="px-4 py-3 font-medium text-kitsuden-subtle cursor-pointer select-none hover:text-kitsuden-text"
-                        onclick={() => toggleSort(col.key)}
-                      >
-                        <div class="flex items-center gap-1">
-                          {col.label}
-                          {#if sortKey === col.key}
-                            <span class="text-kitsuden-accent">{sortDir === "asc" ? "▲" : "▼"}</span
-                            >
-                          {/if}
-                        </div>
-                      </TableHead>
-                    {/each}
-                    <TableHead class="px-4 py-3 font-medium text-kitsuden-subtle"
-                      >{tr("common.actions")}</TableHead
-                    >
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {#each filteredDocuments as doc}
-                    {@const status = getStatusConfig(doc.status)}
-                    {@const type = getTypeConfig(doc.type)}
-                    <TableRow
-                      class="border-b border-kitsuden-border hover:bg-kitsuden-bg/50 transition-colors group"
-                    >
-                      <TableCell class="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
-                          checked={selectedIds.has(doc.id)}
-                          onchange={() => toggleSelect(doc.id)}
-                        />
-                      </TableCell>
-                      <TableCell class="px-4 py-3 font-mono text-kitsuden-subtle"
-                        >{doc.code}</TableCell
-                      >
-                      <TableCell class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                          {#if doc.requiresReview || isOverdue(doc.reviewDueDate)}
-                            <span title={tr("dMSView.reviewOverdue")}
-                              ><AlertCircle
-                                class="w-3.5 h-3.5 text-kitsuden-danger shrink-0"
-                              /></span
-                            >
-                          {/if}
-                          <span class="font-medium text-kitsuden-text">{doc.title}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell class="px-4 py-3">
-                        <span
-                          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs"
-                          style="background-color: {type.color}20; color: {type.color}"
-                        >
-                          <span>{type.icon}</span>
-                          {type.label}
-                        </span>
-                      </TableCell>
-                      <TableCell class="px-4 py-3">
-                        <span
-                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs {statusBadgeClass(
-                            doc.status
-                          )}"
-                        >
-                          <status.icon class="w-3 h-3" />
-                          {status.label}
-                        </span>
-                      </TableCell>
-                      <TableCell class="px-4 py-3 text-kitsuden-subtle"
-                        >{doc.categoryName || "—"}</TableCell
-                      >
-                      <TableCell class="px-4 py-3 font-mono text-kitsuden-subtle"
-                        >v{doc.currentVersionNumber}</TableCell
-                      >
-                      <TableCell class="px-4 py-3 text-kitsuden-subtle"
-                        >{formatDate(doc.updatedAt)}</TableCell
-                      >
-                      <TableCell class="px-4 py-3">
-                        <div
-                          class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <button
-                            class="p-1.5 hover:bg-kitsuden-card rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
-                            title={tr("common.edit")}
-                            onclick={() => openDrawer(doc)}
-                          >
-                            <Edit2 class="w-3.5 h-3.5" />
-                          </button>
-                          {#if doc.isTemplate}
-                            <button
-                              class="p-1.5 hover:bg-kitsuden-card rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent"
-                              title={tr("dMSView.clone")}
-                              onclick={() => cloneFromTemplate(doc.id)}
-                            >
-                              <Copy class="w-3.5 h-3.5" />
-                            </button>
-                          {/if}
-                          <button
-                            class="p-1.5 hover:bg-kitsuden-card rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent-2"
-                            title={tr("common.delete")}
-                            onclick={() => {
-                              deleteTargetIds = [doc.id];
-                              showConfirmDeleteModal = true;
-                            }}
-                          >
-                            <Trash2 class="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  {/each}
-                </TableBody>
-              </Table>
             {/if}
           </div>
 
-          <!-- Pagination -->
+          {#if loading}
+            <div class="flex justify-center py-16">
+              <Spinner size="lg" />
+            </div>
+          {:else if filteredDocuments.length === 0}
+            <EmptyState
+              title={tr("dMSView.noDocumentsFound")}
+              description={selectedCategory
+                ? tr("dMSView.thisCategoryIsEmpty")
+                : tr("dMSView.getStartedByCreatingYour")}
+              actionLabel={tr("dMSView.newDocument")}
+              onAction={openCreateDocumentModal}
+            />
+          {:else}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <Checkbox
+                      ariaLabel={tr("dMSView.selectAll")}
+                      checked={allSelected}
+                      indeterminate={someSelected}
+                      onchange={toggleSelectAll}
+                    />
+                  </TableHead>
+                  {#each sortableColumns as col}
+                    <TableHead
+                      aria-sort={sortKey === col.key
+                        ? sortDir === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : undefined}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        class="-ml-2"
+                        onclick={() => toggleSort(col.key)}
+                      >
+                        {col.label}
+                        {#if sortKey === col.key}
+                          <span aria-hidden="true">{sortDir === "asc" ? "▲" : "▼"}</span>
+                        {/if}
+                      </Button>
+                    </TableHead>
+                  {/each}
+                  <TableHead>{tr("common.actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {#each filteredDocuments as doc}
+                  {@const status = getStatusConfig(doc.status)}
+                  {@const type = getTypeConfig(doc.type)}
+                  <TableRow>
+                    <TableCell>
+                      <Checkbox
+                        ariaLabel={tr("dMSView.selectDocument", { title: doc.title })}
+                        checked={selectedIds.has(doc.id)}
+                        onchange={() => toggleSelect(doc.id)}
+                      />
+                    </TableCell>
+                    <TableCell class="font-mono text-kitsuden-subtle whitespace-nowrap"
+                      >{doc.code}</TableCell
+                    >
+                    <TableCell>
+                      <div class="flex items-center gap-2 min-w-56">
+                        {#if doc.requiresReview || isOverdue(doc.reviewDueDate)}
+                          <span title={tr("dMSView.reviewOverdue")}
+                            ><AlertCircle class="w-3.5 h-3.5 shrink-0 text-kitsuden-danger" /></span
+                          >
+                        {/if}
+                        <span class="font-medium text-kitsuden-text">{doc.title}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        <span aria-hidden="true">{type.icon}</span>
+                        {type.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant(doc.status)}>
+                        <status.icon class="w-3 h-3" />
+                        {status.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell class="text-kitsuden-subtle">{doc.categoryName || "—"}</TableCell>
+                    <TableCell class="font-mono text-kitsuden-subtle"
+                      >v{doc.currentVersionNumber}</TableCell
+                    >
+                    <TableCell class="whitespace-nowrap text-kitsuden-subtle"
+                      >{formatDate(doc.updatedAt)}</TableCell
+                    >
+                    <TableCell>
+                      <div class="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          ariaLabel={tr("common.edit")}
+                          title={tr("common.edit")}
+                          onclick={() => openDrawer(doc)}
+                        >
+                          <Edit2 class="w-4 h-4" />
+                        </Button>
+                        {#if doc.isTemplate}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            ariaLabel={tr("dMSView.clone")}
+                            title={tr("dMSView.clone")}
+                            onclick={() => cloneFromTemplate(doc.id)}
+                          >
+                            <Copy class="w-4 h-4" />
+                          </Button>
+                        {/if}
+                        <Button
+                          variant="danger-ghost"
+                          size="icon"
+                          ariaLabel={tr("common.delete")}
+                          title={tr("common.delete")}
+                          onclick={() => {
+                            deleteTargetIds = [doc.id];
+                            showConfirmDeleteModal = true;
+                          }}
+                        >
+                          <Trash2 class="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                {/each}
+              </TableBody>
+            </Table>
+          {/if}
+
           {#if totalPages > 1}
-            <div
-              class="p-3 border-t border-kitsuden-border bg-kitsuden-card shrink-0 flex items-center justify-between"
-            >
+            <div class="flex flex-wrap items-center justify-between gap-3">
               <span class="text-xs text-kitsuden-subtle">
                 {tr("dMSView.totalPageOf", { totalDocs, currentPage, totalPages })}
               </span>
-              <div class="flex items-center gap-2">
-                <button
-                  class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
-                  disabled={currentPage === 1}
-                  onclick={() => {
-                    currentPage = 1;
-                    loadDocuments();
-                  }}
-                >
-                  <ChevronFirst class="w-3.5 h-3.5" />
-                </button>
-                <button
-                  class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
-                  disabled={currentPage === 1}
-                  onclick={() => {
-                    currentPage--;
-                    loadDocuments();
-                  }}
-                >
-                  <ChevronLeft class="w-3.5 h-3.5" />
-                </button>
-                <span class="text-xs text-kitsuden-subtle px-2">{currentPage} / {totalPages}</span>
-                <button
-                  class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
-                  disabled={currentPage === totalPages}
-                  onclick={() => {
-                    currentPage++;
-                    loadDocuments();
-                  }}
-                >
-                  <ChevronRight class="w-3.5 h-3.5" />
-                </button>
-                <button
-                  class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
-                  disabled={currentPage === totalPages}
-                  onclick={() => {
-                    currentPage = totalPages;
-                    loadDocuments();
-                  }}
-                >
-                  <ChevronLast class="w-3.5 h-3.5" />
-                </button>
-              </div>
+              <Pagination
+                bind:page={currentPage}
+                pageCount={totalPages}
+                onchange={() => loadDocuments()}
+              />
             </div>
           {/if}
-        {/if}
+        </div>
+      </div>
+    {/if}
 
-        {#if activeSection === "categories"}
-          <div class="flex-1 overflow-auto p-6">
-            <div class="max-w-4xl mx-auto">
-              <h2 class="text-lg font-semibold text-kitsuden-text mb-4">
-                {tr("dMSView.categoryTree")}
-              </h2>
-              {#if categories.length === 0}
-                <div class="card p-12 text-center">
-                  <FolderTree class="w-10 h-10 text-kitsuden-text-dim mx-auto mb-3" />
-                  <p class="text-kitsuden-text-dim">{tr("dMSView.noCategoriesYet")}</p>
-                  <Button class="mt-4" onclick={() => (showCreateCatModal = true)}>
-                    <Plus class="w-4 h-4" />
-                    {tr("dMSView.createCategory")}
-                  </Button>
+    {#if activeSection === "categories"}
+      <div class="flex max-w-4xl flex-col gap-3">
+        <h2 class="text-lg font-semibold text-kitsuden-text">{tr("dMSView.categoryTree")}</h2>
+        {#if categories.length === 0}
+          <EmptyState
+            title={tr("dMSView.noCategoriesYet")}
+            actionLabel={tr("dMSView.createCategory")}
+            onAction={() => (showCreateCatModal = true)}
+          />
+        {:else}
+          {#each categories as cat}
+            <Card>
+              <CardContent>
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex min-w-0 items-center gap-3">
+                    <span class="text-2xl" aria-hidden="true">{cat.icon || "📁"}</span>
+                    <div class="min-w-0">
+                      <h3 class="font-semibold text-kitsuden-text">{cat.name}</h3>
+                      <p class="text-xs text-kitsuden-subtle">
+                        {cat.description || tr("dMSView.noDescription")}
+                        {tr("dMSView.docs", { v: cat.documentCount || 0 })}
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    class="h-4 w-4 shrink-0 rounded-full"
+                    style="background-color: {cat.color || '#6366f1'}"
+                  ></div>
                 </div>
-              {:else}
-                <div class="space-y-2">
-                  {#each categories as cat}
-                    <div class="card p-4">
-                      <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                          <span class="text-2xl">{cat.icon || "📁"}</span>
-                          <div>
-                            <h3 class="font-semibold text-kitsuden-text">{cat.name}</h3>
+                {#if cat.children && cat.children.length > 0}
+                  <div class="mt-3 flex flex-col gap-2 sm:ml-8">
+                    {#each cat.children as child}
+                      <div
+                        class="flex items-center justify-between gap-3 rounded-lg border border-kitsuden-border bg-kitsuden-bg p-3"
+                      >
+                        <div class="flex min-w-0 items-center gap-3">
+                          <span class="text-lg" aria-hidden="true">{child.icon || "📂"}</span>
+                          <div class="min-w-0">
+                            <h4 class="text-sm font-medium text-kitsuden-text">{child.name}</h4>
                             <p class="text-xs text-kitsuden-subtle">
-                              {cat.description || tr("dMSView.noDescription")}
-                              {tr("dMSView.docs", { v: cat.documentCount || 0 })}
+                              {child.description || ""}
+                              {tr("dMSView.docs", { v: child.documentCount || 0 })}
                             </p>
                           </div>
                         </div>
                         <div
-                          class="w-4 h-4 rounded-full"
-                          style="background-color: {cat.color || '#6366f1'}"
+                          class="h-3 w-3 shrink-0 rounded-full"
+                          style="background-color: {child.color || '#6366f1'}"
                         ></div>
                       </div>
-                      {#if cat.children && cat.children.length > 0}
-                        <div class="mt-3 ml-8 space-y-2">
-                          {#each cat.children as child}
-                            <div
-                              class="flex items-center justify-between p-3 rounded-lg bg-kitsuden-bg border border-kitsuden-border"
-                            >
-                              <div class="flex items-center gap-3">
-                                <span class="text-lg">{child.icon || "📂"}</span>
-                                <div>
-                                  <h4 class="font-medium text-kitsuden-text text-sm">
-                                    {child.name}
-                                  </h4>
-                                  <p class="text-xs text-kitsuden-subtle">
-                                    {child.description || ""}
-                                    {tr("dMSView.docs", { v: child.documentCount || 0 })}
-                                  </p>
-                                </div>
-                              </div>
-                              <div
-                                class="w-3 h-3 rounded-full"
-                                style="background-color: {child.color || '#6366f1'}"
-                              ></div>
-                            </div>
-                          {/each}
-                        </div>
-                      {/if}
-                    </div>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          </div>
-        {/if}
-
-        {#if activeSection === "notifications"}
-          <div class="flex-1 overflow-auto p-6">
-            <div class="max-w-3xl mx-auto">
-              <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-kitsuden-text">
-                  {tr("dMSView.notificationInbox")}
-                </h2>
-                {#if unreadCount > 0}
-                  <Button variant="secondary" size="sm" onclick={markAllRead}>
-                    <CheckCheck class="w-3.5 h-3.5" />
-                    {tr("dMSView.markAllRead")}
-                  </Button>
-                {/if}
-              </div>
-              {#if notifications.length === 0}
-                <div class="card p-12 text-center">
-                  <Inbox class="w-10 h-10 text-kitsuden-text-dim mx-auto mb-3" />
-                  <p class="text-kitsuden-text-dim">{tr("dMSView.noNotifications")}</p>
-                </div>
-              {:else}
-                <div class="space-y-2">
-                  {#each notifications as n}
-                    <div class="card p-4 flex items-start gap-3 {n.read ? 'opacity-70' : ''}">
-                      <div
-                        class="w-9 h-9 rounded-lg bg-kitsuden-bg flex items-center justify-center shrink-0"
-                      >
-                        <Bell class="w-4 h-4 text-kitsuden-accent" />
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                          <h3 class="font-medium text-kitsuden-text text-sm">{n.title}</h3>
-                          <span class="text-xs text-kitsuden-subtle"
-                            >{formatDateTime(n.createdAt)}</span
-                          >
-                        </div>
-                        <p class="text-xs text-kitsuden-subtle mt-0.5">{n.message || ""}</p>
-                        {#if n.documentId}
-                          <button
-                            class="text-xs text-kitsuden-accent hover:underline mt-1"
-                            onclick={() =>
-                              openDrawer({
-                                id: n.documentId!,
-                                code: "",
-                                title: n.documentTitle || "",
-                                slug: "",
-                                type: "other",
-                                status: "draft",
-                                tags: [],
-                                currentVersionNumber: 1,
-                                updatedAt: "",
-                              })}
-                          >
-                            {tr("dMSView.viewDocument")}
-                          </button>
-                        {/if}
-                      </div>
-                      {#if !n.read}
-                        <button
-                          class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
-                          onclick={() => markNotificationRead(n.id)}
-                          title={tr("dMSView.markRead")}
-                        >
-                          <Check class="w-3.5 h-3.5" />
-                        </button>
-                      {/if}
-                    </div>
-                  {/each}
-                </div>
-                {#if notifTotalPages > 1}
-                  <div class="flex items-center justify-center gap-2 mt-4">
-                    <button
-                      class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
-                      disabled={notifPage === 1}
-                      onclick={() => {
-                        notifPage--;
-                        loadNotifications();
-                      }}
-                    >
-                      {tr("dMSView.prev")}
-                    </button>
-                    <span class="text-xs text-kitsuden-subtle">{notifPage} / {notifTotalPages}</span
-                    >
-                    <button
-                      class="px-2.5 py-1.5 rounded-lg bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text text-xs hover:border-kitsuden-accent/50 disabled:opacity-40"
-                      disabled={notifPage === notifTotalPages}
-                      onclick={() => {
-                        notifPage++;
-                        loadNotifications();
-                      }}
-                    >
-                      {tr("common.next")}
-                    </button>
+                    {/each}
                   </div>
                 {/if}
-              {/if}
-            </div>
-          </div>
-        {/if}
-
-        {#if activeSection === "stats"}
-          <div class="flex-1 overflow-auto p-6">
-            <div class="max-w-6xl mx-auto space-y-6">
-              {#if stats}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div class="card p-5">
-                    <div class="flex items-center justify-between">
-                      <div>
-                        <p class="text-sm text-kitsuden-subtle">{tr("dMSView.totalDocuments")}</p>
-                        <p class="text-3xl font-bold text-kitsuden-text mt-1">
-                          {stats.documents?.total || 0}
-                        </p>
-                      </div>
-                      <div
-                        class="w-12 h-12 rounded-xl bg-kitsuden-info/10 flex items-center justify-center"
-                      >
-                        <FileText class="w-6 h-6 text-kitsuden-info" />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="card p-5">
-                    <div class="flex items-center justify-between">
-                      <div>
-                        <p class="text-sm text-kitsuden-subtle">{tr("common.published")}</p>
-                        <p class="text-3xl font-bold text-kitsuden-text mt-1">
-                          {stats.documents?.published || 0}
-                        </p>
-                      </div>
-                      <div
-                        class="w-12 h-12 rounded-xl bg-kitsuden-green/10 flex items-center justify-center"
-                      >
-                        <CheckCircle class="w-6 h-6 text-kitsuden-green" />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="card p-5">
-                    <div class="flex items-center justify-between">
-                      <div>
-                        <p class="text-sm text-kitsuden-subtle">{tr("dMSView.drafts")}</p>
-                        <p class="text-3xl font-bold text-kitsuden-text mt-1">
-                          {stats.documents?.draft || 0}
-                        </p>
-                      </div>
-                      <div
-                        class="w-12 h-12 rounded-xl bg-kitsuden-amber/10 flex items-center justify-center"
-                      >
-                        <Clock class="w-6 h-6 text-kitsuden-amber" />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="card p-5">
-                    <div class="flex items-center justify-between">
-                      <div>
-                        <p class="text-sm text-kitsuden-subtle">{tr("dMSView.inReview")}</p>
-                        <p class="text-3xl font-bold text-kitsuden-text mt-1">
-                          {stats.documents?.review_pending || 0}
-                        </p>
-                      </div>
-                      <div
-                        class="w-12 h-12 rounded-xl bg-kitsuden-amber/10 flex items-center justify-center"
-                      >
-                        <ClipboardCheck class="w-6 h-6 text-kitsuden-amber" />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="card p-5">
-                    <div class="flex items-center justify-between">
-                      <div>
-                        <p class="text-sm text-kitsuden-subtle">{tr("common.archived")}</p>
-                        <p class="text-3xl font-bold text-kitsuden-text mt-1">
-                          {stats.documents?.archived || 0}
-                        </p>
-                      </div>
-                      <div
-                        class="w-12 h-12 rounded-xl bg-kitsuden-purple/10 flex items-center justify-center"
-                      >
-                        <Archive class="w-6 h-6 text-kitsuden-purple" />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="card p-5">
-                    <div class="flex items-center justify-between">
-                      <div>
-                        <p class="text-sm text-kitsuden-subtle">{tr("dMSView.upcomingReviews")}</p>
-                        <p class="text-3xl font-bold text-kitsuden-text mt-1">
-                          {stats.upcomingReviews?.length || 0}
-                        </p>
-                      </div>
-                      <div
-                        class="w-12 h-12 rounded-xl bg-kitsuden-danger/10 flex items-center justify-center"
-                      >
-                        <AlertCircle class="w-6 h-6 text-kitsuden-danger" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Status Distribution Bar -->
-                {#if stats.statusDistribution}
-                  <div class="card p-5">
-                    <h3 class="font-semibold text-kitsuden-text mb-4">
-                      {tr("dMSView.statusDistribution")}
-                    </h3>
-                    <div class="space-y-3">
-                      {#each Object.entries(stats.statusDistribution) as [status, count]}
-                        {@const cfg = getStatusConfig(status)}
-                        <div class="flex items-center gap-3">
-                          <span class="w-24 text-xs text-kitsuden-subtle truncate">{cfg.label}</span
-                          >
-                          <div class="flex-1 h-2 bg-kitsuden-bg rounded-full overflow-hidden">
-                            <div
-                              class="h-full rounded-full"
-                              style="width: {Math.min(
-                                100,
-                                (Number(count) / (stats.documents?.total || 1)) * 100
-                              )}%; background-color: {cfg.color}"
-                            ></div>
-                          </div>
-                          <span class="w-8 text-xs text-kitsuden-text text-right">{count}</span>
-                        </div>
-                      {/each}
-                    </div>
-                  </div>
-                {/if}
-              {:else}
-                <div class="flex items-center justify-center h-64">
-                  <div
-                    class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          {/each}
         {/if}
       </div>
-    </div>
+    {/if}
+
+    {#if activeSection === "notifications"}
+      <div class="flex max-w-3xl flex-col gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-lg font-semibold text-kitsuden-text">
+            {tr("dMSView.notificationInbox")}
+          </h2>
+          {#if unreadCount > 0}
+            <Button variant="secondary" size="sm" onclick={markAllRead}>
+              <CheckCheck class="w-3.5 h-3.5" />
+              {tr("dMSView.markAllRead")}
+            </Button>
+          {/if}
+        </div>
+        {#if notifications.length === 0}
+          <EmptyState title={tr("dMSView.noNotifications")} />
+        {:else}
+          {#each notifications as n}
+            <Card class={n.read ? "opacity-70" : ""}>
+              <CardContent>
+                <div class="flex items-start gap-3">
+                  <Bell class="mt-0.5 w-4 h-4 shrink-0 text-kitsuden-accent" />
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center justify-between gap-x-3">
+                      <h3 class="text-sm font-medium text-kitsuden-text">{n.title}</h3>
+                      <span class="text-xs text-kitsuden-subtle">{formatDateTime(n.createdAt)}</span
+                      >
+                    </div>
+                    <p class="mt-0.5 text-xs text-kitsuden-subtle">{n.message || ""}</p>
+                    {#if n.documentId}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        class="-ml-2 mt-1"
+                        onclick={() =>
+                          openDrawer({
+                            id: n.documentId!,
+                            code: "",
+                            title: n.documentTitle || "",
+                            slug: "",
+                            type: "other",
+                            status: "draft",
+                            tags: [],
+                            currentVersionNumber: 1,
+                            updatedAt: "",
+                          })}
+                      >
+                        {tr("dMSView.viewDocument")}
+                      </Button>
+                    {/if}
+                  </div>
+                  {#if !n.read}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      ariaLabel={tr("dMSView.markRead")}
+                      title={tr("dMSView.markRead")}
+                      onclick={() => markNotificationRead(n.id)}
+                    >
+                      <Check class="w-4 h-4" />
+                    </Button>
+                  {/if}
+                </div>
+              </CardContent>
+            </Card>
+          {/each}
+          {#if notifTotalPages > 1}
+            <div class="flex justify-center">
+              <Pagination
+                bind:page={notifPage}
+                pageCount={notifTotalPages}
+                onchange={() => loadNotifications()}
+              />
+            </div>
+          {/if}
+        {/if}
+      </div>
+    {/if}
+
+    {#if activeSection === "stats"}
+      {#if stats}
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <Stat label={tr("dMSView.totalDocuments")} value={stats.documents?.total || 0} />
+          <Stat
+            label={tr("common.published")}
+            value={stats.documents?.published || 0}
+            variant="success"
+          />
+          <Stat label={tr("dMSView.drafts")} value={stats.documents?.draft || 0} />
+          <Stat
+            label={tr("dMSView.inReview")}
+            value={stats.documents?.review_pending || 0}
+            variant={stats.documents?.review_pending ? "warning" : "default"}
+          />
+          <Stat label={tr("common.archived")} value={stats.documents?.archived || 0} />
+          <Stat
+            label={tr("dMSView.upcomingReviews")}
+            value={stats.upcomingReviews?.length || 0}
+            variant={stats.upcomingReviews?.length ? "warning" : "default"}
+          />
+        </div>
+
+        {#if stats.statusDistribution}
+          <Card>
+            <CardHeader>
+              <CardTitle level={2}>{tr("dMSView.statusDistribution")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div class="flex flex-col gap-3">
+                {#each Object.entries(stats.statusDistribution) as [status, count]}
+                  <Progress
+                    label={`${getStatusConfig(status).label} · ${count}`}
+                    value={Number(count)}
+                    max={stats.documents?.total || 1}
+                    showValue
+                  />
+                {/each}
+              </div>
+            </CardContent>
+          </Card>
+        {/if}
+      {:else}
+        <div class="flex justify-center py-16">
+          <Spinner size="lg" />
+        </div>
+      {/if}
+    {/if}
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-  <!-- DETAIL DRAWER -->
-  <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-  <Dialog
+  <!-- Document detail -->
+  <Sheet
     open={!!drawerOpen}
-    bare
     size="2xl"
-    ariaLabel={drawerDoc?.title || tr("dMSView.document")}
-    placement="right"
+    title={drawerDoc?.title || tr("dMSView.document")}
+    description={drawerDoc?.code || undefined}
     onClose={() => closeDrawer()}
   >
     {#if drawerOpen}
-      <div
-        class="relative w-full max-w-[60%] bg-kitsuden-card border-l border-kitsuden-border h-full flex flex-col shadow-2xl"
-      >
-        <!-- Drawer Header -->
-        <div
-          class="flex items-center justify-between px-6 py-4 border-b border-kitsuden-border shrink-0"
-        >
-          <div class="min-w-0">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-mono text-kitsuden-subtle">{drawerDoc?.code || "—"}</span>
-              {#if drawerDoc?.isTemplate}
-                <span
-                  class="px-1.5 py-0.5 rounded-sm bg-kitsuden-purple/10 text-kitsuden-purple text-xs font-medium"
-                  >{tr("dMSView.template2")}</span
-                >
-              {/if}
-              {#if drawerDoc?.requiresReview || isOverdue(drawerDoc?.reviewDueDate)}
-                <span
-                  class="px-1.5 py-0.5 rounded-sm bg-kitsuden-danger/10 text-kitsuden-danger text-xs font-medium"
-                  >{tr("dMSView.reviewOverdue2")}</span
-                >
-              {/if}
-            </div>
-            <h2 class="text-lg font-bold text-kitsuden-text truncate">
-              {drawerDoc?.title || tr("dMSView.document")}
-            </h2>
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            {#if drawerDoc?.isTemplate}
-              <Button
-                variant="secondary"
-                size="sm"
-                onclick={() => drawerDoc && cloneFromTemplate(drawerDoc.id)}
-              >
-                <Copy class="w-3.5 h-3.5" />
-                {tr("dMSView.clone")}
-              </Button>
+      {#if drawerLoading}
+        <div class="flex justify-center py-16">
+          <Spinner size="lg" />
+        </div>
+      {:else if !drawerDoc}
+        <EmptyState size="sm" title={tr("dMSView.noDocumentSelected")} />
+      {:else}
+        <div class="flex min-w-0 flex-col gap-4">
+          <div class="flex flex-wrap items-center gap-2">
+            {#if drawerDoc.isTemplate}
+              <Badge variant="purple">{tr("dMSView.template2")}</Badge>
             {/if}
-            <Button variant="secondary" size="sm" onclick={() => exportVersion("md")}>
-              <Download class="w-3.5 h-3.5" />
-              {tr("dMSView.md")}
-            </Button>
-            <Button variant="secondary" size="sm" onclick={() => exportVersion("html")}>
-              <FileCode class="w-3.5 h-3.5" />
-              {tr("dMSView.html")}
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onclick={() => {
-                if (drawerDoc) {
-                  deleteTargetIds = [drawerDoc.id];
-                  showConfirmDeleteModal = true;
-                }
-              }}
-            >
-              <Trash2 class="w-3.5 h-3.5" />
-            </Button>
-            <button
-              class="p-2 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-text"
-              onclick={closeDrawer}
-            >
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Drawer Tabs -->
-        <div
-          class="flex items-center gap-1 px-6 py-2 border-b border-kitsuden-border bg-kitsuden-bg/50 shrink-0 overflow-x-auto"
-        >
-          {#each ["metadata", "content", "versions", "comments", "diagrams", "audit", "backlinks"] as const as tab}
-            <button
-              class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 {drawerTab ===
-              tab
-                ? 'bg-kitsuden-accent/10 text-kitsuden-accent'
-                : 'text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-bg'}"
-              onclick={() => (drawerTab = tab)}
-            >
-              {#if tab === "metadata"}<Settings class="w-3.5 h-3.5" />{/if}
-              {#if tab === "content"}<FileText class="w-3.5 h-3.5" />{/if}
-              {#if tab === "versions"}<GitBranch class="w-3.5 h-3.5" />{/if}
-              {#if tab === "comments"}<MessageSquare class="w-3.5 h-3.5" />{/if}
-              {#if tab === "diagrams"}<Layers class="w-3.5 h-3.5" />{/if}
-              {#if tab === "audit"}<Activity class="w-3.5 h-3.5" />{/if}
-              {#if tab === "backlinks"}<Link2 class="w-3.5 h-3.5" />{/if}
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              {#if tab === "comments" && comments.length > 0}
-                <span
-                  class="px-1 py-0 rounded-full bg-kitsuden-accent/20 text-kitsuden-accent text-xs"
-                  >{comments.length}</span
+            {#if drawerDoc.requiresReview || isOverdue(drawerDoc.reviewDueDate)}
+              <Badge variant="error">{tr("dMSView.reviewOverdue2")}</Badge>
+            {/if}
+            <div class="ml-auto flex flex-wrap items-center gap-2">
+              {#if drawerDoc.isTemplate}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onclick={() => drawerDoc && cloneFromTemplate(drawerDoc.id)}
                 >
+                  <Copy class="w-3.5 h-3.5" />
+                  {tr("dMSView.clone")}
+                </Button>
               {/if}
-              {#if tab === "versions" && versions.length > 0}
-                <span
-                  class="px-1 py-0 rounded-full bg-kitsuden-accent/20 text-kitsuden-accent text-xs"
-                  >{versions.length}</span
-                >
-              {/if}
-            </button>
-          {/each}
-        </div>
-
-        <!-- Drawer Body -->
-        <div class="flex-1 overflow-y-auto p-6">
-          {#if drawerLoading}
-            <div class="flex items-center justify-center h-full">
-              <div
-                class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-              ></div>
+              <Button variant="secondary" size="sm" onclick={() => exportVersion("md")}>
+                <Download class="w-3.5 h-3.5" />
+                {tr("dMSView.md")}
+              </Button>
+              <Button variant="secondary" size="sm" onclick={() => exportVersion("html")}>
+                <FileCode class="w-3.5 h-3.5" />
+                {tr("dMSView.html")}
+              </Button>
+              <Button
+                variant="danger-ghost"
+                size="sm"
+                onclick={() => {
+                  if (drawerDoc) {
+                    deleteTargetIds = [drawerDoc.id];
+                    showConfirmDeleteModal = true;
+                  }
+                }}
+              >
+                <Trash2 class="w-3.5 h-3.5" />
+                {tr("common.delete")}
+              </Button>
             </div>
-          {:else if !drawerDoc}
-            <div class="text-center text-kitsuden-subtle">{tr("dMSView.noDocumentSelected")}</div>
-          {:else if drawerTab === "metadata"}
-            <!-- Metadata Tab -->
-            <div class="max-w-2xl space-y-4">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label for="title" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("common.title")}</label
-                  >
-                  <input id="title" class="kitsuden-input w-full" bind:value={formDoc.title} />
-                </div>
-                <div>
-                  <label for="code" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("dMSView.code")}</label
-                  >
-                  <input
+          </div>
+
+          <Tabs
+            items={drawerTabs}
+            bind:value={drawerTab}
+            panels={false}
+            ariaLabel={tr("dMSView.documentSections")}
+          />
+
+          {#if drawerTab === "metadata"}
+            <div class="flex max-w-2xl flex-col gap-4">
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label={tr("common.title")}>
+                  <Input id="title" value={formDoc.title ?? ""} oninput={setField("title")} />
+                </Field>
+                <Field label={tr("dMSView.code")}>
+                  <Input
                     id="code"
-                    class="kitsuden-input w-full font-mono"
-                    bind:value={formDoc.code}
+                    class="font-mono"
+                    value={formDoc.code ?? ""}
+                    oninput={setField("code")}
                   />
-                </div>
-                <div>
-                  <label for="slug" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("common.slug")}</label
-                  >
-                  <input id="slug" class="kitsuden-input w-full" bind:value={formDoc.slug} />
-                </div>
-                <div>
-                  <label for="type" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("common.type")}</label
-                  >
-                  <select id="type" class="kitsuden-input w-full" bind:value={formDoc.type}>
-                    {#each documentTypes as t}
-                      <option value={t.id}>{t.label}</option>
-                    {/each}
-                  </select>
-                </div>
-                <div>
-                  <label for="status" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("common.status")}</label
-                  >
-                  <select id="status" class="kitsuden-input w-full" bind:value={formDoc.status}>
-                    {#each workflowStatuses as s}
-                      <option value={s.id}>{s.label}</option>
-                    {/each}
-                  </select>
-                </div>
-                <div>
-                  <label for="categoryid" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("common.category")}</label
-                  >
-                  <select
+                </Field>
+                <Field label={tr("common.slug")}>
+                  <Input id="slug" value={formDoc.slug ?? ""} oninput={setField("slug")} />
+                </Field>
+                <Field label={tr("common.type")}>
+                  <Select
+                    id="type"
+                    value={formDoc.type ?? ""}
+                    onchange={setField("type")}
+                    options={documentTypes.map((d) => ({ value: d.id, label: d.label }))}
+                  />
+                </Field>
+                <Field label={tr("common.status")}>
+                  <Select
+                    id="status"
+                    value={formDoc.status ?? ""}
+                    onchange={setField("status")}
+                    options={workflowStatuses.map((s) => ({ value: s.id, label: s.label }))}
+                  />
+                </Field>
+                <Field label={tr("common.category")}>
+                  <Select
                     id="categoryid"
-                    class="kitsuden-input w-full"
-                    bind:value={formDoc.categoryId}
-                  >
-                    <option value="">{tr("dMSView.none")}</option>
-                    {#each categories as c}
-                      <option value={c.id}>{c.name}</option>
-                      {#each c.children || [] as child}
-                        <option value={child.id}> {child.name}</option>
-                      {/each}
-                    {/each}
-                  </select>
-                </div>
-                <div>
-                  <label for="visibility" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("common.visibility")}</label
-                  >
-                  <select
+                    value={formDoc.categoryId ?? ""}
+                    onchange={setField("categoryId")}
+                    placeholder={tr("dMSView.none")}
+                    options={categoryOptions}
+                  />
+                </Field>
+                <Field label={tr("common.visibility")}>
+                  <Select
                     id="visibility"
-                    class="kitsuden-input w-full"
-                    bind:value={formDoc.visibility}
-                  >
-                    {#each visibilityOptions as v}
-                      <option value={v.id}>{v.label}</option>
-                    {/each}
-                  </select>
-                </div>
-                <div>
-                  <label for="effectivedate" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("dMSView.effectiveDate")}</label
-                  >
-                  <input
+                    value={formDoc.visibility ?? ""}
+                    onchange={setField("visibility")}
+                    options={visibilityOptions.map((v) => ({ value: v.id, label: v.label }))}
+                  />
+                </Field>
+                <Field label={tr("dMSView.effectiveDate")}>
+                  <Input
                     id="effectivedate"
                     type="date"
-                    class="kitsuden-input w-full"
-                    bind:value={formDoc.effectiveDate}
+                    value={formDoc.effectiveDate ?? ""}
+                    oninput={setField("effectiveDate")}
                   />
-                </div>
-                <div>
-                  <label for="reviewduedate" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("dMSView.reviewDueDate")}</label
-                  >
-                  <input
+                </Field>
+                <Field
+                  label={tr("dMSView.reviewDueDate")}
+                  error={isOverdue(formDoc.reviewDueDate) ? tr("dMSView.reviewOverdue") : undefined}
+                >
+                  <Input
                     id="reviewduedate"
                     type="date"
-                    class="kitsuden-input w-full {isOverdue(formDoc.reviewDueDate)
-                      ? 'border-kitsuden-danger/50 text-kitsuden-danger'
-                      : ''}"
-                    bind:value={formDoc.reviewDueDate}
+                    value={formDoc.reviewDueDate ?? ""}
+                    oninput={setField("reviewDueDate")}
                   />
-                </div>
-                <div>
-                  <label for="expirationdate" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("dMSView.expirationDate")}</label
-                  >
-                  <input
+                </Field>
+                <Field label={tr("dMSView.expirationDate")}>
+                  <Input
                     id="expirationdate"
                     type="date"
-                    class="kitsuden-input w-full"
-                    bind:value={formDoc.expirationDate}
+                    value={formDoc.expirationDate ?? ""}
+                    oninput={setField("expirationDate")}
                   />
-                </div>
-                <div class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="reqAck"
-                    class="rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent focus:ring-kitsuden-accent/30"
-                    bind:checked={formDoc.requiresAcknowledgment}
-                  />
-                  <label for="reqAck" class="text-sm text-kitsuden-text"
-                    >{tr("dMSView.requiresAcknowledgment")}</label
-                  >
-                </div>
-              </div>
-              <div>
-                <label for="description" class="block text-xs text-kitsuden-subtle mb-1"
-                  >{tr("common.description")}</label
-                >
-                <textarea
-                  id="description"
-                  rows="3"
-                  class="kitsuden-input w-full"
-                  bind:value={formDoc.description}></textarea>
-              </div>
-              <div>
-                <label for="tags-comma-separated" class="block text-xs text-kitsuden-subtle mb-1"
-                  >{tr("dMSView.tagsCommaSeparated")}</label
-                >
-                <input
-                  id="tags-comma-separated"
-                  class="kitsuden-input w-full"
-                  value={Array.isArray(formDoc.tags) ? formDoc.tags.join(", ") : formDoc.tags}
-                  oninput={(e) => {
-                    formDoc.tags = (e.target as HTMLInputElement).value
-                      .split(",")
-                      .map((t) => t.trim())
-                      .filter(Boolean);
-                  }}
+                </Field>
+                <Checkbox
+                  id="reqAck"
+                  label={tr("dMSView.requiresAcknowledgment")}
+                  checked={!!formDoc.requiresAcknowledgment}
+                  onchange={(e: Event) =>
+                    (formDoc.requiresAcknowledgment = (
+                      e.currentTarget as HTMLInputElement
+                    ).checked)}
                 />
               </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label for="title-2" class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("dMSView.allowedUserIdsCommaSeparated")}</label
-                  >
-                  <input
-                    class="kitsuden-input w-full"
+              <Field label={tr("common.description")}>
+                <Textarea
+                  id="description"
+                  rows={3}
+                  value={formDoc.description ?? ""}
+                  oninput={setField("description")}
+                />
+              </Field>
+              <Field label={tr("dMSView.tagsCommaSeparated")}>
+                <Input
+                  id="tags-comma-separated"
+                  value={Array.isArray(formDoc.tags) ? formDoc.tags.join(", ") : ""}
+                  oninput={setList("tags")}
+                />
+              </Field>
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label={tr("dMSView.allowedUserIdsCommaSeparated")}>
+                  <Input
                     value={Array.isArray(formDoc.allowedUserIds)
                       ? formDoc.allowedUserIds.join(", ")
                       : ""}
-                    oninput={(e) => {
-                      formDoc.allowedUserIds = (e.target as HTMLInputElement).value
-                        .split(",")
-                        .map((t) => t.trim())
-                        .filter(Boolean);
-                    }}
+                    oninput={setList("allowedUserIds")}
                   />
-                </div>
-                <div>
-                  <label class="block text-xs text-kitsuden-subtle mb-1"
-                    >{tr("dMSView.allowedRoleIdsCommaSeparated")}</label
-                  >
-                  <input
-                    class="kitsuden-input w-full"
+                </Field>
+                <Field label={tr("dMSView.allowedRoleIdsCommaSeparated")}>
+                  <Input
                     value={Array.isArray(formDoc.allowedRoleIds)
                       ? formDoc.allowedRoleIds.join(", ")
                       : ""}
-                    oninput={(e) => {
-                      formDoc.allowedRoleIds = (e.target as HTMLInputElement).value
-                        .split(",")
-                        .map((t) => t.trim())
-                        .filter(Boolean);
-                    }}
+                    oninput={setList("allowedRoleIds")}
                   />
-                </div>
+                </Field>
               </div>
-              <div class="flex items-center gap-3 pt-4 border-t border-kitsuden-border">
-                <Button onclick={updateDocument} disabled={saving}>
-                  {#if saving}
-                    <Loader2 class="w-4 h-4 animate-spin" />
-                    {tr("common.saving")}
-                  {:else}
-                    <Save class="w-4 h-4" />
-                    {tr("dMSView.saveChanges")}
-                  {/if}
+              <div class="flex flex-wrap items-center gap-3 border-t border-kitsuden-border pt-4">
+                <Button onclick={updateDocument} loading={saving} disabled={saving}>
+                  <Save class="w-4 h-4" />
+                  {saving ? tr("common.saving") : tr("dMSView.saveChanges")}
                 </Button>
                 <Button variant="secondary" onclick={closeDrawer}>{tr("dMSView.close")}</Button>
               </div>
             </div>
           {:else if drawerTab === "content"}
-            <!-- Content Tab -->
-            <div class="h-full flex flex-col gap-3">
-              <div class="flex items-center gap-3 shrink-0">
-                <select class="kitsuden-input w-32" bind:value={contentFormat}>
-                  <option value="markdown">{tr("common.markdown")}</option>
-                  <option value="html">{tr("dMSView.html")}</option>
-                </select>
+            <div class="flex min-w-0 flex-col gap-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <Select
+                  width="auto"
+                  aria-label={tr("dMSView.contentFormat")}
+                  bind:value={contentFormat}
+                  options={[
+                    { value: "markdown", label: tr("common.markdown") },
+                    { value: "html", label: tr("dMSView.html") },
+                  ]}
+                />
                 <Button variant="secondary" size="sm" onclick={insertDiagramPlaceholder}>
                   <Layers class="w-3.5 h-3.5" />
                   {tr("dMSView.insertDiagram")}
@@ -2214,66 +1858,75 @@
                   <Link2 class="w-3.5 h-3.5" />
                   {tr("dMSView.wikiLink")}
                 </Button>
-                <div class="ml-auto flex items-center gap-2">
-                  <Button size="sm" onclick={saveVersionContent} disabled={saving}>
-                    {#if saving}<Loader2 class="w-3.5 h-3.5 animate-spin" />{/if}
-                    {tr("dMSView.saveContent")}
-                  </Button>
-                </div>
+                <Button
+                  class="ml-auto"
+                  size="sm"
+                  onclick={saveVersionContent}
+                  loading={saving}
+                  disabled={saving}
+                >
+                  {tr("dMSView.saveContent")}
+                </Button>
               </div>
-              <div class="flex-1 flex gap-3 min-h-0">
-                <div class="flex-1 flex flex-col min-h-0 relative">
-                  <textarea
+              <div class="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2">
+                <div class="relative min-w-0">
+                  <Textarea
                     id="content-editor"
-                    class="flex-1 kitsuden-input font-mono text-xs resize-none"
+                    mono
+                    rows={18}
+                    aria-label={tr("common.content")}
                     bind:value={contentEditor}
                     oninput={onContentInput}
-                    placeholder={tr("dMSView.writeYourContentHere")}></textarea>
+                    placeholder={tr("dMSView.writeYourContentHere")}
+                  />
                   {#if showWikiDropdown && wikiSuggestions.length > 0}
                     <div
-                      class="absolute left-4 bottom-4 w-64 max-h-48 overflow-y-auto bg-kitsuden-card border border-kitsuden-border rounded-xl shadow-xl z-10"
+                      class="absolute bottom-4 left-4 z-10 flex max-h-48 w-64 max-w-[calc(100%-2rem)] flex-col overflow-y-auto rounded-xl border border-kitsuden-border bg-kitsuden-card shadow-xl"
                     >
                       {#each wikiSuggestions as s}
-                        <button
-                          class="w-full text-left px-3 py-2 text-sm text-kitsuden-text hover:bg-kitsuden-bg flex items-center gap-2"
+                        <Button
+                          variant="ghost"
+                          class="w-full justify-start"
                           onclick={() => insertWikiLink(s)}
                         >
                           <span class="font-mono text-xs text-kitsuden-subtle">{s.code}</span>
                           <span class="truncate">{s.title}</span>
-                        </button>
+                        </Button>
                       {/each}
                     </div>
                   {/if}
                 </div>
-                <div
-                  class="flex-1 bg-kitsuden-bg border border-kitsuden-border rounded-xl overflow-auto p-4"
-                >
-                  <div class="text-xs text-kitsuden-subtle mb-2 flex items-center gap-1">
-                    <Eye class="w-3 h-3" />
-                    {tr("common.preview")}
-                  </div>
-                  {#if renderedHtml}
-                    <div class="prose prose-invert prose-sm max-w-none">
-                      {@html cleanHtml(renderedHtml)}
+                <Card class="min-w-0">
+                  <CardContent>
+                    <div class="mb-2 flex items-center gap-1 text-xs text-kitsuden-subtle">
+                      <Eye class="w-3 h-3" />
+                      {tr("common.preview")}
                     </div>
-                  {:else}
-                    <p class="text-sm text-kitsuden-subtle">
-                      {tr("dMSView.previewWillAppearHereAfter")}
-                    </p>
-                  {/if}
-                </div>
+                    {#if renderedHtml}
+                      <div class="prose prose-invert prose-sm max-w-none overflow-auto">
+                        {@html cleanHtml(renderedHtml)}
+                      </div>
+                    {:else}
+                      <p class="text-sm text-kitsuden-subtle">
+                        {tr("dMSView.previewWillAppearHereAfter")}
+                      </p>
+                    {/if}
+                  </CardContent>
+                </Card>
               </div>
-              <div class="flex items-center gap-3 shrink-0 pt-2 border-t border-kitsuden-border">
-                <input
-                  class="kitsuden-input flex-1 text-sm"
+              <div class="flex flex-wrap items-center gap-2 border-t border-kitsuden-border pt-3">
+                <Input
+                  class="min-w-0 flex-1 basis-48"
+                  aria-label={tr("dMSView.changelog")}
                   placeholder={tr("dMSView.changelogForThisEdit")}
                   bind:value={changelogInput}
                 />
-                <select class="kitsuden-input w-28 text-sm" bind:value={changeTypeInput}>
-                  <option value="major">{tr("dMSView.major")}</option>
-                  <option value="minor">{tr("dMSView.minor")}</option>
-                  <option value="patch">{tr("dMSView.patch")}</option>
-                </select>
+                <Select
+                  width="auto"
+                  aria-label={tr("dMSView.changeType")}
+                  bind:value={changeTypeInput}
+                  options={changeTypeOptions}
+                />
                 <Button
                   size="sm"
                   onclick={createNewVersion}
@@ -2285,9 +1938,8 @@
               </div>
             </div>
           {:else if drawerTab === "versions"}
-            <!-- Versions Tab -->
-            <div class="space-y-4">
-              <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
                 <h3 class="font-semibold text-kitsuden-text">{tr("dMSView.versionHistory")}</h3>
                 <Button size="sm" onclick={() => (showCreateVersionModal = true)}>
                   <Plus class="w-3.5 h-3.5" />
@@ -2295,115 +1947,98 @@
                 </Button>
               </div>
               {#if versions.length === 0}
-                <div class="card p-8 text-center text-kitsuden-subtle text-sm">
-                  {tr("dMSView.noVersionsYet")}
-                </div>
+                <EmptyState size="sm" title={tr("dMSView.noVersionsYet")} />
               {:else}
-                <div class="space-y-2">
-                  {#each versions as v}
-                    <div class="card p-4 flex items-start gap-4">
-                      <div
-                        class="w-10 h-10 rounded-lg bg-kitsuden-bg flex items-center justify-center shrink-0"
-                      >
-                        <GitCommit class="w-5 h-5 text-kitsuden-accent" />
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                          <div class="flex items-center gap-2">
-                            <span class="font-mono text-sm text-kitsuden-text"
-                              >v{v.versionNumber}</span
-                            >
-                            <span
-                              class="px-2 py-0.5 rounded-full text-xs font-medium {statusBadgeClass(
-                                v.status
-                              )}">{getStatusConfig(v.status).label}</span
-                            >
-                          </div>
-                          <span class="text-xs text-kitsuden-subtle"
-                            >{formatDateTime(v.createdAt)}</span
+                {#each versions as v}
+                  <Card>
+                    <CardContent>
+                      <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                          <GitCommit class="w-4 h-4 text-kitsuden-accent" />
+                          <span class="font-mono text-sm text-kitsuden-text"
+                            >v{v.versionNumber}</span
+                          >
+                          <Badge variant={statusVariant(v.status)}
+                            >{getStatusConfig(v.status).label}</Badge
                           >
                         </div>
-                        <p class="text-xs text-kitsuden-subtle mt-1">
-                          {v.changelog || tr("dMSView.noChangelog")}
-                        </p>
-                        <p class="text-xs text-kitsuden-text-dim">
-                          {tr("dMSView.by")}
-                          {v.createdBy?.name || tr("dMSView.unknown")}
-                        </p>
-                        <div class="flex items-center gap-2 mt-2">
-                          {#if v.status === "draft"}
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onclick={() => submitForReview(v.id)}
-                            >
-                              <Send class="w-3 h-3" />
-                              {tr("dMSView.submitForReview")}
-                            </Button>
-                          {:else if v.status === "review_pending"}
-                            <Button size="sm" onclick={() => reviewVersion(v.id, "approved")}>
-                              <Check class="w-3 h-3" />
-                              {tr("dMSView.approve")}
-                            </Button>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onclick={() => reviewVersion(v.id, "changes_requested")}
-                            >
-                              <XCircle class="w-3 h-3" />
-                              {tr("dMSView.requestChanges")}
-                            </Button>
-                            <input
-                              class="kitsuden-input w-48 text-xs"
-                              placeholder={tr("dMSView.reviewNotes")}
-                              bind:value={reviewNotes}
-                            />
-                          {:else if v.status === "approved"}
-                            <Button size="sm" onclick={() => publishVersion(v.id)}>
-                              <CheckCircle class="w-3 h-3" />
-                              {tr("dMSView.publish")}
-                            </Button>
-                          {:else if v.status === "published"}
-                            <span class="text-xs text-kitsuden-info flex items-center gap-1">
-                              <CheckCircle class="w-3 h-3" />
-                              {tr("common.published")}
-                            </span>
-                          {/if}
-                        </div>
+                        <span class="text-xs text-kitsuden-subtle"
+                          >{formatDateTime(v.createdAt)}</span
+                        >
                       </div>
-                    </div>
-                  {/each}
-                </div>
+                      <p class="mt-1 text-xs text-kitsuden-subtle">
+                        {v.changelog || tr("dMSView.noChangelog")}
+                      </p>
+                      <p class="text-xs text-kitsuden-text-dim">
+                        {tr("dMSView.by")}
+                        {v.createdBy?.name || tr("dMSView.unknown")}
+                      </p>
+                      <div class="mt-2 flex flex-wrap items-center gap-2">
+                        {#if v.status === "draft"}
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onclick={() => submitForReview(v.id)}
+                          >
+                            <Send class="w-3 h-3" />
+                            {tr("dMSView.submitForReview")}
+                          </Button>
+                        {:else if v.status === "review_pending"}
+                          <Button size="sm" onclick={() => reviewVersion(v.id, "approved")}>
+                            <Check class="w-3 h-3" />
+                            {tr("dMSView.approve")}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onclick={() => reviewVersion(v.id, "changes_requested")}
+                          >
+                            <XCircle class="w-3 h-3" />
+                            {tr("dMSView.requestChanges")}
+                          </Button>
+                          <Input
+                            class="min-w-0 flex-1 basis-40"
+                            aria-label={tr("dMSView.reviewNotes")}
+                            placeholder={tr("dMSView.reviewNotes")}
+                            bind:value={reviewNotes}
+                          />
+                        {:else if v.status === "approved"}
+                          <Button size="sm" onclick={() => publishVersion(v.id)}>
+                            <CheckCircle class="w-3 h-3" />
+                            {tr("dMSView.publish")}
+                          </Button>
+                        {:else if v.status === "published"}
+                          <Badge variant="info" dot>{tr("common.published")}</Badge>
+                        {/if}
+                      </div>
+                    </CardContent>
+                  </Card>
+                {/each}
               {/if}
             </div>
           {:else if drawerTab === "comments"}
-            <!-- Comments Tab -->
-            <div class="space-y-4">
+            <div class="flex flex-col gap-3">
               <h3 class="font-semibold text-kitsuden-text">{tr("dMSView.comments")}</h3>
               <div class="flex gap-3">
-                <div
-                  class="w-8 h-8 rounded-full bg-kitsuden-accent/20 flex items-center justify-center text-kitsuden-accent text-xs font-bold shrink-0"
-                >
-                  {getInitials("You")}
-                </div>
-                <div class="flex-1">
+                <Avatar name={tr("dMSView.you")} size="sm" decorative />
+                <div class="min-w-0 flex-1">
                   {#if replyToId}
-                    <div class="flex items-center gap-2 mb-1">
+                    <div class="mb-1 flex items-center gap-2">
                       <span class="text-xs text-kitsuden-accent"
                         >{tr("dMSView.replyingToComment")}</span
                       >
-                      <button
-                        class="text-xs text-kitsuden-subtle hover:text-kitsuden-text"
-                        onclick={() => (replyToId = null)}>{tr("common.cancel")}</button
+                      <Button variant="ghost" size="sm" onclick={() => (replyToId = null)}
+                        >{tr("common.cancel")}</Button
                       >
                     </div>
                   {/if}
-                  <textarea
-                    rows="2"
-                    class="kitsuden-input w-full text-sm"
+                  <Textarea
+                    rows={2}
+                    aria-label={tr("dMSView.addAComment")}
                     placeholder={tr("dMSView.addAComment")}
-                    bind:value={commentInput}></textarea>
-                  <div class="flex justify-end mt-2">
+                    bind:value={commentInput}
+                  />
+                  <div class="mt-2 flex justify-end">
                     <Button size="sm" onclick={postComment} disabled={!commentInput.trim()}>
                       <Send class="w-3 h-3" />
                       {tr("dMSView.post")}
@@ -2411,17 +2046,17 @@
                   </div>
                 </div>
               </div>
-              <div class="space-y-3">
-                {#each comments.filter((c) => !c.parentId) as comment}
-                  <div class="card p-4">
+              {#each comments.filter((c) => !c.parentId) as comment}
+                <Card>
+                  <CardContent>
                     <div class="flex items-start gap-3">
-                      <div
-                        class="w-8 h-8 rounded-full bg-kitsuden-bg border border-kitsuden-border flex items-center justify-center text-kitsuden-text text-xs font-bold shrink-0"
-                      >
-                        {getInitials(comment.createdBy?.name)}
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
+                      <Avatar
+                        name={comment.createdBy?.name || tr("dMSView.unknown")}
+                        size="sm"
+                        decorative
+                      />
+                      <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center justify-between gap-x-3">
                           <span class="text-sm font-medium text-kitsuden-text"
                             >{comment.createdBy?.name || tr("dMSView.unknown")}</span
                           >
@@ -2429,48 +2064,50 @@
                             >{formatDateTime(comment.createdAt)}</span
                           >
                         </div>
-                        <p class="text-sm text-kitsuden-subtle mt-1">{comment.content}</p>
-                        <div class="flex items-center gap-2 mt-2">
-                          <button
-                            class="text-xs text-kitsuden-subtle hover:text-kitsuden-accent flex items-center gap-1"
+                        <p class="mt-1 text-sm text-kitsuden-subtle">{comment.content}</p>
+                        <div class="mt-2 flex flex-wrap items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onclick={() => (replyToId = comment.id)}
                           >
                             <Reply class="w-3 h-3" />
                             {tr("dMSView.reply")}
-                          </button>
+                          </Button>
                           {#if !comment.resolved}
-                            <button
-                              class="text-xs text-kitsuden-subtle hover:text-kitsuden-green flex items-center gap-1"
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onclick={() => resolveComment(comment.id)}
                             >
                               <Check class="w-3 h-3" />
                               {tr("dMSView.resolve")}
-                            </button>
+                            </Button>
                           {:else}
-                            <span class="text-xs text-kitsuden-green flex items-center gap-1">
-                              <CheckCircle class="w-3 h-3" />
-                              {tr("dMSView.resolved")}
-                            </span>
+                            <Badge variant="success" dot>{tr("dMSView.resolved")}</Badge>
                           {/if}
-                          <button
-                            class="text-xs text-kitsuden-subtle hover:text-kitsuden-accent-2 flex items-center gap-1"
+                          <Button
+                            variant="danger-ghost"
+                            size="sm"
                             onclick={() => deleteComment(comment.id)}
                           >
                             <Trash2 class="w-3 h-3" />
                             {tr("common.delete")}
-                          </button>
+                          </Button>
                         </div>
                         {#if comment.replies && comment.replies.length > 0}
-                          <div class="mt-3 ml-4 pl-3 border-l border-kitsuden-border space-y-2">
+                          <div
+                            class="mt-3 ml-2 flex flex-col gap-2 border-l border-kitsuden-border pl-3"
+                          >
                             {#each comment.replies as reply}
                               <div class="flex items-start gap-2">
-                                <div
-                                  class="w-6 h-6 rounded-full bg-kitsuden-bg border border-kitsuden-border flex items-center justify-center text-kitsuden-text text-xs font-bold shrink-0"
-                                >
-                                  {getInitials(reply.createdBy?.name)}
-                                </div>
-                                <div class="flex-1">
-                                  <div class="flex items-center gap-2">
+                                <Avatar
+                                  name={reply.createdBy?.name || tr("dMSView.unknown")}
+                                  size="sm"
+                                  decorative
+                                />
+                                <div class="min-w-0 flex-1">
+                                  <div class="flex flex-wrap items-center gap-x-2">
                                     <span class="text-xs font-medium text-kitsuden-text"
                                       >{reply.createdBy?.name || tr("dMSView.unknown")}</span
                                     >
@@ -2478,7 +2115,7 @@
                                       >{formatDateTime(reply.createdAt)}</span
                                     >
                                   </div>
-                                  <p class="text-xs text-kitsuden-subtle mt-0.5">{reply.content}</p>
+                                  <p class="mt-0.5 text-xs text-kitsuden-subtle">{reply.content}</p>
                                 </div>
                               </div>
                             {/each}
@@ -2486,19 +2123,16 @@
                         {/if}
                       </div>
                     </div>
-                  </div>
-                {/each}
-                {#if comments.length === 0}
-                  <div class="text-center text-kitsuden-subtle text-sm py-8">
-                    {tr("dMSView.noCommentsYet")}
-                  </div>
-                {/if}
-              </div>
+                  </CardContent>
+                </Card>
+              {/each}
+              {#if comments.length === 0}
+                <EmptyState size="sm" title={tr("dMSView.noCommentsYet")} />
+              {/if}
             </div>
           {:else if drawerTab === "diagrams"}
-            <!-- Diagrams Tab -->
-            <div class="space-y-4">
-              <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
                 <h3 class="font-semibold text-kitsuden-text">{tr("dMSView.diagrams")}</h3>
                 <Button size="sm" onclick={() => (showCreateDiagramModal = true)}>
                   <Plus class="w-3.5 h-3.5" />
@@ -2506,29 +2140,32 @@
                 </Button>
               </div>
               {#if diagrams.length === 0}
-                <div class="card p-8 text-center text-kitsuden-subtle text-sm">
-                  {tr("dMSView.noDiagramsForThisVersion")}
-                </div>
+                <EmptyState size="sm" title={tr("dMSView.noDiagramsForThisVersion")} />
               {:else}
-                <div class="grid grid-cols-1 gap-3">
-                  {#each diagrams as d}
-                    <div class="card p-4">
-                      <div class="flex items-center justify-between mb-2">
-                        <h4 class="font-medium text-kitsuden-text text-sm">{d.name}</h4>
-                        <button
-                          class="p-1.5 hover:bg-kitsuden-bg rounded-lg text-kitsuden-text-dim hover:text-kitsuden-accent-2"
+                {#each diagrams as d}
+                  <Card>
+                    <CardContent>
+                      <div class="mb-2 flex items-center justify-between gap-2">
+                        <h4 class="min-w-0 truncate text-sm font-medium text-kitsuden-text">
+                          {d.name}
+                        </h4>
+                        <Button
+                          variant="danger-ghost"
+                          size="icon"
+                          ariaLabel={tr("dMSView.deleteDiagram", { name: d.name })}
+                          title={tr("common.delete")}
                           onclick={() => deleteDiagram(d.id)}
                         >
-                          <Trash2 class="w-3.5 h-3.5" />
-                        </button>
+                          <Trash2 class="w-4 h-4" />
+                        </Button>
                       </div>
                       {#if d.renderedSvg}
-                        <div class="bg-white rounded-lg p-2 overflow-auto">
+                        <div class="overflow-auto rounded-lg bg-white p-2">
                           {@html cleanSvg(d.renderedSvg)}
                         </div>
                       {:else if d.sourceXml}
                         <pre
-                          class="text-xs text-kitsuden-subtle bg-kitsuden-bg p-3 rounded-lg overflow-auto max-h-40">{d.sourceXml.slice(
+                          class="max-h-40 overflow-auto rounded-lg bg-kitsuden-bg p-3 text-xs text-kitsuden-subtle">{d.sourceXml.slice(
                             0,
                             500
                           )}{d.sourceXml.length > 500 ? "..." : ""}</pre>
@@ -2537,529 +2174,309 @@
                           {tr("dMSView.noPreviewAvailable")}
                         </p>
                       {/if}
-                    </div>
-                  {/each}
-                </div>
+                    </CardContent>
+                  </Card>
+                {/each}
               {/if}
             </div>
           {:else if drawerTab === "audit"}
-            <!-- Audit Tab -->
-            <div class="space-y-4">
+            <div class="flex flex-col gap-3">
               <h3 class="font-semibold text-kitsuden-text">{tr("dMSView.auditLog")}</h3>
               {#if auditEntries.length === 0}
-                <div class="card p-8 text-center text-kitsuden-subtle text-sm">
-                  {tr("dMSView.noAuditEntries")}
-                </div>
+                <EmptyState size="sm" title={tr("dMSView.noAuditEntries")} />
               {:else}
-                <div class="relative pl-4 border-l border-kitsuden-border space-y-4">
-                  {#each auditEntries as entry}
-                    <div class="relative">
-                      <div
-                        class="absolute left-[-21px] top-0 w-2.5 h-2.5 rounded-full bg-kitsuden-accent border-2 border-kitsuden-card"
-                      ></div>
-                      <div class="card p-3">
-                        <div class="flex items-center justify-between">
-                          <span class="text-sm font-medium text-kitsuden-text">{entry.action}</span>
-                          <span class="text-xs text-kitsuden-subtle"
-                            >{formatDateTime(entry.createdAt)}</span
-                          >
-                        </div>
-                        <p class="text-xs text-kitsuden-subtle mt-1">
-                          {tr("dMSView.by")}
-                          {entry.user?.name || tr("common.system")}
-                        </p>
-                        {#if entry.details}
-                          <pre
-                            class="text-xs text-kitsuden-text-dim bg-kitsuden-bg p-2 rounded-sm mt-2 overflow-auto">{JSON.stringify(
-                              entry.details,
-                              null,
-                              2
-                            )}</pre>
-                        {/if}
+                {#each auditEntries as entry}
+                  <Card>
+                    <CardContent>
+                      <div class="flex flex-wrap items-center justify-between gap-x-3">
+                        <span class="text-sm font-medium text-kitsuden-text">{entry.action}</span>
+                        <span class="text-xs text-kitsuden-subtle"
+                          >{formatDateTime(entry.createdAt)}</span
+                        >
                       </div>
-                    </div>
-                  {/each}
-                </div>
+                      <p class="mt-1 text-xs text-kitsuden-subtle">
+                        {tr("dMSView.by")}
+                        {entry.user?.name || tr("common.system")}
+                      </p>
+                      {#if entry.details}
+                        <pre
+                          class="mt-2 overflow-auto rounded-sm bg-kitsuden-bg p-2 text-xs text-kitsuden-text-dim">{JSON.stringify(
+                            entry.details,
+                            null,
+                            2
+                          )}</pre>
+                      {/if}
+                    </CardContent>
+                  </Card>
+                {/each}
               {/if}
             </div>
           {:else if drawerTab === "backlinks"}
-            <!-- Backlinks Tab -->
-            <div class="space-y-4">
+            <div class="flex flex-col gap-3">
               <h3 class="font-semibold text-kitsuden-text">{tr("dMSView.backlinks")}</h3>
               <p class="text-sm text-kitsuden-subtle">{tr("dMSView.documentsThatLinkToThis")}</p>
               {#if backlinks.length === 0}
-                <div class="card p-8 text-center text-kitsuden-subtle text-sm">
-                  {tr("dMSView.noBacklinksFound")}
-                </div>
+                <EmptyState size="sm" title={tr("dMSView.noBacklinksFound")} />
               {:else}
-                <div class="space-y-2">
-                  {#each backlinks as bl}
-                    <button
-                      class="w-full text-left card p-3 hover:border-kitsuden-accent/30 transition-colors"
-                      onclick={() =>
-                        openDrawer({
-                          id: bl.id,
-                          code: bl.code,
-                          title: bl.title,
-                          slug: "",
-                          type: "other",
-                          status: "draft",
-                          tags: [],
-                          currentVersionNumber: 1,
-                          updatedAt: "",
-                        })}
-                    >
-                      <div class="flex items-center gap-3">
-                        <Link2 class="w-4 h-4 text-kitsuden-accent" />
-                        <div>
-                          <p class="text-sm font-medium text-kitsuden-text">{bl.title}</p>
-                          <p class="text-xs font-mono text-kitsuden-subtle">{bl.code}</p>
-                        </div>
-                      </div>
-                    </button>
-                  {/each}
-                </div>
+                {#each backlinks as bl}
+                  <Button
+                    variant="secondary"
+                    class="w-full justify-start"
+                    onclick={() =>
+                      openDrawer({
+                        id: bl.id,
+                        code: bl.code,
+                        title: bl.title,
+                        slug: "",
+                        type: "other",
+                        status: "draft",
+                        tags: [],
+                        currentVersionNumber: 1,
+                        updatedAt: "",
+                      })}
+                  >
+                    <Link2 class="w-4 h-4 shrink-0 text-kitsuden-accent" />
+                    <span class="truncate">{bl.title}</span>
+                    <span class="ml-auto font-mono text-xs text-kitsuden-subtle">{bl.code}</span>
+                  </Button>
+                {/each}
               {/if}
             </div>
           {/if}
         </div>
-      </div>
+      {/if}
     {/if}
-  </Dialog>
+  </Sheet>
 
-  <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-  <!-- MODALS -->
-  <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-
-  <!-- Create Document Modal -->
+  <!-- New document -->
   <Dialog
     open={!!showCreateDocModal}
-    bare
     size="2xl"
-    ariaLabel={tr("dMSView.newDocument")}
+    title={tr("dMSView.newDocument")}
     onClose={() => (showCreateDocModal = false)}
   >
-    {#if showCreateDocModal}
-      <div
-        class="relative bg-kitsuden-card border border-kitsuden-border rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-      >
-        <div class="flex items-center justify-between p-6 border-b border-kitsuden-border">
-          <h3 class="text-lg font-semibold text-kitsuden-text">{tr("dMSView.newDocument")}</h3>
-          <button
-            onclick={() => (showCreateDocModal = false)}
-            class="p-2 rounded-xl text-kitsuden-text-dim hover:text-kitsuden-text hover:bg-kitsuden-bg transition-all"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-        <form onsubmit={createDocument} class="p-6 space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs text-kitsuden-subtle mb-1">{tr("dMSView.title")}</label>
-              <input
-                id="title-2"
-                bind:value={formDoc.title}
-                type="text"
-                placeholder={tr("dMSView.documentTitle")}
-                class="kitsuden-input w-full"
-                required
-              />
-            </div>
-            <div>
-              <label for="type-2" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.type")}</label
-              >
-              <select id="type-2" bind:value={formDoc.type} class="kitsuden-input w-full">
-                {#each documentTypes as t}
-                  <option value={t.id}>{t.label}</option>
-                {/each}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label for="description-2" class="block text-xs text-kitsuden-subtle mb-1"
-              >{tr("common.description")}</label
-            >
-            <textarea
-              id="description-2"
-              bind:value={formDoc.description}
-              rows="3"
-              placeholder={tr("dMSView.shortDescription")}
-              class="kitsuden-input w-full"></textarea>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="status-2" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.status")}</label
-              >
-              <select id="status-2" bind:value={formDoc.status} class="kitsuden-input w-full">
-                {#each workflowStatuses as s}
-                  <option value={s.id}>{s.label}</option>
-                {/each}
-              </select>
-            </div>
-            <div>
-              <label for="categoryid-2" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.category")}</label
-              >
-              <select
-                id="categoryid-2"
-                bind:value={formDoc.categoryId}
-                class="kitsuden-input w-full"
-              >
-                <option value="">{tr("dMSView.noCategory")}</option>
-                {#each categories as cat}
-                  <option value={cat.id}>{cat.name}</option>
-                  {#each cat.children || [] as child}
-                    <option value={child.id}> {child.name}</option>
-                  {/each}
-                {/each}
-              </select>
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="visibility-2" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("common.visibility")}</label
-              >
-              <select
-                id="visibility-2"
-                bind:value={formDoc.visibility}
-                class="kitsuden-input w-full"
-              >
-                {#each visibilityOptions as v}
-                  <option value={v.id}>{v.label}</option>
-                {/each}
-              </select>
-            </div>
-            <div>
-              <label for="tags-comma-separated-2" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("dMSView.tagsCommaSeparated")}</label
-              >
-              <input
-                id="tags-comma-separated-2"
-                type="text"
-                placeholder={tr("dMSView.policyHr2025")}
-                class="kitsuden-input w-full"
-                oninput={(e) => {
-                  formDoc.tags = (e.target as HTMLInputElement).value
-                    .split(",")
-                    .map((t) => t.trim())
-                    .filter(Boolean);
-                }}
-              />
-            </div>
-          </div>
-          <div class="flex justify-end gap-3 pt-4 border-t border-kitsuden-border">
-            <Button type="button" onclick={() => (showCreateDocModal = false)} variant="secondary"
-              >{tr("common.cancel")}</Button
-            >
-            <button type="submit" disabled={saving || !formDoc.title} class="btn-primary">
-              {#if saving}
-                <span
-                  class="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin"
-                ></span>
-                {tr("common.creating")}
-              {:else}
-                <Plus class="w-4 h-4" />
-                {tr("dMSView.createDocument")}
-              {/if}
-            </button>
-          </div>
-        </form>
+    <form id="{uid}-doc" onsubmit={createDocument} class="flex flex-col gap-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label={tr("common.title")} required>
+          <Input
+            id="title-2"
+            value={formDoc.title ?? ""}
+            oninput={setField("title")}
+            placeholder={tr("dMSView.documentTitle")}
+            required
+          />
+        </Field>
+        <Field label={tr("common.type")}>
+          <Select
+            id="type-2"
+            value={formDoc.type ?? ""}
+            onchange={setField("type")}
+            options={documentTypes.map((d) => ({ value: d.id, label: d.label }))}
+          />
+        </Field>
       </div>
-    {/if}
+      <Field label={tr("common.description")}>
+        <Textarea
+          id="description-2"
+          rows={3}
+          value={formDoc.description ?? ""}
+          oninput={setField("description")}
+          placeholder={tr("dMSView.shortDescription")}
+        />
+      </Field>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label={tr("common.status")}>
+          <Select
+            id="status-2"
+            value={formDoc.status ?? ""}
+            onchange={setField("status")}
+            options={workflowStatuses.map((s) => ({ value: s.id, label: s.label }))}
+          />
+        </Field>
+        <Field label={tr("common.category")}>
+          <Select
+            id="categoryid-2"
+            value={formDoc.categoryId ?? ""}
+            onchange={setField("categoryId")}
+            placeholder={tr("dMSView.noCategory")}
+            options={categoryOptions}
+          />
+        </Field>
+        <Field label={tr("common.visibility")}>
+          <Select
+            id="visibility-2"
+            value={formDoc.visibility ?? ""}
+            onchange={setField("visibility")}
+            options={visibilityOptions.map((v) => ({ value: v.id, label: v.label }))}
+          />
+        </Field>
+        <Field label={tr("dMSView.tagsCommaSeparated")}>
+          <Input
+            id="tags-comma-separated-2"
+            placeholder={tr("dMSView.policyHr2025")}
+            oninput={setList("tags")}
+          />
+        </Field>
+      </div>
+    </form>
+    {#snippet footer()}
+      <Button variant="secondary" onclick={() => (showCreateDocModal = false)}
+        >{tr("common.cancel")}</Button
+      >
+      <Button type="submit" form="{uid}-doc" loading={saving} disabled={saving || !formDoc.title}>
+        <Plus class="w-4 h-4" />
+        {saving ? tr("common.creating") : tr("dMSView.createDocument")}
+      </Button>
+    {/snippet}
   </Dialog>
 
-  <!-- Create Category Modal -->
+  <!-- New category -->
   <Dialog
     open={!!showCreateCatModal}
-    bare
     size="lg"
-    ariaLabel={tr("dMSView.newCategory")}
+    title={tr("dMSView.newCategory")}
     onClose={() => (showCreateCatModal = false)}
   >
-    {#if showCreateCatModal}
-      <div
-        class="relative bg-kitsuden-card border border-kitsuden-border rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
-      >
-        <div class="flex items-center justify-between p-6 border-b border-kitsuden-border">
-          <h3 class="text-lg font-semibold text-kitsuden-text">{tr("dMSView.newCategory")}</h3>
-          <button
-            onclick={() => (showCreateCatModal = false)}
-            class="p-2 rounded-xl text-kitsuden-text-dim hover:text-kitsuden-text hover:bg-kitsuden-bg transition-all"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-        <form onsubmit={saveCategory} class="p-6 space-y-4">
-          <div>
-            <label for="newcategoryname" class="block text-xs text-kitsuden-subtle mb-1"
-              >{tr("common.name2")}</label
-            >
-            <input
-              id="newcategoryname"
-              bind:value={newCategoryName}
-              type="text"
-              placeholder={tr("dMSView.categoryName")}
-              class="kitsuden-input w-full"
-              required
-            />
-          </div>
-          <div>
-            <label for="newcategorydescription" class="block text-xs text-kitsuden-subtle mb-1"
-              >{tr("common.description")}</label
-            >
-            <textarea
-              id="newcategorydescription"
-              bind:value={newCategoryDescription}
-              rows="2"
-              placeholder={tr("dMSView.shortDescription")}
-              class="kitsuden-input w-full"></textarea>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="newcategoryicon" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("dMSView.icon")}</label
-              >
-              <input
-                id="newcategoryicon"
-                bind:value={newCategoryIcon}
-                type="text"
-                placeholder="📁"
-                class="kitsuden-input w-full"
-              />
-            </div>
-            <div>
-              <label for="newcategorycolor" class="block text-xs text-kitsuden-subtle mb-1"
-                >{tr("dMSView.color")}</label
-              >
-              <input
-                id="newcategorycolor"
-                bind:value={newCategoryColor}
-                type="color"
-                class="w-full h-10 bg-kitsuden-bg border border-kitsuden-input rounded-lg px-2 py-1"
-              />
-            </div>
-          </div>
-          <div>
-            <label for="newcategoryparentid" class="block text-xs text-kitsuden-subtle mb-1"
-              >{tr("dMSView.parentCategory")}</label
-            >
-            <select
-              id="newcategoryparentid"
-              bind:value={newCategoryParentId}
-              class="kitsuden-input w-full"
-            >
-              <option value="">{tr("dMSView.noneRoot")}</option>
-              {#each categories as cat}
-                <option value={cat.id}>{cat.name}</option>
-              {/each}
-            </select>
-          </div>
-          <div class="flex justify-end gap-3 pt-4 border-t border-kitsuden-border">
-            <Button type="button" onclick={() => (showCreateCatModal = false)} variant="secondary"
-              >{tr("common.cancel")}</Button
-            >
-            <button type="submit" disabled={saving || !newCategoryName} class="btn-primary">
-              {#if saving}
-                <span
-                  class="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin"
-                ></span>
-                {tr("common.creating")}
-              {:else}
-                <Plus class="w-4 h-4" />
-                {tr("dMSView.createCategory")}
-              {/if}
-            </button>
-          </div>
-        </form>
+    <form id="{uid}-cat" onsubmit={saveCategory} class="flex flex-col gap-4">
+      <Field label={tr("common.name2")} required>
+        <Input
+          id="newcategoryname"
+          bind:value={newCategoryName}
+          placeholder={tr("dMSView.categoryName")}
+          required
+        />
+      </Field>
+      <Field label={tr("common.description")}>
+        <Textarea
+          id="newcategorydescription"
+          rows={2}
+          bind:value={newCategoryDescription}
+          placeholder={tr("dMSView.shortDescription")}
+        />
+      </Field>
+      <div class="grid grid-cols-2 gap-4">
+        <Field label={tr("dMSView.icon")}>
+          <Input id="newcategoryicon" bind:value={newCategoryIcon} placeholder="📁" />
+        </Field>
+        <Field label={tr("dMSView.color")}>
+          <input
+            id="newcategorycolor"
+            bind:value={newCategoryColor}
+            type="color"
+            class="h-10 w-full rounded-lg border border-kitsuden-input bg-kitsuden-bg px-2 py-1"
+          />
+        </Field>
       </div>
-    {/if}
+      <Field label={tr("dMSView.parentCategory")}>
+        <Select
+          id="newcategoryparentid"
+          bind:value={newCategoryParentId}
+          placeholder={tr("dMSView.noneRoot")}
+          options={categories.map((c) => ({ value: c.id, label: c.name }))}
+        />
+      </Field>
+    </form>
+    {#snippet footer()}
+      <Button variant="secondary" onclick={() => (showCreateCatModal = false)}
+        >{tr("common.cancel")}</Button
+      >
+      <Button type="submit" form="{uid}-cat" loading={saving} disabled={saving || !newCategoryName}>
+        <Plus class="w-4 h-4" />
+        {saving ? tr("common.creating") : tr("dMSView.createCategory")}
+      </Button>
+    {/snippet}
   </Dialog>
 
-  <!-- Confirm Delete Modal -->
+  <!-- Confirm deletion -->
   <Dialog
     open={!!showConfirmDeleteModal}
-    bare
-    ariaLabel={tr("dMSView.confirmDeletion")}
+    title={tr("dMSView.confirmDeletion")}
+    description={tr("dMSView.areYouSureYouWant", { deleteTargetIdsCount: deleteTargetIds.length })}
     onClose={() => (showConfirmDeleteModal = false)}
   >
-    {#if showConfirmDeleteModal}
-      <div
-        class="relative bg-kitsuden-card border border-kitsuden-border rounded-2xl shadow-2xl max-w-md w-full p-6"
+    {#snippet footer()}
+      <Button variant="secondary" onclick={() => (showConfirmDeleteModal = false)}
+        >{tr("common.cancel")}</Button
       >
-        <div class="flex items-center gap-3 mb-4">
-          <div
-            class="w-10 h-10 rounded-full bg-kitsuden-accent-2/10 flex items-center justify-center"
-          >
-            <AlertCircle class="w-5 h-5 text-kitsuden-accent-2" />
-          </div>
-          <h3 class="text-lg font-semibold text-kitsuden-text">{tr("dMSView.confirmDeletion")}</h3>
-        </div>
-        <p class="text-sm text-kitsuden-subtle mb-6">
-          {tr("dMSView.areYouSureYouWant", { deleteTargetIdsCount: deleteTargetIds.length })}
-        </p>
-        <div class="flex justify-end gap-3">
-          <Button variant="secondary" onclick={() => (showConfirmDeleteModal = false)}
-            >{tr("common.cancel")}</Button
-          >
-          <button class="btn-danger" onclick={() => deleteDocuments(deleteTargetIds)}>
-            <Trash2 class="w-4 h-4" />
-            {tr("common.delete")}
-          </button>
-        </div>
-      </div>
-    {/if}
+      <Button variant="danger" onclick={() => deleteDocuments(deleteTargetIds)}>
+        <Trash2 class="w-4 h-4" />
+        {tr("common.delete")}
+      </Button>
+    {/snippet}
   </Dialog>
 
-  <!-- Create Version Modal -->
+  <!-- New version -->
   <Dialog
     open={!!showCreateVersionModal}
-    bare
     size="lg"
-    ariaLabel={tr("dMSView.createNewVersion")}
+    title={tr("dMSView.createNewVersion")}
     onClose={() => (showCreateVersionModal = false)}
   >
-    {#if showCreateVersionModal}
-      <div
-        class="relative bg-kitsuden-card border border-kitsuden-border rounded-2xl shadow-2xl max-w-lg w-full p-6"
+    <div class="flex flex-col gap-4">
+      <Field label={tr("dMSView.changeType")}>
+        <Select id="changetypeinput" bind:value={changeTypeInput} options={changeTypeOptions} />
+      </Field>
+      <Field label={tr("dMSView.changelog")}>
+        <Textarea
+          id="changeloginput"
+          rows={3}
+          placeholder={tr("dMSView.describeWhatChanged")}
+          bind:value={changelogInput}
+        />
+      </Field>
+    </div>
+    {#snippet footer()}
+      <Button variant="secondary" onclick={() => (showCreateVersionModal = false)}
+        >{tr("common.cancel")}</Button
       >
-        <h3 class="text-lg font-semibold text-kitsuden-text mb-4">
-          {tr("dMSView.createNewVersion")}
-        </h3>
-        <div class="space-y-4">
-          <div>
-            <label for="changetypeinput" class="block text-xs text-kitsuden-subtle mb-1"
-              >{tr("dMSView.changeType")}</label
-            >
-            <select id="changetypeinput" class="kitsuden-input w-full" bind:value={changeTypeInput}>
-              <option value="major">{tr("dMSView.major")}</option>
-              <option value="minor">{tr("dMSView.minor")}</option>
-              <option value="patch">{tr("dMSView.patch")}</option>
-            </select>
-          </div>
-          <div>
-            <label for="changeloginput" class="block text-xs text-kitsuden-subtle mb-1"
-              >{tr("dMSView.changelog")}</label
-            >
-            <textarea
-              id="changeloginput"
-              rows="3"
-              class="kitsuden-input w-full"
-              placeholder={tr("dMSView.describeWhatChanged")}
-              bind:value={changelogInput}></textarea>
-          </div>
-          <div class="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onclick={() => (showCreateVersionModal = false)}
-              >{tr("common.cancel")}</Button
-            >
-            <button
-              class="btn-primary"
-              onclick={createNewVersion}
-              disabled={saving || !changelogInput.trim()}
-            >
-              {#if saving}<Loader2 class="w-4 h-4 animate-spin" />{/if}
-              {tr("dMSView.createVersion")}
-            </button>
-          </div>
-        </div>
-      </div>
-    {/if}
+      <Button
+        onclick={createNewVersion}
+        loading={saving}
+        disabled={saving || !changelogInput.trim()}
+      >
+        {tr("dMSView.createVersion")}
+      </Button>
+    {/snippet}
   </Dialog>
 
-  <!-- Create Diagram Modal -->
+  <!-- New diagram -->
   <Dialog
     open={!!showCreateDiagramModal}
-    bare
     size="lg"
-    ariaLabel={tr("dMSView.addDiagram")}
+    title={tr("dMSView.addDiagram")}
     onClose={() => (showCreateDiagramModal = false)}
   >
-    {#if showCreateDiagramModal}
-      <div
-        class="relative bg-kitsuden-card border border-kitsuden-border rounded-2xl shadow-2xl max-w-lg w-full p-6"
+    <form id="{uid}-diagram" onsubmit={createDiagram} class="flex flex-col gap-4">
+      <Field label={tr("common.name")} required>
+        <Input
+          id="newdiagramname"
+          bind:value={newDiagramName}
+          placeholder={tr("dMSView.diagramName")}
+          required
+        />
+      </Field>
+      <Field label={tr("dMSView.sourceXmlJson")}>
+        <Textarea
+          id="newdiagramsource"
+          rows={6}
+          mono
+          bind:value={newDiagramSource}
+          placeholder={tr("dMSView.pasteDiagramSourceXmlOr")}
+        />
+      </Field>
+    </form>
+    {#snippet footer()}
+      <Button variant="secondary" onclick={() => (showCreateDiagramModal = false)}
+        >{tr("common.cancel")}</Button
       >
-        <h3 class="text-lg font-semibold text-kitsuden-text mb-4">{tr("dMSView.addDiagram")}</h3>
-        <form onsubmit={createDiagram} class="space-y-4">
-          <div>
-            <label for="newdiagramname" class="block text-xs text-kitsuden-subtle mb-1"
-              >{tr("common.name")}</label
-            >
-            <input
-              id="newdiagramname"
-              type="text"
-              class="kitsuden-input w-full"
-              bind:value={newDiagramName}
-              placeholder={tr("dMSView.diagramName")}
-              required
-            />
-          </div>
-          <div>
-            <label for="newdiagramsource" class="block text-xs text-kitsuden-subtle mb-1"
-              >{tr("dMSView.sourceXmlJson")}</label
-            >
-            <textarea
-              id="newdiagramsource"
-              rows="6"
-              class="kitsuden-input w-full font-mono text-xs"
-              bind:value={newDiagramSource}
-              placeholder={tr("dMSView.pasteDiagramSourceXmlOr")}></textarea>
-          </div>
-          <div class="flex justify-end gap-3 pt-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onclick={() => (showCreateDiagramModal = false)}>{tr("common.cancel")}</Button
-            >
-            <button type="submit" class="btn-primary" disabled={saving || !newDiagramName}>
-              {#if saving}<Loader2 class="w-4 h-4 animate-spin" />{/if}
-              {tr("dMSView.addDiagram")}
-            </button>
-          </div>
-        </form>
-      </div>
-    {/if}
+      <Button
+        type="submit"
+        form="{uid}-diagram"
+        loading={saving}
+        disabled={saving || !newDiagramName}
+      >
+        {tr("dMSView.addDiagram")}
+      </Button>
+    {/snippet}
   </Dialog>
-
-  <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-  <!-- TOASTS -->
-  <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-  <div class="fixed bottom-6 right-6 z-60 space-y-2 pointer-events-none">
-    {#each toasts as toast}
-      <div
-        class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium min-w-[280px] transition-all duration-300
-      {toast.type === 'success'
-          ? 'bg-kitsuden-card border-kitsuden-green/30 text-kitsuden-green'
-          : toast.type === 'error'
-            ? 'bg-kitsuden-card border-kitsuden-danger/30 text-kitsuden-danger'
-            : 'bg-kitsuden-card border-kitsuden-accent/30 text-kitsuden-accent'}"
-      >
-        {#if toast.type === "success"}<CheckCircle class="w-4 h-4 shrink-0" />{/if}
-        {#if toast.type === "error"}<AlertCircle class="w-4 h-4 shrink-0" />{/if}
-        {#if toast.type === "info"}<Sparkles class="w-4 h-4 shrink-0" />{/if}
-        <span>{toast.message}</span>
-      </div>
-    {/each}
-  </div>
 </ViewPage>
-
-<style>
-  @reference "../../style.css";
-
-  .btn-primary {
-    @apply inline-flex items-center gap-2 px-4 py-2 bg-kitsuden-accent text-kitsuden-on-accent rounded-lg font-medium hover:bg-kitsuden-accent-dim active:scale-[0.98] transition-all disabled:opacity-50;
-  }
-  .btn-secondary {
-    @apply inline-flex items-center gap-2 px-4 py-2 bg-kitsuden-card border border-kitsuden-border text-kitsuden-text rounded-lg hover:bg-kitsuden-muted/30 transition-all disabled:opacity-50;
-  }
-  .btn-danger {
-    @apply inline-flex items-center gap-2 px-4 py-2 bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border border-kitsuden-accent-2/20 rounded-lg hover:bg-kitsuden-accent-2/20 transition-all disabled:opacity-50;
-  }
-  .btn-sm {
-    @apply px-3 py-1.5 text-xs gap-1.5;
-  }
-  .kitsuden-input {
-    @apply bg-kitsuden-bg border border-kitsuden-border rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-1 focus:ring-kitsuden-accent/50 focus:border-kitsuden-accent/50 transition-all duration-150;
-  }
-</style>

@@ -106,19 +106,19 @@ See `docs/agents/coding-agents.md` for running several agents side by side.
 
 ## 🛠️ Data tools (11)
 
-| Tool                     | Description                                                                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `kitsuden_list_tables`   | Discover all data tables with row counts                                                                                           |
-| `kitsuden_query_table`   | Query records with pagination, sort, filter. Result in the shortest lossless format (compact JSON, TOON or TRON; `format: "auto"`) |
-| `kitsuden_create_record` | Create a new record in any table                                                                                                   |
-| `kitsuden_update_record` | Update a record by ID                                                                                                              |
-| `kitsuden_delete_record` | Delete a record by ID                                                                                                              |
-| `kitsuden_get_schema`    | Get JSON Schema for a table (fields, types, relations)                                                                             |
-| `kitsuden_list_modules`  | List all kon modules + status                                                                                                      |
-| `kitsuden_toggle_module` | Enable/disable a module                                                                                                            |
-| `kitsuden_encode_toon`   | Encode JSON → TOON; says how many characters TOON and compact JSON take                                                            |
-| `kitsuden_list_datasets` | List dynamic datasets                                                                                                              |
-| `kitsuden_api_request`   | Raw API request (escape hatch)                                                                                                     |
+| Tool                     | Description                                                                                                                                                                                                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kitsuden_list_tables`   | Discover all data tables with row counts                                                                                                                                                                                                                         |
+| `kitsuden_query_table`   | Query records with pagination, sort, `search` / `search_fields` and several `filters` (`{ col: value }` or `{ col: { gte: v } }`; ops contains, equals, gt, lt, gte, lte). Result in the shortest lossless format (compact JSON, TOON or TRON; `format: "auto"`) |
+| `kitsuden_create_record` | Create a new record in any table                                                                                                                                                                                                                                 |
+| `kitsuden_update_record` | Update a record by ID                                                                                                                                                                                                                                            |
+| `kitsuden_delete_record` | Delete a record by ID                                                                                                                                                                                                                                            |
+| `kitsuden_get_schema`    | Get JSON Schema for a table (fields, types, relations)                                                                                                                                                                                                           |
+| `kitsuden_list_modules`  | List all kon modules + status                                                                                                                                                                                                                                    |
+| `kitsuden_toggle_module` | Enable/disable a module                                                                                                                                                                                                                                          |
+| `kitsuden_encode_toon`   | Encode JSON → TOON; says how many characters TOON and compact JSON take                                                                                                                                                                                          |
+| `kitsuden_list_datasets` | List dynamic datasets                                                                                                                                                                                                                                            |
+| `kitsuden_api_request`   | Raw API request (escape hatch)                                                                                                                                                                                                                                   |
 
 The server also exposes code-navigation tools (`kitsuden_find_symbol`, `kitsuden_file_outline`,
 `kitsuden_search_code`, `kitsuden_graph_path`, ...), mail preview tools and document-reading tools

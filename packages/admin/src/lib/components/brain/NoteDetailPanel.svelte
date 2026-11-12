@@ -1,6 +1,16 @@
 <script lang="ts">
   import { t } from "$lib/i18n";
-  import { Network, FileText, Tag, AlertCircle, Loader2 } from "lucide-svelte";
+  import { Network, FileText, Tag } from "lucide-svelte";
+  import {
+    Alert,
+    Badge,
+    Button,
+    Card,
+    CodeBlock,
+    EmptyState,
+    Progress,
+    Spinner,
+  } from "$lib/tallao";
 
   import { getBrainNeighborhood, getBrainNote } from "$lib/services/brain";
   import type { BrainNeighborhood, BrainNote, KnowledgeGraphNode } from "$lib/types/brain";
@@ -70,80 +80,48 @@
   );
 </script>
 
-<div
-  class="flex flex-col h-full w-full min-w-[280px] max-w-[360px] rounded-xl border border-kitsuden-border bg-kitsuden-card"
->
+<Card class="flex flex-col h-full w-full min-w-0 lg:min-w-[280px] lg:max-w-[360px]">
   {#if !note}
-    <div class="flex-1 flex flex-col items-center justify-center p-6 text-kitsuden-text-dim">
-      <Network class="w-8 h-8 mb-3 text-kitsuden-subtle" />
-      <p class="text-sm text-center">{t("noteDetailPanel.selectANodeFromThe")}</p>
-    </div>
+    <EmptyState
+      size="sm"
+      icon={false}
+      title={t("noteDetailPanel.selectANodeFromThe")}
+      level={null}
+    />
   {:else}
     <div class="flex-1 overflow-y-auto p-5 space-y-5">
       <!-- Header -->
       <div>
-        <span
-          class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/20"
-        >
-          {displayCategory}
-        </span>
-        <h3 class="mt-2 text-lg font-semibold text-kitsuden-text leading-tight">
+        <Badge variant="accent">{displayCategory}</Badge>
+        <h3 class="mt-2 text-lg font-semibold text-kitsuden-text leading-tight break-words">
           {displayTitle}
         </h3>
       </div>
 
       {#if loading}
         <div class="flex items-center gap-2 text-sm text-kitsuden-text-dim">
-          <Loader2 class="w-4 h-4 animate-spin" />
-          <span>{t("noteDetailPanel.loadingDetails")}</span>
+          <Spinner size="sm" label={t("noteDetailPanel.loadingDetails")} />
+          <span aria-hidden="true">{t("noteDetailPanel.loadingDetails")}</span>
         </div>
       {/if}
 
       {#if error && !loading}
-        <div
-          class="flex items-start gap-2 rounded-lg bg-kitsuden-accent-2/10 border border-kitsuden-accent-2/20 p-3"
-        >
-          <AlertCircle class="w-4 h-4 text-kitsuden-accent-2 shrink-0 mt-0.5" />
-          <p class="text-xs text-kitsuden-accent-2">{error}</p>
-        </div>
+        <Alert variant="error">{error}</Alert>
       {/if}
 
       <!-- Metrics -->
       <div class="grid grid-cols-2 gap-3">
-        <div class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3">
-          <p class="text-xs uppercase tracking-wider text-kitsuden-subtle mb-1">
-            {t("noteDetailPanel.importance")}
-          </p>
-          <div class="flex items-center gap-2">
-            <div class="flex-1 h-1.5 rounded-full bg-kitsuden-border overflow-hidden">
-              <div
-                class="h-full rounded-full bg-kitsuden-accent"
-                style="width: {Math.round(displayImportance * 100)}%"
-              ></div>
-            </div>
-            <span class="text-xs font-medium text-kitsuden-text"
-              >{Math.round(displayImportance * 100)}%</span
-            >
-          </div>
-        </div>
-
+        <Progress
+          label={t("noteDetailPanel.importance")}
+          value={Math.round(displayImportance * 100)}
+          showValue
+        />
         {#if displayConfidence !== null}
-          <div class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3">
-            <p class="text-xs uppercase tracking-wider text-kitsuden-subtle mb-1">
-              {t("noteDetailPanel.confidence")}
-            </p>
-            <div class="flex items-center gap-2">
-              <div class="flex-1 h-1.5 rounded-full bg-kitsuden-border overflow-hidden">
-                <div
-                  class="h-full rounded-full bg-kitsuden-purple"
-                  style="width: {Math.round(displayConfidence * 100)}%"
-                ></div>
-              </div>
-              <span class="text-xs font-medium text-kitsuden-text"
-                >{Math.round(displayConfidence * 100)}%</span
-              >
-            </div>
-          </div>
+          <Progress
+            label={t("noteDetailPanel.confidence")}
+            value={Math.round(displayConfidence * 100)}
+            showValue
+          />
         {/if}
       </div>
 
@@ -180,11 +158,7 @@
           </p>
           <div class="flex flex-wrap gap-1.5">
             {#each displayTags as tag}
-              <span
-                class="inline-flex items-center rounded-md bg-kitsuden-bg border border-kitsuden-border px-2 py-1 text-xs text-kitsuden-text-dim"
-              >
-                {tag}
-              </span>
+              <Badge variant="secondary">{tag}</Badge>
             {/each}
           </div>
         </div>
@@ -196,24 +170,14 @@
           <p class="text-xs uppercase tracking-wider text-kitsuden-subtle mb-2">
             {t("noteDetailPanel.metadata")}
           </p>
-          <pre
-            class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3 text-xs text-kitsuden-text-dim overflow-x-auto">{JSON.stringify(
-              detail.metadata,
-              null,
-              2
-            )}</pre>
+          <CodeBlock code={JSON.stringify(detail.metadata, null, 2)} language="json" />
         </div>
       {:else if note?.metadata && Object.keys(note.metadata).length > 0 && !detail}
         <div>
           <p class="text-xs uppercase tracking-wider text-kitsuden-subtle mb-2">
             {t("noteDetailPanel.metadata")}
           </p>
-          <pre
-            class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3 text-xs text-kitsuden-text-dim overflow-x-auto">{JSON.stringify(
-              note.metadata,
-              null,
-              2
-            )}</pre>
+          <CodeBlock code={JSON.stringify(note.metadata, null, 2)} language="json" />
         </div>
       {/if}
 
@@ -224,7 +188,7 @@
             {t("common.content")}
           </p>
           <div
-            class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3 text-xs text-kitsuden-text-dim max-h-48 overflow-y-auto"
+            class="rounded-lg bg-kitsuden-bg border border-kitsuden-border p-3 text-xs text-kitsuden-text-dim max-h-48 overflow-y-auto break-words"
           >
             {detail.content}
           </div>
@@ -234,14 +198,16 @@
 
     <!-- Footer action -->
     <div class="border-t border-kitsuden-border p-4">
-      <button onclick={handleExpand} disabled={expanding} class="kitsuden-btn-primary w-full">
-        {#if expanding}
-          <Loader2 class="w-4 h-4 animate-spin" />
-        {:else}
-          <Network class="w-4 h-4" />
-        {/if}
-        <span>{t("noteDetailPanel.expandNeighborhood")}</span>
-      </button>
+      <Button
+        variant="secondary"
+        class="w-full"
+        onclick={handleExpand}
+        loading={expanding}
+        disabled={expanding}
+      >
+        {#if !expanding}<Network class="w-4 h-4" aria-hidden="true" />{/if}
+        {t("noteDetailPanel.expandNeighborhood")}
+      </Button>
     </div>
   {/if}
-</div>
+</Card>

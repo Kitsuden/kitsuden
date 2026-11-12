@@ -24,7 +24,7 @@ import { knownTables } from "$lib/explorer-tables";
 
 import type { FieldDefinition } from "../../types/datasets";
 
-import type { SnapshotLike } from "./history";
+import type { ChangeLike, SnapshotLike } from "./history";
 import { dateRangeOf, type FieldKind, type FieldOption, type ListField } from "./model-filters";
 import { recordTitle } from "./record-title";
 import { SEARCH_KEY, type ListFilters, type ListSort } from "./url-state";
@@ -106,6 +106,12 @@ export interface RecordSource {
   fullUpdate?: boolean;
   /** Earlier versions of the record, when the API keeps them (a dataset entry's snapshots). */
   snapshots?(id: string): Promise<SnapshotLike[]>;
+  /**
+   * Who created, changed or deleted the record and which fields (the API's change
+   * history), newest first. The table history route is admin-only: for anyone else
+   * it fails and the page shows what the rest keeps.
+   */
+  history?(id: string): Promise<ChangeLike[]>;
 }
 
 // ── Pure: the query each API understands ─────────────────────────────────────────────
@@ -460,6 +466,14 @@ async function del(path: string): Promise<void> {
   }
 }
 
+/** The change history of a row of a table (GET /api/history/:table/:id, admin only). */
+async function tableHistory(table: string, id: string): Promise<ChangeLike[]> {
+  const r = await api.get<{ history?: ChangeLike[] }>(
+    `/api/history/${encodeURIComponent(table)}/${encodeURIComponent(id)}?limit=200`
+  );
+  return r.history ?? [];
+}
+
 const aboutOf = (row: Row) => {
   const text = (v: unknown) => (typeof v === "string" && v ? v : undefined);
   const name = (v: unknown) =>
@@ -611,6 +625,7 @@ export async function explorerSource(input: ExplorerSourceInput): Promise<Record
     formValues: (row) => ({ ...row }),
     apiPath: (id) => (id ? `${endpoint}/${id}` : endpoint),
     about: aboutOf,
+    history: (id) => tableHistory(input.table, id),
   };
   return source;
 }
@@ -685,6 +700,12 @@ export function datasetSource(
       );
       return r.snapshots ?? [];
     },
+    async history(id) {
+      const r = await api.get<{ history?: ChangeLike[] }>(
+        `${base}/entries/${encodeURIComponent(id)}/history?limit=200`
+      );
+      return r.history ?? [];
+    },
   };
 }
 
@@ -744,6 +765,8 @@ export function modelSource(kon: string, base: string, descriptor: ModelDescript
     formValues: (row) => ({ ...row }),
     apiPath: (id) => (id ? `${base}/${id}` : base),
     about: aboutOf,
+    // A model's rows are recorded by its table (the same record the explorer edits).
+    history: descriptor.table ? (id) => tableHistory(descriptor.table, id) : undefined,
   };
 }
 

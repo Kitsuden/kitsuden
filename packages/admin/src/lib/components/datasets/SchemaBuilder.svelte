@@ -1,5 +1,21 @@
 <script lang="ts">
-  import { Switch } from "$lib/tallao";
+  import {
+    Badge,
+    Button,
+    Card,
+    CardContent,
+    Checkbox,
+    EmptyState,
+    Field,
+    Input,
+    NumberInput,
+    RadioGroup,
+    Select,
+    Switch,
+    Tabs,
+    ToggleGroup,
+    type TabItem,
+  } from "$lib/tallao";
   import { t as tr } from "$lib/i18n";
   /**
    * SchemaBuilder.svelte — Drag-and-drop field designer
@@ -52,6 +68,7 @@
     type FieldType,
     type DatasetDefinition,
     type RelationType,
+    type RelationTarget,
   } from "../../../types/datasets";
 
   // ─── Props ──────────────────────────────────────────
@@ -75,6 +92,8 @@
   ];
 
   // ─── Access option cards ────────────────────────────
+  const tabItems: TabItem[] = tabs.map((x) => ({ id: x.id, label: x.label }));
+
   const readAccessOptions = [
     {
       value: "admin" as const,
@@ -88,7 +107,12 @@
       desc: tr("schemaBuilder.loggedInUsers"),
       icon: Users,
     },
-    { value: "public" as const, label: tr("schemaBuilder.public"), desc: "Everyone", icon: Globe },
+    {
+      value: "public" as const,
+      label: tr("schemaBuilder.public"),
+      desc: tr("schemaBuilder.everyone"),
+      icon: Globe,
+    },
   ];
 
   const writeAccessOptions = [
@@ -393,125 +417,113 @@
   }
 </script>
 
-<div class="flex h-[calc(100vh-9rem)] gap-4 animate-fade-in">
+<div class="sb" class:sb--palette={activeTab === "fields"}>
   <!-- ═══ LEFT: Field Type Palette ═══ -->
   {#if activeTab === "fields"}
-    <div class="w-56 shrink-0 card overflow-y-auto">
-      <div class="p-3 border-b border-kitsuden-border sticky top-0 bg-kitsuden-card z-10">
-        <p class="label">{tr("schemaBuilder.fieldTypes")}</p>
-        <p class="text-xs text-kitsuden-subtle mt-0.5">
-          {tr("schemaBuilder.dragOrClickToAdd")}
-        </p>
+    <Card class="sb-palette">
+      <div class="sb-pane-head">
+        <h2 class="sb-pane-title">{tr("schemaBuilder.fieldTypes")}</h2>
+        <p class="sb-pane-note">{tr("schemaBuilder.dragOrClickToAdd")}</p>
       </div>
-      <div class="p-2 space-y-1">
+      <div class="sb-palette-list">
         {#each FIELD_TYPE_OPTIONS as ft}
+          <!-- A whole tile that adds the type on click and can be dragged: no kit equivalent. -->
           <button
+            type="button"
             onclick={() => addField(ft.type)}
             draggable="true"
             ondragstart={(e) => onDragStartPalette(e, ft.type)}
-            class="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-kitsuden-border/30 transition-all cursor-grab active:cursor-grabbing group"
+            class="sb-type"
           >
-            <div
-              class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors"
-              style="background: {ft.color}12; border: 1px solid {ft.color}25"
-            >
+            <span class="sb-type-icon" style="background: {ft.color}12; border-color: {ft.color}25">
               {#if iconMap[ft.icon]}
                 {@const IconComponent = iconMap[ft.icon]}
-                <IconComponent class="w-4 h-4" style="color: {ft.color}" />
+                <IconComponent size={16} style="color: {ft.color}" aria-hidden="true" />
               {/if}
-            </div>
-            <div class="min-w-0">
-              <p
-                class="font-medium text-kitsuden-text group-hover:text-kitsuden-text transition-colors"
-              >
-                {ft.label}
-              </p>
-              <p class="text-xs text-kitsuden-subtle truncate">{ft.description}</p>
-            </div>
+            </span>
+            <span class="sb-type-text">
+              <span class="sb-type-label">{ft.label}</span>
+              <span class="sb-type-desc">{ft.description}</span>
+            </span>
           </button>
         {/each}
       </div>
-    </div>
+    </Card>
   {/if}
 
   <!-- ═══ CENTER: Tabbed Content ═══ -->
-  <div class="flex-1 flex flex-col min-w-0">
+  <div class="sb-main">
     <!-- Dataset header -->
-    <div class="card p-4 mb-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label for="name" class="label mb-1.5 block">{tr("schemaBuilder.datasetName")}</label>
-          <input
-            id="name"
-            bind:value={localDef.name}
-            oninput={autoSlug}
-            type="text"
-            placeholder={tr("schemaBuilder.eGProducts")}
-            class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-          />
-        </div>
-        <div>
-          <label class="label mb-1.5 block">{tr("common.slug")}</label>
-          <div class="flex items-center gap-2">
-            <input
-              bind:value={localDef.slug}
-              type="text"
-              placeholder="products"
-              class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent font-mono text-xs"
+    <Card>
+      <CardContent class="sb-head">
+        <div class="sb-grid-2">
+          <Field label={tr("schemaBuilder.datasetName")}>
+            <Input
+              id="name"
+              bind:value={localDef.name}
+              oninput={autoSlug}
+              placeholder={tr("schemaBuilder.eGProducts")}
             />
-            <select
-              bind:value={localDef.icon}
-              class="w-20 px-2 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent text-center text-lg appearance-none"
-            >
-              {#each iconOptions as ic}
-                <option value={ic}>{ic}</option>
-              {/each}
-            </select>
+          </Field>
+          <div class="sb-slug">
+            <Field label={tr("common.slug")} class="sb-slug-field">
+              <Input bind:value={localDef.slug} placeholder="products" class="font-mono" />
+            </Field>
+            <Field label={tr("schemaBuilder.icon")} class="sb-icon-field">
+              <Select
+                value={localDef.icon ?? ""}
+                onchange={(e: Event) =>
+                  (localDef.icon = (e.currentTarget as HTMLSelectElement).value)}
+                options={(localDef.icon && !iconOptions.includes(localDef.icon)
+                  ? [localDef.icon, ...iconOptions]
+                  : iconOptions
+                ).map((ic) => ({ value: ic, label: ic }))}
+              />
+            </Field>
           </div>
         </div>
-      </div>
-      <div class="mt-3">
-        <label for="description" class="label mb-1.5 block">{tr("common.description")}</label>
-        <input
-          id="description"
-          bind:value={localDef.description}
-          type="text"
-          placeholder={tr("schemaBuilder.optionalDescriptionForThisData")}
-          class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-        />
-      </div>
-    </div>
+        <Field label={tr("common.description")}>
+          <Input
+            id="description"
+            bind:value={() => localDef.description ?? "", (v) => (localDef.description = v)}
+            placeholder={tr("schemaBuilder.optionalDescriptionForThisData")}
+          />
+        </Field>
+      </CardContent>
+    </Card>
 
     <!-- ═══ Tab Navigation ═══ -->
-    <div class="flex flex-wrap items-center gap-1 mb-3">
-      {#each tabs as tab}
-        <button
-          onclick={() => (activeTab = tab.id)}
-          class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all border {activeTab ===
-          tab.id
-            ? 'bg-kitsuden-accent-10 text-kitsuden-accent border-kitsuden-accent-20'
-            : 'text-kitsuden-text-dim hover:text-kitsuden-text hover:bg-kitsuden-border/20 border-transparent'}"
-        >
-          <tab.icon class="w-3.5 h-3.5" />
-          {tab.label}
-          {#if tab.id === "security" && localDef.policyJson}
-            <span class="w-1.5 h-1.5 rounded-full bg-kitsuden-amber"></span>
+    <Tabs
+      items={tabItems}
+      value={activeTab}
+      onchange={(id) => (activeTab = id as TabId)}
+      panels={false}
+      ariaLabel={tr("schemaBuilder.sections")}
+    >
+      {#snippet tab(item)}
+        {@const def = tabs.find((x) => x.id === item.id)}
+        <span class="sb-tab">
+          {#if def}<def.icon size={14} aria-hidden="true" />{/if}
+          {item.label}
+          {#if item.id === "security" && localDef.policyJson}
+            <span class="sb-dot sb-dot--amber" aria-hidden="true"></span>
           {/if}
-          {#if tab.id === "workflow" && localDef.workflowJson?.requireApproval}
-            <span class="w-1.5 h-1.5 rounded-full bg-kitsuden-purple"></span>
+          {#if item.id === "workflow" && localDef.workflowJson?.requireApproval}
+            <span class="sb-dot sb-dot--purple" aria-hidden="true"></span>
           {/if}
-        </button>
-      {/each}
-    </div>
+        </span>
+      {/snippet}
+    </Tabs>
 
     <!-- ════════════════════════════════════════ -->
     <!-- TAB: Fields -->
     <!-- ════════════════════════════════════════ -->
     {#if activeTab === "fields"}
-      <div class="flex-1 flex flex-col min-h-0">
-        <!-- Field list / drop zone -->
+      <Card class="sb-pane">
         <div
-          class="flex-1 card overflow-y-auto"
+          class="sb-pane-scroll"
+          role="group"
+          aria-label={tr("schemaBuilder.schemaFields")}
           ondragover={(e) => {
             e.preventDefault();
             dragOverIndex = -1;
@@ -521,30 +533,30 @@
             onDropZone();
           }}
         >
-          <div
-            class="p-3 border-b border-kitsuden-border sticky top-0 bg-kitsuden-card z-10 flex items-center justify-between"
-          >
-            <div class="flex items-center gap-2">
-              <p class="label">{tr("schemaBuilder.schemaFields")}</p>
-              <span class="badge-cyan text-xs">{localDef.fields.length}</span>
+          <div class="sb-pane-head sb-pane-head--row">
+            <div class="sb-pane-title-row">
+              <h2 class="sb-pane-title">{tr("schemaBuilder.schemaFields")}</h2>
+              <Badge variant="info">{localDef.fields.length}</Badge>
             </div>
             {#if localDef.fields.length > 0}
-              <button onclick={collapseAll} class="btn-ghost btn-sm text-xs"
-                >{tr("schemaBuilder.collapseAll")}</button
+              <Button variant="ghost" size="sm" onclick={collapseAll}
+                >{tr("schemaBuilder.collapseAll")}</Button
               >
             {/if}
           </div>
 
           {#if localDef.fields.length === 0}
-            <div class="flex flex-col items-center justify-center py-12 text-kitsuden-subtle">
-              <Layers class="w-10 h-10 mb-3 text-kitsuden-subtle" />
-              <p class="text-sm font-medium">{tr("schemaBuilder.noFieldsYet")}</p>
-              <p class="text-xs mt-1">{tr("schemaBuilder.clickOrDragFieldTypes")}</p>
-            </div>
+            <EmptyState
+              size="sm"
+              icon={layersIcon}
+              title={tr("schemaBuilder.noFieldsYet")}
+              description={tr("schemaBuilder.clickOrDragFieldTypes")}
+            />
           {:else}
-            <div class="divide-y divide-kitsuden-border/50">
+            <div class="sb-fields" role="list">
               {#each localDef.fields as field, idx}
                 <div
+                  role="listitem"
                   draggable="true"
                   ondragstart={(e) => onDragStartField(e, idx)}
                   ondragover={(e) => {
@@ -556,888 +568,1202 @@
                     e.stopPropagation();
                     onDropReorder(idx);
                   }}
-                  class="group transition-all {dragOverIndex === idx
-                    ? 'ring-2 ring-kitsuden-accent-30 ring-inset'
-                    : ''} {selectedFieldId === field.id
-                    ? 'bg-kitsuden-accent/4'
-                    : 'hover:bg-kitsuden-border/20'}"
+                  class="sb-field"
+                  class:sb-field--over={dragOverIndex === idx}
+                  class:sb-field--on={selectedFieldId === field.id}
                 >
-                  <!-- Field row -->
+                  <!-- Field row: the whole row opens the field (a large target). -->
                   <div
                     role="button"
                     tabindex="0"
-                    class="flex items-center gap-3 px-4 py-3 w-full text-left"
+                    class="sb-field-row"
                     onclick={() => selectField(field.id)}
                     onkeydown={(e) => {
                       if (e.key === "Enter" || e.key === " ") selectField(field.id);
                     }}
                   >
-                    <!-- Drag handle -->
-                    <GripVertical
-                      class="w-4 h-4 text-kitsuden-subtle shrink-0 opacity-0 group-hover:opacity-60 cursor-grab transition-opacity"
-                    />
+                    <GripVertical size={16} class="sb-grip" aria-hidden="true" />
 
-                    <!-- Type icon -->
-                    <div
-                      class="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+                    <span
+                      class="sb-field-icon"
                       style="background: {getFieldColor(
                         field.type
-                      )}15; border: 1px solid {getFieldColor(field.type)}20"
+                      )}15; border-color: {getFieldColor(field.type)}20"
+                      aria-hidden="true"
                     >
                       {#if getFieldIcon(field.type)}
                         {@const FieldIcon = getFieldIcon(field.type)}
-                        <FieldIcon class="w-3.5 h-3.5" style="color: {getFieldColor(field.type)}" />
+                        <FieldIcon size={14} style="color: {getFieldColor(field.type)}" />
                       {/if}
-                    </div>
+                    </span>
 
-                    <!-- Label + Key -->
-                    <div class="flex-1 min-w-0">
-                      <p class="text-sm font-medium text-kitsuden-text truncate">
+                    <span class="sb-field-text">
+                      <span class="sb-field-label">
                         {field.label || tr("schemaBuilder.untitledField")}
-                        {#if field.isRequired}<span class="text-kitsuden-accent-2 ml-1">*</span
+                        {#if field.isRequired}<span class="sb-required" aria-hidden="true">*</span
                           >{/if}
-                      </p>
-                      <p class="text-xs font-mono text-kitsuden-subtle">
+                      </span>
+                      <span class="sb-field-key">
                         {field.key || tr("schemaBuilder.noKey")} · {field.type}
-                      </p>
-                    </div>
+                      </span>
+                    </span>
 
-                    <!-- Badges -->
-                    <div class="flex items-center gap-1.5 shrink-0">
-                      {#if field.isUnique}<span class="badge-amber text-xs py-0"
-                          >{tr("schemaBuilder.unq")}</span
-                        >{/if}
-                      {#if field.relation}
-                        <span class="badge-pink text-xs py-0">
-                          {field.relation.type === "many-to-many"
-                            ? "M:N"
-                            : field.relation.type === "one-to-many"
-                              ? "1:N"
-                              : "1:1"}
-                        </span>
-                      {/if}
-                    </div>
+                    {#if field.isUnique || field.relation}
+                      <span class="sb-field-badges">
+                        {#if field.isUnique}<Badge variant="warning"
+                            >{tr("schemaBuilder.unq")}</Badge
+                          >{/if}
+                        {#if field.relation}
+                          <Badge variant="accent-2">
+                            {field.relation.type === "many-to-many"
+                              ? "M:N"
+                              : field.relation.type === "one-to-many"
+                                ? "1:N"
+                                : "1:1"}
+                          </Badge>
+                        {/if}
+                      </span>
+                    {/if}
 
-                    <!-- Delete -->
-                    <button
-                      type="button"
+                    <Button
+                      variant="danger-ghost"
+                      size="icon"
+                      class="sb-field-remove"
+                      ariaLabel={tr("schemaBuilder.removeField")}
+                      title={tr("schemaBuilder.removeField")}
                       onclick={(e) => {
                         e.stopPropagation();
                         removeField(idx);
                       }}
-                      class="btn-icon p-1.5 opacity-0 group-hover:opacity-100 hover:text-kitsuden-accent-2! transition-all"
                     >
-                      <X class="w-3.5 h-3.5" />
-                    </button>
+                      <X size={14} aria-hidden="true" />
+                    </Button>
                   </div>
                 </div>
               {/each}
             </div>
           {/if}
         </div>
-      </div>
+      </Card>
     {/if}
 
     <!-- ════════════════════════════════════════ -->
     <!-- TAB: Security -->
     <!-- ════════════════════════════════════════ -->
     {#if activeTab === "security"}
-      <div class="flex-1 card overflow-y-auto">
-        <div class="p-3 border-b border-kitsuden-border sticky top-0 bg-kitsuden-card z-10">
-          <div class="flex items-center gap-2">
-            <Shield class="w-4 h-4 text-kitsuden-amber" />
-            <p class="label">{tr("schemaBuilder.accessControl")}</p>
+      <Card class="sb-pane">
+        <div class="sb-pane-scroll">
+          <div class="sb-pane-head">
+            <div class="sb-pane-title-row">
+              <Shield size={16} class="sb-amber" aria-hidden="true" />
+              <h2 class="sb-pane-title">{tr("schemaBuilder.accessControl")}</h2>
+            </div>
+            <p class="sb-pane-note">{tr("schemaBuilder.configureWhoCanReadAnd")}</p>
           </div>
-          <p class="text-xs text-kitsuden-subtle mt-0.5">
-            {tr("schemaBuilder.configureWhoCanReadAnd")}
-          </p>
-        </div>
 
-        {#if !localDef.policyJson}
-          <div class="flex flex-col items-center justify-center py-8 px-4 text-kitsuden-subtle">
-            <div class="flex items-start gap-4 w-full max-w-lg">
-              <ShieldOff class="w-10 h-10 text-kitsuden-subtle shrink-0 mt-1" />
-              <div class="flex-1">
-                <p class="text-sm font-medium text-kitsuden-text">
-                  {tr("schemaBuilder.defaultAdminOnly")}
-                </p>
-                <p class="text-xs mt-1 text-kitsuden-subtle">
-                  {tr("schemaBuilder.onlyAdminsCanReadAnd")}
-                </p>
-                <button onclick={enablePolicy} class="btn-primary mt-4">
-                  <Shield class="w-4 h-4" />
+          {#if !localDef.policyJson}
+            <EmptyState
+              size="sm"
+              icon={shieldOffIcon}
+              title={tr("schemaBuilder.defaultAdminOnly")}
+              description={tr("schemaBuilder.onlyAdminsCanReadAnd")}
+            >
+              {#snippet actions()}
+                <Button onclick={enablePolicy}>
+                  <Shield size={16} aria-hidden="true" />
                   {tr("schemaBuilder.enableCustomSecurity")}
-                </button>
-              </div>
-            </div>
-          </div>
-        {:else}
-          <div class="p-5 space-y-6">
-            <!-- Read Access -->
-            <div>
-              <label class="label mb-2 block">{tr("schemaBuilder.whoCanRead")}</label>
-              <div class="grid grid-cols-3 gap-2">
-                {#each readAccessOptions as opt}
-                  <button
-                    onclick={() => (localDef.policyJson!.readAccess = opt.value)}
-                    class="card-glow p-3 text-center transition-all {localDef.policyJson!
-                      .readAccess === opt.value
-                      ? 'border-kitsuden-accent-40 bg-kitsuden-accent-5 text-kitsuden-accent'
-                      : 'text-kitsuden-text-dim hover:text-kitsuden-text'}"
-                  >
-                    <opt.icon class="w-5 h-5 mx-auto mb-1.5" />
-                    <p class="text-xs font-semibold">{opt.label}</p>
-                    <p class="text-xs text-kitsuden-subtle mt-0.5">{opt.desc}</p>
-                  </button>
-                {/each}
-              </div>
-            </div>
+                </Button>
+              {/snippet}
+            </EmptyState>
+          {:else}
+            <div class="sb-pane-body">
+              <RadioGroup
+                legend={tr("schemaBuilder.whoCanRead")}
+                orientation="horizontal"
+                value={localDef.policyJson!.readAccess}
+                options={readAccessOptions.map((o) => ({
+                  value: o.value,
+                  label: o.label,
+                  description: o.desc,
+                }))}
+                onchange={(v) =>
+                  (localDef.policyJson!.readAccess =
+                    v as (typeof readAccessOptions)[number]["value"])}
+              />
 
-            <!-- Write Access -->
-            <div>
-              <label class="label mb-2 block">{tr("schemaBuilder.whoCanWrite")}</label>
-              <div class="grid grid-cols-2 gap-2">
-                {#each writeAccessOptions as opt}
-                  <button
-                    onclick={() => (localDef.policyJson!.writeAccess = opt.value)}
-                    class="card-glow p-3 text-center transition-all {localDef.policyJson!
-                      .writeAccess === opt.value
-                      ? 'border-kitsuden-accent-2-40 bg-kitsuden-accent-2-5 text-kitsuden-accent-2'
-                      : 'text-kitsuden-text-dim hover:text-kitsuden-text'}"
-                  >
-                    <opt.icon class="w-5 h-5 mx-auto mb-1.5" />
-                    <p class="text-xs font-semibold">{opt.label}</p>
-                    <p class="text-xs text-kitsuden-subtle mt-0.5">{opt.desc}</p>
-                  </button>
-                {/each}
-              </div>
-            </div>
+              <RadioGroup
+                legend={tr("schemaBuilder.whoCanWrite")}
+                orientation="horizontal"
+                value={localDef.policyJson!.writeAccess}
+                options={writeAccessOptions.map((o) => ({
+                  value: o.value,
+                  label: o.label,
+                  description: o.desc,
+                }))}
+                onchange={(v) =>
+                  (localDef.policyJson!.writeAccess =
+                    v as (typeof writeAccessOptions)[number]["value"])}
+              />
 
-            <!-- RLS Toggle -->
-            <div class="pt-4 border-t border-kitsuden-border">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm font-medium text-kitsuden-text flex items-center gap-2">
-                    <Lock class="w-3.5 h-3.5 text-kitsuden-amber" />
-                    {tr("schemaBuilder.rowLevelSecurity")}
-                  </p>
-                  <p class="text-xs text-kitsuden-subtle mt-0.5">
-                    {tr("schemaBuilder.filterRowsBasedOnUser")}
-                  </p>
+              <!-- RLS Toggle -->
+              <div class="sb-section">
+                <div class="sb-switch-row">
+                  <div>
+                    <p class="sb-switch-title">
+                      <Lock size={14} class="sb-amber" aria-hidden="true" />
+                      {tr("schemaBuilder.rowLevelSecurity")}
+                    </p>
+                    <p class="sb-hint">{tr("schemaBuilder.filterRowsBasedOnUser")}</p>
+                  </div>
+                  <Switch
+                    checked={!!localDef.policyJson!.enableRLS}
+                    ariaLabel={tr("schemaBuilder.rowLevelSecurity")}
+                    onchange={() =>
+                      (localDef.policyJson!.enableRLS = !localDef.policyJson!.enableRLS)}
+                  />
                 </div>
-                <Switch
-                  checked={!!localDef.policyJson!.enableRLS}
-                  ariaLabel={tr("schemaBuilder.rowLevelSecurity")}
-                  onchange={() =>
-                    (localDef.policyJson!.enableRLS = !localDef.policyJson!.enableRLS)}
-                />
+
+                <!-- RLS Rules -->
+                {#if localDef.policyJson!.enableRLS}
+                  <div class="sb-rows">
+                    {#each localDef.policyJson!.rlsRules || [] as rule, ri}
+                      <div class="sb-rule">
+                        <Input
+                          bind:value={rule.field}
+                          placeholder="field_key"
+                          aria-label={tr("schemaBuilder.ruleField")}
+                          class="font-mono sb-rule-field"
+                        />
+                        <Select
+                          value={rule.operator}
+                          aria-label={tr("schemaBuilder.operator")}
+                          class="sb-rule-op"
+                          onchange={(e: Event) =>
+                            (rule.operator = (e.currentTarget as HTMLSelectElement)
+                              .value as typeof rule.operator)}
+                          options={[
+                            { value: "eq", label: tr("schemaBuilder.equals") },
+                            { value: "neq", label: tr("schemaBuilder.notEqual") },
+                            { value: "contains", label: tr("schemaBuilder.contains") },
+                            { value: "gt", label: tr("schemaBuilder.greater") },
+                            { value: "lt", label: tr("schemaBuilder.less") },
+                          ]}
+                        />
+                        <Input
+                          bind:value={rule.value}
+                          placeholder={tr("schemaBuilder.valueOrUserId")}
+                          aria-label={tr("schemaBuilder.valueOrUserId")}
+                          class="sb-rule-value"
+                        />
+                        <Button
+                          variant="danger-ghost"
+                          size="icon"
+                          ariaLabel={tr("schemaBuilder.removeRule")}
+                          onclick={() => localDef.policyJson!.rlsRules!.splice(ri, 1)}
+                        >
+                          <X size={14} aria-hidden="true" />
+                        </Button>
+                      </div>
+                    {/each}
+                    <Button variant="secondary" size="sm" class="sb-add" onclick={addRLSRule}>
+                      <Plus size={14} aria-hidden="true" />
+                      {tr("schemaBuilder.addRule")}
+                    </Button>
+                  </div>
+                {/if}
               </div>
 
-              <!-- RLS Rules -->
-              {#if localDef.policyJson!.enableRLS}
-                <div class="mt-4 space-y-3">
-                  {#each localDef.policyJson!.rlsRules || [] as rule, ri}
-                    <div class="flex items-center gap-2">
-                      <input
-                        bind:value={rule.field}
-                        type="text"
-                        placeholder="field_key"
-                        class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent flex-1 font-mono text-xs"
-                      />
-                      <select
-                        bind:value={rule.operator}
-                        class="px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent appearance-none w-24 text-xs"
-                      >
-                        <option value="eq">{tr("schemaBuilder.equals")}</option>
-                        <option value="neq">{tr("schemaBuilder.notEqual")}</option>
-                        <option value="contains">{tr("schemaBuilder.contains")}</option>
-                        <option value="gt">{tr("schemaBuilder.greater")}</option>
-                        <option value="lt">{tr("schemaBuilder.less")}</option>
-                      </select>
-                      <input
-                        bind:value={rule.value}
-                        type="text"
-                        placeholder={tr("schemaBuilder.valueOrUserId")}
-                        class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent flex-1 text-xs"
-                      />
-                      <button
-                        onclick={() => localDef.policyJson!.rlsRules!.splice(ri, 1)}
-                        class="btn-icon p-1.5 hover:text-kitsuden-accent-2!"
-                      >
-                        <X class="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  {/each}
-                  <button onclick={addRLSRule} class="btn-ghost btn-sm w-full justify-center">
-                    <Plus class="w-3.5 h-3.5" />
-                    {tr("schemaBuilder.addRule")}
-                  </button>
-                </div>
-              {/if}
+              <!-- Remove policy -->
+              <div class="sb-section">
+                <Button
+                  variant="danger-ghost"
+                  size="sm"
+                  onclick={() => (localDef.policyJson = null)}
+                >
+                  <X size={14} aria-hidden="true" />
+                  {tr("schemaBuilder.removeCustomSecurity")}
+                </Button>
+              </div>
             </div>
-
-            <!-- Remove policy -->
-            <div class="pt-4 border-t border-kitsuden-border">
-              <button
-                onclick={() => (localDef.policyJson = null)}
-                class="btn-ghost btn-sm text-kitsuden-accent-2 hover:bg-kitsuden-accent-2/5"
-              >
-                <X class="w-3.5 h-3.5" />
-                {tr("schemaBuilder.removeCustomSecurity")}
-              </button>
-            </div>
-          </div>
-        {/if}
-      </div>
+          {/if}
+        </div>
+      </Card>
     {/if}
 
     <!-- ════════════════════════════════════════ -->
     <!-- TAB: Workflow -->
     <!-- ════════════════════════════════════════ -->
     {#if activeTab === "workflow"}
-      <div class="flex-1 card overflow-y-auto">
-        <div class="p-3 border-b border-kitsuden-border sticky top-0 bg-kitsuden-card z-10">
-          <div class="flex items-center gap-2">
-            <GitPullRequest class="w-4 h-4 text-kitsuden-purple" />
-            <p class="label">{tr("schemaBuilder.workflowApprovals")}</p>
+      <Card class="sb-pane">
+        <div class="sb-pane-scroll">
+          <div class="sb-pane-head">
+            <div class="sb-pane-title-row">
+              <GitPullRequest size={16} class="sb-purple" aria-hidden="true" />
+              <h2 class="sb-pane-title">{tr("schemaBuilder.workflowApprovals")}</h2>
+            </div>
+            <p class="sb-pane-note">{tr("schemaBuilder.requireReviewBeforeEntriesGo")}</p>
           </div>
-          <p class="text-xs text-kitsuden-subtle mt-0.5">
-            {tr("schemaBuilder.requireReviewBeforeEntriesGo")}
-          </p>
-        </div>
 
-        {#if !localDef.workflowJson || !localDef.workflowJson.requireApproval}
-          <div class="flex flex-col items-center justify-center py-8 px-4 text-kitsuden-subtle">
-            <div class="flex items-start gap-4 w-full max-w-lg">
-              <Zap class="w-10 h-10 text-kitsuden-subtle shrink-0 mt-1" />
-              <div class="flex-1">
-                <p class="text-sm font-medium text-kitsuden-text">
-                  {tr("schemaBuilder.defaultInstantPublish")}
-                </p>
-                <p class="text-xs mt-1 text-kitsuden-subtle">
-                  {tr("schemaBuilder.newEntriesArePublishedImmediately")}
-                </p>
-                <button onclick={enableWorkflow} class="btn-primary mt-4">
-                  <GitPullRequest class="w-4 h-4" />
+          {#if !localDef.workflowJson || !localDef.workflowJson.requireApproval}
+            <EmptyState
+              size="sm"
+              icon={zapIcon}
+              title={tr("schemaBuilder.defaultInstantPublish")}
+              description={tr("schemaBuilder.newEntriesArePublishedImmediately")}
+            >
+              {#snippet actions()}
+                <Button onclick={enableWorkflow}>
+                  <GitPullRequest size={16} aria-hidden="true" />
                   {tr("schemaBuilder.enableApprovalWorkflow")}
-                </button>
+                </Button>
+              {/snippet}
+            </EmptyState>
+          {:else}
+            <div class="sb-pane-body">
+              <!-- Require Approval Toggle -->
+              <div class="sb-switch-row">
+                <div>
+                  <p class="sb-switch-title">
+                    <CheckCircle size={14} class="sb-purple" aria-hidden="true" />
+                    {tr("schemaBuilder.requireApproval")}
+                  </p>
+                  <p class="sb-hint">{tr("schemaBuilder.newEntriesStartAsDrafts")}</p>
+                </div>
+                <Switch
+                  checked={!!localDef.workflowJson!.requireApproval}
+                  ariaLabel={tr("schemaBuilder.requireApproval")}
+                  onchange={() =>
+                    (localDef.workflowJson!.requireApproval =
+                      !localDef.workflowJson!.requireApproval)}
+                />
               </div>
-            </div>
-          </div>
-        {:else}
-          <div class="p-5 space-y-6">
-            <!-- Require Approval Toggle -->
-            <div class="flex items-center justify-between">
+
+              <!-- Approver IDs -->
               <div>
-                <p class="text-sm font-medium text-kitsuden-text flex items-center gap-2">
-                  <CheckCircle class="w-3.5 h-3.5 text-kitsuden-purple" />
-                  {tr("schemaBuilder.requireApproval")}
-                </p>
-                <p class="text-xs text-kitsuden-subtle mt-0.5">
-                  {tr("schemaBuilder.newEntriesStartAsDrafts")}
-                </p>
+                <h3 class="sb-sub-title">{tr("schemaBuilder.approverUserIds")}</h3>
+                <p class="sb-hint">{tr("schemaBuilder.usersWhoCanReviewAnd")}</p>
+                <div class="sb-rows">
+                  {#each localDef.workflowJson!.approverUserIds || [] as _, ai}
+                    <div class="sb-inline">
+                      <Input
+                        bind:value={localDef.workflowJson!.approverUserIds![ai]}
+                        placeholder={tr("common.userId")}
+                        aria-label={tr("common.userId")}
+                        class="font-mono"
+                      />
+                      <Button
+                        variant="danger-ghost"
+                        size="icon"
+                        ariaLabel={tr("schemaBuilder.removeApprover")}
+                        onclick={() => localDef.workflowJson!.approverUserIds!.splice(ai, 1)}
+                      >
+                        <X size={14} aria-hidden="true" />
+                      </Button>
+                    </div>
+                  {/each}
+                  <Button variant="secondary" size="sm" class="sb-add" onclick={addApprover}>
+                    <Plus size={14} aria-hidden="true" />
+                    {tr("schemaBuilder.addApprover")}
+                  </Button>
+                </div>
               </div>
-              <Switch
-                checked={!!localDef.workflowJson!.requireApproval}
-                ariaLabel={tr("schemaBuilder.requireApproval")}
-                onchange={() =>
-                  (localDef.workflowJson!.requireApproval =
-                    !localDef.workflowJson!.requireApproval)}
-              />
-            </div>
 
-            <!-- Approver IDs -->
-            <div>
-              <label class="label mb-2 block">{tr("schemaBuilder.approverUserIds")}</label>
-              <p class="text-xs text-kitsuden-subtle mb-3">
-                {tr("schemaBuilder.usersWhoCanReviewAnd")}
-              </p>
-              <div class="space-y-2">
-                {#each localDef.workflowJson!.approverUserIds || [] as _, ai}
-                  <div class="flex items-center gap-2">
-                    <input
-                      bind:value={localDef.workflowJson!.approverUserIds![ai]}
-                      type="text"
-                      placeholder={tr("common.userId")}
-                      class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent flex-1 font-mono text-xs"
-                    />
-                    <button
-                      onclick={() => localDef.workflowJson!.approverUserIds!.splice(ai, 1)}
-                      class="btn-icon p-1.5 hover:text-kitsuden-accent-2!"
-                    >
-                      <X class="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                {/each}
+              <!-- Remove workflow -->
+              <div class="sb-section">
+                <Button
+                  variant="danger-ghost"
+                  size="sm"
+                  onclick={() => (localDef.workflowJson = null)}
+                >
+                  <X size={14} aria-hidden="true" />
+                  {tr("schemaBuilder.removeWorkflow")}
+                </Button>
               </div>
-              <button onclick={addApprover} class="btn-ghost btn-sm mt-2 w-full justify-center">
-                <Plus class="w-3.5 h-3.5" />
-                {tr("schemaBuilder.addApprover")}
-              </button>
             </div>
-
-            <!-- Remove workflow -->
-            <div class="pt-4 border-t border-kitsuden-border">
-              <button
-                onclick={() => (localDef.workflowJson = null)}
-                class="btn-ghost btn-sm text-kitsuden-accent-2 hover:bg-kitsuden-accent-2/5"
-              >
-                <X class="w-3.5 h-3.5" />
-                {tr("schemaBuilder.removeWorkflow")}
-              </button>
-            </div>
-          </div>
-        {/if}
-      </div>
+          {/if}
+        </div>
+      </Card>
     {/if}
 
     <!-- Bottom action bar -->
-    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+    <div class="sb-actions">
       {#if validationErrors.length > 0}
-        <p class="text-xs text-kitsuden-accent-2">{validationErrors[0]}</p>
+        <p class="sb-error" role="alert">{validationErrors[0]}</p>
       {:else}
         <div></div>
       {/if}
-      <div class="flex flex-wrap items-center gap-3">
-        <button onclick={onCancel} class="btn-ghost">{tr("common.cancel")}</button>
-        <button onclick={save} disabled={!canSave} class="btn-primary">
-          <Save class="w-4 h-4" />
+      <div class="sb-actions-buttons">
+        <Button variant="ghost" onclick={onCancel}>{tr("common.cancel")}</Button>
+        <Button onclick={save} disabled={!canSave}>
+          <Save size={16} aria-hidden="true" />
           {localDef.id ? tr("schemaBuilder.updateSchema") : tr("common.create")}
-        </button>
+        </Button>
       </div>
     </div>
   </div>
 
   <!-- ═══ RIGHT: Field Settings Panel ═══ -->
   {#if selectedField && activeTab === "fields"}
-    <div transition:slide={{ duration: 200, axis: "x" }} class="w-80 shrink-0 card overflow-y-auto">
-      <div class="p-4 border-b border-kitsuden-border sticky top-0 bg-kitsuden-card z-10">
-        <div class="flex items-center justify-between">
-          <p class="label">{tr("schemaBuilder.fieldSettings")}</p>
-          <button onclick={() => (selectedFieldId = null)} class="btn-icon p-1">
-            <X class="w-4 h-4" />
-          </button>
-        </div>
-        <div class="flex items-center gap-2 mt-2">
-          <div
-            class="w-6 h-6 rounded-sm flex items-center justify-center"
-            style="background: {getFieldColor(selectedField.type)}15"
-          >
-            {#if getFieldIcon(selectedField.type)}
-              {@const SFI = getFieldIcon(selectedField.type)}
-              <SFI class="w-3 h-3" style="color: {getFieldColor(selectedField.type)}" />
-            {/if}
-          </div>
-          <span class="text-xs font-medium text-kitsuden-text"
-            >{getFieldTypeLabel(selectedField.type)}</span
-          >
-        </div>
-      </div>
-
-      <div class="p-4 space-y-5">
-        <!-- Label -->
-        <div>
-          <label for="label" class="label mb-1.5 block">{tr("schemaBuilder.label")}</label>
-          <input
-            id="label"
-            bind:value={selectedField.label}
-            oninput={() => autoFieldKey(selectedField)}
-            type="text"
-            placeholder={tr("schemaBuilder.eGWeaponName")}
-            class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-          />
-        </div>
-
-        <!-- Key -->
-        <div>
-          <label for="key" class="label mb-1.5 block">{tr("schemaBuilder.machineKey")}</label>
-          <input
-            id="key"
-            bind:value={selectedField.key}
-            type="text"
-            placeholder={tr("schemaBuilder.eGWeaponName2")}
-            class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent font-mono text-xs"
-          />
-        </div>
-
-        <!-- Help text -->
-        <div>
-          <label for="helptext" class="label mb-1.5 block">{tr("schemaBuilder.helpText")}</label>
-          <input
-            id="helptext"
-            bind:value={selectedField.helpText}
-            type="text"
-            placeholder={tr("schemaBuilder.shownBelowTheField")}
-            class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-          />
-        </div>
-
-        <!-- ── Validation Rules ── -->
-        <div class="pt-3 border-t border-kitsuden-border">
-          <p class="label mb-3">{tr("schemaBuilder.validationRules")}</p>
-
-          <!-- Required -->
-          <div class="flex items-center justify-between py-2">
-            <div>
-              <p class="text-sm text-kitsuden-text">{tr("schemaBuilder.required")}</p>
-              <p class="text-xs text-kitsuden-subtle">{tr("schemaBuilder.mustHaveAValue")}</p>
-            </div>
-            <Switch
-              checked={!!selectedField.isRequired}
-              ariaLabel={tr("schemaBuilder.required")}
-              onchange={() => (selectedField.isRequired = !selectedField.isRequired)}
-            />
-          </div>
-
-          <!-- Unique -->
-          <div class="flex items-center justify-between py-2">
-            <div>
-              <p class="text-sm text-kitsuden-text">{tr("schemaBuilder.unique")}</p>
-              <p class="text-xs text-kitsuden-subtle">
-                {tr("schemaBuilder.noDuplicateValues")}
-              </p>
-            </div>
-            <Switch
-              checked={!!selectedField.isUnique}
-              ariaLabel={tr("schemaBuilder.unique")}
-              onchange={() => (selectedField.isUnique = !selectedField.isUnique)}
-            />
-          </div>
-
-          <!-- Default value -->
-          <div class="pt-2">
-            <label for="defaultvalue" class="label mb-1.5 block"
-              >{tr("schemaBuilder.defaultValue")}</label
+    <div transition:slide={{ duration: 200, axis: "x" }} class="sb-panel-wrap">
+      <Card class="sb-panel">
+        <div class="sb-pane-head">
+          <div class="sb-pane-head--row">
+            <h2 class="sb-pane-title">{tr("schemaBuilder.fieldSettings")}</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              ariaLabel={tr("schemaBuilder.closeFieldSettings")}
+              onclick={() => (selectedFieldId = null)}
             >
-            <input
-              id="defaultvalue"
-              bind:value={selectedField.defaultValue}
-              type="text"
-              placeholder={tr("schemaBuilder.eGUnknown")}
-              class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-            />
+              <X size={16} aria-hidden="true" />
+            </Button>
           </div>
+          <div class="sb-pane-title-row">
+            <span
+              class="sb-field-icon sb-field-icon--sm"
+              style="background: {getFieldColor(selectedField.type)}15"
+              aria-hidden="true"
+            >
+              {#if getFieldIcon(selectedField.type)}
+                {@const SFI = getFieldIcon(selectedField.type)}
+                <SFI size={12} style="color: {getFieldColor(selectedField.type)}" />
+              {/if}
+            </span>
+            <span class="sb-type-label">{getFieldTypeLabel(selectedField.type)}</span>
+          </div>
+        </div>
 
-          <!-- Regex (text, email, url) -->
-          {#if ["text", "email", "url"].includes(selectedField.type)}
-            <div class="pt-2">
-              <label for="validationregex" class="label mb-1.5 block"
-                >{tr("schemaBuilder.validationRegex")}</label
-              >
-              <input
-                id="validationregex"
-                bind:value={selectedField.validationRegex}
-                type="text"
-                placeholder={tr("schemaBuilder.eGAZaZ0")}
-                class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent font-mono text-xs"
+        <div class="sb-panel-body">
+          <Field label={tr("schemaBuilder.label")}>
+            <Input
+              id="label"
+              bind:value={selectedField.label}
+              oninput={() => autoFieldKey(selectedField)}
+              placeholder={tr("schemaBuilder.eGWeaponName")}
+            />
+          </Field>
+
+          <Field label={tr("schemaBuilder.machineKey")}>
+            <Input
+              id="key"
+              bind:value={selectedField.key}
+              placeholder={tr("schemaBuilder.eGWeaponName2")}
+              class="font-mono"
+            />
+          </Field>
+
+          <Field label={tr("schemaBuilder.helpText")}>
+            <Input
+              id="helptext"
+              bind:value={() => selectedField.helpText ?? "", (v) => (selectedField.helpText = v)}
+              placeholder={tr("schemaBuilder.shownBelowTheField")}
+            />
+          </Field>
+
+          <!-- ── Validation Rules ── -->
+          <div class="sb-section">
+            <h3 class="sb-sub-title">{tr("schemaBuilder.validationRules")}</h3>
+
+            <div class="sb-switch-row">
+              <div>
+                <p class="sb-switch-title">{tr("schemaBuilder.required")}</p>
+                <p class="sb-hint">{tr("schemaBuilder.mustHaveAValue")}</p>
+              </div>
+              <Switch
+                checked={!!selectedField.isRequired}
+                ariaLabel={tr("schemaBuilder.required")}
+                onchange={() => (selectedField.isRequired = !selectedField.isRequired)}
               />
             </div>
-          {/if}
 
-          <!-- Min/Max (number) -->
-          {#if selectedField.type === "number"}
-            <div class="pt-2 grid grid-cols-2 gap-3">
+            <div class="sb-switch-row">
               <div>
-                <label for="minvalue" class="label mb-1.5 block">{tr("schemaBuilder.min")}</label>
-                <input
-                  id="minvalue"
-                  bind:value={selectedField.minValue}
-                  type="number"
-                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                  placeholder="0"
-                />
+                <p class="sb-switch-title">{tr("schemaBuilder.unique")}</p>
+                <p class="sb-hint">{tr("schemaBuilder.noDuplicateValues")}</p>
               </div>
-              <div>
-                <label for="maxvalue" class="label mb-1.5 block">{tr("schemaBuilder.max")}</label>
-                <input
-                  id="maxvalue"
-                  bind:value={selectedField.maxValue}
-                  type="number"
-                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                  placeholder="100"
+              <Switch
+                checked={!!selectedField.isUnique}
+                ariaLabel={tr("schemaBuilder.unique")}
+                onchange={() => (selectedField.isUnique = !selectedField.isUnique)}
+              />
+            </div>
+
+            <Field label={tr("schemaBuilder.defaultValue")}>
+              <Input
+                id="defaultvalue"
+                bind:value={
+                  () => selectedField.defaultValue ?? "", (v) => (selectedField.defaultValue = v)
+                }
+                placeholder={tr("schemaBuilder.eGUnknown")}
+              />
+            </Field>
+
+            {#if ["text", "email", "url"].includes(selectedField.type)}
+              <Field label={tr("schemaBuilder.validationRegex")}>
+                <Input
+                  id="validationregex"
+                  bind:value={
+                    () => selectedField.validationRegex ?? "",
+                    (v) => (selectedField.validationRegex = v)
+                  }
+                  placeholder={tr("schemaBuilder.eGAZaZ0")}
+                  class="font-mono"
                 />
-              </div>
-            </div>
-          {/if}
-
-          <!-- Min/Max length (text) -->
-          {#if selectedField.type === "text"}
-            <div class="pt-2 grid grid-cols-2 gap-3">
-              <div>
-                <label for="minlength" class="label mb-1.5 block"
-                  >{tr("schemaBuilder.minLength")}</label
-                >
-                <input
-                  id="minlength"
-                  bind:value={selectedField.minLength}
-                  type="number"
-                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label for="maxlength" class="label mb-1.5 block"
-                  >{tr("schemaBuilder.maxLength")}</label
-                >
-                <input
-                  id="maxlength"
-                  bind:value={selectedField.maxLength}
-                  type="number"
-                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                  placeholder="255"
-                />
-              </div>
-            </div>
-          {/if}
-        </div>
-
-        <!-- ── Select Options ── -->
-        {#if selectedField.type === "select"}
-          <div class="pt-3 border-t border-kitsuden-border">
-            <p class="label mb-3">{tr("schemaBuilder.options")}</p>
-            <div class="space-y-2">
-              {#each selectedField.options || [] as opt, oi}
-                <div class="flex items-center gap-2">
-                  <input
-                    bind:value={opt.label}
-                    oninput={() =>
-                      (opt.value = opt.label.toLowerCase().replace(/[^a-z0-9]+/g, "_"))}
-                    type="text"
-                    placeholder={tr("schemaBuilder.option", { v: oi + 1 })}
-                    class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent flex-1"
-                  />
-                  <button
-                    onclick={() => selectedField.options!.splice(oi, 1)}
-                    class="btn-icon p-1.5 hover:text-kitsuden-accent-2!"
-                  >
-                    <X class="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              {/each}
-            </div>
-            <button onclick={addSelectOption} class="btn-ghost btn-sm mt-2 w-full justify-center">
-              <Plus class="w-3.5 h-3.5" />
-              {tr("schemaBuilder.addOption")}
-            </button>
-          </div>
-        {/if}
-
-        <!-- ── Relation Config ── -->
-        {#if selectedField.type === "relation"}
-          <div class="pt-3 border-t border-kitsuden-border">
-            <p class="label mb-3">
-              <GitBranch class="w-3 h-3 inline text-kitsuden-accent-2 mr-1" />
-              {tr("schemaBuilder.relationship")}
-            </p>
-
-            <!-- Target collection -->
-            <div class="mb-3">
-              <label class="label mb-1.5 block">{tr("schemaBuilder.linkToCollection")}</label>
-              {#if selectedField.relation}
-                <select
-                  bind:value={selectedField.relation.target}
-                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent appearance-none"
-                >
-                  <option value="">{tr("schemaBuilder.selectCollection")}</option>
-                  <option value="games">{tr("schemaBuilder.games")}</option>
-                  <option value="blog-posts">{tr("schemaBuilder.blogPosts")}</option>
-                  <option value="platforms">{tr("schemaBuilder.platforms")}</option>
-                  <option value="tags">{tr("schemaBuilder.tags")}</option>
-                  <option value="streamers">{tr("schemaBuilder.streamers")}</option>
-                  <optgroup label={tr("schemaBuilder.datasets")}>
-                    {#each otherDatasets as ds}
-                      <option value="dataset:{ds.id}">{ds.icon || "📦"} {ds.name}</option>
-                    {/each}
-                  </optgroup>
-                </select>
-              {/if}
-            </div>
-
-            <!-- Relationship type -->
-            <div class="mb-3">
-              <label class="label mb-1.5 block">{tr("schemaBuilder.cardinality")}</label>
-              <div class="grid grid-cols-3 gap-2">
-                {#each ["one-to-one", "one-to-many", "many-to-many"] as rt}
-                  <button
-                    onclick={() => setRelationType(rt as RelationType)}
-                    class="card-glow p-3 text-center transition-all text-xs font-medium {selectedField
-                      .relation?.type === rt
-                      ? 'border-kitsuden-accent-2-40 bg-kitsuden-accent-2-5 text-kitsuden-accent-2'
-                      : 'text-kitsuden-text-dim hover:text-kitsuden-text'}"
-                  >
-                    <p class="text-lg mb-1">
-                      {rt === "one-to-one" ? "1↔1" : rt === "one-to-many" ? "1→N" : "M↔N"}
-                    </p>
-                    <p>
-                      {rt === "one-to-one"
-                        ? tr("schemaBuilder.hasOne")
-                        : rt === "one-to-many"
-                          ? tr("schemaBuilder.hasMany")
-                          : tr("schemaBuilder.manyMany")}
-                    </p>
-                  </button>
-                {/each}
-              </div>
-            </div>
-
-            <!-- Display field -->
-            <div>
-              <label class="label mb-1.5 block">{tr("schemaBuilder.displayField")}</label>
-              {#if selectedField.relation}
-                <input
-                  bind:value={selectedField.relation.displayField}
-                  type="text"
-                  placeholder={tr("schemaBuilder.eGTitleName")}
-                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                />
-                <p class="text-xs text-kitsuden-subtle mt-1">
-                  {tr("schemaBuilder.whichFieldToShowIn")}
-                </p>
-              {/if}
-            </div>
-          </div>
-        {/if}
-
-        <!-- ── Repeater: shape of each row ── -->
-        {#if selectedField.type === "repeater"}
-          <div class="pt-3 border-t border-kitsuden-border">
-            <p class="label mb-1">
-              <Rows3 class="w-3 h-3 inline text-kitsuden-accent-2 mr-1" />
-              {tr("schemaBuilder.rowFields")}
-            </p>
-            <p class="text-xs text-kitsuden-subtle mb-3">
-              {tr("schemaBuilder.eachEntryStoresAList")}
-            </p>
-
-            <div class="space-y-2">
-              {#each selectedField.subFields || [] as sub, si (sub.id)}
-                <div class="rounded-lg border border-kitsuden-border p-2.5 bg-kitsuden-card/40">
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="text-xs text-kitsuden-subtle font-mono w-4">{si + 1}</span>
-                    <input
-                      bind:value={sub.label}
-                      oninput={() => autoSubKey(sub)}
-                      type="text"
-                      placeholder={tr("schemaBuilder.label2")}
-                      class="flex-1 px-2 py-1.5 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-sm text-sm focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                    />
-                    <button
-                      onclick={() => moveSubField(si, -1)}
-                      disabled={si === 0}
-                      title={tr("schemaBuilder.moveUp")}
-                      class="btn-icon p-1 disabled:opacity-30"
-                    >
-                      <GripVertical class="w-3 h-3" />
-                    </button>
-                    <button
-                      onclick={() => removeSubField(si)}
-                      title={tr("schemaBuilder.removeSubfield")}
-                      class="btn-icon p-1 hover:text-kitsuden-accent-2!"
-                    >
-                      <Trash2 class="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-2">
-                    <select
-                      bind:value={sub.type}
-                      class="px-2 py-1.5 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-sm text-xs focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                    >
-                      {#each SUBFIELD_TYPES as t}
-                        <option value={t.type}>{t.label}</option>
-                      {/each}
-                    </select>
-                    <input
-                      bind:value={sub.key}
-                      type="text"
-                      placeholder="key"
-                      class="px-2 py-1.5 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-sm font-mono text-xs focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                    />
-                  </div>
-
-                  <label class="flex items-center gap-2 mt-2 text-[11px] text-kitsuden-subtle">
-                    <input
-                      type="checkbox"
-                      bind:checked={sub.isRequired}
-                      class="accent-kitsuden-accent"
-                    />
-                    {tr("schemaBuilder.requiredInEveryRow")}
-                  </label>
-
-                  {#if sub.type === "select"}
-                    <!-- A dropdown with no options cannot be filled in; it is
-                         flagged here instead of letting it fail on save. -->
-                    <p class="text-xs text-kitsuden-subtle mt-1.5">
-                      {tr("schemaBuilder.optionsForSubfieldSelectsAre")}
-                    </p>
-                  {/if}
-                </div>
-              {/each}
-            </div>
-
-            {#if !selectedField.subFields?.length}
-              <p class="text-[11px] text-kitsuden-subtle italic py-2">
-                {tr("schemaBuilder.noRowFieldsYetRows")}
-              </p>
+              </Field>
             {/if}
 
-            <button onclick={addSubField} class="btn-ghost btn-sm mt-2 w-full justify-center">
-              <Plus class="w-3.5 h-3.5" />
-              {tr("schemaBuilder.addRowField")}
-            </button>
-
-            <!-- minLength/maxLength of a repeater are rows, not characters. -->
-            <div class="pt-3 grid grid-cols-2 gap-3">
-              <div>
-                <label for="minrows" class="label mb-1.5 block">{tr("schemaBuilder.minRows")}</label
-                >
-                <input
-                  id="minrows"
-                  bind:value={selectedField.minLength}
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                />
+            {#if selectedField.type === "number"}
+              <div class="sb-grid-2 sb-grid-2--always">
+                <Field label={tr("schemaBuilder.min")}>
+                  <NumberInput
+                    id="minvalue"
+                    value={selectedField.minValue ?? null}
+                    clamp={false}
+                    placeholder="0"
+                    onchange={(v) => (selectedField.minValue = v ?? undefined)}
+                  />
+                </Field>
+                <Field label={tr("schemaBuilder.max")}>
+                  <NumberInput
+                    id="maxvalue"
+                    value={selectedField.maxValue ?? null}
+                    clamp={false}
+                    placeholder="100"
+                    onchange={(v) => (selectedField.maxValue = v ?? undefined)}
+                  />
+                </Field>
               </div>
-              <div>
-                <label for="maxrows" class="label mb-1.5 block">{tr("schemaBuilder.maxRows")}</label
-                >
-                <input
-                  id="maxrows"
-                  bind:value={selectedField.maxLength}
-                  type="number"
-                  min="0"
-                  placeholder="∞"
-                  class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                />
-              </div>
-            </div>
-          </div>
-        {/if}
+            {/if}
 
-        <!-- ── Conditional visibility ── -->
-        <div class="pt-3 border-t border-kitsuden-border">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="label mb-0.5">
-                <Eye class="w-3 h-3 inline text-kitsuden-accent mr-1" />
-                {tr("schemaBuilder.conditional")}
-              </p>
-              <p class="text-xs text-kitsuden-subtle">
-                {tr("schemaBuilder.showOnlyWhenAnotherField")}
-              </p>
-            </div>
-            <Switch
-              checked={!!selectedField.showIf}
-              ariaLabel={tr("schemaBuilder.conditional")}
-              disabled={conditionSources(selectedField).length === 0}
-              onchange={toggleCondition}
-            />
+            {#if selectedField.type === "text"}
+              <div class="sb-grid-2 sb-grid-2--always">
+                <Field label={tr("schemaBuilder.minLength")}>
+                  <NumberInput
+                    id="minlength"
+                    value={selectedField.minLength ?? null}
+                    clamp={false}
+                    placeholder="0"
+                    onchange={(v) => (selectedField.minLength = v ?? undefined)}
+                  />
+                </Field>
+                <Field label={tr("schemaBuilder.maxLength")}>
+                  <NumberInput
+                    id="maxlength"
+                    value={selectedField.maxLength ?? null}
+                    clamp={false}
+                    placeholder="255"
+                    onchange={(v) => (selectedField.maxLength = v ?? undefined)}
+                  />
+                </Field>
+              </div>
+            {/if}
           </div>
 
-          {#if conditionSources(selectedField).length === 0}
-            <p class="text-xs text-kitsuden-subtle italic mt-2">
-              {tr("schemaBuilder.needsAtLeastOneOther")}
-            </p>
-          {/if}
-
-          {#if selectedField.showIf}
-            <div class="mt-3 space-y-2">
-              <select
-                bind:value={selectedField.showIf.field}
-                class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-              >
-                {#each conditionSources(selectedField) as f}
-                  <option value={f.key}>{f.label || f.key}</option>
+          <!-- ── Select Options ── -->
+          {#if selectedField.type === "select"}
+            <div class="sb-section">
+              <h3 class="sb-sub-title">{tr("schemaBuilder.options")}</h3>
+              <div class="sb-rows">
+                {#each selectedField.options || [] as opt, oi}
+                  <div class="sb-inline">
+                    <Input
+                      bind:value={opt.label}
+                      oninput={() =>
+                        (opt.value = opt.label.toLowerCase().replace(/[^a-z0-9]+/g, "_"))}
+                      placeholder={tr("schemaBuilder.option", { v: oi + 1 })}
+                      aria-label={tr("schemaBuilder.option", { v: oi + 1 })}
+                    />
+                    <Button
+                      variant="danger-ghost"
+                      size="icon"
+                      ariaLabel={tr("schemaBuilder.removeOption")}
+                      onclick={() => selectedField.options!.splice(oi, 1)}
+                    >
+                      <X size={14} aria-hidden="true" />
+                    </Button>
+                  </div>
                 {/each}
-              </select>
-
-              <div class="grid grid-cols-2 gap-2">
-                <select
-                  bind:value={selectedField.showIf.operator}
-                  class="px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                >
-                  <option value="eq">{tr("schemaBuilder.equals")}</option>
-                  <option value="neq">{tr("schemaBuilder.notEquals")}</option>
-                  <option value="contains">{tr("schemaBuilder.contains")}</option>
-                  <option value="gt">{tr("schemaBuilder.greaterThan")}</option>
-                  <option value="lt">{tr("schemaBuilder.lessThan")}</option>
-                </select>
-                <input
-                  bind:value={selectedField.showIf.value}
-                  type="text"
-                  placeholder="value"
-                  class="px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-                />
+                <Button variant="secondary" size="sm" class="sb-add" onclick={addSelectOption}>
+                  <Plus size={14} aria-hidden="true" />
+                  {tr("schemaBuilder.addOption")}
+                </Button>
               </div>
+            </div>
+          {/if}
 
-              {#if selectedField.isRequired}
-                <!-- What people do not expect: a conditional required field is only
-                     enforced when it is shown. Saying so here avoids the ticket. -->
-                <p class="text-xs text-kitsuden-subtle">
-                  {tr("schemaBuilder.requiredOnlyWhileThisCondition")}
-                </p>
+          <!-- ── Relation Config ── -->
+          {#if selectedField.type === "relation"}
+            <div class="sb-section">
+              <h3 class="sb-sub-title">
+                <GitBranch size={12} class="sb-pink" aria-hidden="true" />
+                {tr("schemaBuilder.relationship")}
+              </h3>
+
+              {#if selectedField.relation}
+                <Field label={tr("schemaBuilder.linkToCollection")}>
+                  <Select
+                    value={selectedField.relation.target}
+                    onchange={(e: Event) =>
+                      (selectedField.relation!.target = (e.currentTarget as HTMLSelectElement)
+                        .value as RelationTarget)}
+                  >
+                    <option value="">{tr("schemaBuilder.selectCollection")}</option>
+                    <option value="games">{tr("schemaBuilder.games")}</option>
+                    <option value="blog-posts">{tr("schemaBuilder.blogPosts")}</option>
+                    <option value="platforms">{tr("schemaBuilder.platforms")}</option>
+                    <option value="tags">{tr("schemaBuilder.tags")}</option>
+                    <option value="streamers">{tr("schemaBuilder.streamers")}</option>
+                    <optgroup label={tr("schemaBuilder.datasets")}>
+                      {#each otherDatasets as ds}
+                        <option value="dataset:{ds.id}">{ds.icon || "📦"} {ds.name}</option>
+                      {/each}
+                    </optgroup>
+                  </Select>
+                </Field>
               {/if}
-              {#if selectedField.showIf.operator === "gt" || selectedField.showIf.operator === "lt"}
-                <p class="text-xs text-kitsuden-subtle">
-                  {tr("schemaBuilder.comparedAsNumbersNonNumeric")}
-                </p>
+
+              <ToggleGroup
+                label={tr("schemaBuilder.cardinality")}
+                hideLabel={false}
+                required
+                value={selectedField.relation?.type ?? ""}
+                onchange={(v) => setRelationType(v as RelationType)}
+                options={[
+                  { value: "one-to-one", label: `1↔1 · ${tr("schemaBuilder.hasOne")}` },
+                  { value: "one-to-many", label: `1→N · ${tr("schemaBuilder.hasMany")}` },
+                  { value: "many-to-many", label: `M↔N · ${tr("schemaBuilder.manyMany")}` },
+                ]}
+                class="sb-cardinality"
+              />
+
+              {#if selectedField.relation}
+                <Field label={tr("schemaBuilder.displayField")}>
+                  <Input
+                    bind:value={
+                      () => selectedField.relation?.displayField ?? "",
+                      (v) => (selectedField.relation!.displayField = v)
+                    }
+                    placeholder={tr("schemaBuilder.eGTitleName")}
+                  />
+                </Field>
+                <p class="sb-hint">{tr("schemaBuilder.whichFieldToShowIn")}</p>
               {/if}
             </div>
           {/if}
-        </div>
 
-        <!-- Grid settings -->
-        <div class="pt-3 border-t border-kitsuden-border">
-          <p class="label mb-3">{tr("schemaBuilder.display")}</p>
-          <div class="flex items-center justify-between py-2">
-            <div>
-              <p class="text-sm text-kitsuden-text">{tr("schemaBuilder.hiddenInGrid")}</p>
-              <p class="text-xs text-kitsuden-subtle">
-                {tr("schemaBuilder.onlyVisibleInForm")}
-              </p>
+          <!-- ── Repeater: shape of each row ── -->
+          {#if selectedField.type === "repeater"}
+            <div class="sb-section">
+              <h3 class="sb-sub-title">
+                <Rows3 size={12} class="sb-pink" aria-hidden="true" />
+                {tr("schemaBuilder.rowFields")}
+              </h3>
+              <p class="sb-hint">{tr("schemaBuilder.eachEntryStoresAList")}</p>
+
+              <div class="sb-rows">
+                {#each selectedField.subFields || [] as sub, si (sub.id)}
+                  <div class="sb-sub">
+                    <div class="sb-inline">
+                      <span class="sb-sub-n" aria-hidden="true">{si + 1}</span>
+                      <Input
+                        bind:value={sub.label}
+                        oninput={() => autoSubKey(sub)}
+                        placeholder={tr("schemaBuilder.label2")}
+                        aria-label={tr("schemaBuilder.label2")}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={si === 0}
+                        ariaLabel={tr("schemaBuilder.moveUp")}
+                        title={tr("schemaBuilder.moveUp")}
+                        onclick={() => moveSubField(si, -1)}
+                      >
+                        <GripVertical size={14} aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="danger-ghost"
+                        size="icon"
+                        ariaLabel={tr("schemaBuilder.removeSubfield")}
+                        title={tr("schemaBuilder.removeSubfield")}
+                        onclick={() => removeSubField(si)}
+                      >
+                        <Trash2 size={14} aria-hidden="true" />
+                      </Button>
+                    </div>
+
+                    <div class="sb-grid-2 sb-grid-2--always">
+                      <Select
+                        size="sm"
+                        value={sub.type}
+                        aria-label={tr("schemaBuilder.subfieldType")}
+                        onchange={(e: Event) =>
+                          (sub.type = (e.currentTarget as HTMLSelectElement).value as FieldType)}
+                        options={SUBFIELD_TYPES.map((st) => ({ value: st.type, label: st.label }))}
+                      />
+                      <Input
+                        bind:value={sub.key}
+                        placeholder="key"
+                        aria-label={tr("schemaBuilder.machineKey")}
+                        class="font-mono"
+                      />
+                    </div>
+
+                    <Checkbox
+                      bind:checked={() => !!sub.isRequired, (v) => (sub.isRequired = v)}
+                      label={tr("schemaBuilder.requiredInEveryRow")}
+                    />
+
+                    {#if sub.type === "select"}
+                      <!-- A dropdown with no options cannot be filled in; it is
+                           flagged here instead of letting it fail on save. -->
+                      <p class="sb-hint">{tr("schemaBuilder.optionsForSubfieldSelectsAre")}</p>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+
+              {#if !selectedField.subFields?.length}
+                <p class="sb-hint sb-hint--empty">{tr("schemaBuilder.noRowFieldsYetRows")}</p>
+              {/if}
+
+              <Button variant="secondary" size="sm" class="sb-add" onclick={addSubField}>
+                <Plus size={14} aria-hidden="true" />
+                {tr("schemaBuilder.addRowField")}
+              </Button>
+
+              <!-- minLength/maxLength of a repeater are rows, not characters. -->
+              <div class="sb-grid-2 sb-grid-2--always">
+                <Field label={tr("schemaBuilder.minRows")}>
+                  <NumberInput
+                    id="minrows"
+                    min={0}
+                    value={selectedField.minLength ?? null}
+                    clamp={false}
+                    placeholder="0"
+                    onchange={(v) => (selectedField.minLength = v ?? undefined)}
+                  />
+                </Field>
+                <Field label={tr("schemaBuilder.maxRows")}>
+                  <NumberInput
+                    id="maxrows"
+                    min={0}
+                    value={selectedField.maxLength ?? null}
+                    clamp={false}
+                    placeholder="∞"
+                    onchange={(v) => (selectedField.maxLength = v ?? undefined)}
+                  />
+                </Field>
+              </div>
             </div>
-            <Switch
-              checked={!!selectedField.hidden}
-              ariaLabel={tr("schemaBuilder.hiddenInGrid")}
-              onchange={() => (selectedField.hidden = !selectedField.hidden)}
-            />
+          {/if}
+
+          <!-- ── Conditional visibility ── -->
+          <div class="sb-section">
+            <div class="sb-switch-row">
+              <div>
+                <p class="sb-sub-title">
+                  <Eye size={12} class="sb-accent" aria-hidden="true" />
+                  {tr("schemaBuilder.conditional")}
+                </p>
+                <p class="sb-hint">{tr("schemaBuilder.showOnlyWhenAnotherField")}</p>
+              </div>
+              <Switch
+                checked={!!selectedField.showIf}
+                ariaLabel={tr("schemaBuilder.conditional")}
+                disabled={conditionSources(selectedField).length === 0}
+                onchange={toggleCondition}
+              />
+            </div>
+
+            {#if conditionSources(selectedField).length === 0}
+              <p class="sb-hint sb-hint--empty">{tr("schemaBuilder.needsAtLeastOneOther")}</p>
+            {/if}
+
+            {#if selectedField.showIf}
+              <div class="sb-rows">
+                <Select
+                  value={selectedField.showIf.field}
+                  aria-label={tr("schemaBuilder.conditionSource")}
+                  onchange={(e: Event) =>
+                    (selectedField.showIf!.field = (e.currentTarget as HTMLSelectElement).value)}
+                  options={conditionSources(selectedField).map((f) => ({
+                    value: f.key,
+                    label: f.label || f.key,
+                  }))}
+                />
+
+                <div class="sb-grid-2 sb-grid-2--always">
+                  <Select
+                    value={selectedField.showIf.operator}
+                    aria-label={tr("schemaBuilder.operator")}
+                    onchange={(e: Event) =>
+                      (selectedField.showIf!.operator = (e.currentTarget as HTMLSelectElement)
+                        .value as "eq" | "neq" | "contains" | "gt" | "lt")}
+                    options={[
+                      { value: "eq", label: tr("schemaBuilder.equals") },
+                      { value: "neq", label: tr("schemaBuilder.notEquals") },
+                      { value: "contains", label: tr("schemaBuilder.contains") },
+                      { value: "gt", label: tr("schemaBuilder.greaterThan") },
+                      { value: "lt", label: tr("schemaBuilder.lessThan") },
+                    ]}
+                  />
+                  <Input
+                    bind:value={selectedField.showIf.value}
+                    placeholder="value"
+                    aria-label={tr("schemaBuilder.conditionValue")}
+                  />
+                </div>
+
+                {#if selectedField.isRequired}
+                  <!-- What people do not expect: a conditional required field is only
+                       enforced when it is shown. Saying so here avoids the ticket. -->
+                  <p class="sb-hint">{tr("schemaBuilder.requiredOnlyWhileThisCondition")}</p>
+                {/if}
+                {#if selectedField.showIf.operator === "gt" || selectedField.showIf.operator === "lt"}
+                  <p class="sb-hint">{tr("schemaBuilder.comparedAsNumbersNonNumeric")}</p>
+                {/if}
+              </div>
+            {/if}
           </div>
-          <div class="pt-2">
-            <label for="width" class="label mb-1.5 block">{tr("schemaBuilder.columnWidthPx")}</label
-            >
-            <input
-              id="width"
-              bind:value={selectedField.width}
-              type="number"
-              placeholder={tr("schemaBuilder.auto")}
-              class="w-full px-3 py-2 bg-kitsuden-border border border-kitsuden-input text-kitsuden-text placeholder:text-kitsuden-subtle rounded-md focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent"
-            />
+
+          <!-- Grid settings -->
+          <div class="sb-section">
+            <h3 class="sb-sub-title">{tr("schemaBuilder.display")}</h3>
+            <div class="sb-switch-row">
+              <div>
+                <p class="sb-switch-title">{tr("schemaBuilder.hiddenInGrid")}</p>
+                <p class="sb-hint">{tr("schemaBuilder.onlyVisibleInForm")}</p>
+              </div>
+              <Switch
+                checked={!!selectedField.hidden}
+                ariaLabel={tr("schemaBuilder.hiddenInGrid")}
+                onchange={() => (selectedField.hidden = !selectedField.hidden)}
+              />
+            </div>
+            <Field label={tr("schemaBuilder.columnWidthPx")}>
+              <NumberInput
+                id="width"
+                value={selectedField.width ?? null}
+                clamp={false}
+                placeholder={tr("schemaBuilder.auto")}
+                onchange={(v) => (selectedField.width = v ?? undefined)}
+              />
+            </Field>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   {/if}
 </div>
 
+{#snippet layersIcon()}<Layers size={32} aria-hidden="true" />{/snippet}
+{#snippet shieldOffIcon()}<ShieldOff size={32} aria-hidden="true" />{/snippet}
+{#snippet zapIcon()}<Zap size={32} aria-hidden="true" />{/snippet}
+
 <style>
-  .bg-kitsuden-accent-10 {
-    background-color: rgb(168 85 247 / 0.1);
+  /* Three columns on a wide screen (types · fields · the field's settings), one column
+     on a phone: nothing may push the page sideways at 390px. */
+  .sb {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
   }
-  .border-kitsuden-accent-20 {
-    border-color: rgb(168 85 247 / 0.2);
+  .sb-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+    flex: 1;
   }
-  .border-kitsuden-accent-40 {
-    border-color: rgb(168 85 247 / 0.4);
+  :global(.sb-palette),
+  :global(.sb-pane),
+  :global(.sb-panel) {
+    min-width: 0;
+    overflow: hidden;
   }
-  .bg-kitsuden-accent-5 {
-    background-color: rgb(168 85 247 / 0.05);
+  .sb-pane-scroll {
+    height: 100%;
+    overflow-y: auto;
   }
-  .bg-kitsuden-accent-2-5 {
-    background-color: rgb(255 45 111 / 0.05);
+  .sb-pane-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgb(var(--ta-border));
+    background: rgb(var(--ta-surface));
   }
-  .border-kitsuden-accent-2-40 {
-    border-color: rgb(255 45 111 / 0.4);
+  .sb-pane-head--row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .sb-pane-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .sb-pane-title {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  .sb-pane-note,
+  .sb-hint {
+    margin: 0.125rem 0 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .sb-hint--empty {
+    font-style: italic;
+  }
+  .sb-pane-body,
+  .sb-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1rem 1.25rem 1.25rem;
+  }
+  .sb-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgb(var(--ta-border));
+  }
+  .sb-sub-title {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  .sb-switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .sb-switch-title {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  :global(.sb-head) {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .sb-grid-2 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem 1rem;
+  }
+  .sb-grid-2--always {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .sb-slug {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  :global(.sb-slug-field) {
+    flex: 1;
+    min-width: 0;
+  }
+  :global(.sb-icon-field) {
+    flex: 0 0 7rem;
+    min-width: 0;
+  }
+  .sb-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .sb-dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 999px;
+  }
+  .sb-dot--amber {
+    background: rgb(var(--ta-warning));
+  }
+  .sb-dot--purple {
+    background: rgb(var(--ta-accent));
+  }
+  :global(.sb-amber) {
+    color: rgb(var(--ta-warning));
+  }
+  :global(.sb-purple),
+  :global(.sb-accent) {
+    color: rgb(var(--ta-accent));
+  }
+  :global(.sb-pink) {
+    color: rgb(var(--ta-accent-2));
+  }
+
+  /* Palette */
+  .sb-palette-list {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    overflow-x: auto;
+  }
+  .sb-type {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 0 0 13rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-radius: var(--ta-radius-lg);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: grab;
+  }
+  .sb-type:hover {
+    background: rgb(var(--ta-border) / 0.3);
+  }
+  .sb-type:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent));
+    outline-offset: -2px;
+  }
+  .sb-type:active {
+    cursor: grabbing;
+  }
+  .sb-type-icon,
+  .sb-field-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid transparent;
+    border-radius: var(--ta-radius-md, 0.5rem);
+  }
+  .sb-field-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  .sb-field-icon--sm {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  .sb-type-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .sb-type-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .sb-type-desc {
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Field list */
+  .sb-fields > * + * {
+    border-top: 1px solid rgb(var(--ta-border) / 0.5);
+  }
+  .sb-field:hover {
+    background: rgb(var(--ta-border) / 0.2);
+  }
+  .sb-field--on,
+  .sb-field--on:hover {
+    background: rgb(var(--ta-accent) / 0.06);
+  }
+  .sb-field--over {
+    box-shadow: inset 0 0 0 2px rgb(var(--ta-accent) / 0.3);
+  }
+  .sb-field-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.25rem;
+    padding: 0.5rem 0.5rem 0.5rem 1rem;
+    cursor: pointer;
+  }
+  .sb-field-row:focus-visible {
+    outline: 2px solid rgb(var(--ta-accent));
+    outline-offset: -2px;
+  }
+  :global(.sb-grip) {
+    flex-shrink: 0;
+    color: rgb(var(--ta-text-dim));
+    opacity: 0.6;
+    cursor: grab;
+  }
+  .sb-field-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+  .sb-field-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sb-required {
+    margin-left: 0.25rem;
+    color: rgb(var(--ta-accent-2));
+  }
+  .sb-field-key {
+    font-family: var(--ta-font-mono, monospace);
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sb-field-badges {
+    display: flex;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  /* Rows of inputs (rules, approvers, options, subfields) */
+  .sb-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .sb-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .sb-inline > :global(*:not(button)) {
+    flex: 1;
+    min-width: 0;
+  }
+  .sb-rule {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .sb-rule > :global(:first-child) {
+    grid-column: 1 / -1;
+  }
+  :global(.sb-add) {
+    align-self: flex-start;
+  }
+  .sb-sub {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.625rem;
+    border: 1px solid rgb(var(--ta-border));
+    border-radius: var(--ta-radius-lg);
+  }
+  .sb-sub-n {
+    flex: 0 0 1rem !important;
+    font-family: var(--ta-font-mono, monospace);
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  :global(.sb-cardinality) {
+    flex-wrap: wrap;
+  }
+
+  .sb-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .sb-actions-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-left: auto;
+  }
+  .sb-error {
+    margin: 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-danger, var(--ta-accent-2)));
+  }
+
+  @media (min-width: 640px) {
+    .sb-grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .sb-rule {
+      grid-template-columns: minmax(0, 1fr) 8rem minmax(0, 1fr) auto;
+    }
+    .sb-rule > :global(:first-child) {
+      grid-column: auto;
+    }
+  }
+
+  /* Phone: every control reaches a 44px touch target. */
+  @media (max-width: 767px) {
+    .sb :global(.ta-btn--icon) {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
+    .sb :global(.ta-btn),
+    .sb :global(.ta-input),
+    .sb :global(.ta-select),
+    .sb :global(.ta-tab) {
+      min-height: 2.75rem;
+    }
+  }
+
+  /* Wide screen: the three columns, each scrolling on its own. */
+  @media (min-width: 1024px) {
+    .sb {
+      flex-direction: row;
+      height: calc(100vh - 9rem);
+    }
+    :global(.sb-palette) {
+      flex: 0 0 14rem;
+      overflow-y: auto;
+    }
+    .sb-palette-list {
+      flex-direction: column;
+      overflow-x: visible;
+    }
+    .sb-type {
+      flex: none;
+      width: 100%;
+    }
+    :global(.sb-pane) {
+      flex: 1;
+      min-height: 0;
+    }
+    .sb-panel-wrap {
+      flex: 0 0 20rem;
+      min-height: 0;
+      display: flex;
+    }
+    :global(.sb-panel) {
+      flex: 1;
+      overflow-y: auto;
+    }
   }
 </style>

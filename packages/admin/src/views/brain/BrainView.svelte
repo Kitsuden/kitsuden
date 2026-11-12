@@ -1,26 +1,25 @@
 <script lang="ts">
   import Page from "$lib/components/layout/Page.svelte";
   import {
+    Alert,
+    Badge,
     Button,
+    Card,
+    EmptyState,
+    SearchInput,
+    Select,
+    Spinner,
+    Stat,
     Table,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    Tabs,
   } from "$lib/tallao";
   import { t as tr, localeFormat } from "$lib/i18n";
-  import {
-    Brain,
-    Loader2,
-    RefreshCw,
-    Search,
-    ExternalLink,
-    BookOpen,
-    AlertCircle,
-    Fingerprint,
-    GitBranch,
-  } from "lucide-svelte";
+  import { RefreshCw, ExternalLink, BookOpen } from "lucide-svelte";
   import { onMount } from "svelte";
 
   import KnowledgeGraph from "$lib/components/brain/KnowledgeGraph.svelte";
@@ -169,93 +168,56 @@
       {tr("brainView.scanNow")}
     </Button>
   {/snippet}
-  <div class="space-y-6">
+  <div class="space-y-6 min-w-0">
     <!-- Error -->
     {#if error}
-      <div
-        class="flex items-start gap-3 rounded-xl bg-kitsuden-accent-2/10 border border-kitsuden-accent-2/20 p-4"
+      <Alert
+        variant="error"
+        title={tr("brainView.somethingWentWrong")}
+        onDismiss={() => (error = null)}
+        dismissLabel={tr("brainView.dismiss")}
       >
-        <AlertCircle class="w-5 h-5 text-kitsuden-accent-2 shrink-0 mt-0.5" />
-        <div class="flex-1">
-          <p class="text-sm font-medium text-kitsuden-accent-2">
-            {tr("brainView.somethingWentWrong")}
-          </p>
-          <p class="text-xs text-kitsuden-text-dim mt-1">{error}</p>
-        </div>
-        <button
-          onclick={() => (error = null)}
-          class="text-xs text-kitsuden-text-dim hover:text-kitsuden-text underline"
-        >
-          {tr("brainView.dismiss")}
-        </button>
-      </div>
+        {error}
+      </Alert>
     {/if}
 
     <!-- Stats -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="kitsuden-card p-4">
-        <p class="text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle">
-          {tr("brainView.totalNotes")}
-        </p>
-        <div class="flex items-end gap-2 mt-1">
-          <Fingerprint class="w-5 h-5 text-kitsuden-accent" />
-          <span class="text-2xl font-bold text-kitsuden-text">
-            {statusLoading ? "—" : (status?.totalNotes ?? 0)}
-          </span>
-        </div>
-      </div>
-      <div class="kitsuden-card p-4">
-        <p class="text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle">
-          {tr("brainView.connections")}
-        </p>
-        <div class="flex items-end gap-2 mt-1">
-          <GitBranch class="w-5 h-5 text-kitsuden-purple" />
-          <span class="text-2xl font-bold text-kitsuden-text">
-            {statusLoading ? "—" : (status?.totalConnections ?? 0)}
-          </span>
-        </div>
-      </div>
-      <div class="kitsuden-card p-4">
-        <p class="text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle">
-          {tr("brainView.lastScan")}
-        </p>
-        <div class="flex items-end gap-2 mt-1">
-          <RefreshCw class="w-5 h-5 text-kitsuden-green" />
-          <span class="text-lg font-semibold text-kitsuden-text">
-            {statusLoading ? "—" : formatDate(status?.lastScanAt)}
-          </span>
-        </div>
-      </div>
+      <Stat
+        label={tr("brainView.totalNotes")}
+        value={statusLoading ? "—" : (status?.totalNotes ?? 0)}
+      />
+      <Stat
+        label={tr("brainView.connections")}
+        value={statusLoading ? "—" : (status?.totalConnections ?? 0)}
+      />
+      <Stat
+        label={tr("brainView.lastScan")}
+        value={statusLoading ? "—" : formatDate(status?.lastScanAt)}
+      />
     </div>
 
     <!-- Tabs -->
-    <div class="border-b border-kitsuden-border">
-      <div class="flex items-center gap-1">
-        {#each ["Graph", "Notes"] as tab}
-          <button
-            class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
-            class:text-kitsuden-text={activeTab === tab}
-            class:text-kitsuden-text-dim={activeTab !== tab}
-            class:border-kitsuden-accent={activeTab === tab}
-            class:border-transparent={activeTab !== tab}
-            class:hover:text-kitsuden-text={activeTab !== tab}
-            onclick={() => (activeTab = tab as Tab)}
-          >
-            {tab}
-          </button>
-        {/each}
-      </div>
-    </div>
+    <Tabs
+      items={[
+        { id: "Graph", label: tr("brainView.tabGraph") },
+        { id: "Notes", label: tr("brainView.tabNotes") },
+      ]}
+      value={activeTab}
+      onchange={(id) => (activeTab = id as Tab)}
+      panels={false}
+      ariaLabel={tr("brainView.sections")}
+    />
 
     <!-- Tab content -->
     {#if activeTab === "Graph"}
       {#if graphLoading}
-        <div class="flex items-center justify-center h-[600px] kitsuden-card">
+        <Card class="flex items-center justify-center h-[600px]">
           <div class="flex flex-col items-center gap-3 text-kitsuden-text-dim">
-            <Loader2 class="w-8 h-8 animate-spin" />
-            <p class="text-sm">{tr("brainView.loadingKnowledgeGraph")}</p>
+            <Spinner size="lg" label={tr("brainView.loadingKnowledgeGraph")} />
+            <p class="text-sm" aria-hidden="true">{tr("brainView.loadingKnowledgeGraph")}</p>
           </div>
-        </div>
+        </Card>
       {:else if graph}
         <div class="flex flex-col lg:flex-row gap-4 h-auto lg:h-[600px]">
           <div class="flex-1 min-w-0 h-[500px] lg:h-full">
@@ -265,7 +227,7 @@
               onNodeSelect={(node) => (selectedNode = node)}
             />
           </div>
-          <div class="h-[500px] lg:h-full">
+          <div class="h-[500px] lg:h-full min-w-0">
             <NoteDetailPanel note={selectedNode} onExpand={mergeNeighborhood} />
           </div>
         </div>
@@ -273,99 +235,81 @@
     {:else if activeTab === "Notes"}
       <div class="space-y-4">
         <div class="flex flex-col sm:flex-row gap-3">
-          <div class="relative flex-1">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-subtle" />
-            <input
-              type="text"
-              bind:value={searchQuery}
-              placeholder={tr("brainView.searchByTitleContentOr")}
-              class="kitsuden-input w-full pl-9"
-            />
-          </div>
-          <select bind:value={categoryFilter} class="kitsuden-input sm:w-56">
-            <option value="">{tr("brainView.allCategories")}</option>
-            {#each categories as category}
-              <option value={category}>{category}</option>
-            {/each}
-          </select>
+          <SearchInput
+            class="flex-1 min-w-0"
+            bind:value={searchQuery}
+            placeholder={tr("brainView.searchByTitleContentOr")}
+          />
+          <Select
+            bind:value={categoryFilter}
+            class="sm:w-56"
+            aria-label={tr("common.category")}
+            placeholder={tr("brainView.allCategories")}
+            options={categories.map((category) => ({ value: category, label: category }))}
+          />
         </div>
 
         {#if notesLoading}
-          <div class="flex items-center justify-center h-64 kitsuden-card">
-            <Loader2 class="w-8 h-8 animate-spin text-kitsuden-text-dim" />
-          </div>
+          <Card class="flex items-center justify-center h-64">
+            <Spinner size="lg" />
+          </Card>
         {:else if filteredNotes.length === 0}
-          <div class="kitsuden-card p-12 text-center text-kitsuden-text-dim">
-            <Fingerprint class="w-10 h-10 mx-auto mb-3 text-kitsuden-subtle" />
-            <p class="text-sm">{tr("brainView.noNotesFound")}</p>
-            {#if searchQuery || categoryFilter}
-              <p class="text-xs text-kitsuden-subtle mt-1">
-                {tr("brainView.tryAdjustingYourFilters")}
-              </p>
-            {/if}
-          </div>
+          <EmptyState
+            variant={searchQuery || categoryFilter ? "no-results" : "empty"}
+            title={tr("brainView.noNotesFound")}
+            description={searchQuery || categoryFilter
+              ? tr("brainView.tryAdjustingYourFilters")
+              : undefined}
+          />
         {:else}
-          <div class="kitsuden-card overflow-hidden">
-            <div class="overflow-x-auto">
-              <Table density="compact">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{tr("common.title")}</TableHead>
-                    <TableHead>{tr("common.category")}</TableHead>
-                    <TableHead>{tr("common.source")}</TableHead>
-                    <TableHead>{tr("common.tags")}</TableHead>
-                    <TableHead>{tr("brainView.importance")}</TableHead>
-                    <TableHead>{tr("brainView.updated")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {#each filteredNotes as note}
-                    <TableRow>
-                      <TableCell>
-                        <p class="font-medium text-kitsuden-text truncate max-w-[240px]">
-                          {note.title}
-                        </p>
-                        <p class="text-xs text-kitsuden-subtle truncate max-w-[240px]">
-                          {note.sourcePath || note.source}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/20"
-                        >
-                          {note.category}
-                        </span>
-                      </TableCell>
-                      <TableCell class="truncate max-w-[160px]">{note.source}</TableCell>
-                      <TableCell>
-                        <div class="flex flex-wrap gap-1 max-w-[160px]">
-                          {#each note.tags.slice(0, 3) as tag}
-                            <span
-                              class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim"
-                            >
-                              {tag}
-                            </span>
-                          {/each}
-                          {#if note.tags.length > 3}
-                            <span class="text-xs text-kitsuden-subtle">+{note.tags.length - 3}</span
-                            >
-                          {/if}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span class="text-xs text-kitsuden-text"
-                          >{Math.round((note.importance ?? 0) * 100)}%</span
-                        >
-                      </TableCell>
-                      <TableCell class="whitespace-nowrap">
-                        {formatDate(note.updatedAt)}
-                      </TableCell>
-                    </TableRow>
-                  {/each}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+          <Table density="compact">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{tr("common.title")}</TableHead>
+                <TableHead>{tr("common.category")}</TableHead>
+                <TableHead>{tr("common.source")}</TableHead>
+                <TableHead>{tr("common.tags")}</TableHead>
+                <TableHead>{tr("brainView.importance")}</TableHead>
+                <TableHead>{tr("brainView.updated")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {#each filteredNotes as note}
+                <TableRow>
+                  <TableCell>
+                    <p class="font-medium text-kitsuden-text truncate max-w-[240px]">
+                      {note.title}
+                    </p>
+                    <p class="text-xs text-kitsuden-subtle truncate max-w-[240px]">
+                      {note.sourcePath || note.source}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="accent">{note.category}</Badge>
+                  </TableCell>
+                  <TableCell class="truncate max-w-[160px]">{note.source}</TableCell>
+                  <TableCell>
+                    <div class="flex flex-wrap gap-1 max-w-[160px]">
+                      {#each note.tags.slice(0, 3) as tag}
+                        <Badge variant="secondary">{tag}</Badge>
+                      {/each}
+                      {#if note.tags.length > 3}
+                        <span class="text-xs text-kitsuden-subtle">+{note.tags.length - 3}</span>
+                      {/if}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span class="text-xs text-kitsuden-text"
+                      >{Math.round((note.importance ?? 0) * 100)}%</span
+                    >
+                  </TableCell>
+                  <TableCell class="whitespace-nowrap">
+                    {formatDate(note.updatedAt)}
+                  </TableCell>
+                </TableRow>
+              {/each}
+            </TableBody>
+          </Table>
         {/if}
       </div>
     {/if}

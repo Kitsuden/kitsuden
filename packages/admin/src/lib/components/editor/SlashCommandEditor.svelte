@@ -19,6 +19,8 @@
     Minus,
   } from "lucide-svelte";
 
+  import { Button } from "$lib/tallao";
+
   interface Props {
     value?: string;
     onChange?: (value: string) => void;
@@ -406,77 +408,85 @@
 <div class="relative flex flex-col gap-2">
   <!-- Toolbar -->
   <div
-    class="flex items-center gap-1 p-1.5 rounded-lg border border-kitsuden-border bg-kitsuden-card"
+    class="flex flex-wrap items-center gap-1 p-1.5 rounded-lg border border-kitsuden-border bg-kitsuden-card"
   >
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="icon"
       onclick={() => wrapSelection("**", "**")}
-      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      ariaLabel={t("slashCommandEditor.boldCtrlB")}
       title={t("slashCommandEditor.boldCtrlB")}
     >
-      <Bold class="w-4 h-4" />
-    </button>
-    <button
-      type="button"
+      <Bold class="w-4 h-4" aria-hidden="true" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon"
       onclick={() => wrapSelection("*", "*")}
-      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      ariaLabel={t("slashCommandEditor.italicCtrlI")}
       title={t("slashCommandEditor.italicCtrlI")}
     >
-      <Italic class="w-4 h-4" />
-    </button>
-    <button
-      type="button"
+      <Italic class="w-4 h-4" aria-hidden="true" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon"
       onclick={() => wrapSelection("[", "](url)")}
-      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      ariaLabel={t("slashCommandEditor.linkCtrlK")}
       title={t("slashCommandEditor.linkCtrlK")}
     >
-      <Link class="w-4 h-4" />
-    </button>
+      <Link class="w-4 h-4" aria-hidden="true" />
+    </Button>
 
     <div class="w-px h-5 bg-kitsuden-border mx-1"></div>
 
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="icon"
       onclick={() => insertAtCursor("# ")}
-      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      ariaLabel={t("slashCommandEditor.heading1")}
       title={t("slashCommandEditor.heading1")}
     >
-      <Heading class="w-4 h-4" />
-    </button>
-    <button
-      type="button"
+      <Heading class="w-4 h-4" aria-hidden="true" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon"
       onclick={() => insertAtCursor("- ")}
-      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      ariaLabel={t("slashCommandEditor.bulletList")}
       title={t("slashCommandEditor.bulletList")}
     >
-      <List class="w-4 h-4" />
-    </button>
-    <button
-      type="button"
+      <List class="w-4 h-4" aria-hidden="true" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon"
       onclick={() => insertAtCursor("> ")}
-      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      ariaLabel={t("slashCommandEditor.quote")}
       title={t("slashCommandEditor.quote")}
     >
-      <Quote class="w-4 h-4" />
-    </button>
+      <Quote class="w-4 h-4" aria-hidden="true" />
+    </Button>
     {#if onRequestImage}
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="icon"
         onclick={requestImage}
-        class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+        ariaLabel={t("slashCommandEditor.insertLibraryImage")}
         title={t("slashCommandEditor.insertLibraryImage")}
       >
-        <Image class="w-4 h-4" />
-      </button>
+        <Image class="w-4 h-4" aria-hidden="true" />
+      </Button>
     {/if}
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="icon"
       onclick={() => insertAtCursor("```\n\n```")}
-      class="p-1.5 rounded-sm hover:bg-kitsuden-border/50 text-kitsuden-text-dim hover:text-kitsuden-text transition-colors"
+      ariaLabel={t("slashCommandEditor.codeBlock")}
       title={t("slashCommandEditor.codeBlock")}
     >
-      <Code class="w-4 h-4" />
-    </button>
+      <Code class="w-4 h-4" aria-hidden="true" />
+    </Button>
 
     <div class="flex-1"></div>
 

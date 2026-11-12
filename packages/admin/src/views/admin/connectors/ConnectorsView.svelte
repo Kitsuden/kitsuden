@@ -2,10 +2,22 @@
   import Page from "$lib/components/layout/Page.svelte";
   import { confirmDialog } from "$lib/confirm.svelte";
   import {
+    Badge,
     Button,
+    Card,
+    CardContent,
+    CardFooter,
+    CardHeader,
+    CardTitle,
     Dialog,
     EmptyState,
+    Field,
+    Input,
+    Select,
     Skeleton,
+    Spinner,
+    Stat,
+    Switch,
     Table,
     TableBody,
     TableCell,
@@ -20,13 +32,8 @@
     Plus,
     RefreshCw,
     Trash2,
-    Zap,
-    Database as DbIcon,
     Globe,
     TestTube,
-    CheckCircle,
-    XCircle,
-    Loader2,
     X,
     Eye,
     Server,
@@ -236,360 +243,265 @@
   crumbs={[{ label: t("connectorsView.dataConnectors") }]}
 >
   {#snippet actions()}
-    <Button variant="secondary" size="icon" onclick={loadConnectors} ariaLabel={t("common.retry")}>
+    <Button
+      variant="secondary"
+      size="icon"
+      class="connectors-touch"
+      onclick={loadConnectors}
+      ariaLabel={t("common.retry")}
+    >
       <RefreshCw size={16} aria-hidden="true" />
     </Button>
-    <Button onclick={() => (showCreate = true)}>
+    <Button class="connectors-touch" onclick={() => (showCreate = true)}>
       <Plus size={16} aria-hidden="true" />
       {t("connectorsView.newConnector")}
     </Button>
   {/snippet}
-  <div class="space-y-6">
+  <div class="connectors">
     <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="card p-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-lg bg-kitsuden-purple/10 flex items-center justify-center">
-            <Plug class="w-5 h-5 text-kitsuden-purple" />
-          </div>
-          <div>
-            <p class="text-2xl font-bold text-kitsuden-text">{connectors.length}</p>
-            <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-              {t("connectorsView.total")}
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="card p-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-lg bg-kitsuden-accent/10 flex items-center justify-center">
-            <DbIcon class="w-5 h-5 text-kitsuden-accent" />
-          </div>
-          <div>
-            <p class="text-2xl font-bold text-kitsuden-text">
-              {connectors.filter((c) => c.type === "database").length}
-            </p>
-            <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-              {t("connectorsView.databases")}
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="card p-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-lg bg-kitsuden-green/10 flex items-center justify-center">
-            <Globe class="w-5 h-5 text-kitsuden-green" />
-          </div>
-          <div>
-            <p class="text-2xl font-bold text-kitsuden-text">
-              {connectors.filter((c) => c.type === "api").length}
-            </p>
-            <p class="text-xs text-kitsuden-subtle uppercase tracking-wider">
-              {t("connectorsView.apis")}
-            </p>
-          </div>
-        </div>
-      </div>
+    <div class="connectors-stats">
+      <Stat label={t("connectorsView.total")} value={connectors.length} />
+      <Stat
+        label={t("connectorsView.databases")}
+        value={connectors.filter((c) => c.type === "database").length}
+      />
+      <Stat
+        label={t("connectorsView.apis")}
+        value={connectors.filter((c) => c.type === "api").length}
+      />
     </div>
 
     <!-- Create Form -->
     {#if showCreate}
-      <form class="card p-6 border-kitsuden-purple/20 space-y-4" onsubmit={createConnector}>
-        <div class="flex items-center justify-between">
-          <h3 class="font-semibold text-kitsuden-text">{t("connectorsView.newConnector")}</h3>
-          <button
-            type="button"
-            class="p-1 text-kitsuden-subtle hover:text-kitsuden-text"
-            onclick={() => {
-              showCreate = false;
-              resetForm();
-            }}
-          >
-            <X class="w-4 h-4" />
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="formname" class="text-xs text-kitsuden-subtle block mb-1"
-              >{t("common.name2")}</label
+      <Card>
+        <form onsubmit={createConnector}>
+          <CardHeader class="connectors-form-head">
+            <CardTitle level={2}>{t("connectorsView.newConnector")}</CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              ariaLabel={t("common.cancel")}
+              onclick={() => {
+                showCreate = false;
+                resetForm();
+              }}
             >
-            <input
-              id="formname"
-              type="text"
-              bind:value={formName}
-              placeholder={t("connectorsView.eGLegacyMysql")}
-              required
-              class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-            />
-          </div>
-          <div>
-            <label for="formtype" class="text-xs text-kitsuden-subtle block mb-1"
-              >{t("connectorsView.type")}</label
-            >
-            <select
-              id="formtype"
-              bind:value={formType}
-              class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-            >
-              <option value="database">{t("connectorsView.databaseMysqlMariadb")}</option>
-              <option value="api">{t("connectorsView.restApi")}</option>
-            </select>
-          </div>
-        </div>
+              <X size={16} aria-hidden="true" />
+            </Button>
+          </CardHeader>
+          <CardContent class="connectors-form">
+            <div class="connectors-row connectors-row--2">
+              <Field label={t("common.name2")}>
+                <Input
+                  id="formname"
+                  bind:value={formName}
+                  placeholder={t("connectorsView.eGLegacyMysql")}
+                  required
+                />
+              </Field>
+              <Field label={t("connectorsView.type")}>
+                <Select
+                  id="formtype"
+                  value={formType}
+                  onchange={(e: Event) =>
+                    (formType = (e.currentTarget as HTMLSelectElement).value as "api" | "database")}
+                  options={[
+                    { value: "database", label: t("connectorsView.databaseMysqlMariadb") },
+                    { value: "api", label: t("connectorsView.restApi") },
+                  ]}
+                />
+              </Field>
+            </div>
 
-        {#if formType === "database"}
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="md:col-span-2">
-              <label for="formhost" class="text-xs text-kitsuden-subtle block mb-1"
-                >{t("connectorsView.host")}</label
-              >
-              <input
-                id="formhost"
-                type="text"
-                bind:value={formHost}
-                placeholder="localhost"
-                class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-              />
-            </div>
-            <div>
-              <label for="formport" class="text-xs text-kitsuden-subtle block mb-1"
-                >{t("connectorsView.port")}</label
-              >
-              <input
-                id="formport"
-                type="text"
-                bind:value={formPort}
-                placeholder="3306"
-                class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-              />
-            </div>
-            <div>
-              <label for="formdialect" class="text-xs text-kitsuden-subtle block mb-1"
-                >{t("connectorsView.dialect")}</label
-              >
-              <select
-                id="formdialect"
-                bind:value={formDialect}
-                class="w-full bg-kitsuden-bg text-kitsuden-text border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-              >
-                <option value="mysql">{t("connectorsView.mysql")}</option>
-                <option value="mariadb">{t("connectorsView.mariadb")}</option>
-              </select>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label for="formdbname" class="text-xs text-kitsuden-subtle block mb-1"
-                >{t("connectorsView.database")}</label
-              >
-              <input
-                id="formdbname"
-                type="text"
-                bind:value={formDbName}
-                placeholder="my_database"
-                required
-                class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-              />
-            </div>
-            <div>
-              <label for="formuser" class="text-xs text-kitsuden-subtle block mb-1"
-                >{t("connectorsView.user")}</label
-              >
-              <input
-                id="formuser"
-                type="text"
-                bind:value={formUser}
-                placeholder="root"
-                required
-                class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-              />
-            </div>
-            <div>
-              <label for="formpass" class="text-xs text-kitsuden-subtle block mb-1"
-                >{t("common.password")}</label
-              >
-              <input
-                id="formpass"
-                type="password"
-                bind:value={formPass}
-                placeholder="********"
-                class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-              />
-            </div>
-          </div>
-        {:else}
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="formbaseurl" class="text-xs text-kitsuden-subtle block mb-1"
-                >{t("connectorsView.baseUrl")}</label
-              >
-              <input
-                id="formbaseurl"
-                type="url"
-                bind:value={formBaseUrl}
-                placeholder="https://api.example.com/v1"
-                required
-                class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-              />
-            </div>
-            <div>
-              <label for="formapikey" class="text-xs text-kitsuden-subtle block mb-1"
-                >{t("connectorsView.apiKey")}</label
-              >
-              <input
-                id="formapikey"
-                type="password"
-                bind:value={formApiKey}
-                placeholder="sk-..."
-                class="w-full bg-kitsuden-bg text-kitsuden-text placeholder:text-kitsuden-subtle border border-kitsuden-input rounded-lg px-3 py-2 text-sm focus:border-kitsuden-accent/50 focus:outline-hidden"
-              />
-            </div>
-          </div>
-        {/if}
-
-        <div class="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            class="btn-secondary-sm"
-            onclick={() => {
-              showCreate = false;
-              resetForm();
-            }}>{t("common.cancel")}</button
-          >
-          <button type="submit" class="btn-primary" disabled={creating || !formName}>
-            {#if creating}<Loader2 class="w-4 h-4 animate-spin" />{/if}
-            {t("connectorsView.createConnector")}
-          </button>
-        </div>
-      </form>
+            {#if formType === "database"}
+              <div class="connectors-row connectors-row--4">
+                <Field label={t("connectorsView.host")} class="connectors-span-2">
+                  <Input id="formhost" bind:value={formHost} placeholder="localhost" />
+                </Field>
+                <Field label={t("connectorsView.port")}>
+                  <Input
+                    id="formport"
+                    inputmode="numeric"
+                    bind:value={formPort}
+                    placeholder="3306"
+                  />
+                </Field>
+                <Field label={t("connectorsView.dialect")}>
+                  <Select
+                    id="formdialect"
+                    bind:value={formDialect}
+                    options={[
+                      { value: "mysql", label: t("connectorsView.mysql") },
+                      { value: "mariadb", label: t("connectorsView.mariadb") },
+                    ]}
+                  />
+                </Field>
+              </div>
+              <div class="connectors-row connectors-row--3">
+                <Field label={t("connectorsView.database")}>
+                  <Input
+                    id="formdbname"
+                    bind:value={formDbName}
+                    placeholder="my_database"
+                    required
+                  />
+                </Field>
+                <Field label={t("connectorsView.user")}>
+                  <Input id="formuser" bind:value={formUser} placeholder="root" required />
+                </Field>
+                <Field label={t("common.password")}>
+                  <Input
+                    id="formpass"
+                    type="password"
+                    bind:value={formPass}
+                    placeholder="********"
+                    autocomplete="new-password"
+                  />
+                </Field>
+              </div>
+            {:else}
+              <div class="connectors-row connectors-row--2">
+                <Field label={t("connectorsView.baseUrl")}>
+                  <Input
+                    id="formbaseurl"
+                    type="url"
+                    bind:value={formBaseUrl}
+                    placeholder="https://api.example.com/v1"
+                    required
+                  />
+                </Field>
+                <Field label={t("connectorsView.apiKey")}>
+                  <Input
+                    id="formapikey"
+                    type="password"
+                    bind:value={formApiKey}
+                    placeholder="sk-..."
+                    autocomplete="new-password"
+                  />
+                </Field>
+              </div>
+            {/if}
+          </CardContent>
+          <CardFooter class="connectors-form-foot">
+            <Button
+              variant="ghost"
+              onclick={() => {
+                showCreate = false;
+                resetForm();
+              }}>{t("common.cancel")}</Button
+            >
+            <Button type="submit" loading={creating} disabled={creating || !formName}>
+              {t("connectorsView.createConnector")}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
     {/if}
 
     <!-- Connectors List -->
     {#if loading}
-      <div class="flex justify-center py-20">
-        <div
-          class="w-6 h-6 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin"
-        ></div>
+      <div class="connectors-loading">
+        <Spinner />
       </div>
     {:else if connectors.length === 0 && !showCreate}
-      <div class="card p-16 text-center">
-        <div class="flex justify-center mb-4">
-          <div
-            class="w-16 h-16 rounded-full bg-kitsuden-purple/10 flex items-center justify-center"
-          >
-            <Plug class="w-8 h-8 text-kitsuden-purple" />
-          </div>
-        </div>
-        <h3 class="text-lg font-medium text-kitsuden-text mb-2">
-          {t("connectorsView.noConnectorsConfigured")}
-        </h3>
-        <p class="text-sm text-kitsuden-subtle mb-4">
-          {t("connectorsView.connectExternalDatabasesOrApis")}
-        </p>
-        <button onclick={() => (showCreate = true)} class="btn-primary">
-          <Plus class="w-4 h-4" />
-          {t("connectorsView.createFirstConnector")}
-        </button>
-      </div>
+      <Card>
+        <EmptyState
+          icon={emptyIcon}
+          title={t("connectorsView.noConnectorsConfigured")}
+          description={t("connectorsView.connectExternalDatabasesOrApis")}
+          actionLabel={t("connectorsView.createFirstConnector")}
+          onAction={() => (showCreate = true)}
+        />
+      </Card>
     {:else}
-      <div class="space-y-3">
+      <ul class="connectors-list">
         {#each connectors as conn}
-          <div class="card p-4">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div class="flex min-w-0 items-center gap-4">
-                <div
-                  class="w-10 h-10 rounded-lg flex items-center justify-center {conn.type ===
-                  'database'
-                    ? 'bg-kitsuden-accent/10'
-                    : 'bg-kitsuden-green/10'}"
-                >
-                  {#if conn.type === "database"}
-                    <Server class="w-5 h-5 text-kitsuden-accent" />
-                  {:else}
-                    <Globe class="w-5 h-5 text-kitsuden-green" />
-                  {/if}
-                </div>
-                <div>
-                  <h3 class="font-semibold text-kitsuden-text">{conn.name}</h3>
-                  <div class="flex items-center gap-3 mt-0.5 text-xs text-kitsuden-subtle">
-                    <span
-                      class="uppercase font-medium {conn.type === 'database'
-                        ? 'text-kitsuden-accent'
-                        : 'text-kitsuden-green'}">{conn.type}</span
-                    >
-                    {#if conn.config?.host}
-                      <span>{conn.config.host}:{conn.config.port || 3306}</span>
-                    {:else if conn.config?.baseUrl}
-                      <span class="truncate max-w-[200px]">{conn.config.baseUrl}</span>
+          <li>
+            <Card>
+              <CardContent class="connector">
+                <div class="connector-main">
+                  <div
+                    class="connector-icon {conn.type === 'database'
+                      ? 'connector-icon--db'
+                      : 'connector-icon--api'}"
+                    aria-hidden="true"
+                  >
+                    {#if conn.type === "database"}
+                      <Server size={20} />
+                    {:else}
+                      <Globe size={20} />
                     {/if}
-                    {#if conn.lastSyncedAt}
-                      <span>{t("connectorsView.lastSync")} {formatDate(conn.lastSyncedAt)}</span>
+                  </div>
+                  <div class="connector-text">
+                    <h3>{conn.name}</h3>
+                    <div class="connector-meta">
+                      <Badge variant={conn.type === "database" ? "accent" : "success"}
+                        >{conn.type}</Badge
+                      >
+                      {#if !conn.enabled}
+                        <Badge>{t("connectorsView.disabled")}</Badge>
+                      {/if}
+                      {#if conn.config?.host}
+                        <span class="connector-addr"
+                          >{conn.config.host}:{conn.config.port || 3306}</span
+                        >
+                      {:else if conn.config?.baseUrl}
+                        <span class="connector-addr">{conn.config.baseUrl}</span>
+                      {/if}
+                      {#if conn.lastSyncedAt}
+                        <span>{t("connectorsView.lastSync")} {formatDate(conn.lastSyncedAt)}</span>
+                      {/if}
+                    </div>
+                    {#if testResults[conn.id]}
+                      <Badge
+                        variant={testResults[conn.id].ok ? "success" : "error"}
+                        dot
+                        class="connector-test"
+                      >
+                        {testResults[conn.id].message}
+                      </Badge>
                     {/if}
                   </div>
                 </div>
-              </div>
 
-              <div class="flex items-center gap-2">
-                <!-- Test Result -->
-                {#if testResults[conn.id]}
-                  <span
-                    class="text-xs px-2 py-1 rounded-full {testResults[conn.id].ok
-                      ? 'bg-kitsuden-green/10 text-kitsuden-green'
-                      : 'bg-kitsuden-accent-2/10 text-kitsuden-accent-2'}"
+                <div class="connector-actions">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={testing === conn.id}
+                    disabled={testing === conn.id}
+                    onclick={() => testConnection(conn.id)}
                   >
-                    {#if testResults[conn.id].ok}
-                      <CheckCircle class="w-3 h-3 inline mr-1" />
-                    {:else}
-                      <XCircle class="w-3 h-3 inline mr-1" />
-                    {/if}
-                    {testResults[conn.id].message}
-                  </span>
-                {/if}
-
-                <button
-                  class="btn-secondary-sm"
-                  onclick={() => testConnection(conn.id)}
-                  disabled={testing === conn.id}
-                  title={t("connectorsView.testConnection")}
-                >
-                  {#if testing === conn.id}
-                    <Loader2 class="w-4 h-4 animate-spin" />
-                  {:else}
-                    <TestTube class="w-4 h-4" />
-                  {/if}
-                </button>
-
-                <button
-                  class="btn-secondary-sm"
-                  onclick={() => browseConnector(conn.id)}
-                  title={t("connectorsView.browseData")}
-                >
-                  <Eye class="w-4 h-4" />
-                </button>
-
-                <button
-                  class="btn-secondary-sm"
-                  onclick={() => toggleConnector(conn.id, conn.enabled)}
-                  title={conn.enabled ? t("connectorsView.disable") : t("connectorsView.enable")}
-                >
-                  <Zap
-                    class="w-4 h-4 {conn.enabled ? 'text-kitsuden-green' : 'text-kitsuden-subtle'}"
+                    {#if testing !== conn.id}<TestTube size={14} aria-hidden="true" />{/if}
+                    {t("connectorsView.testConnection")}
+                  </Button>
+                  <Button variant="secondary" size="sm" onclick={() => browseConnector(conn.id)}>
+                    <Eye size={14} aria-hidden="true" />
+                    {t("connectorsView.browseData")}
+                  </Button>
+                  <Switch
+                    size="sm"
+                    checked={conn.enabled}
+                    label={conn.enabled
+                      ? t("connectorsView.enabled")
+                      : t("connectorsView.disabled")}
+                    onchange={() => toggleConnector(conn.id, conn.enabled)}
                   />
-                </button>
-
-                <button
-                  class="p-2 rounded-lg hover:bg-kitsuden-accent-2/10 text-kitsuden-text-dim hover:text-kitsuden-accent-2 transition-colors"
-                  onclick={() => deleteConnector(conn.id)}
-                  title={t("common.delete")}
-                >
-                  <Trash2 class="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
+                  <Button
+                    variant="danger-ghost"
+                    size="icon"
+                    ariaLabel={t("common.delete")}
+                    title={t("common.delete")}
+                    onclick={() => deleteConnector(conn.id)}
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </li>
         {/each}
-      </div>
+      </ul>
     {/if}
 
     <!-- Browse Modal -->
@@ -661,3 +573,152 @@
     </Dialog>
   </div>
 </Page>
+
+{#snippet emptyIcon()}
+  <Plug size={32} aria-hidden="true" />
+{/snippet}
+
+<style>
+  .connectors {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+  .connectors-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    gap: 1rem;
+  }
+  :global(.connectors-form-head) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  :global(.connectors-form) {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .connectors-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  @media (min-width: 768px) {
+    .connectors-row--2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .connectors-row--3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .connectors-row--4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    :global(.connectors-span-2) {
+      grid-column: span 2;
+    }
+  }
+  :global(.connectors-form-foot) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .connectors-loading {
+    display: flex;
+    justify-content: center;
+    padding-block: 5rem;
+  }
+  .connectors-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  :global(.connector) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+  }
+  .connector-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    flex: 1 1 18rem;
+    min-width: 0;
+  }
+  .connector-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--ta-radius-lg);
+  }
+  .connector-icon--db {
+    background: rgb(var(--ta-accent) / 0.1);
+    color: rgb(var(--ta-accent));
+  }
+  .connector-icon--api {
+    background: rgb(var(--ta-success) / 0.1);
+    color: rgb(var(--ta-success));
+  }
+  .connector-text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  .connector-text h3 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .connector-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+    min-width: 0;
+  }
+  .connector-addr {
+    overflow-wrap: anywhere;
+    font-family: var(--ta-font-mono, monospace);
+  }
+  .connector-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  /* Phone: every control reaches a 44px touch target. */
+  @media (max-width: 767px) {
+    :global(.connectors-touch),
+    .connectors :global(.ta-btn),
+    .connectors :global(.ta-input),
+    .connectors :global(.ta-select) {
+      min-height: 2.75rem;
+    }
+    :global(.connectors-touch.ta-btn--icon),
+    .connectors :global(.ta-btn--icon) {
+      min-width: 2.75rem;
+    }
+    /* The switch's text toggles it too: it is the 44px target beside the small track. */
+    .connector-actions :global(.ta-switch-label) {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.75rem;
+    }
+  }
+</style>

@@ -11,9 +11,16 @@
 -->
 <script lang="ts">
   import {
+    Alert,
+    Badge,
     Button,
     Card,
+    Checkbox,
+    SaveBar,
+    Select,
     Skeleton,
+    Tabs,
+    Textarea,
     Table,
     TableHeader,
     TableBody,
@@ -23,7 +30,7 @@
   } from "$lib/tallao";
   import UnsavedGuard from "$lib/components/feedback/UnsavedGuard.svelte";
   import { t } from "$lib/i18n";
-  import { Check, Ban, ShieldCheck, RotateCcw, Save } from "lucide-svelte";
+  import { Check, Ban, ShieldCheck } from "lucide-svelte";
   import { onMount } from "svelte";
   import { toast } from "$lib/tallao";
   import { getAccessCatalog, getAgentAccess, setAgentScopes } from "$lib/services/agents";
@@ -62,14 +69,33 @@
     }
   }
 
-  const changed = $derived(access ? draft.join("\n") !== access.scopes.join("\n") : false);
+  const parseRaw = (text: string) =>
+    text
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+  // In raw mode the textarea is the draft until it is saved or the mode changes.
+  const changed = $derived(
+    access
+      ? (mode === "raw" ? parseRaw(rawValue) : draft).join("\n") !== access.scopes.join("\n")
+      : false
+  );
+
+  function switchMode(next: string) {
+    if (mode === "raw") draft = parseRaw(rawValue);
+    mode = next as typeof mode;
+    rawValue = draft.join("\n");
+  }
+
+  const CHOICES = $derived([
+    { value: "none", label: t("agentAccess.choiceNone") },
+    { value: "allow", label: t("agentAccess.choiceAllow") },
+    { value: "deny", label: t("agentAccess.choiceDeny") },
+  ]);
 
   async function save() {
-    if (mode === "raw")
-      draft = rawValue
-        .split(/\r?\n/)
-        .map((s) => s.trim())
-        .filter(Boolean);
+    if (mode === "raw") draft = parseRaw(rawValue);
     try {
       saving = true;
       access = await setAgentScopes(agentId, draft);
@@ -170,26 +196,27 @@
   };
 
   // ── Merged view ──
-  const STATUS: Record<AccessState, { text: () => string; kind: string }> = {
+  type Tone = "success" | "error" | "info" | "warning" | "default";
+  const STATUS: Record<AccessState, { text: () => string; kind: Tone }> = {
     granted: {
       text: () => t("agentAccess.stateGranted"),
-      kind: "bg-kitsuden-green/15 text-kitsuden-green",
+      kind: "success",
     },
     denied: {
       text: () => t("agentAccess.stateDenied"),
-      kind: "bg-kitsuden-danger/15 text-kitsuden-danger",
+      kind: "error",
     },
     open: {
       text: () => t("agentAccess.stateOpen"),
-      kind: "bg-kitsuden-info/15 text-kitsuden-info",
+      kind: "info",
     },
     policy: {
       text: () => t("agentAccess.statePolicy"),
-      kind: "bg-kitsuden-amber/15 text-kitsuden-amber",
+      kind: "warning",
     },
     none: {
       text: () => t("agentAccess.stateNone"),
-      kind: "bg-kitsuden-muted/40 text-kitsuden-text-dim",
+      kind: "default",
     },
   };
 
@@ -231,46 +258,21 @@
   {#if loading}
     <Skeleton lines={3} />
   {:else if error}
-    <div
-      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
-    >
-      {error}
-    </div>
+    <Alert variant="error">{error}</Alert>
   {:else if catalog && access}
-    <!-- Bar: mode + save -->
-    <div class="flex flex-wrap items-center gap-3">
-      <div class="flex items-center gap-1 bg-kitsuden-card p-1 rounded-lg" role="tablist">
-        {#each [["broad", () => t("agentAccess.modeBroad")], ["fine", () => t("agentAccess.modeFine")], ["raw", () => t("agentAccess.modeRaw")]] as [id, text] (id)}
-          <button
-            role="tab"
-            aria-selected={mode === id}
-            data-testid="mode-{id}"
-            class="px-3 py-1.5 text-sm rounded-md transition-colors {mode === id
-              ? 'bg-kitsuden-border text-kitsuden-text'
-              : 'text-kitsuden-subtle hover:text-kitsuden-text'}"
-            onclick={() => {
-              if (mode === "raw")
-                draft = rawValue
-                  .split(/\r?\n/)
-                  .map((s) => s.trim())
-                  .filter(Boolean);
-              mode = id as typeof mode;
-              rawValue = draft.join("\n");
-            }}>{(text as () => string)()}</button
-          >
-        {/each}
-      </div>
-      <div class="flex-1"></div>
-      {#if changed}
-        <span class="text-xs text-kitsuden-amber">{t("agentAccess.unsaved")}</span>
-        <Button variant="ghost" size="sm" onclick={undo}>
-          <RotateCcw size={14} class="mr-1" />{t("agentAccess.discard")}
-        </Button>
-      {/if}
-      <Button variant="primary" size="sm" loading={saving} onclick={save}>
-        <Save size={14} class="mr-1" />{t("agentAccess.save")}
-      </Button>
-    </div>
+    <!-- Mode -->
+    <Tabs
+      items={[
+        { id: "broad", label: t("agentAccess.modeBroad") },
+        { id: "fine", label: t("agentAccess.modeFine") },
+        { id: "raw", label: t("agentAccess.modeRaw") },
+      ]}
+      value={mode}
+      variant="pills"
+      panels={false}
+      ariaLabel={t("agentAccess.modeLabel")}
+      onchange={switchMode}
+    />
 
     <p class="text-sm text-kitsuden-subtle">{t("agentAccess.unionRule")}</p>
 
@@ -308,13 +310,12 @@
         <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentAccess.broadScopes")}</h3>
         <div class="divide-y divide-kitsuden-border border border-kitsuden-border rounded-lg">
           {#each catalog.broad as b (b.scope)}
-            <label class="flex items-start gap-3 p-3 hover:bg-kitsuden-card/50 cursor-pointer">
-              <input
-                type="checkbox"
-                class="mt-1 w-4 h-4 rounded-sm border-kitsuden-input bg-kitsuden-bg text-kitsuden-accent"
-                checked={draft.includes(b.scope)}
-                onchange={(e) => toggle(b.scope, (e.currentTarget as HTMLInputElement).checked)}
-              />
+            <Checkbox
+              class="flex items-start gap-3 p-3 hover:bg-kitsuden-card/50"
+              checked={draft.includes(b.scope)}
+              onchange={(e: Event) =>
+                toggle(b.scope, (e.currentTarget as HTMLInputElement).checked)}
+            >
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
                   <code class="text-xs text-kitsuden-accent">{b.scope}</code>
@@ -344,7 +345,7 @@
                   </details>
                 {/if}
               </div>
-            </label>
+            </Checkbox>
           {/each}
         </div>
       </section>
@@ -377,37 +378,30 @@
                   class="flex flex-wrap items-center gap-2 px-3 py-2 min-w-0"
                   data-testid="op-{o.scope}"
                 >
-                  <span
-                    class="text-xs font-mono w-14 shrink-0 text-center rounded px-1 py-0.5 {o.write
-                      ? 'bg-kitsuden-amber/10 text-kitsuden-amber'
-                      : 'bg-kitsuden-info/10 text-kitsuden-info'}">{o.method}</span
+                  <Badge variant={o.write ? "warning" : "info"} class="font-mono shrink-0"
+                    >{o.method}</Badge
                   >
                   <div class="min-w-0 flex-1">
                     <div class="text-sm text-kitsuden-text truncate">{o.summary}</div>
                     <code class="text-[11px] text-kitsuden-subtle break-all">{o.scope}</code>
                   </div>
                   {#if o.sensitive}
-                    <span
-                      class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-danger/10 text-kitsuden-danger"
-                      >{t("agentAccess.sensitive")}</span
-                    >
+                    <Badge variant="error">{t("agentAccess.sensitive")}</Badge>
                   {/if}
                   {#if o.cost !== 1}
                     <span class="text-xs text-kitsuden-subtle"
                       >{t("agentAccess.cost", { n: o.cost })}</span
                     >
                   {/if}
-                  <select
-                    class="px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
+                  <Select
+                    size="sm"
+                    width="auto"
+                    options={CHOICES}
                     aria-label={t("agentAccess.permissionFor", { scope: o.scope })}
                     value={choiceOf(o.scope)}
-                    onchange={(e) =>
+                    onchange={(e: Event) =>
                       choose(o.scope, (e.currentTarget as HTMLSelectElement).value as Choice)}
-                  >
-                    <option value="none">{t("agentAccess.choiceNone")}</option>
-                    <option value="allow">{t("agentAccess.choiceAllow")}</option>
-                    <option value="deny">{t("agentAccess.choiceDeny")}</option>
-                  </select>
+                  />
                 </div>
               {/each}
             </div>
@@ -426,7 +420,7 @@
         {#if catalog.datasets.length === 0}
           <p class="text-sm text-kitsuden-subtle">{t("agentAccess.noDatasets")}</p>
         {:else}
-          <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
+          <div class="min-w-0">
             <Table class="w-full text-sm">
               <TableHeader class="text-xs text-kitsuden-subtle">
                 <TableRow>
@@ -445,22 +439,20 @@
                     </TableCell>
                     {#each ACTIONS as a (a)}
                       <TableCell class="px-3 py-2">
-                        <select
-                          class="px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
+                        <Select
+                          size="sm"
+                          width="auto"
+                          options={CHOICES}
                           aria-label={t("agentAccess.permissionFor", {
                             scope: `datasets:${d.slug}:${a}`,
                           })}
                           value={choiceOf(`datasets:${d.slug}:${a}`)}
-                          onchange={(e) =>
+                          onchange={(e: Event) =>
                             choose(
                               `datasets:${d.slug}:${a}`,
                               (e.currentTarget as HTMLSelectElement).value as Choice
                             )}
-                        >
-                          <option value="none">{t("agentAccess.choiceNone")}</option>
-                          <option value="allow">{t("agentAccess.choiceAllow")}</option>
-                          <option value="deny">{t("agentAccess.choiceDeny")}</option>
-                        </select>
+                        />
                       </TableCell>
                     {/each}
                   </TableRow>
@@ -476,12 +468,7 @@
           >{t("agentAccess.rawScopes")}</label
         >
         <p class="text-xs text-kitsuden-subtle">{t("agentAccess.rawHelp")}</p>
-        <textarea
-          id="raw-scopes"
-          bind:value={rawValue}
-          rows={10}
-          class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm font-mono text-kitsuden-text"
-        ></textarea>
+        <Textarea id="raw-scopes" bind:value={rawValue} rows={10} mono />
       </section>
     {/if}
 
@@ -548,21 +535,19 @@
                 class="px-3 py-2 cursor-pointer text-sm text-kitsuden-text flex flex-wrap items-center gap-2"
               >
                 <span class="font-medium">{g.kon}</span>
-                <span class="text-xs px-1.5 py-0.5 rounded-sm {STATUS.granted.kind}"
-                  >{t("agentAccess.groupGranted", { n: g.granted })}</span
+                <Badge variant={STATUS.granted.kind}
+                  >{t("agentAccess.groupGranted", { n: g.granted })}</Badge
                 >
                 {#if g.deniedMany}
-                  <span class="text-xs px-1.5 py-0.5 rounded-sm {STATUS.denied.kind}"
-                    >{t("agentAccess.groupDenied", { n: g.deniedMany })}</span
+                  <Badge variant={STATUS.denied.kind}
+                    >{t("agentAccess.groupDenied", { n: g.deniedMany })}</Badge
                   >
                 {/if}
               </summary>
               <div class="divide-y divide-kitsuden-border/70 border-t border-kitsuden-border">
                 {#each g.ops as o (o.scope)}
                   <div class="flex flex-wrap items-center gap-2 px-3 py-2 text-sm min-w-0">
-                    <span class="text-xs px-1.5 py-0.5 rounded-sm {STATUS[o.state].kind}"
-                      >{STATUS[o.state].text()}</span
-                    >
+                    <Badge variant={STATUS[o.state].kind}>{STATUS[o.state].text()}</Badge>
                     <span class="font-mono text-[11px] text-kitsuden-subtle">{o.method}</span>
                     <span class="text-kitsuden-text truncate min-w-0">{o.path}</span>
                     {#if o.by}<code class="ml-auto text-[11px] text-kitsuden-subtle"
@@ -579,7 +564,7 @@
       {/if}
 
       {#if access.datasets.length}
-        <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
+        <div class="min-w-0">
           <Table class="w-full text-sm">
             <TableHeader class="text-xs text-kitsuden-subtle">
               <TableRow>
@@ -597,9 +582,8 @@
                   >
                   {#each ACTIONS as a (a)}
                     <TableCell class="px-3 py-2">
-                      <span
-                        class="text-xs px-1.5 py-0.5 rounded-sm {STATUS[d[a].state].kind}"
-                        title={d[a].by ?? ""}>{STATUS[d[a].state].text()}</span
+                      <Badge variant={STATUS[d[a].state].kind} title={d[a].by ?? ""}
+                        >{STATUS[d[a].state].text()}</Badge
                       >
                     </TableCell>
                   {/each}
@@ -610,5 +594,16 @@
         </div>
       {/if}
     </section>
+
+    <SaveBar
+      dirty={changed}
+      {saving}
+      disableWhenClean
+      saveLabel={t("agentAccess.save")}
+      dirtyText={t("agentAccess.unsaved")}
+      cancelLabel={t("agentAccess.discard")}
+      onSave={save}
+      onCancel={changed ? undo : undefined}
+    />
   {/if}
 </div>

@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { toCsv } from "./csv";
 import {
+  changeFields,
   diffRecords,
   historyLine,
   proposalChanges,
@@ -657,5 +658,102 @@ describe("history of a record", () => {
     const pending = historyLine({ ...event!, status: "pending" }, t, (iso) => iso);
     expect(pending.title).toContain("record.agentAsks");
     expect(pending.tone).toBe("warning");
+  });
+});
+
+describe("recorded changes in the history", () => {
+  const t = (key: string, params?: Record<string, unknown>) =>
+    `${key}${params ? ` ${JSON.stringify(params)}` : ""}`;
+  const change = (over: Record<string, unknown> = {}) => ({
+    id: "c1",
+    action: "update" as const,
+    at: "2026-11-05T10:00:00.000Z",
+    actor: { type: "user" as const, id: "u1", name: "Ana" },
+    changes: [
+      { field: "data.price", before: 19.5, after: 21 },
+      { field: "data.api_token", redacted: true },
+    ],
+    truncated: false,
+    proposalId: null,
+    ...over,
+  });
+
+  it("maps fields: an entry's own field by its key, a secret without its value", () => {
+    expect(changeFields(change(), { price: "Price" }, "hidden")).toEqual([
+      { field: "price", label: "Price", before: 19.5, after: 21 },
+      { field: "api_token", label: undefined, before: "hidden", after: "hidden" },
+    ]);
+    expect(
+      changeFields(change({ action: "create", changes: [{ field: "name", after: "x" }] }))
+    ).toEqual([{ field: "name", label: undefined, before: null, after: "x" }]);
+  });
+
+  it("merges with the dates: a recorded create replaces the row's own, newest first", () => {
+    const events = recordHistory({
+      id: "e1",
+      apiPath: "/api/datasets/d1/entries/e1",
+      about: {
+        created: "2026-11-01T09:00:00.000Z",
+        updated: "2026-11-05T10:00:01.000Z",
+      },
+      changes: [
+        change(),
+        change({
+          id: "c0",
+          action: "create",
+          at: "2026-11-01T09:00:00.000Z",
+          changes: [{ field: "title", after: "A" }],
+        }),
+      ],
+    });
+    // No synthetic "created" (recorded) and no "updated" (it is the newest change).
+    expect(events.map((e) => [e.kind, e.action])).toEqual([
+      ["change", "update"],
+      ["change", "create"],
+    ]);
+  });
+
+  it("a record changed before the history existed still shows its dates", () => {
+    const events = recordHistory({
+      id: "e1",
+      apiPath: "/x/e1",
+      about: { created: "2026-01-01T00:00:00.000Z", updated: "2026-02-01T00:00:00.000Z" },
+      changes: [],
+    });
+    expect(events.map((e) => e.kind)).toEqual(["updated", "created"]);
+  });
+
+  it("an agent's change is tagged and named; a person's names the person", () => {
+    const [agentEvent] = recordHistory({
+      id: "e1",
+      apiPath: "/x/e1",
+      about: {},
+      changes: [change({ actor: { type: "agent", id: "ag1", name: "Curator" } })],
+    });
+    const line = historyLine(agentEvent!, t, (iso) => iso.slice(0, 10));
+    expect(line.title).toBe('record.agentUpdated {"agent":"Curator"}');
+    expect(line.tag).toBe("record.tagAgent");
+
+    const [person] = recordHistory({
+      id: "e1",
+      apiPath: "/x/e1",
+      about: {},
+      changes: [change({ action: "delete", changes: [] })],
+    });
+    const deleted = historyLine(person!, t, (iso) => iso);
+    expect(deleted.title).toBe('record.changeDeletedBy {"who":"Ana"}');
+    expect(deleted.tag).toBe("record.tagDelete");
+    expect(deleted.tone).toBe("error");
+  });
+
+  it("an approved proposal's write is shown once, as the proposal", () => {
+    const events = recordHistory({
+      id: "e1",
+      apiPath: "/api/datasets/d1/entries/e1",
+      about: {},
+      proposals: [proposal()],
+      changes: [change({ proposalId: proposal().id })],
+    });
+    expect(events.map((e) => e.kind)).toEqual(["proposal"]);
   });
 });

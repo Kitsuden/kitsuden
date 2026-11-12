@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Switch, Button } from "$lib/tallao";
+  import { Switch, Button, Field, Input, Label, NumberInput, Select, Textarea } from "$lib/tallao";
   import { t } from "$lib/i18n";
   /**
    * BlockEditor.svelte — Edit form for a single block's data
@@ -37,6 +37,11 @@
   }
 
   const { block, onUpdate, onDelete, onClose }: Props = $props();
+
+  const uid = $props.id();
+  /** The text of the control an event came from. */
+  const valueOf = (e: Event) =>
+    (e.currentTarget as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value;
 
   /**
    * Which field is waiting for an image. `null` = the picker is closed.
@@ -259,7 +264,9 @@
           <p class="text-xs text-kitsuden-subtle font-mono">{block.type}</p>
         </div>
       </div>
-      <Button onclick={onClose} variant="ghost" size="icon"><X class="w-4 h-4" /></Button>
+      <Button onclick={onClose} variant="ghost" size="icon" ariaLabel={t("blockEditor.close")}
+        ><X class="w-4 h-4" /></Button
+      >
     </div>
   </div>
 
@@ -269,46 +276,38 @@
       <div class="space-y-1.5">
         <!-- Text -->
         {#if field.type === "text"}
-          <label class="label block"
-            >{field.label}
-            {#if field.required}<span class="text-kitsuden-accent-2">*</span>{/if}</label
-          >
-          <input
-            value={block.data[field.key] || ""}
-            oninput={(e) => updateField(field.key, e.currentTarget.value)}
-            type="text"
-            placeholder={field.placeholder}
-            class="input"
-          />
+          <Field label={field.label} required={field.required}>
+            <Input
+              value={block.data[field.key] || ""}
+              oninput={(e: Event) => updateField(field.key, valueOf(e))}
+              placeholder={field.placeholder}
+            />
+          </Field>
         {/if}
 
         <!-- Textarea -->
         {#if field.type === "textarea"}
-          <label class="label block"
-            >{field.label}
-            {#if field.required}<span class="text-kitsuden-accent-2">*</span>{/if}</label
-          >
-          <textarea
-            value={block.data[field.key] || ""}
-            oninput={(e) => updateField(field.key, e.currentTarget.value)}
-            placeholder={field.placeholder}
-            rows="4"
-            class="textarea"></textarea>
+          <Field label={field.label} required={field.required}>
+            <Textarea
+              value={block.data[field.key] || ""}
+              oninput={(e: Event) => updateField(field.key, valueOf(e))}
+              placeholder={field.placeholder}
+              rows={4}
+            />
+          </Field>
         {/if}
 
         <!-- URL / Image -->
         {#if field.type === "url" || field.type === "image"}
-          <label class="label block"
-            >{field.label}
-            {#if field.required}<span class="text-kitsuden-accent-2">*</span>{/if}</label
-          >
+          <Label for="{uid}-{field.key}" required={field.required}>{field.label}</Label>
           <div class="flex items-center gap-2">
-            <input
+            <Input
+              id="{uid}-{field.key}"
               value={block.data[field.key] || ""}
-              oninput={(e) => updateField(field.key, e.currentTarget.value)}
+              oninput={(e: Event) => updateField(field.key, valueOf(e))}
               type="url"
               placeholder={field.placeholder || "https://"}
-              class="input flex-1"
+              class="flex-1 min-w-0"
             />
             <!--
               ── THE BUTTON THAT WAS MISSING ─────────────────────────────────
@@ -344,19 +343,16 @@
 
         <!-- Select -->
         {#if field.type === "select"}
-          <label class="label block"
-            >{field.label}
-            {#if field.required}<span class="text-kitsuden-accent-2">*</span>{/if}</label
-          >
-          <select
-            value={block.data[field.key] || ""}
-            onchange={(e) => updateField(field.key, e.currentTarget.value)}
-            class="select"
-          >
-            {#each field.options || [] as opt}
-              <option value={opt.value}>{opt.label}</option>
-            {/each}
-          </select>
+          <Field label={field.label} required={field.required}>
+            <Select
+              value={block.data[field.key] || ""}
+              onchange={(e: Event) => updateField(field.key, valueOf(e))}
+            >
+              {#each field.options || [] as opt}
+                <option value={opt.value}>{opt.label}</option>
+              {/each}
+            </Select>
+          </Field>
         {/if}
 
         <!-- Number -->
@@ -367,21 +363,18 @@
           wrong gives no error: the page is saved and comes out without the tier list.
         -->
         {#if field.type === "remote-select"}
-          <label class="label block"
-            >{field.label}
-            {#if field.required}<span class="text-kitsuden-accent-2">*</span>{/if}</label
-          >
           {#if field.source}
-            <select
-              value={block.data[field.key] || ""}
-              onchange={(e) => updateField(field.key, e.currentTarget.value)}
-              class="select"
-            >
-              <option value="">{t("blockEditor.chooses")}</option>
-              {#each remoteOptions[field.key] || [] as opt}
-                <option value={opt.value}>{opt.label}</option>
-              {/each}
-            </select>
+            <Field label={field.label} required={field.required}>
+              <Select
+                value={block.data[field.key] || ""}
+                onchange={(e: Event) => updateField(field.key, valueOf(e))}
+              >
+                <option value="">{t("blockEditor.chooses")}</option>
+                {#each remoteOptions[field.key] || [] as opt}
+                  <option value={opt.value}>{opt.label}</option>
+                {/each}
+              </Select>
+            </Field>
 
             {#if remoteFailures[field.key]}
               <p class="text-xs text-kitsuden-accent-2 mt-1">
@@ -392,27 +385,25 @@
                 {t("blockEditor.noneCreatedYet")}
               </p>
             {/if}
+          {:else}
+            <span class="block text-xs font-medium text-kitsuden-text-dim">{field.label}</span>
           {/if}
         {/if}
 
         <!-- Number -->
         {#if field.type === "number"}
-          <label class="label block"
-            >{field.label}
-            {#if field.required}<span class="text-kitsuden-accent-2">*</span>{/if}</label
-          >
-          <input
-            value={block.data[field.key] || ""}
-            oninput={(e) => updateField(field.key, Number(e.currentTarget.value))}
-            type="number"
-            class="input"
-          />
+          <Field label={field.label} required={field.required}>
+            <NumberInput
+              value={typeof block.data[field.key] === "number" ? block.data[field.key] : null}
+              onchange={(n) => updateField(field.key, n ?? 0)}
+            />
+          </Field>
         {/if}
 
         <!-- Boolean -->
         {#if field.type === "boolean"}
           <div class="flex items-center justify-between py-1">
-            <label class="text-sm text-kitsuden-text">{field.label}</label>
+            <span class="text-sm text-kitsuden-text" aria-hidden="true">{field.label}</span>
             <Switch
               checked={!!block.data[field.key]}
               ariaLabel={field.label}
@@ -440,7 +431,7 @@
             —it has an alt and a caption per image, plus the order buttons—, so
             a `label` here associates nothing and only misleads the screen reader.
           -->
-          <span class="label block">
+          <span class="block text-xs font-medium text-kitsuden-text-dim">
             {field.label}
             {#if field.required}<span class="text-kitsuden-accent-2">*</span>{/if}
           </span>
@@ -459,17 +450,19 @@
                     class="h-16 w-16 shrink-0 rounded-sm object-cover"
                   />
                   <div class="min-w-0 flex-1 space-y-1">
-                    <input
+                    <Input
                       value={img.alt ?? ""}
-                      oninput={(e) => editImage(field.key, i, "alt", e.currentTarget.value)}
+                      oninput={(e: Event) => editImage(field.key, i, "alt", valueOf(e))}
                       placeholder={t("blockEditor.altTextAccessibilityAndSeo")}
-                      class="input w-full text-xs"
+                      aria-label={t("blockEditor.altTextAccessibilityAndSeo")}
+                      class="text-xs"
                     />
-                    <input
+                    <Input
                       value={img.caption ?? ""}
-                      oninput={(e) => editImage(field.key, i, "caption", e.currentTarget.value)}
+                      oninput={(e: Event) => editImage(field.key, i, "caption", valueOf(e))}
                       placeholder={t("blockEditor.optionalCaption")}
-                      class="input w-full text-xs"
+                      aria-label={t("blockEditor.optionalCaption")}
+                      class="text-xs"
                     />
                   </div>
                   <div class="flex shrink-0 flex-col gap-1">
@@ -481,6 +474,7 @@
                       disabled={i === 0}
                       onclick={() => moveImage(field.key, i, -1)}
                       title={t("blockEditor.upload")}
+                      ariaLabel={t("blockEditor.upload")}
                     >
                       ↑
                     </Button>
@@ -491,6 +485,7 @@
                       disabled={i === images.length - 1}
                       onclick={() => moveImage(field.key, i, 1)}
                       title={t("blockEditor.lower")}
+                      ariaLabel={t("blockEditor.lower")}
                     >
                       ↓
                     </Button>
@@ -500,6 +495,7 @@
                       size="sm"
                       onclick={() => removeImage(field.key, i)}
                       title={t("blockEditor.remove")}
+                      ariaLabel={t("blockEditor.remove")}
                     >
                       <Trash2 class="h-3 w-3" />
                     </Button>
@@ -523,19 +519,16 @@
 
         <!-- JSON -->
         {#if field.type === "json"}
-          <label class="label block"
-            >{field.label}
-            {#if field.required}<span class="text-kitsuden-accent-2">*</span>{/if}</label
-          >
-          <textarea
-            value={jsonStringify(block.data[field.key])}
-            oninput={(e) => updateJsonField(field.key, e.currentTarget.value)}
-            rows="5"
-            placeholder={field.helpText}
-            class="textarea font-mono text-xs"></textarea>
-          {#if jsonErrors[field.key]}<p class="text-xs text-kitsuden-accent-2">
-              {jsonErrors[field.key]}
-            </p>{/if}
+          <Field label={field.label} required={field.required} error={jsonErrors[field.key]}>
+            <Textarea
+              value={jsonStringify(block.data[field.key])}
+              oninput={(e: Event) => updateJsonField(field.key, valueOf(e))}
+              rows={5}
+              mono
+              placeholder={field.helpText}
+              class="text-xs"
+            />
+          </Field>
         {/if}
 
         <!-- Help text -->

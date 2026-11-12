@@ -1,12 +1,25 @@
 <script lang="ts">
   import {
+    Alert,
+    Badge,
+    Button,
+    Card,
+    CardContent,
     Dialog,
+    EmptyState,
+    Field,
+    Input,
+    Label,
+    Spinner,
+    Stat,
     Table,
     TableHeader,
     TableBody,
     TableRow,
     TableHead,
     TableCell,
+    Tabs,
+    Textarea,
   } from "$lib/tallao";
   import ViewPage from "$lib/components/admin/ViewPage.svelte";
   import { confirmDialog } from "$lib/confirm.svelte";
@@ -107,17 +120,17 @@
   let segmentResult = $state<{ total: number; sample: string[] } | null>(null);
   let segmentError = $state<string | null>(null);
 
-  const STATUS_STYLE: Record<string, string> = {
-    sent: "bg-kitsuden-green/15 text-kitsuden-green",
-    sending: "bg-kitsuden-accent/15 text-kitsuden-accent",
-    scheduled: "bg-kitsuden-accent/15 text-kitsuden-accent",
-    draft: "bg-kitsuden-subtle/15 text-kitsuden-text-dim",
-    failed: "bg-kitsuden-danger/15 text-kitsuden-danger",
-    canceled: "bg-kitsuden-subtle/15 text-kitsuden-text-dim",
-    subscribed: "bg-kitsuden-green/15 text-kitsuden-green",
-    pending: "bg-kitsuden-subtle/15 text-kitsuden-text-dim",
-    unsubscribed: "bg-kitsuden-danger/15 text-kitsuden-danger",
-    cleaned: "bg-kitsuden-danger/15 text-kitsuden-danger",
+  const STATUS_VARIANT: Record<string, "success" | "accent" | "default" | "error"> = {
+    sent: "success",
+    sending: "accent",
+    scheduled: "accent",
+    draft: "default",
+    failed: "error",
+    canceled: "default",
+    subscribed: "success",
+    pending: "default",
+    unsubscribed: "error",
+    cleaned: "error",
   };
 
   async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -329,122 +342,121 @@
     })}
   {/snippet}
   {#snippet actions()}
-    <button
-      class="px-4 py-2 rounded-lg bg-kitsuden-accent text-kitsuden-on-accent text-sm font-medium"
-      onclick={startNew}
-    >
-      {t("newsletterView.newCampaign")}
-    </button>
+    <Button onclick={startNew}>{t("newsletterView.newCampaign")}</Button>
   {/snippet}
 
-  <div class="space-y-4">
+  <div class="space-y-4 min-w-0">
     {#if notice}
-      <div
-        class="px-4 py-2 rounded-lg bg-kitsuden-accent/10 text-kitsuden-accent text-sm flex justify-between"
-      >
-        <span>{notice}</span>
-        <button onclick={() => (notice = null)}>×</button>
-      </div>
+      <Alert onDismiss={() => (notice = null)}>{notice}</Alert>
     {/if}
 
-    <nav class="flex gap-1 border-b border-kitsuden-border">
-      {#each [["campaigns", "Campaigns"], ["members", "Members"], ["suppressions", "Suppressions"], ["segments", "Segments"]] as [id, label] (id)}
-        <button
-          class="px-4 py-2 text-sm rounded-t-lg {tab === id
-            ? 'bg-kitsuden-surface font-medium'
-            : 'text-kitsuden-text-dim hover:bg-kitsuden-surface/50'}"
-          onclick={() => (tab = id as Tab)}
-        >
-          {label}
-        </button>
-      {/each}
-    </nav>
+    <Tabs
+      items={[
+        { id: "campaigns", label: t("newsletterView.tabCampaigns") },
+        { id: "members", label: t("newsletterView.tabMembers") },
+        { id: "suppressions", label: t("newsletterView.tabSuppressions") },
+        { id: "segments", label: t("newsletterView.tabSegments") },
+      ]}
+      value={tab}
+      onchange={(id) => (tab = id as Tab)}
+      panels={false}
+      ariaLabel={t("newsletterView.sections")}
+    />
 
     {#if loading}
-      <p class="text-kitsuden-text-dim text-sm py-8 text-center">{t("common.loadingEllipsis")}</p>
+      <div class="flex justify-center py-8"><Spinner /></div>
     {:else if error}
-      <p class="text-kitsuden-danger text-sm py-8 text-center">{error}</p>
+      <EmptyState variant="error" description={error} onRetry={load} />
     {:else if tab === "campaigns"}
-      <Table class="w-full text-sm">
+      <Table>
         <TableHeader>
-          <TableRow class="text-left text-kitsuden-text-dim border-b border-kitsuden-border">
-            <TableHead class="py-2">{t("newsletterView.subject")}</TableHead>
+          <TableRow>
+            <TableHead>{t("newsletterView.subject")}</TableHead>
             <TableHead>{t("common.status")}</TableHead>
             <TableHead>{t("newsletterView.scheduled")}</TableHead>
             <TableHead>{t("newsletterView.sentItems")}</TableHead>
             <TableHead>{t("newsletterView.openings")}</TableHead>
-            <TableHead></TableHead>
+            <TableHead><span class="sr-only">{t("common.actions")}</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {#each campaigns as campaign (campaign.id)}
-            <TableRow class="border-b border-kitsuden-border/50 hover:bg-kitsuden-surface/40">
-              <TableCell class="py-2 font-medium">{campaign.subject}</TableCell>
+            <TableRow>
+              <TableCell class="font-medium">{campaign.subject}</TableCell>
               <TableCell>
-                <span class="px-2 py-0.5 rounded-sm text-xs {STATUS_STYLE[campaign.status] ?? ''}">
+                <Badge variant={STATUS_VARIANT[campaign.status] ?? "default"}>
                   {campaign.status}
-                </span>
+                </Badge>
               </TableCell>
               <TableCell class="text-kitsuden-text-dim">{fmtDate(campaign.scheduledAt)}</TableCell>
               <TableCell>{campaign.stats?.sent ?? 0}/{campaign.stats?.recipients ?? 0}</TableCell>
               <TableCell>{pct(campaign.stats?.opened ?? 0, campaign.stats?.sent ?? 0)}</TableCell>
-              <TableCell class="text-right space-x-2">
-                <button class="text-kitsuden-accent" onclick={() => openStats(campaign.id)}
-                  >{t("newsletterView.stats")}</button
-                >
-                {#if campaign.status === "draft" || campaign.status === "scheduled"}
-                  <button class="text-kitsuden-accent" onclick={() => startEdit(campaign)}
-                    >{t("newsletterView.edit")}</button
+              <TableCell>
+                <div class="flex flex-wrap items-center justify-end gap-1">
+                  <Button variant="ghost" size="sm" onclick={() => openStats(campaign.id)}
+                    >{t("newsletterView.stats")}</Button
                   >
-                  <button class="text-kitsuden-green" onclick={() => askSend(campaign)}
-                    >{t("newsletterView.send")}</button
+                  {#if campaign.status === "draft" || campaign.status === "scheduled"}
+                    <Button variant="ghost" size="sm" onclick={() => startEdit(campaign)}
+                      >{t("newsletterView.edit")}</Button
+                    >
+                    <Button variant="soft" size="sm" onclick={() => askSend(campaign)}
+                      >{t("newsletterView.send")}</Button
+                    >
+                  {/if}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    href={`${BASE}/campaigns/${campaign.id}/preview?format=html`}
+                    target="_blank"
+                    rel="noreferrer">{t("newsletterView.view")}</Button
                   >
-                {/if}
-                <a
-                  class="text-kitsuden-text-dim"
-                  href={`${BASE}/campaigns/${campaign.id}/preview?format=html`}
-                  target="_blank"
-                  rel="noreferrer">{t("newsletterView.view")}</a
-                >
+                </div>
               </TableCell>
             </TableRow>
           {:else}
             <TableRow
-              ><TableCell colspan={6} class="py-8 text-center text-kitsuden-text-dim">
-                {t("newsletterView.withoutCampaignsYetCreateThe")}
+              ><TableCell colspan={6}>
+                <EmptyState
+                  size="sm"
+                  level={null}
+                  title={t("newsletterView.withoutCampaignsYetCreateThe")}
+                />
               </TableCell></TableRow
             >
           {/each}
         </TableBody>
       </Table>
     {:else if tab === "members"}
-      <Table class="w-full text-sm">
+      <Table>
         <TableHeader>
-          <TableRow class="text-left text-kitsuden-text-dim border-b border-kitsuden-border">
-            <TableHead class="py-2">{t("common.email")}</TableHead><TableHead
-              >{t("common.name")}</TableHead
-            ><TableHead>{t("common.status")}</TableHead><TableHead>{t("common.language")}</TableHead
-            >
+          <TableRow>
+            <TableHead>{t("common.email")}</TableHead>
+            <TableHead>{t("common.name")}</TableHead>
+            <TableHead>{t("common.status")}</TableHead>
+            <TableHead>{t("common.language")}</TableHead>
             <TableHead>{t("newsletterView.consent")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {#each members as member (member.id)}
-            <TableRow class="border-b border-kitsuden-border/50">
-              <TableCell class="py-2">{member.email}</TableCell>
+            <TableRow>
+              <TableCell>{member.email}</TableCell>
               <TableCell>{member.name ?? "—"}</TableCell>
               <TableCell>
-                <span class="px-2 py-0.5 rounded-sm text-xs {STATUS_STYLE[member.status] ?? ''}">
-                  {member.status}
-                </span>
+                <Badge variant={STATUS_VARIANT[member.status] ?? "default"}>{member.status}</Badge>
               </TableCell>
               <TableCell>{member.locale}</TableCell>
               <TableCell class="text-kitsuden-text-dim">{fmtDate(member.consentAt)}</TableCell>
             </TableRow>
           {:else}
             <TableRow
-              ><TableCell colspan={5} class="py-8 text-center text-kitsuden-text-dim">
-                {t("newsletterView.withoutMembersThePublicForm")}
+              ><TableCell colspan={5}>
+                <EmptyState
+                  size="sm"
+                  level={null}
+                  title={t("newsletterView.withoutMembersThePublicForm")}
+                />
               </TableCell></TableRow
             >
           {/each}
@@ -452,39 +464,44 @@
       </Table>
     {:else if tab === "suppressions"}
       <div class="flex justify-end">
-        <button class="text-sm text-kitsuden-danger" onclick={addSuppression}>
+        <Button variant="secondary" size="sm" onclick={addSuppression}>
           {t("newsletterView.suppressAddress")}
-        </button>
+        </Button>
       </div>
-      <Table class="w-full text-sm">
+      <Table>
         <TableHeader>
-          <TableRow class="text-left text-kitsuden-text-dim border-b border-kitsuden-border">
-            <TableHead class="py-2">{t("common.email")}</TableHead><TableHead
-              >{t("newsletterView.reason")}</TableHead
-            ><TableHead>{t("newsletterView.source")}</TableHead><TableHead
-              >{t("newsletterView.date")}</TableHead
-            ><TableHead></TableHead>
+          <TableRow>
+            <TableHead>{t("common.email")}</TableHead>
+            <TableHead>{t("newsletterView.reason")}</TableHead>
+            <TableHead>{t("newsletterView.source")}</TableHead>
+            <TableHead>{t("newsletterView.date")}</TableHead>
+            <TableHead><span class="sr-only">{t("common.actions")}</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {#each suppressions as suppression (suppression.id)}
-            <TableRow class="border-b border-kitsuden-border/50">
-              <TableCell class="py-2">{suppression.email}</TableCell>
+            <TableRow>
+              <TableCell>{suppression.email}</TableCell>
               <TableCell>{suppression.reason}</TableCell>
               <TableCell class="text-kitsuden-text-dim">{suppression.source}</TableCell>
               <TableCell class="text-kitsuden-text-dim">{fmtDate(suppression.createdAt)}</TableCell>
               <TableCell class="text-right">
-                <button
-                  class="text-kitsuden-text-dim"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onclick={() => removeSuppression(suppression.email)}
-                  >{t("newsletterView.remove")}</button
+                  >{t("newsletterView.remove")}</Button
                 >
               </TableCell>
             </TableRow>
           {:else}
             <TableRow
-              ><TableCell colspan={5} class="py-8 text-center text-kitsuden-text-dim">
-                {t("newsletterView.emptySuppressionListGood")}
+              ><TableCell colspan={5}>
+                <EmptyState
+                  size="sm"
+                  level={null}
+                  title={t("newsletterView.emptySuppressionListGood")}
+                />
               </TableCell></TableRow
             >
           {/each}
@@ -492,35 +509,31 @@
       </Table>
     {:else if tab === "segments"}
       <div class="grid md:grid-cols-2 gap-4">
-        <div>
-          <p class="text-sm text-kitsuden-text-dim mb-2">
-            {t("newsletterView.declarativeFilterStatusLocalesTiers")}
-          </p>
-          <textarea
-            class="w-full h-40 font-mono text-sm p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-input"
-            bind:value={segmentFilter}></textarea>
-          <button
-            class="mt-2 px-4 py-2 rounded-lg bg-kitsuden-accent text-kitsuden-on-accent text-sm"
-            onclick={previewSegment}>{t("newsletterView.calculateScope")}</button
-          >
+        <div class="min-w-0 space-y-2">
+          <Field label={t("newsletterView.declarativeFilterStatusLocalesTiers")}>
+            <Textarea mono rows={8} bind:value={segmentFilter} />
+          </Field>
+          <Button onclick={previewSegment}>{t("newsletterView.calculateScope")}</Button>
         </div>
-        <div class="rounded-lg bg-kitsuden-surface border border-kitsuden-border p-4">
-          {#if segmentError}
-            <p class="text-kitsuden-danger text-sm">{segmentError}</p>
-          {:else if segmentResult}
-            <p class="text-2xl font-semibold">{segmentResult.total}</p>
-            <p class="text-sm text-kitsuden-text-dim mb-3">
-              {t("newsletterView.reachedRecipients")}
-            </p>
-            {#each segmentResult.sample as email (email)}
-              <p class="text-xs text-kitsuden-text-dim">{email}</p>
-            {/each}
-          {:else}
-            <p class="text-sm text-kitsuden-text-dim">
-              {t("newsletterView.theResultWillAppearHere")}
-            </p>
-          {/if}
-        </div>
+        <Card class="min-w-0">
+          <CardContent>
+            {#if segmentError}
+              <Alert variant="error">{segmentError}</Alert>
+            {:else if segmentResult}
+              <p class="text-2xl font-semibold">{segmentResult.total}</p>
+              <p class="text-sm text-kitsuden-text-dim mb-3">
+                {t("newsletterView.reachedRecipients")}
+              </p>
+              {#each segmentResult.sample as email (email)}
+                <p class="text-xs text-kitsuden-text-dim break-all">{email}</p>
+              {/each}
+            {:else}
+              <p class="text-sm text-kitsuden-text-dim">
+                {t("newsletterView.theResultWillAppearHere")}
+              </p>
+            {/if}
+          </CardContent>
+        </Card>
       </div>
     {/if}
   </div>
@@ -528,37 +541,31 @@
   <!-- ══ Editor ══ -->
   <Dialog
     open={!!editorOpen}
-    bare
     size="2xl"
-    ariaLabel={editing
-      ? t("newsletterView.editCampaignCreatesNew")
-      : t("newsletterView.newCampaign")}
+    title={editing ? t("newsletterView.editCampaignCreatesNew") : t("newsletterView.newCampaign")}
     onClose={() => (editorOpen = false)}
   >
     {#if editorOpen}
-      <div
-        class="bg-kitsuden-bg rounded-xl border border-kitsuden-border w-full max-w-5xl max-h-[90vh] overflow-auto p-6 space-y-4"
-      >
-        <h2 class="text-lg font-semibold">
-          {editing ? t("newsletterView.editCampaignCreatesNew") : t("newsletterView.newCampaign")}
-        </h2>
-
-        <input
-          class="w-full p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-input"
+      <div class="space-y-4">
+        <Input
+          aria-label={t("newsletterView.subject")}
           placeholder={t("newsletterView.subject")}
           bind:value={draftSubject}
         />
-        <input
-          class="w-full p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-input text-sm"
+        <Input
+          aria-label={t("newsletterView.preheaderWhatIsVisible")}
           placeholder={t("newsletterView.preheaderWhatIsVisible")}
           bind:value={draftPreview}
         />
 
         <div class="grid md:grid-cols-2 gap-4">
-          <textarea
-            class="w-full h-72 font-mono text-sm p-3 rounded-lg bg-kitsuden-surface border border-kitsuden-input"
+          <Textarea
+            mono
+            rows={14}
+            aria-label={t("newsletterView.newsletterHtml")}
             placeholder={t("newsletterView.newsletterHtml")}
-            bind:value={draftHtml}></textarea>
+            bind:value={draftHtml}
+          />
           <!-- sandbox without allow-scripts: the HTML is content, not code. -->
           <iframe
             class="w-full h-72 rounded-lg border border-kitsuden-border bg-white"
@@ -568,54 +575,40 @@
           ></iframe>
         </div>
 
-        <div class="flex items-center gap-3">
-          <label class="text-sm text-kitsuden-text-dim" for="nl-schedule"
-            >{t("newsletterView.scheduleFor")}</label
-          >
-          <input
+        <div class="flex flex-wrap items-center gap-3">
+          <Label for="nl-schedule">{t("newsletterView.scheduleFor")}</Label>
+          <Input
             id="nl-schedule"
             type="datetime-local"
-            class="p-2 rounded-lg bg-kitsuden-surface border border-kitsuden-input text-sm"
+            class="w-auto"
             bind:value={draftScheduledAt}
           />
           <span class="text-xs text-kitsuden-text-dim">
             {t("newsletterView.emptyStaysAsDraftThe")}
           </span>
         </div>
-
-        <div class="flex justify-end gap-2">
-          <button
-            class="px-4 py-2 text-sm text-kitsuden-text-dim"
-            onclick={() => (editorOpen = false)}
-          >
-            {t("common.cancel")}
-          </button>
-          <button
-            class="px-4 py-2 rounded-lg bg-kitsuden-accent text-kitsuden-on-accent text-sm"
-            disabled={saving}
-            onclick={saveDraft}
-          >
-            {saving
-              ? t("newsletterView.saving")
-              : draftScheduledAt
-                ? t("newsletterView.saveAndSchedule")
-                : t("newsletterView.saveDraft")}
-          </button>
-        </div>
       </div>
     {/if}
+    {#snippet footer()}
+      <Button variant="ghost" onclick={() => (editorOpen = false)}>{t("common.cancel")}</Button>
+      <Button loading={saving} disabled={saving} onclick={saveDraft}>
+        {saving
+          ? t("newsletterView.saving")
+          : draftScheduledAt
+            ? t("newsletterView.saveAndSchedule")
+            : t("newsletterView.saveDraft")}
+      </Button>
+    {/snippet}
   </Dialog>
 
   <!-- ══ Send confirmation ══ -->
   <Dialog
     open={!!confirmSend}
-    bare
-    ariaLabel={t("newsletterView.confirmSubmit")}
+    title={t("newsletterView.confirmSubmit")}
     onClose={() => (confirmSend = null)}
   >
     {#if confirmSend}
-      <div class="bg-kitsuden-bg rounded-xl border border-kitsuden-border max-w-md p-6 space-y-4">
-        <h2 class="text-lg font-semibold">{t("newsletterView.confirmSubmit")}</h2>
+      <div class="space-y-4">
         <p class="text-sm">
           {t("newsletterView.willBeSentTo", { subject: confirmSend.subject })}
           <strong class="text-kitsuden-accent">{confirmSend.recipients}</strong>
@@ -624,53 +617,44 @@
         <p class="text-xs text-kitsuden-text-dim">
           {t("newsletterView.thisCannotBeUndone")}
         </p>
-        <div class="flex justify-end gap-2">
-          <button
-            class="px-4 py-2 text-sm text-kitsuden-text-dim"
-            onclick={() => (confirmSend = null)}
-          >
-            {t("common.cancel")}
-          </button>
-          <button
-            class="px-4 py-2 rounded-lg bg-kitsuden-green text-kitsuden-on-status text-sm"
-            onclick={doSend}
-          >
-            {t("newsletterView.sendTo", { recipients: confirmSend.recipients })}
-          </button>
-        </div>
       </div>
     {/if}
+    {#snippet footer()}
+      <Button variant="ghost" onclick={() => (confirmSend = null)}>{t("common.cancel")}</Button>
+      {#if confirmSend}
+        <Button onclick={doSend}>
+          {t("newsletterView.sendTo", { recipients: confirmSend.recipients })}
+        </Button>
+      {/if}
+    {/snippet}
   </Dialog>
 
   <!-- ══ Stats ══ -->
   <Dialog
     open={!!statsFor}
-    bare
     size="lg"
-    ariaLabel={t("newsletterView.statistics")}
-    onClose={() => (statsFor = null)}
+    title={t("newsletterView.statistics")}
+    onClose={() => ((statsFor = null), (statsData = null))}
   >
     {#if statsFor}
-      <div
-        class="bg-kitsuden-bg rounded-xl border border-kitsuden-border max-w-lg w-full p-6 space-y-4"
-      >
-        <div class="flex justify-between items-center">
-          <h2 class="text-lg font-semibold">{t("newsletterView.statistics")}</h2>
-          <button
-            class="text-kitsuden-text-dim"
-            onclick={() => ((statsFor = null), (statsData = null))}
-          >
-            ×
-          </button>
-        </div>
+      <div class="space-y-4">
         {#if statsData}
-          <div class="grid grid-cols-3 gap-3 text-center">
-            {#each [["Recipients", statsData.stats.recipients ?? 0], ["Sent", statsData.stats.sent ?? 0], ["Failed", statsData.stats.failed ?? 0], ["Delivered", statsData.stats.delivered ?? 0], ["Bounced", statsData.stats.bounced ?? 0], ["Complaints", statsData.stats.complained ?? 0]] as [label, value] (label)}
-              <div class="rounded-lg bg-kitsuden-surface p-3">
-                <p class="text-xl font-semibold">{value}</p>
-                <p class="text-xs text-kitsuden-text-dim">{label}</p>
-              </div>
-            {/each}
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <Stat
+              label={t("newsletterView.statRecipients")}
+              value={statsData.stats.recipients ?? 0}
+            />
+            <Stat label={t("newsletterView.sentItems")} value={statsData.stats.sent ?? 0} />
+            <Stat label={t("newsletterView.statFailed")} value={statsData.stats.failed ?? 0} />
+            <Stat
+              label={t("newsletterView.statDelivered")}
+              value={statsData.stats.delivered ?? 0}
+            />
+            <Stat label={t("newsletterView.statBounced")} value={statsData.stats.bounced ?? 0} />
+            <Stat
+              label={t("newsletterView.statComplaints")}
+              value={statsData.stats.complained ?? 0}
+            />
           </div>
           <div>
             <p class="text-sm text-kitsuden-text-dim mb-1">
@@ -683,7 +667,7 @@
             {/each}
           </div>
         {:else}
-          <p class="text-sm text-kitsuden-text-dim">{t("common.loadingEllipsis")}</p>
+          <div class="flex justify-center py-4"><Spinner /></div>
         {/if}
       </div>
     {/if}

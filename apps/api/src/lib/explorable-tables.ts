@@ -45,6 +45,8 @@
  * `admin`.
  */
 
+// Deep import of the pure submodule (not the engine facade, which imports the API).
+import { isSecretColumn } from "../../../../packages/engine/src/secret-columns";
 import { scanPackages } from "../services/scanner";
 
 import { TABLES_ONLY_VIA_THEIR_ROUTE } from "./actions-code";
@@ -87,12 +89,11 @@ export const FORBIDDEN_TABLES = new Set([
  * a panel screen is no place for them. By column NAME (in
  * snake_case and camelCase), so it works for tables that do not exist yet.
  * `tokens_in`/`tokens_out` (an LLM's counters) do not match: they do not end in token.
+ *
+ * The rule itself lives in the engine (a pure module), so the record history
+ * (`packages/engine/src/record-history.ts`) redacts with the very same one.
  */
-const SECRET_COLUMN = /(^|_|[a-z])(token|password|secret|token_?hash|password_?hash|key_?hash)$/i;
-
-export function isSecretColumn(name: string): boolean {
-  return SECRET_COLUMN.test(name);
-}
+export { isSecretColumn };
 
 /** Copy of the value (row, list, response envelope) without secret columns. */
 export function withoutSecretColumns(value: unknown): unknown {

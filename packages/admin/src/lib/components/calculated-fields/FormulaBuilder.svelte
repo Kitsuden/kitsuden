@@ -19,6 +19,8 @@
     Check,
   } from "lucide-svelte";
 
+  import { Button, Card, Textarea } from "$lib/tallao";
+
   import { evaluateFormula } from "./evaluate";
   import { FORMULA_FUNCTIONS, FORMULA_OPERATORS } from "./index";
 
@@ -259,12 +261,15 @@
               </span>
             {/if}
 
-            <button
-              class="ml-1 p-1 rounded-sm hover:bg-kitsuden-accent-2/20 text-kitsuden-subtle hover:text-kitsuden-accent-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            <Button
+              variant="danger-ghost"
+              size="icon"
+              ariaLabel={tr("common.remove")}
+              title={tr("common.remove")}
               onclick={() => removeToken(index)}
             >
               <Trash2 class="w-3.5 h-3.5" />
-            </button>
+            </Button>
           </div>
         {/each}
       {/if}
@@ -293,9 +298,12 @@
   <!-- Toolbox -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     <!-- Fields -->
-    <div class="bg-kitsuden-card border border-kitsuden-border rounded-xl p-3">
-      <button
-        class="w-full flex items-center justify-between text-sm font-medium text-kitsuden-text mb-2 hover:text-kitsuden-accent"
+    <Card class="p-3">
+      <Button
+        variant="ghost"
+        size="sm"
+        class="w-full justify-between"
+        aria-expanded={showFieldMenu}
         onclick={() => (showFieldMenu = !showFieldMenu)}
       >
         <span class="flex items-center gap-2">
@@ -303,50 +311,55 @@
           {tr("common.fields")}
         </span>
         <ChevronDown class="w-4 h-4 transition-transform {showFieldMenu ? 'rotate-180' : ''}" />
-      </button>
+      </Button>
 
       {#if showFieldMenu}
         <div class="space-y-1 mt-2 max-h-40 overflow-y-auto">
           {#each availableFields as field}
-            <button
-              class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-kitsuden-surface transition-colors text-left"
+            {@const FieldIcon = getFieldIcon(field.type)}
+            <Button
+              variant="ghost"
+              size="sm"
+              class="w-full justify-start"
               onclick={() => addToken("field", field.name)}
             >
-              <svelte:component
-                this={getFieldIcon(field.type)}
-                class="w-3.5 h-3.5 text-kitsuden-subtle"
-              />
-              <span class="text-kitsuden-text">{field.label}</span>
+              <FieldIcon class="w-3.5 h-3.5 shrink-0 text-kitsuden-subtle" />
+              <span class="min-w-0 truncate text-kitsuden-text">{field.label}</span>
               <span class="text-kitsuden-subtle text-xs ml-auto">{field.type}</span>
-            </button>
+            </Button>
           {/each}
         </div>
       {/if}
-    </div>
+    </Card>
 
     <!-- Operators -->
-    <div class="bg-kitsuden-card border border-kitsuden-border rounded-xl p-3">
+    <Card class="p-3">
       <h4 class="text-sm font-medium text-kitsuden-text mb-3 flex items-center gap-2">
         <Calculator class="w-4 h-4" />
         {tr("formulaBuilder.operators")}
       </h4>
       <div class="grid grid-cols-4 gap-1">
         {#each FORMULA_OPERATORS.slice(0, 8) as op}
-          <button
-            class="p-2 rounded-lg bg-kitsuden-surface hover:bg-kitsuden-accent/20 text-kitsuden-text hover:text-kitsuden-accent font-bold transition-colors"
+          <Button
+            variant="secondary"
+            size="sm"
+            class="font-bold"
             onclick={() => addToken("operator", op.id)}
             title={op.description}
           >
             {op.label}
-          </button>
+          </Button>
         {/each}
       </div>
-    </div>
+    </Card>
 
     <!-- Functions -->
-    <div class="bg-kitsuden-card border border-kitsuden-border rounded-xl p-3">
-      <button
-        class="w-full flex items-center justify-between text-sm font-medium text-kitsuden-text mb-2 hover:text-kitsuden-accent"
+    <Card class="p-3">
+      <Button
+        variant="ghost"
+        size="sm"
+        class="w-full justify-between"
+        aria-expanded={showFunctionMenu}
         onclick={() => (showFunctionMenu = !showFunctionMenu)}
       >
         <span class="flex items-center gap-2">
@@ -354,23 +367,27 @@
           {tr("formulaBuilder.functions")}
         </span>
         <ChevronDown class="w-4 h-4 transition-transform {showFunctionMenu ? 'rotate-180' : ''}" />
-      </button>
+      </Button>
 
       {#if showFunctionMenu}
         <div class="space-y-1 mt-2 max-h-40 overflow-y-auto">
           {#each FORMULA_FUNCTIONS.slice(0, 8) as fn}
-            <button
-              class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-kitsuden-surface transition-colors text-left"
+            <Button
+              variant="ghost"
+              size="sm"
+              class="w-full justify-start"
               onclick={() => addToken("function", fn.id)}
               title={fn.description}
             >
               <span class="font-mono text-kitsuden-accent">{fn.id}()</span>
-              <span class="text-kitsuden-subtle text-xs ml-auto">{fn.description}</span>
-            </button>
+              <span class="min-w-0 truncate text-kitsuden-subtle text-xs ml-auto"
+                >{fn.description}</span
+              >
+            </Button>
           {/each}
         </div>
       {/if}
-    </div>
+    </Card>
   </div>
 
   <!-- Expression Raw (editable) -->
@@ -378,18 +395,19 @@
     <label for="expression" class="text-sm text-kitsuden-subtle"
       >{tr("formulaBuilder.rawExpression")}</label
     >
-    <textarea
+    <Textarea
       id="expression"
+      mono
       bind:value={expression}
-      class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm font-mono text-kitsuden-text focus:outline-hidden focus:border-kitsuden-accent"
-      rows="2"
-      oninput={(e) => {
-        expression = e.currentTarget.value;
+      rows={2}
+      oninput={(e: Event) => {
+        expression = (e.currentTarget as HTMLTextAreaElement).value;
         parseExpression(expression);
         onChange?.(expression);
         validateExpression();
         calculatePreview();
-      }}></textarea>
+      }}
+    />
     <p class="text-xs text-kitsuden-subtle">
       {tr("formulaBuilder.useToReferenceFieldsExample", { v: "{fieldName}" })}
       <code class="text-kitsuden-accent">{"{price} * {quantity}"}</code>

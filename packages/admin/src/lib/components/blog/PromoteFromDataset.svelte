@@ -10,23 +10,11 @@
    * @production Ready for production use
    * @version 1.0.0
    */
-  import {
-    Database,
-    Search,
-    ArrowRight,
-    FileText,
-    Tag,
-    Image,
-    X,
-    Loader2,
-    Check,
-    AlertCircle,
-    RefreshCw,
-  } from "lucide-svelte";
+  import { Database, ArrowRight, FileText, Tag, Image, Check, RefreshCw } from "lucide-svelte";
   import { onDestroy } from "svelte";
 
   import { api } from "$lib/api";
-  import { Dialog, Button } from "$lib/tallao";
+  import { Alert, Badge, Button, Dialog, EmptyState, SearchInput, Spinner } from "$lib/tallao";
 
   // ─── Types ──────────────────────────────────────────
   interface Dataset {
@@ -260,12 +248,6 @@
       loadDatasets();
     } else if (step === "entries" && selectedDataset) {
       loadEntries(selectedDataset.id, 1);
-    }
-  }
-
-  function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      handleSearch();
     }
   }
 
@@ -529,9 +511,10 @@
     : step === "entries"
       ? tr("promoteFromDataset.selectFrom", { name: selectedDataset?.name })
       : tr("promoteFromDataset.previewContent")}
+  size="2xl"
   onClose={handleClose}
 >
-  <div class="w-[700px] max-h-[80vh] flex flex-col">
+  <div class="w-full min-w-0 max-h-[80vh] flex flex-col">
     <!-- Navigation -->
     <div class="flex items-center gap-2 px-4 py-3 border-b border-kitsuden-border">
       {#if step !== "datasets"}
@@ -557,30 +540,23 @@
 
     <!-- Search -->
     <div class="p-4 border-b border-kitsuden-border">
-      <div class="relative">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-subtle" />
-        <input
-          type="text"
+      <!-- Enter searches: the form's implicit submit, since SearchInput keeps its own keydown. -->
+      <form
+        role="search"
+        onsubmit={(e) => {
+          e.preventDefault();
+          handleSearch();
+        }}
+      >
+        <SearchInput
           bind:value={searchQuery}
-          onkeydown={handleKeyDown}
           placeholder={step === "datasets"
             ? tr("promoteFromDataset.searchDatasets")
             : tr("promoteFromDataset.searchEntries")}
-          class="input w-full pl-10"
+          onclear={handleSearch}
           disabled={loading}
         />
-        {#if searchQuery}
-          <button
-            onclick={() => {
-              searchQuery = "";
-              handleSearch();
-            }}
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-kitsuden-subtle hover:text-kitsuden-text"
-          >
-            <X class="w-4 h-4" />
-          </button>
-        {/if}
-      </div>
+      </form>
       <div class="flex justify-between mt-2">
         <span class="text-xs text-kitsuden-subtle">
           {#if step === "datasets"}
@@ -601,32 +577,29 @@
 
     <!-- Error Alert -->
     {#if error}
-      <div
-        class="mx-4 mt-4 p-3 rounded-lg bg-kitsuden-accent-2/10 border border-kitsuden-accent-2/20 text-kitsuden-accent-2 text-sm flex items-start gap-2"
-      >
-        <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
-        <div class="flex-1">
-          <p>{error}</p>
-          <button
-            onclick={() => {
-              error = null;
-              handleSearch();
-            }}
-            class="text-xs underline mt-1 hover:no-underline flex items-center gap-1"
-          >
-            <RefreshCw class="w-3 h-3" />
-            {tr("promoteFromDataset.retry")}
-          </button>
-        </div>
-      </div>
+      <Alert variant="error" class="mx-4 mt-4">
+        <p>{error}</p>
+        <Button
+          variant="ghost"
+          size="sm"
+          class="mt-1"
+          onclick={() => {
+            error = null;
+            handleSearch();
+          }}
+        >
+          <RefreshCw class="w-3.5 h-3.5" aria-hidden="true" />
+          {tr("promoteFromDataset.retry")}
+        </Button>
+      </Alert>
     {/if}
 
     <!-- Content -->
     <div class="flex-1 overflow-y-auto p-4">
       {#if loading}
-        <div class="flex flex-col items-center justify-center py-12">
-          <Loader2 class="w-8 h-8 text-kitsuden-accent animate-spin mb-3" />
-          <p class="text-kitsuden-subtle text-sm">{tr("common.loading")}</p>
+        <div class="flex flex-col items-center justify-center gap-3 py-12">
+          <Spinner size="lg" label={tr("common.loading")} class="text-kitsuden-accent" />
+          <p class="text-kitsuden-subtle text-sm" aria-hidden="true">{tr("common.loading")}</p>
         </div>
       {:else if step === "datasets"}
         <!-- Datasets List -->
@@ -667,14 +640,14 @@
           {/each}
 
           {#if filteredDatasets.length === 0}
-            <div class="text-center py-12">
-              <Database class="w-12 h-12 text-kitsuden-subtle mx-auto mb-3" />
-              <p class="text-kitsuden-subtle">
-                {searchQuery
-                  ? tr("promoteFromDataset.noDatasetsMatchYourSearch")
-                  : tr("promoteFromDataset.noDatasetsAvailable")}
-              </p>
-            </div>
+            <EmptyState
+              size="sm"
+              variant={searchQuery ? "no-results" : "empty"}
+              level={null}
+              title={searchQuery
+                ? tr("promoteFromDataset.noDatasetsMatchYourSearch")
+                : tr("promoteFromDataset.noDatasetsAvailable")}
+            />
           {/if}
         </div>
       {:else if step === "entries"}
@@ -701,11 +674,7 @@
                   {/if}
                   <div class="flex items-center gap-3 mt-2">
                     {#if entry.status}
-                      <span
-                        class="text-xs px-2 py-0.5 rounded-full bg-kitsuden-border/50 text-kitsuden-subtle capitalize"
-                      >
-                        {entry.status}
-                      </span>
+                      <Badge variant="secondary" class="capitalize">{entry.status}</Badge>
                     {/if}
                     <span class="text-xs text-kitsuden-subtle">
                       {formatDate(entry.updatedAt)}
@@ -720,14 +689,14 @@
           {/each}
 
           {#if entries.length === 0}
-            <div class="text-center py-12">
-              <FileText class="w-12 h-12 text-kitsuden-subtle mx-auto mb-3" />
-              <p class="text-kitsuden-subtle">
-                {searchQuery
-                  ? tr("promoteFromDataset.noEntriesMatchYourSearch")
-                  : tr("promoteFromDataset.noEntriesAvailable")}
-              </p>
-            </div>
+            <EmptyState
+              size="sm"
+              variant={searchQuery ? "no-results" : "empty"}
+              level={null}
+              title={searchQuery
+                ? tr("promoteFromDataset.noEntriesMatchYourSearch")
+                : tr("promoteFromDataset.noEntriesAvailable")}
+            />
           {/if}
         </div>
 
@@ -762,39 +731,33 @@
         <div class="space-y-4">
           <!-- Title -->
           <div>
-            <label class="label text-xs uppercase text-kitsuden-subtle">{tr("common.title")}</label>
+            <p class="text-xs uppercase text-kitsuden-subtle">{tr("common.title")}</p>
             <p class="text-lg font-medium text-kitsuden-text">{preview.title}</p>
           </div>
 
           <!-- Excerpt -->
           <div>
-            <label class="label text-xs uppercase text-kitsuden-subtle"
-              >{tr("promoteFromDataset.excerpt")}</label
-            >
+            <p class="text-xs uppercase text-kitsuden-subtle">
+              {tr("promoteFromDataset.excerpt")}
+            </p>
             <p class="text-sm text-kitsuden-text-dim line-clamp-3">{preview.excerpt}</p>
           </div>
 
           <!-- Tags -->
           {#if preview.tags.length > 0}
             <div>
-              <label class="label text-xs uppercase text-kitsuden-subtle flex items-center gap-1">
-                <Tag class="w-3 h-3" />
+              <p class="text-xs uppercase text-kitsuden-subtle flex items-center gap-1">
+                <Tag class="w-3 h-3" aria-hidden="true" />
                 {tr("promoteFromDataset.tags", { tagsCount: preview.tags.length })}
-              </label>
+              </p>
               <div class="flex flex-wrap gap-2 mt-1">
                 {#each preview.tags.slice(0, 10) as tag}
-                  <span
-                    class="px-2 py-1 rounded-full bg-kitsuden-accent/10 text-kitsuden-accent text-xs"
-                  >
-                    {tag}
-                  </span>
+                  <Badge variant="accent">{tag}</Badge>
                 {/each}
                 {#if preview.tags.length > 10}
-                  <span
-                    class="px-2 py-1 rounded-full bg-kitsuden-border/50 text-kitsuden-subtle text-xs"
-                  >
+                  <Badge variant="secondary">
                     {tr("common.more", { v: preview.tags.length - 10 })}
-                  </span>
+                  </Badge>
                 {/if}
               </div>
             </div>
@@ -803,19 +766,17 @@
           <!-- Featured Image -->
           {#if preview.featuredImageId}
             <div>
-              <label class="label text-xs uppercase text-kitsuden-subtle flex items-center gap-1">
-                <Image class="w-3 h-3" />
+              <p class="text-xs uppercase text-kitsuden-subtle flex items-center gap-1">
+                <Image class="w-3 h-3" aria-hidden="true" />
                 {tr("promoteFromDataset.featuredImage")}
-              </label>
+              </p>
               <p class="text-xs text-kitsuden-accent font-mono mt-1">{preview.featuredImageId}</p>
             </div>
           {/if}
 
           <!-- Content Preview -->
           <div>
-            <label class="label text-xs uppercase text-kitsuden-subtle"
-              >{tr("common.contentPreview")}</label
-            >
+            <p class="text-xs uppercase text-kitsuden-subtle">{tr("common.contentPreview")}</p>
             <div class="mt-1 p-3 rounded-lg bg-kitsuden-bg border border-kitsuden-border">
               <pre
                 class="text-xs text-kitsuden-text-dim whitespace-pre-wrap line-clamp-10 font-mono">{preview.content.substring(
@@ -829,15 +790,12 @@
           </div>
 
           <!-- Source Info -->
-          <div class="p-3 rounded-lg bg-kitsuden-accent/5 border border-kitsuden-accent/20">
-            <p class="text-xs text-kitsuden-accent flex items-center gap-1">
-              <Check class="w-3 h-3" />
-              {tr("promoteFromDataset.source", {
-                name: selectedDataset?.name,
-                v: selectedEntry.id.substring(0, 8),
-              })}
-            </p>
-          </div>
+          <Alert variant="info">
+            {tr("promoteFromDataset.source", {
+              name: selectedDataset?.name,
+              v: selectedEntry.id.substring(0, 8),
+            })}
+          </Alert>
         </div>
       {/if}
     </div>
@@ -848,12 +806,11 @@
         {tr("common.cancel")}
       </Button>
       {#if step === "preview"}
-        <Button onclick={handleConfirm} disabled={loading}>
+        <Button onclick={handleConfirm} {loading} disabled={loading}>
           {#if loading}
-            <Loader2 class="w-4 h-4 animate-spin" />
             {tr("promoteFromDataset.processing")}
           {:else}
-            <Check class="w-4 h-4" />
+            <Check class="w-4 h-4" aria-hidden="true" />
             {tr("promoteFromDataset.createPost")}
           {/if}
         </Button>

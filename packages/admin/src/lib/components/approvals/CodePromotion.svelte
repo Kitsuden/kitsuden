@@ -9,8 +9,22 @@
 -->
 <script lang="ts">
   import {
+    Alert,
+    Badge,
     Button,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    Checkbox,
+    EmptyState,
+    Field,
+    Input,
+    NumberInput,
+    SaveBar,
+    Select,
     Skeleton,
+    Textarea,
     Table,
     TableHeader,
     TableBody,
@@ -19,7 +33,7 @@
     TableCell,
   } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
-  import { Check, X, RefreshCw, RotateCcw, Play, Save, GitBranch } from "lucide-svelte";
+  import { Check, X, RefreshCw, RotateCcw, Play, GitBranch } from "lucide-svelte";
   import { onMount } from "svelte";
   import { toast } from "$lib/tallao";
 
@@ -173,16 +187,26 @@
   const shortOne = (h: string | null) => (h ? h.slice(0, 12) : "—");
   const json = (v: unknown) => JSON.stringify(v, null, 2);
 
-  const COLOR: Record<VersionStatus, string> = {
-    awaiting_approval: "bg-kitsuden-amber/15 text-kitsuden-amber",
-    approved: "bg-kitsuden-info/15 text-kitsuden-info",
-    active: "bg-kitsuden-green/15 text-kitsuden-green",
-    superseded: "bg-kitsuden-muted/40 text-kitsuden-text-dim",
-    rolled_back: "bg-kitsuden-danger/15 text-kitsuden-danger",
-    rejected: "bg-kitsuden-muted/40 text-kitsuden-text",
-    expired: "bg-kitsuden-muted/40 text-kitsuden-subtle",
-    failed: "bg-kitsuden-danger/15 text-kitsuden-danger",
+  const COLOR: Record<VersionStatus, "warning" | "info" | "success" | "default" | "error"> = {
+    awaiting_approval: "warning",
+    approved: "info",
+    active: "success",
+    superseded: "default",
+    rolled_back: "error",
+    rejected: "default",
+    expired: "default",
+    failed: "error",
   };
+
+  /** The settings form differs from what is saved. */
+  const configDirty = $derived(
+    !!settings &&
+      !!draftConfig &&
+      (draftConfig.turboAllowed !== settings.config.turboAllowed ||
+        Number(draftConfig.watchMinutes) !== Number(settings.config.watchMinutes) ||
+        Number(draftConfig.minExecutions) !== Number(settings.config.minExecutions) ||
+        Number(draftConfig.maxErrorRate) !== Number(settings.config.maxErrorRate))
+  );
 
   function stepClass(ok: boolean | null): string {
     return ok === null
@@ -197,136 +221,148 @@
   <p class="text-xs text-kitsuden-subtle">{t("promotion.help")}</p>
 
   {#if settings && draftConfig}
-    <section
-      class="border border-kitsuden-border rounded-lg p-4 space-y-3"
-      data-testid="promotion-settings"
-    >
-      <h3 class="text-sm font-semibold text-kitsuden-text">{t("promotion.settingsTitle")}</h3>
-      {#if !settings.codeActionsEnabled}
-        <p
-          class="text-xs text-kitsuden-amber bg-kitsuden-amber/10 border border-kitsuden-amber/20 rounded-sm px-3 py-2"
-          data-testid="code-actions-off"
-        >
-          {t("promotion.codeActionsOff")}
-        </p>
-      {/if}
-      <p class="text-xs text-kitsuden-subtle">
-        {t("promotion.approvalsMaster", {
-          state: settings.approvalsEnabled ? t("approvals.globalOn") : t("approvals.globalOff"),
-        })}
-      </p>
-      <fieldset class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" disabled={!isAdmin()}>
-        <label class="flex items-start gap-2 text-sm text-kitsuden-text">
-          <input
-            type="checkbox"
-            bind:checked={draftConfig.turboAllowed}
-            class="mt-1"
-            data-testid="turbo-allowed"
-          />
-          <span>
-            <span class="block">{t("promotion.turboAllowed")}</span>
-            <span class="block text-xs text-kitsuden-subtle">{t("promotion.turboAllowedHelp")}</span
+    <div data-testid="promotion-settings">
+      <Card>
+        <CardHeader><CardTitle level={3}>{t("promotion.settingsTitle")}</CardTitle></CardHeader>
+        <CardContent class="space-y-3">
+          {#if !settings.codeActionsEnabled}
+            <div data-testid="code-actions-off">
+              <Alert variant="warning">{t("promotion.codeActionsOff")}</Alert>
+            </div>
+          {/if}
+          <p class="text-xs text-kitsuden-subtle">
+            {t("promotion.approvalsMaster", {
+              state: settings.approvalsEnabled ? t("approvals.globalOn") : t("approvals.globalOff"),
+            })}
+          </p>
+          <form
+            id="promotion-config-form"
+            onsubmit={(e) => {
+              e.preventDefault();
+              void saveConfig();
+            }}
+          >
+            <fieldset
+              class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-start"
+              disabled={!isAdmin()}
             >
-          </span>
-        </label>
-        <label class="text-xs text-kitsuden-text-dim">
-          {t("promotion.watchMinutes")}
-          <input
-            type="number"
-            min="1"
-            max="1440"
-            bind:value={draftConfig.watchMinutes}
-            class="mt-1 w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm text-kitsuden-text"
-          />
-        </label>
-        <label class="text-xs text-kitsuden-text-dim">
-          {t("promotion.minExecutions")}
-          <input
-            type="number"
-            min="1"
-            max="1000"
-            bind:value={draftConfig.minExecutions}
-            class="mt-1 w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm text-kitsuden-text"
-          />
-        </label>
-        <label class="text-xs text-kitsuden-text-dim">
-          {t("promotion.maxErrorRate")}
-          <input
-            type="number"
-            min="0.01"
-            max="1"
-            step="0.05"
-            bind:value={draftConfig.maxErrorRate}
-            class="mt-1 w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm text-kitsuden-text"
-          />
-        </label>
-      </fieldset>
-      {#if isAdmin()}
-        <Button variant="primary" size="sm" loading={savingConfig} onclick={saveConfig}>
-          <Save size={14} class="mr-1" />{t("promotion.save")}
-        </Button>
-      {/if}
-
-      <div
-        class="overflow-x-auto border border-kitsuden-border rounded-sm"
-        data-testid="promotion-agents"
-      >
-        <Table class="w-full text-xs">
-          <TableHeader class="text-kitsuden-subtle">
-            <TableRow>
-              <TableHead class="text-left px-3 py-2">{t("promotion.colAgent")}</TableHead>
-              <TableHead class="text-left px-3 py-2">{t("promotion.colCanPropose")}</TableHead>
-              <TableHead class="text-left px-3 py-2">{t("promotion.colMode")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody class="divide-y divide-kitsuden-border/70">
-            {#each settings.agents as a (a.id)}
-              <TableRow>
-                <TableCell class="px-3 py-1.5 text-kitsuden-text"
-                  >{a.name}{a.isActive ? "" : ` (${t("promotion.inactive")})`}</TableCell
-                >
-                <TableCell class="px-3 py-1.5 text-kitsuden-text-dim"
-                  >{a.canPropose ? t("promotion.yes") : t("promotion.no")}</TableCell
-                >
-                <TableCell class="px-3 py-1.5">
-                  <select
-                    class="bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-kitsuden-text"
-                    value={a.mode}
-                    disabled={!isAdmin()}
-                    onchange={(e) =>
-                      changeMode(
-                        a.id,
-                        (e.currentTarget as HTMLSelectElement).value as PromotionMode
-                      )}
-                    data-testid="promotion-mode-{a.id}"
+              <Checkbox
+                class="items-start"
+                bind:checked={draftConfig.turboAllowed}
+                data-testid="turbo-allowed"
+              >
+                <span>
+                  <span class="block text-sm">{t("promotion.turboAllowed")}</span>
+                  <span class="block text-xs text-kitsuden-subtle"
+                    >{t("promotion.turboAllowedHelp")}</span
                   >
-                    {#each MODES as m}
-                      <option value={m}>{t(`promotion.mode_${m}`)}</option>
-                    {/each}
-                  </select>
-                </TableCell>
-              </TableRow>
-            {/each}
-          </TableBody>
-        </Table>
-      </div>
-    </section>
+                </span>
+              </Checkbox>
+              <Field label={t("promotion.watchMinutes")}>
+                <NumberInput
+                  min={1}
+                  max={1440}
+                  bind:value={
+                    () => draftConfig!.watchMinutes, (v) => (draftConfig!.watchMinutes = v ?? 0)
+                  }
+                />
+              </Field>
+              <Field label={t("promotion.minExecutions")}>
+                <NumberInput
+                  min={1}
+                  max={1000}
+                  bind:value={
+                    () => draftConfig!.minExecutions, (v) => (draftConfig!.minExecutions = v ?? 0)
+                  }
+                />
+              </Field>
+              <Field label={t("promotion.maxErrorRate")}>
+                <NumberInput
+                  min={0.01}
+                  max={1}
+                  step={0.05}
+                  bind:value={
+                    () => draftConfig!.maxErrorRate, (v) => (draftConfig!.maxErrorRate = v ?? 0)
+                  }
+                />
+              </Field>
+            </fieldset>
+            {#if isAdmin()}
+              <SaveBar
+                form="promotion-config-form"
+                sticky={false}
+                dirty={configDirty}
+                saving={savingConfig}
+                disableWhenClean
+                saveLabel={t("promotion.save")}
+                cancelLabel={t("record.discard")}
+                onCancel={configDirty && settings
+                  ? () => (draftConfig = { ...settings!.config })
+                  : undefined}
+              />
+            {/if}
+          </form>
+
+          <div class="min-w-0" data-testid="promotion-agents">
+            <Table class="w-full text-xs">
+              <TableHeader class="text-kitsuden-subtle">
+                <TableRow>
+                  <TableHead class="text-left px-3 py-2">{t("promotion.colAgent")}</TableHead>
+                  <TableHead class="text-left px-3 py-2">{t("promotion.colCanPropose")}</TableHead>
+                  <TableHead class="text-left px-3 py-2">{t("promotion.colMode")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody class="divide-y divide-kitsuden-border/70">
+                {#each settings.agents as a (a.id)}
+                  <TableRow>
+                    <TableCell class="px-3 py-1.5 text-kitsuden-text"
+                      >{a.name}{a.isActive ? "" : ` (${t("promotion.inactive")})`}</TableCell
+                    >
+                    <TableCell class="px-3 py-1.5 text-kitsuden-text-dim"
+                      >{a.canPropose ? t("promotion.yes") : t("promotion.no")}</TableCell
+                    >
+                    <TableCell class="px-3 py-1.5">
+                      <Select
+                        size="sm"
+                        width="auto"
+                        value={a.mode}
+                        disabled={!isAdmin()}
+                        aria-label={t("promotion.colMode")}
+                        onchange={(e: Event) =>
+                          changeMode(
+                            a.id,
+                            (e.currentTarget as HTMLSelectElement).value as PromotionMode
+                          )}
+                        data-testid="promotion-mode-{a.id}"
+                        options={MODES.map((m) => ({ value: m, label: t(`promotion.mode_${m}`) }))}
+                      />
+                    </TableCell>
+                  </TableRow>
+                {/each}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   {/if}
 
   <div class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
     <section class="space-y-3 min-w-0">
       <div class="flex items-center gap-2">
-        <select
-          class="bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-xs text-kitsuden-text"
-          bind:value={filter}
-          onchange={load}
+        <Select
+          size="sm"
+          width="auto"
+          value={filter}
+          onchange={(e: Event) => {
+            filter = (e.currentTarget as HTMLSelectElement).value as VersionStatus | "";
+            void load();
+          }}
+          aria-label={t("promotion.allStatuses")}
           data-testid="promotion-filter"
-        >
-          <option value="">{t("promotion.allStatuses")}</option>
-          {#each STATUSES as e}
-            <option value={e}>{t(`promotion.status_${e}`)}</option>
-          {/each}
-        </select>
+          placeholder={t("promotion.allStatuses")}
+          options={STATUSES.map((e) => ({ value: e, label: t(`promotion.status_${e}`) }))}
+        />
         <div class="flex-1"></div>
         <Button variant="ghost" size="sm" onclick={load}
           ><RefreshCw size={14} class="mr-1" />{t("promotion.refresh")}</Button
@@ -335,13 +371,9 @@
       {#if loading}
         <Skeleton lines={3} />
       {:else if error}
-        <div
-          class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
-        >
-          {error}
-        </div>
+        <Alert variant="error">{error}</Alert>
       {:else if versions.length === 0}
-        <p class="text-sm text-kitsuden-subtle">{t("promotion.empty")}</p>
+        <EmptyState size="sm" title={t("promotion.empty")} />
       {:else}
         <ul class="space-y-1" data-testid="promotion-list">
           {#each versions as v (v.id)}
@@ -363,9 +395,8 @@
                   {#if v.origin !== "agent"}<span class="text-xs text-kitsuden-subtle shrink-0"
                       >{t(`promotion.origin_${v.origin}`)}</span
                     >{/if}
-                  <span
-                    class="ml-auto text-xs px-1.5 py-0.5 rounded-full shrink-0 {COLOR[v.status]}"
-                    >{t(`promotion.status_${v.status}`)}</span
+                  <Badge variant={COLOR[v.status]} class="ml-auto shrink-0"
+                    >{t(`promotion.status_${v.status}`)}</Badge
                   >
                 </div>
                 <div class="text-[11px] text-kitsuden-subtle mt-0.5 truncate">
@@ -397,9 +428,8 @@
             <h3 class="text-base font-semibold text-kitsuden-text min-w-0 truncate">
               {v.target.name} · v{v.versionNumber}
             </h3>
-            <span
-              class="text-xs px-1.5 py-0.5 rounded-full {COLOR[v.status]}"
-              data-testid="detail-status">{t(`promotion.status_${v.status}`)}</span
+            <Badge variant={COLOR[v.status]} data-testid="detail-status"
+              >{t(`promotion.status_${v.status}`)}</Badge
             >
           </div>
           <p class="text-xs text-kitsuden-subtle">
@@ -599,12 +629,12 @@
           {#if isAdmin()}
             {#if v.status === "awaiting_approval"}
               <div class="space-y-2" data-testid="promotion-decide">
-                <textarea
+                <Textarea
                   bind:value={comment}
-                  rows="2"
+                  rows={2}
                   placeholder={t("promotion.commentPlaceholder")}
-                  class="w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm text-kitsuden-text"
-                ></textarea>
+                  aria-label={t("promotion.commentPlaceholder")}
+                />
                 <div class="flex gap-2">
                   <Button
                     variant="primary"
@@ -624,10 +654,10 @@
               </div>
             {:else if v.status === "active" && v.origin !== "baseline"}
               <div class="space-y-2" data-testid="promotion-rollback">
-                <input
+                <Input
                   bind:value={returnReason}
                   placeholder={t("promotion.rollbackReason")}
-                  class="w-full bg-kitsuden-card border border-kitsuden-input rounded-sm px-2 py-1 text-sm text-kitsuden-text"
+                  aria-label={t("promotion.rollbackReason")}
                 />
                 <Button
                   variant="secondary"

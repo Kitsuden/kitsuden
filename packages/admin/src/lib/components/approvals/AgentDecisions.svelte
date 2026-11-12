@@ -6,7 +6,10 @@
 -->
 <script lang="ts">
   import {
+    Alert,
     Button,
+    EmptyState,
+    Select,
     Skeleton,
     Table,
     TableHeader,
@@ -58,17 +61,23 @@
       <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentDecisions.title")}</h3>
       <p class="text-xs text-kitsuden-subtle">{t("agentDecisions.help")}</p>
     </div>
-    <select
-      bind:value={days}
-      onchange={load}
+    <Select
+      size="sm"
+      width="auto"
+      value={String(days)}
+      onchange={(e: Event) => {
+        days = Number((e.currentTarget as HTMLSelectElement).value);
+        void load();
+      }}
       aria-label={t("agentDecisions.days", { n: days })}
-      class="px-2 py-1 bg-kitsuden-bg border border-kitsuden-input rounded-sm text-xs text-kitsuden-text"
+      options={PERIODS.map((p) => ({
+        value: String(p),
+        label: t("agentDecisions.days", { n: p }),
+      }))}
+    />
+    <Button variant="ghost" size="icon" ariaLabel={t("approvals.refresh")} onclick={load}
+      ><RefreshCw size={14} aria-hidden="true" /></Button
     >
-      {#each PERIODS as p}
-        <option value={p}>{t("agentDecisions.days", { n: p })}</option>
-      {/each}
-    </select>
-    <Button variant="ghost" size="sm" onclick={load}><RefreshCw size={14} /></Button>
     <a href="/approvals?tab=inbox" class="text-xs text-kitsuden-accent hover:underline self-center"
       >{t("agentDecisions.inboxLink")}</a
     >
@@ -77,18 +86,14 @@
   {#if loading}
     <Skeleton lines={3} />
   {:else if error}
-    <div
-      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
-    >
-      {error}
-    </div>
+    <Alert variant="error">{error}</Alert>
   {:else if decisions.length === 0}
-    <p class="text-sm text-kitsuden-subtle py-6 text-center">{t("agentDecisions.empty")}</p>
+    <EmptyState size="sm" title={t("agentDecisions.empty")} />
   {:else}
     <p class="text-xs text-kitsuden-subtle">{t("agentDecisions.total", { n: total })}</p>
-    <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
+    <div class="min-w-0">
       <Table class="w-full text-sm">
-        <TableHeader class="bg-kitsuden-card text-xs text-kitsuden-subtle text-left">
+        <TableHeader class="text-xs text-kitsuden-subtle text-left">
           <TableRow>
             <TableHead class="px-3 py-2 font-medium">{t("agentDecisions.colWhen")}</TableHead>
             {#if !agentId}<TableHead class="px-3 py-2 font-medium"

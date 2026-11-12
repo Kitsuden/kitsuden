@@ -4,9 +4,9 @@
   The API is GET /api/approvals/reviews; see docs/agents/ledger.md.
 -->
 <script lang="ts">
-  import { Button, Skeleton } from "$lib/tallao";
+  import { Alert, Badge, Button, EmptyState, Select, Skeleton } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
-  import { RefreshCw, CalendarClock } from "lucide-svelte";
+  import { RefreshCw } from "lucide-svelte";
   import { onMount } from "svelte";
   import { toast } from "$lib/tallao";
   import { closeReview, listReviews } from "$lib/services/approvals";
@@ -58,47 +58,35 @@
     <label for="review-filter" class="text-xs text-kitsuden-subtle"
       >{t("approvals.reviewsFilter")}</label
     >
-    <select
+    <Select
       id="review-filter"
-      bind:value={filter}
-      onchange={load}
-      class="px-2 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
-    >
-      {#each FILTERS as f}
-        <option value={f}>{label(f)}</option>
-      {/each}
-    </select>
+      width="auto"
+      value={filter}
+      onchange={(e: Event) => {
+        filter = (e.currentTarget as HTMLSelectElement).value as Filter;
+        void load();
+      }}
+      options={FILTERS.map((f) => ({ value: f, label: label(f) }))}
+    />
     <div class="flex-1"></div>
     <Button variant="ghost" size="sm" onclick={load}>
-      <RefreshCw size={14} class="mr-1" />{t("approvals.refresh")}
+      <RefreshCw size={14} aria-hidden="true" />{t("approvals.refresh")}
     </Button>
   </div>
 
   {#if loading}
     <Skeleton lines={3} />
   {:else if error}
-    <div
-      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
-    >
-      {error}
-    </div>
+    <Alert variant="error">{error}</Alert>
   {:else if list.length === 0}
-    <div
-      class="p-8 text-center text-kitsuden-subtle border border-dashed border-kitsuden-border rounded-lg"
-    >
-      <CalendarClock size={20} class="mx-auto mb-2 text-kitsuden-subtle" />
-      {t("approvals.reviewsEmpty")}
-    </div>
+    <EmptyState size="sm" icon="calendar" title={t("approvals.reviewsEmpty")} />
   {:else}
     <ul class="border border-kitsuden-border rounded-lg divide-y divide-kitsuden-border/70">
       {#each list as r (r.id)}
         <li class="px-3 py-2.5 text-xs space-y-1" data-testid="review-row">
           <div class="flex flex-wrap items-center gap-2">
-            <span
-              class="text-[11px] px-1.5 py-0.5 rounded {r.status === 'due'
-                ? 'bg-kitsuden-amber/15 text-kitsuden-amber'
-                : 'bg-kitsuden-muted/40 text-kitsuden-text'}"
-              >{t(`approvals.reviewStatus_${r.status}`)}</span
+            <Badge variant={r.status === "due" ? "warning" : "default"}
+              >{t(`approvals.reviewStatus_${r.status}`)}</Badge
             >
             <span class="text-kitsuden-text"
               >{t("approvals.reviewDueOn", { date: date(r.dueAt) })}</span

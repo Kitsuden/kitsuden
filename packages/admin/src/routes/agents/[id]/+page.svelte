@@ -60,6 +60,7 @@
     EmptyState,
     Field,
     Input,
+    SaveBar,
     Select,
     Sheet,
     Skeleton,
@@ -542,6 +543,7 @@
             <CardHeader><CardTitle level={2}>{t("agentPage.definition")}</CardTitle></CardHeader>
             <CardContent>
               <form
+                id="agent-settings-form"
                 class="agent-form"
                 onsubmit={(e) => {
                   e.preventDefault();
@@ -573,12 +575,17 @@
                     ]}
                   />
                 </Field>
-                <div class="agent-form-foot">
-                  <Button type="submit" loading={saving} disabled={!settingsDirty}>
-                    {t("idPage.saveChanges")}
-                  </Button>
-                </div>
               </form>
+              <SaveBar
+                form="agent-settings-form"
+                sticky={false}
+                dirty={settingsDirty}
+                {saving}
+                disableWhenClean
+                saveLabel={t("idPage.saveChanges")}
+                cancelLabel={t("record.discard")}
+                onCancel={settingsDirty && agent ? () => (formData = { ...agent }) : undefined}
+              />
             </CardContent>
           </Card>
 
@@ -590,7 +597,7 @@
             <CardContent>
               <p class="agent-dim">{t("agentPage.deleteHint")}</p>
               <p class="agent-link">
-                <Button variant="danger" onclick={handleRemove} data-testid="delete-agent">
+                <Button variant="danger-ghost" onclick={handleRemove} data-testid="delete-agent">
                   {t("agentsView.removeAgent")}
                 </Button>
               </p>
@@ -685,10 +692,6 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-  }
-  .agent-form-foot {
-    display: flex;
-    justify-content: flex-end;
   }
   .agent-chat {
     height: min(70vh, 40rem);

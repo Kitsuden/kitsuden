@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button } from "$lib/tallao";
+  import { Badge, Button } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import {
     LayoutGrid,
@@ -197,7 +197,7 @@
         <span class="text-xs font-semibold text-kitsuden-text"
           >{t("pageBuilder.layoutBuilder")}</span
         >
-        <span class="badge-cyan text-xs">{blocks.length} {t("pageBuilder.blocks")}</span>
+        <Badge variant="info">{blocks.length} {t("pageBuilder.blocks")}</Badge>
       </div>
       <Button
         onclick={() => (panelMode = panelMode === "picker" ? null : "picker")}

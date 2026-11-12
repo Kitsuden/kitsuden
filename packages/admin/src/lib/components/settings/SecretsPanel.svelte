@@ -1,5 +1,22 @@
 <script lang="ts">
-  import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "$lib/tallao";
+  import {
+    Alert,
+    Badge,
+    Button,
+    Card,
+    Checkbox,
+    EmptyState,
+    Input,
+    Label,
+    Select,
+    Spinner,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+  } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
   /**
    * KITSUDEN Secrets Manager — Admin panel (KITSUDEN architecture §7)
@@ -14,7 +31,6 @@
     Trash2,
     Zap,
     RefreshCw,
-    AlertCircle,
     CheckCircle2,
     Eye,
     EyeOff,
@@ -182,10 +198,10 @@
 
 <div class="space-y-6">
   <!-- Header -->
-  <div class="flex items-center justify-between">
-    <div>
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div class="min-w-0">
       <h2 class="text-lg font-semibold text-kitsuden-text flex items-center gap-2">
-        <KeyRound class="w-5 h-5 text-kitsuden-accent" />
+        <KeyRound class="w-5 h-5 text-kitsuden-accent" aria-hidden="true" />
         {t("secretsPanel.secretsManager")}
       </h2>
       <p class="text-sm text-kitsuden-subtle mt-1">
@@ -194,247 +210,213 @@
         {t("secretsPanel.withoutRestartingTheServer")}
       </p>
     </div>
-    <div class="flex items-center gap-2">
-      <button
-        class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-kitsuden-border text-kitsuden-text hover:border-kitsuden-accent/50 transition-colors disabled:opacity-50"
-        onclick={reloadAll}
-        disabled={busyKey === "__all__"}
-      >
-        <RefreshCw class="w-4 h-4 {busyKey === '__all__' ? 'animate-spin' : ''}" />
+    <div class="flex flex-wrap items-center gap-2">
+      <Button variant="secondary" onclick={reloadAll} loading={busyKey === "__all__"}>
+        {#if busyKey !== "__all__"}<RefreshCw class="w-4 h-4" aria-hidden="true" />{/if}
         {t("secretsPanel.reinjectAll")}
-      </button>
-      <button
-        class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/30 hover:bg-kitsuden-accent/20 transition-colors"
-        onclick={() => (showForm = !showForm)}
-      >
-        <Plus class="w-4 h-4" />
+      </Button>
+      <Button onclick={() => (showForm = !showForm)} aria-expanded={showForm}>
+        <Plus class="w-4 h-4" aria-hidden="true" />
         {t("secretsPanel.newSecret")}
-      </button>
+      </Button>
     </div>
   </div>
 
   <!-- Messages -->
   {#if error}
-    <div
-      class="flex items-center gap-2 p-3 rounded-lg bg-kitsuden-accent-2/10 border border-kitsuden-accent-2/30 text-kitsuden-accent-2 text-sm"
-    >
-      <AlertCircle class="w-4 h-4 shrink-0" />
-      {error}
-      <button class="ml-auto" onclick={() => (error = null)}><X class="w-4 h-4" /></button>
-    </div>
+    <Alert variant="error" onDismiss={() => (error = null)}>{error}</Alert>
   {/if}
   {#if successMsg}
-    <div
-      class="flex items-center gap-2 p-3 rounded-lg bg-kitsuden-green/10 border border-kitsuden-green/30 text-kitsuden-green text-sm"
-    >
-      <CheckCircle2 class="w-4 h-4 shrink-0" />
-      {successMsg}
-    </div>
+    <Alert variant="success">{successMsg}</Alert>
   {/if}
 
   <!-- Create/rotate form -->
   {#if showForm}
-    <div class="p-4 rounded-xl bg-kitsuden-card border border-kitsuden-border space-y-4">
+    <Card class="p-4 space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs text-kitsuden-subtle mb-1" for="secret-key"
-            >{t("secretsPanel.keyUpperSnakeCase")}</label
-          >
-          <input
+        <div class="space-y-1.5">
+          <Label for="secret-key">{t("secretsPanel.keyUpperSnakeCase")}</Label>
+          <Input
             id="secret-key"
-            class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border {keyValid
-              ? 'border-kitsuden-input'
-              : 'border-kitsuden-accent-2'} text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
+            class="font-mono!"
             placeholder={t("secretsPanel.openaiApiKey")}
+            aria-invalid={!keyValid}
+            aria-describedby={keyValid ? undefined : "secret-key-error"}
             bind:value={formKey}
           />
           {#if !keyValid}
-            <p class="text-xs text-kitsuden-accent-2 mt-1">
+            <p id="secret-key-error" class="text-xs text-kitsuden-danger">
               {t("secretsPanel.upperCaseUnderscoreFormat")}
             </p>
           {/if}
         </div>
-        <div>
-          <label class="block text-xs text-kitsuden-subtle mb-1" for="secret-value"
-            >{t("secretsPanel.value")}</label
-          >
-          <div class="relative">
-            {#if formShowValue}
-              <input
-                id="secret-value"
-                type="text"
-                class="w-full px-3 py-2 pr-10 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
-                placeholder="sk-..."
-                bind:value={formValue}
-              />
-            {:else}
-              <input
-                id="secret-value"
-                type="password"
-                class="w-full px-3 py-2 pr-10 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text font-mono focus:border-kitsuden-accent outline-hidden"
-                placeholder="sk-..."
-                bind:value={formValue}
-              />
-            {/if}
-            <button
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-kitsuden-subtle hover:text-kitsuden-text"
+        <div class="space-y-1.5">
+          <Label for="secret-value">{t("secretsPanel.value")}</Label>
+          <div class="flex items-center gap-2">
+            <Input
+              id="secret-value"
+              type={formShowValue ? "text" : "password"}
+              class="font-mono! min-w-0 flex-1"
+              placeholder="sk-..."
+              autocomplete="off"
+              bind:value={formValue}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
               onclick={() => (formShowValue = !formShowValue)}
-              type="button"
+              ariaLabel={formShowValue ? t("secretsPanel.hideValue") : t("secretsPanel.showValue")}
+              title={formShowValue ? t("secretsPanel.hideValue") : t("secretsPanel.showValue")}
             >
-              {#if formShowValue}<EyeOff class="w-4 h-4" />{:else}<Eye class="w-4 h-4" />{/if}
-            </button>
+              {#if formShowValue}
+                <EyeOff class="w-4 h-4" aria-hidden="true" />
+              {:else}
+                <Eye class="w-4 h-4" aria-hidden="true" />
+              {/if}
+            </Button>
           </div>
         </div>
-        <div>
-          <label class="block text-xs text-kitsuden-subtle mb-1" for="secret-desc"
-            >{t("secretsPanel.optionalDescription")}</label
-          >
-          <input
+        <div class="space-y-1.5">
+          <Label for="secret-desc">{t("secretsPanel.optionalDescription")}</Label>
+          <Input
             id="secret-desc"
-            class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
             placeholder={t("secretsPanel.productionApiKeyOf")}
             bind:value={formDescription}
           />
         </div>
-        <div class="flex items-end gap-4">
-          <div class="flex-1">
-            <label class="block text-xs text-kitsuden-subtle mb-1" for="secret-cat"
-              >{t("secretsPanel.category")}</label
-            >
-            <select
-              id="secret-cat"
-              class="w-full px-3 py-2 text-sm rounded-lg bg-kitsuden-bg border border-kitsuden-input text-kitsuden-text focus:border-kitsuden-accent outline-hidden"
-              bind:value={formCategory}
-            >
+        <div class="flex flex-wrap items-end gap-4">
+          <div class="flex-1 min-w-40 space-y-1.5">
+            <Label for="secret-cat">{t("secretsPanel.category")}</Label>
+            <Select id="secret-cat" bind:value={formCategory}>
               {#each categories as cat (cat)}
                 <option value={cat}>{cat}</option>
               {/each}
-            </select>
+            </Select>
           </div>
-          <label class="flex items-center gap-2 text-sm text-kitsuden-text pb-2 cursor-pointer">
-            <input type="checkbox" bind:checked={formAutoInject} class="accent-[#a855f7]" />
-            {t("secretsPanel.autoInjectAtBoot")}
-          </label>
+          <Checkbox
+            class="pb-2"
+            bind:checked={formAutoInject}
+            label={t("secretsPanel.autoInjectAtBoot")}
+          />
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <button
-          class="px-4 py-2 text-sm rounded-lg bg-kitsuden-accent/10 text-kitsuden-accent border border-kitsuden-accent/30 hover:bg-kitsuden-accent/20 transition-colors disabled:opacity-50"
+      <div class="flex flex-wrap items-center gap-2">
+        <Button
           onclick={saveSecret}
-          disabled={saving || !KEY_RE.test(formKey) || !formValue}
+          loading={saving}
+          disabled={!KEY_RE.test(formKey) || !formValue}
         >
           {saving ? t("secretsPanel.saving") : t("secretsPanel.saveAndInject")}
-        </button>
-        <button
-          class="px-4 py-2 text-sm rounded-lg text-kitsuden-subtle hover:text-kitsuden-text transition-colors"
-          onclick={() => (showForm = false)}
-        >
+        </Button>
+        <Button variant="ghost" onclick={() => (showForm = false)}>
           {t("common.cancel")}
-        </button>
-        <p class="text-xs text-kitsuden-subtle ml-auto">
+        </Button>
+        <p class="text-xs text-kitsuden-subtle sm:ml-auto">
           {t("secretsPanel.ifKeyAlreadyExists")}
         </p>
       </div>
-    </div>
+    </Card>
   {/if}
 
   <!-- List -->
   {#if loading}
-    <div class="flex items-center justify-center py-12 text-kitsuden-subtle text-sm">
-      <RefreshCw class="w-4 h-4 animate-spin mr-2" />
-      {t("secretsPanel.loadingSecrets")}
+    <div class="flex items-center justify-center gap-2 py-12 text-kitsuden-subtle text-sm">
+      <Spinner size="sm" label={t("secretsPanel.loadingSecrets")} />
+      <span aria-hidden="true">{t("secretsPanel.loadingSecrets")}</span>
     </div>
   {:else if secrets.length === 0}
-    <div
-      class="flex flex-col items-center justify-center py-12 rounded-xl border border-dashed border-kitsuden-border text-center"
-    >
-      <KeyRound class="w-8 h-8 text-kitsuden-subtle mb-3" />
-      <p class="text-sm text-kitsuden-text font-medium">{t("secretsPanel.withoutSecretsYet")}</p>
-      <p class="text-xs text-kitsuden-subtle mt-1 max-w-sm">
+    <EmptyState title={t("secretsPanel.withoutSecretsYet")}>
+      <p class="text-xs text-kitsuden-subtle max-w-sm">
         {t("secretsPanel.createsYourFirstSecretAnd")}
         <code>process.env</code>
         {t("secretsPanel.instantlyWithoutTouchingFiles")}
       </p>
-    </div>
+    </EmptyState>
   {:else}
-    <div class="rounded-xl border border-kitsuden-border overflow-hidden">
-      <Table density="compact">
-        <TableHeader>
+    <Table density="compact">
+      <TableHeader>
+        <TableRow>
+          <TableHead class="text-left">{t("secretsPanel.key")}</TableHead>
+          <TableHead class="text-left">{t("secretsPanel.value")}</TableHead>
+          <TableHead class="text-left">{t("secretsPanel.category")}</TableHead>
+          <TableHead class="text-left">{t("secretsPanel.auto")}</TableHead>
+          <TableHead class="text-left">{t("secretsPanel.rotated")}</TableHead>
+          <TableHead class="text-left">{t("secretsPanel.injected")}</TableHead>
+          <TableHead class="text-right">{t("common.actions")}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {#each secrets as s (s.id)}
           <TableRow>
-            <TableHead class="text-left">{t("secretsPanel.key")}</TableHead>
-            <TableHead class="text-left">{t("secretsPanel.value")}</TableHead>
-            <TableHead class="text-left">{t("secretsPanel.category")}</TableHead>
-            <TableHead class="text-left">{t("secretsPanel.auto")}</TableHead>
-            <TableHead class="text-left">{t("secretsPanel.rotated")}</TableHead>
-            <TableHead class="text-left">{t("secretsPanel.injected")}</TableHead>
-            <TableHead class="text-right">{t("common.actions")}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {#each secrets as s (s.id)}
-            <TableRow>
-              <TableCell>
-                <div class="font-mono text-kitsuden-text">{s.key}</div>
-                {#if s.description}
-                  <div class="text-xs text-kitsuden-subtle mt-0.5">{s.description}</div>
-                {/if}
-              </TableCell>
-              <TableCell class="font-mono">{s.hint}</TableCell>
-              <TableCell>
-                <span
-                  class="px-2 py-0.5 rounded-full text-xs bg-kitsuden-purple/10 text-kitsuden-purple border border-kitsuden-purple/20"
-                  >{s.category}</span
+            <TableCell>
+              <div class="font-mono text-kitsuden-text">{s.key}</div>
+              {#if s.description}
+                <div class="text-xs text-kitsuden-subtle mt-0.5">{s.description}</div>
+              {/if}
+            </TableCell>
+            <TableCell class="font-mono">{s.hint}</TableCell>
+            <TableCell>
+              <Badge variant="purple">{s.category}</Badge>
+            </TableCell>
+            <TableCell>
+              {#if s.autoInject}
+                <CheckCircle2
+                  class="w-4 h-4 text-kitsuden-green"
+                  aria-label={t("secretsPanel.autoInjectAtBoot")}
+                />
+              {:else}
+                <span class="text-kitsuden-subtle text-xs">{t("secretsPanel.manual")}</span>
+              {/if}
+            </TableCell>
+            <TableCell>{fmtDate(s.lastRotatedAt)}</TableCell>
+            <TableCell>{fmtDate(s.lastInjectedAt)}</TableCell>
+            <TableCell>
+              <div class="flex items-center justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title={t("secretsPanel.injectIntoProcessEnvNow")}
+                  ariaLabel={t("secretsPanel.injectIntoProcessEnvNow")}
+                  onclick={() => injectSecret(s.key)}
+                  disabled={busyKey === s.key}
                 >
-              </TableCell>
-              <TableCell>
-                {#if s.autoInject}
-                  <CheckCircle2 class="w-4 h-4 text-kitsuden-green" />
-                {:else}
-                  <span class="text-kitsuden-subtle text-xs">{t("secretsPanel.manual")}</span>
-                {/if}
-              </TableCell>
-              <TableCell>{fmtDate(s.lastRotatedAt)}</TableCell>
-              <TableCell>{fmtDate(s.lastInjectedAt)}</TableCell>
-              <TableCell>
-                <div class="flex items-center justify-end gap-1">
-                  <button
-                    class="p-1.5 rounded-lg text-kitsuden-accent hover:bg-kitsuden-accent/10 transition-colors disabled:opacity-40"
-                    title={t("secretsPanel.injectIntoProcessEnvNow")}
-                    onclick={() => injectSecret(s.key)}
+                  <Zap class="w-4 h-4" aria-hidden="true" />
+                </Button>
+                {#if deleteTarget === s.key}
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onclick={() => deleteSecret(s.key)}
                     disabled={busyKey === s.key}
                   >
-                    <Zap class="w-4 h-4" />
-                  </button>
-                  {#if deleteTarget === s.key}
-                    <button
-                      class="px-2 py-1 rounded-lg text-xs bg-kitsuden-accent-2/10 text-kitsuden-accent-2 border border-kitsuden-accent-2/30 hover:bg-kitsuden-accent-2/20"
-                      onclick={() => deleteSecret(s.key)}
-                      disabled={busyKey === s.key}
-                    >
-                      {t("secretsPanel.confirm")}
-                    </button>
-                    <button
-                      class="p-1.5 rounded-lg text-kitsuden-subtle hover:text-kitsuden-text"
-                      onclick={() => (deleteTarget = null)}
-                    >
-                      <X class="w-4 h-4" />
-                    </button>
-                  {:else}
-                    <button
-                      class="p-1.5 rounded-lg text-kitsuden-subtle hover:text-kitsuden-accent-2 hover:bg-kitsuden-accent-2/10 transition-colors"
-                      title={t("secretsPanel.removeDbProcessEnv")}
-                      onclick={() => (deleteTarget = s.key)}
-                    >
-                      <Trash2 class="w-4 h-4" />
-                    </button>
-                  {/if}
-                </div>
-              </TableCell>
-            </TableRow>
-          {/each}
-        </TableBody>
-      </Table>
-    </div>
+                    {t("secretsPanel.confirm")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    ariaLabel={t("common.cancel")}
+                    title={t("common.cancel")}
+                    onclick={() => (deleteTarget = null)}
+                  >
+                    <X class="w-4 h-4" aria-hidden="true" />
+                  </Button>
+                {:else}
+                  <Button
+                    variant="danger-ghost"
+                    size="icon"
+                    title={t("secretsPanel.removeDbProcessEnv")}
+                    ariaLabel={t("secretsPanel.removeDbProcessEnv")}
+                    onclick={() => (deleteTarget = s.key)}
+                  >
+                    <Trash2 class="w-4 h-4" aria-hidden="true" />
+                  </Button>
+                {/if}
+              </div>
+            </TableCell>
+          </TableRow>
+        {/each}
+      </TableBody>
+    </Table>
     <p class="text-xs text-kitsuden-subtle">
       {t("secretsPanel.valuesAreNeverShown")} <code>KITSUDEN_SECRETS_KEY</code>
       {t("secretsPanel.fallbackA")} <code>BETTER_AUTH_SECRET</code>

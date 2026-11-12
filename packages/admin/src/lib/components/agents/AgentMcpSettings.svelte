@@ -4,9 +4,19 @@
   API: GET/PUT /api/v1/agents/:id/mcp-settings (lib/mcp-settings.ts).
 -->
 <script lang="ts">
-  import { Button, Skeleton } from "$lib/tallao";
+  import {
+    Alert,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    Field,
+    Input,
+    SaveBar,
+    Select,
+    Skeleton,
+  } from "$lib/tallao";
   import { t } from "$lib/i18n";
-  import { Save } from "lucide-svelte";
   import { onMount } from "svelte";
   import { toast } from "$lib/tallao";
   import { getAgentMcpSettings, setAgentMcpSettings } from "$lib/services/agents";
@@ -44,6 +54,17 @@
     }
   }
 
+  /** The form differs from the saved settings. */
+  const dirty = $derived(
+    !!settings &&
+      ((toolset.trim() || null) !== (settings.settings.toolset ?? null) ||
+        wrapper !== settings.settings.untrustedWrap)
+  );
+
+  function discard() {
+    if (settings) fill(settings);
+  }
+
   async function save() {
     try {
       saving = true;
@@ -68,67 +89,72 @@
   };
 </script>
 
-<div class="space-y-4" data-testid="agent-mcp-settings">
-  <div>
-    <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentMcpSettings.title")}</h3>
-    <p class="text-xs text-kitsuden-subtle">{t("agentMcpSettings.help")}</p>
-  </div>
-
-  {#if loading}
-    <Skeleton lines={3} />
-  {:else if error}
-    <div
-      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
-    >
-      {error}
-    </div>
-  {:else if settings}
-    <form
-      class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end"
-      onsubmit={(e) => {
-        e.preventDefault();
-        save();
-      }}
-    >
-      <div class="min-w-0">
-        <label for="mcp-toolset" class="block text-sm text-kitsuden-text mb-1.5"
-          >{t("agentMcpSettings.toolset")}</label
+<div data-testid="agent-mcp-settings">
+  <Card>
+    <CardHeader>
+      <CardTitle level={2}>{t("agentMcpSettings.title")}</CardTitle>
+      <p class="text-xs text-kitsuden-subtle">{t("agentMcpSettings.help")}</p>
+    </CardHeader>
+    <CardContent>
+      {#if loading}
+        <Skeleton lines={3} />
+      {:else if error}
+        <Alert variant="error">{error}</Alert>
+      {:else if settings}
+        <form
+          id="agent-mcp-form"
+          onsubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
         >
-        <input
-          id="mcp-toolset"
-          type="text"
-          list="mcp-toolsets"
-          bind:value={toolset}
-          placeholder={t("agentMcpSettings.toolsetAll")}
-          class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
-        />
-        <datalist id="mcp-toolsets">
-          {#each [...settings.options.toolsets, ...settings.options.kons] as option (option)}
-            <option value={option}></option>
-          {/each}
-        </datalist>
-        <p class="text-[11px] text-kitsuden-subtle mt-1">{t("agentMcpSettings.toolsetHelp")}</p>
-      </div>
-      <div class="min-w-0">
-        <label for="mcp-wrap" class="block text-sm text-kitsuden-text mb-1.5"
-          >{t("agentMcpSettings.wrap")}</label
-        >
-        <select
-          id="mcp-wrap"
-          bind:value={wrapper}
-          class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
-        >
-          {#each settings.options.untrustedWrap as mode (mode)}
-            <option value={mode}>{WRAPPER_TAG[mode]?.() ?? mode}</option>
-          {/each}
-        </select>
-        <p class="text-[11px] text-kitsuden-subtle mt-1">{t("agentMcpSettings.wrapHelp")}</p>
-      </div>
-      <div class="md:col-span-2 flex justify-end">
-        <Button type="submit" variant="primary" size="sm" loading={saving}>
-          <Save size={14} class="mr-1" />{t("agentMcpSettings.save")}
-        </Button>
-      </div>
-    </form>
-  {/if}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+            <div class="min-w-0">
+              <Field label={t("agentMcpSettings.toolset")}>
+                <Input
+                  id="mcp-toolset"
+                  list="mcp-toolsets"
+                  bind:value={toolset}
+                  placeholder={t("agentMcpSettings.toolsetAll")}
+                />
+              </Field>
+              <datalist id="mcp-toolsets">
+                {#each [...settings.options.toolsets, ...settings.options.kons] as option (option)}
+                  <option value={option}></option>
+                {/each}
+              </datalist>
+              <p class="text-[11px] text-kitsuden-subtle mt-1">
+                {t("agentMcpSettings.toolsetHelp")}
+              </p>
+            </div>
+            <div class="min-w-0">
+              <Field label={t("agentMcpSettings.wrap")}>
+                <Select
+                  id="mcp-wrap"
+                  value={wrapper}
+                  onchange={(e: Event) =>
+                    (wrapper = (e.currentTarget as HTMLSelectElement).value as UntrustedWrap)}
+                  options={settings.options.untrustedWrap.map((mode) => ({
+                    value: mode,
+                    label: WRAPPER_TAG[mode]?.() ?? mode,
+                  }))}
+                />
+              </Field>
+              <p class="text-[11px] text-kitsuden-subtle mt-1">{t("agentMcpSettings.wrapHelp")}</p>
+            </div>
+          </div>
+          <SaveBar
+            form="agent-mcp-form"
+            sticky={false}
+            {dirty}
+            {saving}
+            disableWhenClean
+            saveLabel={t("agentMcpSettings.save")}
+            cancelLabel={t("record.discard")}
+            onCancel={dirty ? discard : undefined}
+          />
+        </form>
+      {/if}
+    </CardContent>
+  </Card>
 </div>

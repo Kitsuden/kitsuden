@@ -107,14 +107,61 @@ export interface KitsudenClientConfig {
 /** Wire formats this SDK can decode (TRON is not one: it would add a dependency). */
 export type ClientFormat = "json" | "toon" | "auto";
 
+/** The operators `GET /api/explorer/:table` understands (another one is a 400). */
+export type FilterOp = "contains" | "equals" | "gt" | "lt" | "gte" | "lte";
+
+/**
+ * The list query of `GET /api/explorer/:table` (apps/api/src/lib/explorer-query.ts).
+ * Every condition must hold (AND). A secret column (token, password, hash) cannot be
+ * filtered or searched: the API answers 400, as for an unknown operator or column.
+ */
 export interface ListOptions {
   limit?: number;
   page?: number;
   sort?: string;
   dir?: "asc" | "desc";
+  /** Text to find in any textual column (or only in `search_fields`), case-insensitive. */
+  search?: string;
+  /** Columns the search is limited to (at most 30). */
+  search_fields?: string[];
+  /**
+   * One or more conditions per column: a value (equals) or `{ op: value }`, e.g.
+   * `{ status: "draft", created_at: { gte: "2026-01-01" } }` sends
+   * `filter[status]=draft&filter[created_at][gte]=2026-01-01`. At most 20 conditions.
+   */
+  filters?: Record<
+    string,
+    string | number | boolean | Partial<Record<FilterOp, string | number | boolean>>
+  >;
+  /** The older single filter, still honoured (combined with `filters` by AND). */
   filter_field?: string;
-  filter_op?: "contains" | "equals" | "gt" | "lt" | "gte" | "lte";
+  filter_op?: FilterOp;
   filter_value?: string;
+}
+
+/** One change of a record, as the history routes return it (newest first). */
+export interface RecordChange {
+  id: string;
+  action: "create" | "update" | "delete";
+  /** ISO timestamp. */
+  at: string;
+  actor: { type: "user" | "agent" | "system"; id: string | null; name: string | null };
+  /**
+   * The fields that changed. A secret column is `{ field, redacted: true }` with no
+   * values; a long value is cut to `{ truncated, bytes, preview }`.
+   */
+  changes: Array<{ field: string; before?: unknown; after?: unknown; redacted?: true }>;
+  truncated: boolean;
+  /** The approved proposal this write executed, and who approved it (a user id). */
+  proposalId: string | null;
+  approvedBy: string | null;
+}
+
+export interface RecordHistory {
+  history: RecordChange[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 export interface ListResponse<T> {
@@ -283,6 +330,10 @@ export class TableRef<T extends Record<string, unknown> = Record<string, unknown
    * @example
    * const games = await kitsuden.from('games').list();
    * const filtered = await kitsuden.from('games').list({ limit: 10, sort: 'title', dir: 'asc' });
+   * const found = await kitsuden.from('games').list({
+   *   search: 'zelda',
+   *   filters: { status: 'published', released_at: { gte: '2020-01-01' } },
+   * });
    */
   async list(options: ListOptions = {}): Promise<ListResponse<T>> {
     const params = new URLSearchParams();
@@ -290,6 +341,15 @@ export class TableRef<T extends Record<string, unknown> = Record<string, unknown
     if (options.page) params.set("page", String(options.page));
     if (options.sort) params.set("sort", options.sort);
     if (options.dir) params.set("dir", options.dir);
+    if (options.search) params.set("search", options.search);
+    if (options.search_fields?.length) params.set("search_fields", options.search_fields.join(","));
+    for (const [field, condition] of Object.entries(options.filters ?? {})) {
+      if (condition !== null && typeof condition === "object") {
+        for (const [op, value] of Object.entries(condition)) {
+          if (value !== undefined) params.append(`filter[${field}][${op}]`, String(value));
+        }
+      } else if (condition !== undefined) params.append(`filter[${field}]`, String(condition));
+    }
     if (options.filter_field) params.set("filter_field", options.filter_field);
     if (options.filter_op) params.set("filter_op", options.filter_op);
     if (options.filter_value) params.set("filter_value", options.filter_value);
@@ -307,12 +367,7 @@ export class TableRef<T extends Record<string, unknown> = Record<string, unknown
    */
   async get(id: string): Promise<T> {
     // Explorer doesn't have a single-record GET, so we use filter
-    const result = await this.list({
-      filter_field: "id",
-      filter_op: "equals",
-      filter_value: id,
-      limit: 1,
-    });
+    const result = await this.list({ filters: { id }, limit: 1 });
     const record = result.data?.[0];
     if (!record) throw new KitsudenError("Record not found", 404);
     return record;
@@ -343,6 +398,26 @@ export class TableRef<T extends Record<string, unknown> = Record<string, unknown
    */
   async delete(id: string): Promise<void> {
     await this.client.del<void>(`/explorer/${this.tableName}/${id}`);
+  }
+
+  /**
+   * Who created, changed or deleted a record, when, and which fields (newest first).
+   * Writes are recorded from the moment the record history exists; a deleted record
+   * keeps its history. Admin only (`GET /api/history/:table/:id`), like the explorer.
+   * @example
+   * const { history } = await kitsuden.from('games').history('uuid-123');
+   */
+  async history(
+    id: string,
+    page: { limit?: number; offset?: number } = {}
+  ): Promise<RecordHistory> {
+    const params = new URLSearchParams();
+    if (page.limit) params.set("limit", String(page.limit));
+    if (page.offset) params.set("offset", String(page.offset));
+    const query = params.toString();
+    return this.client.get<RecordHistory>(
+      `/history/${this.tableName}/${encodeURIComponent(id)}${query ? `?${query}` : ""}`
+    );
   }
 
   /**

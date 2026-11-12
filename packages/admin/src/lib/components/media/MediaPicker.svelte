@@ -20,10 +20,10 @@
    * field. Putting that decision here is what tied it to the blog editor.
    * ─────────────────────────────────────────────────────────────────────────
    */
-  import { Image, Loader2, Plus, Search } from "lucide-svelte";
+  import { Plus } from "lucide-svelte";
 
   import { api } from "$lib/api";
-  import { Dialog, Button } from "$lib/tallao";
+  import { Alert, Button, Dialog, EmptyState, SearchInput, Spinner } from "$lib/tallao";
   import { uploadMedia } from "$lib/media/upload";
   import { mediaUrl } from "$lib/states/media.svelte";
 
@@ -92,6 +92,8 @@
   $effect(() => {
     if (open) void load();
   });
+
+  let fileInput = $state<HTMLInputElement>();
 
   async function load() {
     searching = true;
@@ -165,93 +167,84 @@
 <Dialog {open} {title} {onClose}>
   <div class="p-4">
     <div class="mb-3 flex items-center gap-2">
-      <div class="relative flex-1">
-        <Search
-          class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kitsuden-subtle"
-        />
-        <input
-          type="text"
-          value={searchValue}
-          oninput={(e) => search(e.currentTarget.value)}
-          placeholder={t("mediaPicker.searchByFileName")}
-          class="input w-full pl-9"
-        />
-        {#if searching}
-          <Loader2
-            class="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-kitsuden-subtle"
-          />
-        {/if}
-      </div>
+      <SearchInput
+        class="min-w-0 flex-1"
+        value={searchValue}
+        oninput={search}
+        placeholder={t("mediaPicker.searchByFileName")}
+      />
+      {#if searching}
+        <Spinner size="sm" class="shrink-0 text-kitsuden-subtle" />
+      {/if}
 
       <!--
         Upload from right here. It is what makes the picker useful on
         a new installation: without this the library is empty and the only
         way out is going to another screen and coming back.
       -->
-      <label
-        class="btn-ghost btn-sm shrink-0 cursor-pointer gap-1.5 {uploading
-          ? 'pointer-events-none opacity-60'
-          : ''}"
+      <Button
+        variant="ghost"
+        size="sm"
+        class="shrink-0"
+        loading={uploading}
+        onclick={() => fileInput?.click()}
       >
         {#if uploading}
-          <Loader2 class="h-4 w-4 animate-spin" />
           {t("mediaPicker.uploading")}
         {:else}
-          <Plus class="h-4 w-4" />
+          <Plus class="h-4 w-4" aria-hidden="true" />
           {t("mediaPicker.upload")}
         {/if}
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          class="hidden"
-          disabled={uploading}
-          onchange={(e) => {
-            void upload(e.currentTarget.files);
-            e.currentTarget.value = "";
-          }}
-        />
-      </label>
+      </Button>
+      <!-- The native file field: the kit's Button opens it. -->
+      <input
+        bind:this={fileInput}
+        type="file"
+        accept="image/*"
+        multiple
+        class="hidden"
+        tabindex="-1"
+        aria-hidden="true"
+        disabled={uploading}
+        onchange={(e) => {
+          void upload(e.currentTarget.files);
+          e.currentTarget.value = "";
+        }}
+      />
     </div>
 
     {#if error}
-      <p
-        class="mb-3 rounded-lg border border-kitsuden-accent-2/40 bg-kitsuden-accent-2/10 px-3 py-2 text-xs text-kitsuden-accent-2"
-      >
-        {error}
-      </p>
+      <Alert variant="error" class="mb-3">{error}</Alert>
     {/if}
 
     {#if mediaValue.length === 0}
-      <div class="py-8 text-center">
-        <Image class="mx-auto mb-3 h-12 w-12 text-kitsuden-subtle" />
-        {#if searchValue.trim()}
-          <!--
-            Telling «there is nothing» from «there is nothing THAT MATCHES» is not
-            cosmetic: with the «upload images first» message in front of a
-            search with no results, anyone concludes the library is empty and
-            goes off to upload something they already have.
-          -->
-          <p class="text-kitsuden-subtle">
-            {t("mediaPicker.noImageMatches", { search: searchValue })}
-          </p>
-          <button
-            class="mt-2 text-xs text-kitsuden-accent hover:underline"
-            onclick={() => search("")}
-          >
-            {t("mediaPicker.viewAll")}
-          </button>
-        {:else}
-          <p class="text-kitsuden-subtle">{t("mediaPicker.noImagesYet")}</p>
-          <p class="mt-1 text-xs text-kitsuden-subtle">
-            {t("mediaPicker.useUploadHereNotAbove")}
-          </p>
-        {/if}
-      </div>
+      {#if searchValue.trim()}
+        <!--
+          Telling «there is nothing» from «there is nothing THAT MATCHES» is not
+          cosmetic: with the «upload images first» message in front of a
+          search with no results, anyone concludes the library is empty and
+          goes off to upload something they already have.
+        -->
+        <EmptyState
+          variant="no-results"
+          size="sm"
+          title={t("mediaPicker.noImageMatches", { search: searchValue })}
+          onClearFilters={() => search("")}
+          clearFiltersLabel={t("mediaPicker.viewAll")}
+        />
+      {:else}
+        <EmptyState
+          size="sm"
+          title={t("mediaPicker.noImagesYet")}
+          description={t("mediaPicker.useUploadHereNotAbove")}
+        />
+      {/if}
     {:else}
       <div class="grid max-h-96 grid-cols-3 gap-3 overflow-y-auto">
         {#each mediaValue as media (media.id)}
           <button
+            type="button"
+            aria-pressed={chosen(media.id)}
             onclick={() => onSelect(media)}
             class="relative aspect-square overflow-hidden rounded-lg border-2 transition-all {chosen(
               media.id

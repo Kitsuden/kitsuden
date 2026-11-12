@@ -239,6 +239,43 @@ export const Generic = z
   .describe("Result object (see the description)");
 export const Success = z.object({ success: z.literal(true) }).passthrough();
 
+export const HistoryQuery = z
+  .object({
+    limit: z.string().optional().describe("1-200, default 50"),
+    offset: z.string().optional().describe("Entries to skip, default 0"),
+  })
+  .passthrough();
+
+/** The change history of a record (see packages/engine/src/record-history.ts). */
+export const RecordHistory = z.object({
+  history: z.array(
+    z.object({
+      id: z.string(),
+      action: z.enum(["create", "update", "delete"]),
+      at: z.string().describe("ISO timestamp"),
+      actor: z.object({
+        type: z.enum(["user", "agent", "system"]),
+        id: z.string().nullable(),
+        name: z.string().nullable(),
+      }),
+      changes: z.array(
+        z.object({
+          field: z.string().describe("`title`, `status`… or `data.<key>`"),
+          before: z.unknown().optional(),
+          after: z.unknown().optional(),
+          redacted: z.literal(true).optional().describe("A secret field: values are not kept"),
+        })
+      ),
+      truncated: z.boolean().describe("Some value or the list was cut to its size limit"),
+      proposalId: z.string().nullable().describe("The approved proposal this write executed"),
+      approvedBy: z.string().nullable(),
+    })
+  ),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+});
+
 export const ComputedField = z
   .object({ id: z.guid(), name: z.string(), label: z.string(), type: z.string() })
   .passthrough();

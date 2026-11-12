@@ -270,6 +270,8 @@ export const ADMIN_ONLY_ROUTES: GateRule[] = [
   { prefix: "/api/v1/agent-decisions", methods: ["GET"], role: "staff" },
   { prefix: "/api/v1" },
   { prefix: "/api/explorer" },
+  // The change history of any table's rows (routes/record-history.ts), as the explorer.
+  { prefix: "/api/history" },
   { prefix: "/api/generate-code" },
   { prefix: "/api/schema" },
   { prefix: "/api/map" },

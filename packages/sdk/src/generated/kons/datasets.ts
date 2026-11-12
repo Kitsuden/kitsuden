@@ -335,6 +335,75 @@ export type DeleteEntryResponse = {
   [key: string]: unknown;
 };
 
+/** Arguments of `datasets.entry-history`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
+export type EntryHistoryParams = {
+  /** Dataset id (uuid) */
+  id: string | number;
+  /** Entry id (uuid) */
+  entryId: string | number;
+  /** 1-200, default 50 */
+  limit?: string | number;
+  /** Entries to skip, default 0 */
+  offset?: string | number;
+};
+
+/** Success response of `datasets.entry-history`. */
+export type EntryHistoryResponse = {
+  history: {
+    id: string;
+    action: "create" | "update" | "delete";
+    /** ISO timestamp */
+    at: string;
+    actor: {
+      type: "user" | "agent" | "system";
+      id: string | null;
+      name: string | null;
+    };
+    changes: {
+      /** `title`, `status`… or `data.<key>` */
+      field: string;
+      before?: unknown;
+      after?: unknown;
+      /** A secret field: values are not kept */
+      redacted?: true;
+    }[];
+    /** Some value or the list was cut to its size limit */
+    truncated: boolean;
+    /** The approved proposal this write executed */
+    proposalId: string | null;
+    approvedBy: string | null;
+  }[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+/** One item of the list `datasets.entry-history` pages through. */
+export type EntryHistoryItem = {
+  id: string;
+  action: "create" | "update" | "delete";
+  /** ISO timestamp */
+  at: string;
+  actor: {
+    type: "user" | "agent" | "system";
+    id: string | null;
+    name: string | null;
+  };
+  changes: {
+    /** `title`, `status`… or `data.<key>` */
+    field: string;
+    before?: unknown;
+    after?: unknown;
+    /** A secret field: values are not kept */
+    redacted?: true;
+  }[];
+  /** Some value or the list was cut to its size limit */
+  truncated: boolean;
+  /** The approved proposal this write executed */
+  proposalId: string | null;
+  approvedBy: string | null;
+};
+
 /** Body of `datasets.export-datasets`. */
 export type ExportDatasetsBody = {
   datasets: string[];
@@ -866,6 +935,7 @@ export const operations = {
   "deleteCalculatedField": {"kon":"kon-datasets","id":"delete-calculated-field","operationId":"datasets.delete-calculated-field","method":"DELETE","path":"/datasets/{id}/calculated-fields/{fieldId}","pathParams":["id","fieldId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:datasets:delete-calculated-field","mcpTool":"datasets__delete-calculated-field","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "deleteDataset": {"kon":"kon-datasets","id":"delete-dataset","operationId":"datasets.delete-dataset","method":"DELETE","path":"/datasets/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:datasets:delete-dataset","mcpTool":"datasets__delete-dataset","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "deleteEntry": {"kon":"kon-datasets","id":"delete-entry","operationId":"datasets.delete-entry","method":"DELETE","path":"/datasets/{id}/entries/{entryId}","pathParams":["id","entryId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:datasets:delete-entry","mcpTool":"datasets__delete-entry","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "entryHistory": {"kon":"kon-datasets","id":"entry-history","operationId":"datasets.entry-history","method":"GET","path":"/datasets/{id}/entries/{entryId}/history","pathParams":["id","entryId"],"queryParams":["limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:entry-history","mcpTool":"datasets__entry-history","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"history","limit":"limit"}},
   "exportDatasets": {"kon":"kon-datasets","id":"export-datasets","operationId":"datasets.export-datasets","method":"POST","path":"/datasets/export","pathParams":[],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:datasets:export-datasets","mcpTool":"datasets__export-datasets","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "getCalculatedField": {"kon":"kon-datasets","id":"get-calculated-field","operationId":"datasets.get-calculated-field","method":"GET","path":"/datasets/{id}/calculated-fields/{fieldId}","pathParams":["id","fieldId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:get-calculated-field","mcpTool":"datasets__get-calculated-field","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "getDataset": {"kon":"kon-datasets","id":"get-dataset","operationId":"datasets.get-dataset","method":"GET","path":"/datasets/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:get-dataset","mcpTool":"datasets__get-dataset","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
@@ -1004,6 +1074,16 @@ export interface DatasetsApi {
    * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly deleteEntry: Operation<DeleteEntryParams, DeleteEntryResponse>;
+  /**
+   * Change history of an entry
+   *
+   * Who created, changed or deleted an entry, newest first: the actor (a person or an agent), the action (create, update, delete) and the fields that changed, with their value before and after. A field named like a secret (token, password, hash) is listed as `redacted` without values, and long values are cut to a preview. Same visibility as reading the entry (otherwise 404). Changes made before this history existed are not listed.
+   *
+   * REST: `GET /api/datasets/{id}/entries/{entryId}/history` · scope `kon:datasets:entry-history`
+   * idempotent (safe to retry) · MCP tool `datasets__entry-history`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   */
+  readonly entryHistory: PageableOperation<EntryHistoryParams, EntryHistoryResponse, EntryHistoryItem>;
   /**
    * Export datasets
    *

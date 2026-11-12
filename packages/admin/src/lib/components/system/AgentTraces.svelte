@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Button, Card } from "$lib/tallao";
+  import { Alert, Button, Card, EmptyState, SearchInput, Spinner } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
-  import { Activity, Filter, Bot, Clock, Coins } from "lucide-svelte";
+  import { Activity, Bot, Clock, Coins } from "lucide-svelte";
   import { onMount } from "svelte";
 
   import Timeline from "$lib/components/agents/Timeline.svelte";
@@ -86,9 +86,11 @@
   }
 </script>
 
-<div class="flex h-full">
+<div class="flex flex-col md:flex-row h-full min-w-0">
   <!-- Sidebar - Trace List -->
-  <div class="w-96 border-r border-kitsuden-border flex flex-col">
+  <div
+    class="w-full md:w-96 md:shrink-0 border-b md:border-b-0 md:border-r border-kitsuden-border flex flex-col min-w-0"
+  >
     <p class="px-4 py-3 border-b border-kitsuden-border text-xs text-kitsuden-subtle">
       {total}
       {t("tracesPage.registeredTraces")}
@@ -96,50 +98,36 @@
 
     <!-- Filters -->
     <div class="p-3 border-b border-kitsuden-border">
-      <div class="flex items-center gap-2">
-        <div class="flex-1 relative">
-          <input
-            type="text"
-            placeholder={t("tracesPage.searchTraces")}
-            class="w-full pl-8 pr-3 py-1.5 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:ring-2 focus:ring-kitsuden-accent/50"
-          />
-          <Filter
-            size={14}
-            class="absolute left-2.5 top-1/2 -translate-y-1/2 text-kitsuden-subtle"
-          />
-        </div>
-      </div>
+      <SearchInput
+        size="sm"
+        placeholder={t("tracesPage.searchTraces")}
+        ariaLabel={t("tracesPage.searchTraces")}
+      />
     </div>
 
     <!-- Trace List -->
     <div class="flex-1 overflow-y-auto">
       {#if loading}
         <div class="flex items-center justify-center h-32">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
+          <Spinner />
         </div>
       {:else if error}
-        <div
-          class="p-4 m-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger text-sm"
-        >
-          {error}
-        </div>
+        <div class="m-4"><Alert variant="error">{error}</Alert></div>
       {:else if traces.length === 0}
-        <div class="p-8 text-center text-kitsuden-subtle">
-          <Activity size={32} class="mx-auto mb-3 opacity-50" />
-          <p class="text-sm">{t("tracesPage.noTraces")}</p>
-        </div>
+        <EmptyState size="sm" title={t("tracesPage.noTraces")} />
       {:else}
         <div class="divide-y divide-kitsuden-border/50">
           {#each traces as trace}
             <button
+              type="button"
               class="w-full p-3 text-left hover:bg-kitsuden-border/30 transition-colors {selectedTrace?.id ===
               trace.id
                 ? 'bg-kitsuden-border/50'
                 : ''}"
               onclick={() => selectTrace(trace)}
             >
-              <div class="flex items-start justify-between">
-                <div class="flex items-center gap-2">
+              <div class="flex items-start justify-between gap-2 min-w-0">
+                <div class="flex items-center gap-2 min-w-0">
                   <span class={getStatusColor(trace.status)}>{getStatusIcon(trace.status)}</span>
                   <span class="text-sm font-medium text-kitsuden-text truncate max-w-[140px]"
                     >{trace.sessionId || t("tracesPage.withoutSession")}</span
@@ -148,7 +136,7 @@
                 <span class="text-xs text-kitsuden-subtle">{formatDate(trace.createdAt)}</span>
               </div>
 
-              <div class="flex items-center gap-3 mt-2 text-xs text-kitsuden-subtle">
+              <div class="flex flex-wrap items-center gap-3 mt-2 text-xs text-kitsuden-subtle">
                 <span class="flex items-center gap-1">
                   <Bot size={12} />
                   {trace.agentName || t("tracesPage.agent")}
@@ -185,11 +173,11 @@
   </div>
 
   <!-- Main Content - Trace Detail -->
-  <div class="flex-1 overflow-y-auto">
+  <div class="flex-1 overflow-y-auto min-w-0">
     {#if selectedTrace}
-      <div class="p-6 space-y-6">
+      <div class="p-4 md:p-6 space-y-6">
         <!-- Header -->
-        <div class="flex items-start justify-between">
+        <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div class="flex items-center gap-2">
               <span class="{getStatusColor(selectedTrace.status)} text-lg"
@@ -228,23 +216,20 @@
 
         <!-- Timeline -->
         {#if selectedTrace.steps?.length > 0}
-          <Card class="p-6">
+          <Card class="p-4 md:p-6">
             <h3 class="text-sm font-medium text-kitsuden-text-dim mb-4">
               {t("tracesPage.execution")}
             </h3>
             <Timeline steps={selectedTrace.steps} />
           </Card>
         {:else}
-          <Card class="p-12 text-center">
-            <Activity size={48} class="mx-auto text-kitsuden-subtle mb-4" />
-            <p class="text-kitsuden-subtle">{t("tracesPage.noStepsRecordedFor")}</p>
-          </Card>
+          <EmptyState title={t("tracesPage.noStepsRecordedFor")} />
         {/if}
       </div>
     {:else}
-      <div class="flex items-center justify-center h-full text-kitsuden-subtle">
+      <div class="flex items-center justify-center h-full p-6 text-kitsuden-subtle">
         <div class="text-center">
-          <Activity size={48} class="mx-auto mb-4 opacity-50" />
+          <Activity size={48} class="mx-auto mb-4 opacity-50" aria-hidden="true" />
           <p>{t("tracesPage.selectATraceToView")}</p>
         </div>
       </div>

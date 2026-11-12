@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from "$lib/i18n";
+  import { Badge, Button, Input, Label, Textarea } from "$lib/tallao";
   import { Gauge, ImagePlus, X, CheckCircle2, XCircle } from "lucide-svelte";
 
   export interface SEOData {
@@ -16,6 +17,7 @@
   }
 
   const { data, onUpdate }: Props = $props();
+  const uid = $props.id();
 
   let dragOver = $state(false);
   let fileInput: HTMLInputElement | undefined = $state();
@@ -73,31 +75,25 @@
     <h3 class="text-sm font-semibold uppercase tracking-wider text-kitsuden-text-dim">
       {t("sEOAnalyzer.seoGuardian")}
     </h3>
-    <span
-      class="ml-auto badge {overallScore >= 80
-        ? 'badge-green'
-        : overallScore >= 50
-          ? 'badge-amber'
-          : 'badge-pink'}"
+    <Badge
+      class="ml-auto"
+      variant={overallScore >= 80 ? "success" : overallScore >= 50 ? "warning" : "error"}
     >
       {overallScore}%
-    </span>
+    </Badge>
   </div>
 
   <!-- Slug -->
   <div>
-    <label class="label mb-1.5 block">{t("sEOAnalyzer.urlSlug")}</label>
-    <div
-      class="flex items-center gap-0 rounded-lg border border-kitsuden-border overflow-hidden bg-kitsuden-bg"
-    >
-      <span
-        class="px-3 py-2 text-xs text-kitsuden-subtle bg-kitsuden-card border-r border-kitsuden-border font-mono"
-        >{t("sEOAnalyzer.blog")}</span
-      >
-      <input
+    <Label for="{uid}-slug" class="mb-1.5 block">{t("sEOAnalyzer.urlSlug")}</Label>
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="text-xs text-kitsuden-subtle font-mono shrink-0">{t("sEOAnalyzer.blog")}</span>
+      <Input
+        id="{uid}-slug"
         value={data.slug}
-        oninput={(e) => onUpdate({ ...data, slug: e.currentTarget.value })}
-        class="flex-1 bg-transparent px-3 py-2 text-sm text-kitsuden-accent font-mono outline-hidden"
+        oninput={(e: Event) =>
+          onUpdate({ ...data, slug: (e.currentTarget as HTMLInputElement).value })}
+        class="flex-1 min-w-0 font-mono"
         placeholder="post-slug"
       />
     </div>
@@ -106,13 +102,14 @@
   <!-- SEO Title -->
   <div>
     <div class="flex items-center justify-between mb-1.5">
-      <label class="label">{t("sEOAnalyzer.seoTitle")}</label>
+      <Label for="{uid}-title">{t("sEOAnalyzer.seoTitle")}</Label>
       {@render charCounter(data.seoTitle.length, 60)}
     </div>
-    <input
+    <Input
+      id="{uid}-title"
       value={data.seoTitle}
-      oninput={(e) => onUpdate({ ...data, seoTitle: e.currentTarget.value })}
-      class="input"
+      oninput={(e: Event) =>
+        onUpdate({ ...data, seoTitle: (e.currentTarget as HTMLInputElement).value })}
       placeholder={t("sEOAnalyzer.seoOptimizedTitle")}
     />
   </div>
@@ -120,20 +117,24 @@
   <!-- SEO Description -->
   <div>
     <div class="flex items-center justify-between mb-1.5">
-      <label class="label">{t("sEOAnalyzer.metaDescription")}</label>
+      <Label for="{uid}-description">{t("sEOAnalyzer.metaDescription")}</Label>
       {@render charCounter(data.seoDescription.length, 160)}
     </div>
-    <textarea
+    <Textarea
+      id="{uid}-description"
       value={data.seoDescription}
-      oninput={(e) => onUpdate({ ...data, seoDescription: e.currentTarget.value })}
-      class="textarea"
-      rows="3"
-      placeholder={t("sEOAnalyzer.compellingDescriptionForSearchResults")}></textarea>
+      oninput={(e: Event) =>
+        onUpdate({ ...data, seoDescription: (e.currentTarget as HTMLTextAreaElement).value })}
+      rows={3}
+      placeholder={t("sEOAnalyzer.compellingDescriptionForSearchResults")}
+    />
   </div>
 
   <!-- OG Image -->
   <div>
-    <label class="label mb-1.5 block">{t("sEOAnalyzer.ogImageSocialPreview")}</label>
+    <p class="mb-1.5 text-sm font-medium text-kitsuden-text">
+      {t("sEOAnalyzer.ogImageSocialPreview")}
+    </p>
     <div
       ondragover={(e) => {
         e.preventDefault();
@@ -153,15 +154,19 @@
             class="w-full rounded-lg border border-kitsuden-border"
             alt={t("sEOAnalyzer.ogImage")}
           />
-          <button
-            onclick={(e) => {
+          <Button
+            variant="secondary"
+            size="icon"
+            class="absolute top-2 right-2"
+            ariaLabel={t("common.remove")}
+            title={t("common.remove")}
+            onclick={(e: MouseEvent) => {
               e.stopPropagation();
               onUpdate({ ...data, ogImageUrl: "" });
             }}
-            class="absolute top-2 right-2 btn-icon bg-black/60 p-1 rounded-md"
           >
-            <X class="w-3 h-3" />
-          </button>
+            <X class="w-4 h-4" aria-hidden="true" />
+          </Button>
         </div>
       {:else}
         <div class="flex flex-col items-center gap-2 text-kitsuden-subtle">
@@ -182,7 +187,7 @@
 
   <!-- Google Preview -->
   <div>
-    <label class="label mb-2 block">{t("sEOAnalyzer.searchPreview")}</label>
+    <p class="mb-2 text-sm font-medium text-kitsuden-text">{t("sEOAnalyzer.searchPreview")}</p>
     <div class="rounded-lg bg-white p-4 space-y-1">
       <p class="text-sm text-[#1a0dab] truncate font-medium">
         {data.seoTitle || data.title || t("common.pageTitle")}
@@ -198,7 +203,7 @@
 
   <!-- Checks -->
   <div class="space-y-2">
-    <label class="label mb-2 block">{t("sEOAnalyzer.seoChecklist")}</label>
+    <p class="mb-2 text-sm font-medium text-kitsuden-text">{t("sEOAnalyzer.seoChecklist")}</p>
     {#each checks as check}
       <div class="flex items-center gap-2 text-xs">
         {#if check.pass}

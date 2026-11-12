@@ -17,7 +17,7 @@
   import { t } from "$lib/i18n";
   import { Save, ArrowLeft, Eye, Trash2 } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast, Button } from "$lib/tallao";
+  import { toast, Button, Input } from "$lib/tallao";
 
   import { api } from "$lib/api";
   import PageBuilder from "$lib/components/builder/PageBuilder.svelte";
@@ -158,29 +158,29 @@
   <div
     class="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-kitsuden-border bg-kitsuden-card"
   >
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3 min-w-0 flex-1 basis-64">
       <Button
         onclick={() => goto(LISTING)}
         variant="ghost"
         size="icon"
-        aria-label={t("builderView.comeBack")}
+        ariaLabel={t("builderView.comeBack")}
       >
         <ArrowLeft class="w-5 h-5" />
       </Button>
-      <div>
-        <input
+      <div class="flex flex-col gap-1.5 min-w-0 flex-1 max-w-md">
+        <Input
           bind:value={pageTitle}
-          type="text"
           placeholder={t("common.pageTitle")}
-          class="bg-transparent text-xl font-bold text-kitsuden-text outline-hidden border-b border-transparent focus:border-kitsuden-accent/50 transition-colors placeholder:text-kitsuden-subtle"
+          aria-label={t("common.pageTitle")}
+          class="font-semibold"
         />
-        <div class="flex items-center gap-2 mt-1">
-          <span class="text-xs text-kitsuden-subtle">/</span>
-          <input
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-xs text-kitsuden-subtle" aria-hidden="true">/</span>
+          <Input
             bind:value={pageSlug}
-            type="text"
             placeholder="page-slug"
-            class="bg-transparent text-xs text-kitsuden-text-dim outline-hidden border-b border-transparent focus:border-kitsuden-accent/50 transition-colors placeholder:text-kitsuden-subtle font-mono"
+            aria-label={t("common.slug")}
+            class="font-mono text-xs"
           />
         </div>
       </div>
@@ -209,11 +209,8 @@
         <Eye class="w-4 h-4" />
         {t("common.preview")}
       </Button>
-      <Button onclick={handleSave} disabled={saving || loading} size="sm">
+      <Button onclick={handleSave} disabled={loading} loading={saving} size="sm">
         {#if saving}
-          <span
-            class="w-4 h-4 border-2 border-kitsuden-bg border-t-transparent rounded-full animate-spin"
-          ></span>
           {t("common.saving")}
         {:else}
           <Save class="w-4 h-4" /> {t("builderView.savePage")}

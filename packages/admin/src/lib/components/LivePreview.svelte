@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t, localeFormat } from "$lib/i18n";
+  import { Button } from "$lib/tallao";
   import { Monitor, Tablet, Smartphone } from "lucide-svelte";
   import { renderBlocks } from "@kitsuden/shared";
 
@@ -253,33 +254,36 @@
       >{t("common.contentPreview")}</span
     >
     <div class="flex items-center gap-1">
-      <button
-        class="p-1.5 rounded-md transition-colors {viewport === 'desktop'
-          ? 'bg-kitsuden-accent/10 text-kitsuden-accent'
-          : 'text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-border/30'}"
+      <Button
+        variant={viewport === "desktop" ? "soft" : "ghost"}
+        size="icon"
+        aria-pressed={viewport === "desktop"}
+        ariaLabel={t("livePreview.desktopView")}
+        title={t("livePreview.desktopView")}
         onclick={() => (viewport = "desktop")}
-        aria-label={t("livePreview.desktopView")}
       >
-        <Monitor class="w-4 h-4" />
-      </button>
-      <button
-        class="p-1.5 rounded-md transition-colors {viewport === 'tablet'
-          ? 'bg-kitsuden-accent/10 text-kitsuden-accent'
-          : 'text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-border/30'}"
+        <Monitor class="w-4 h-4" aria-hidden="true" />
+      </Button>
+      <Button
+        variant={viewport === "tablet" ? "soft" : "ghost"}
+        size="icon"
+        aria-pressed={viewport === "tablet"}
+        ariaLabel={t("livePreview.tabletView")}
+        title={t("livePreview.tabletView")}
         onclick={() => (viewport = "tablet")}
-        aria-label={t("livePreview.tabletView")}
       >
-        <Tablet class="w-4 h-4" />
-      </button>
-      <button
-        class="p-1.5 rounded-md transition-colors {viewport === 'mobile'
-          ? 'bg-kitsuden-accent/10 text-kitsuden-accent'
-          : 'text-kitsuden-subtle hover:text-kitsuden-text hover:bg-kitsuden-border/30'}"
+        <Tablet class="w-4 h-4" aria-hidden="true" />
+      </Button>
+      <Button
+        variant={viewport === "mobile" ? "soft" : "ghost"}
+        size="icon"
+        aria-pressed={viewport === "mobile"}
+        ariaLabel={t("livePreview.mobileView")}
+        title={t("livePreview.mobileView")}
         onclick={() => (viewport = "mobile")}
-        aria-label={t("livePreview.mobileView")}
       >
-        <Smartphone class="w-4 h-4" />
-      </button>
+        <Smartphone class="w-4 h-4" aria-hidden="true" />
+      </Button>
     </div>
   </div>
 

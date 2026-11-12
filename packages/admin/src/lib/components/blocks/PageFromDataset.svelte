@@ -9,21 +9,11 @@
    * @production Ready for production use
    * @version 1.0.0
    */
-  import {
-    Database,
-    Search,
-    ArrowRight,
-    Layout,
-    Check,
-    X,
-    Loader2,
-    AlertCircle,
-    RefreshCw,
-  } from "lucide-svelte";
+  import { Database, ArrowRight, Layout, Check, RefreshCw } from "lucide-svelte";
   import { onDestroy } from "svelte";
 
   import { api } from "$lib/api";
-  import { Dialog, Button } from "$lib/tallao";
+  import { Alert, Badge, Button, Dialog, EmptyState, SearchInput, Spinner } from "$lib/tallao";
 
   // ─── Types ──────────────────────────────────────────
   interface Dataset {
@@ -263,12 +253,6 @@
       loadDatasets();
     } else if (step === "entries" && selectedDataset) {
       loadEntries(selectedDataset.id, 1);
-    }
-  }
-
-  function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      handleSearch();
     }
   }
 
@@ -713,9 +697,10 @@
     : step === "entries"
       ? t("pageFromDataset.selectFrom", { name: selectedDataset?.name })
       : t("pageFromDataset.previewBlocks")}
+  size="xl"
   onClose={handleClose}
 >
-  <div class="w-[700px] max-h-[80vh] flex flex-col">
+  <div class="w-full min-w-0 max-h-[80vh] flex flex-col">
     <!-- Navigation -->
     <div class="flex items-center gap-2 px-4 py-3 border-b border-kitsuden-border">
       {#if step !== "datasets"}
@@ -741,30 +726,23 @@
 
     <!-- Search -->
     <div class="p-4 border-b border-kitsuden-border">
-      <div class="relative">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-kitsuden-subtle" />
-        <input
-          type="text"
+      <!-- Enter searches: the field sits in a form because SearchInput keeps its own keydown. -->
+      <form
+        role="search"
+        onsubmit={(e) => {
+          e.preventDefault();
+          handleSearch();
+        }}
+      >
+        <SearchInput
           bind:value={searchQuery}
-          onkeydown={handleKeyDown}
+          onclear={handleSearch}
           placeholder={step === "datasets"
             ? t("pageFromDataset.searchDatasets")
             : t("pageFromDataset.searchEntries")}
-          class="input w-full pl-10"
           disabled={loading}
         />
-        {#if searchQuery}
-          <button
-            onclick={() => {
-              searchQuery = "";
-              handleSearch();
-            }}
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-kitsuden-subtle hover:text-kitsuden-text"
-          >
-            <X class="w-4 h-4" />
-          </button>
-        {/if}
-      </div>
+      </form>
       <div class="flex justify-between mt-2">
         <span class="text-xs text-kitsuden-subtle">
           {#if step === "datasets"}
@@ -785,38 +763,36 @@
 
     <!-- Error Alert -->
     {#if error}
-      <div
-        class="mx-4 mt-4 p-3 rounded-lg bg-kitsuden-accent-2/10 border border-kitsuden-accent-2/20 text-kitsuden-accent-2 text-sm flex items-start gap-2"
-      >
-        <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
-        <div class="flex-1">
-          <p>{error}</p>
-          <button
-            onclick={() => {
-              error = null;
-              handleSearch();
-            }}
-            class="text-xs underline mt-1 hover:no-underline flex items-center gap-1"
-          >
-            <RefreshCw class="w-3 h-3" />
-            {t("pageFromDataset.retry")}
-          </button>
-        </div>
-      </div>
+      <Alert variant="error" class="mx-4 mt-4">
+        <p>{error}</p>
+        <Button
+          variant="ghost"
+          size="sm"
+          class="mt-1"
+          onclick={() => {
+            error = null;
+            handleSearch();
+          }}
+        >
+          <RefreshCw class="w-3 h-3" aria-hidden="true" />
+          {t("pageFromDataset.retry")}
+        </Button>
+      </Alert>
     {/if}
 
     <!-- Content -->
     <div class="flex-1 overflow-y-auto p-4">
       {#if loading}
         <div class="flex flex-col items-center justify-center py-12">
-          <Loader2 class="w-8 h-8 text-kitsuden-accent animate-spin mb-3" />
-          <p class="text-kitsuden-subtle text-sm">{t("common.loading")}</p>
+          <Spinner size="lg" class="text-kitsuden-accent mb-3" />
+          <p class="text-kitsuden-subtle text-sm" aria-hidden="true">{t("common.loading")}</p>
         </div>
       {:else if step === "datasets"}
         <!-- Datasets List -->
         <div class="space-y-2">
           {#each filteredDatasets as dataset}
             <button
+              type="button"
               onclick={() => selectDataset(dataset)}
               class="w-full p-4 rounded-xl border border-kitsuden-border hover:border-kitsuden-accent/50 hover:bg-kitsuden-accent/5 transition-all text-left group"
               disabled={loading}
@@ -851,14 +827,13 @@
           {/each}
 
           {#if filteredDatasets.length === 0}
-            <div class="text-center py-12">
-              <Database class="w-12 h-12 text-kitsuden-subtle mx-auto mb-3" />
-              <p class="text-kitsuden-subtle">
-                {searchQuery
-                  ? t("pageFromDataset.noDatasetsMatchYourSearch")
-                  : t("pageFromDataset.noDatasetsAvailable")}
-              </p>
-            </div>
+            <EmptyState
+              size="sm"
+              variant={searchQuery ? "no-results" : "empty"}
+              title={searchQuery
+                ? t("pageFromDataset.noDatasetsMatchYourSearch")
+                : t("pageFromDataset.noDatasetsAvailable")}
+            />
           {/if}
         </div>
       {:else if step === "entries"}
@@ -868,6 +843,7 @@
             {@const entryTitle = entry.data?.title || entry.data?.name || "Untitled"}
             {@const entryDesc = entry.data?.description || entry.data?.summary || ""}
             <button
+              type="button"
               onclick={() => selectEntry(entry)}
               class="w-full p-4 rounded-xl border border-kitsuden-border hover:border-kitsuden-accent/50 hover:bg-kitsuden-accent/5 transition-all text-left group"
               disabled={loading}
@@ -885,11 +861,7 @@
                   {/if}
                   <div class="flex items-center gap-3 mt-2">
                     {#if entry.status}
-                      <span
-                        class="text-xs px-2 py-0.5 rounded-full bg-kitsuden-border/50 text-kitsuden-subtle capitalize"
-                      >
-                        {entry.status}
-                      </span>
+                      <Badge variant="secondary" class="capitalize">{entry.status}</Badge>
                     {/if}
                     <span class="text-xs text-kitsuden-subtle">
                       {formatDate(entry.updatedAt)}
@@ -904,14 +876,13 @@
           {/each}
 
           {#if entries.length === 0}
-            <div class="text-center py-12">
-              <Layout class="w-12 h-12 text-kitsuden-subtle mx-auto mb-3" />
-              <p class="text-kitsuden-subtle">
-                {searchQuery
-                  ? t("pageFromDataset.noEntriesMatchYourSearch")
-                  : t("pageFromDataset.noEntriesAvailable")}
-              </p>
-            </div>
+            <EmptyState
+              size="sm"
+              variant={searchQuery ? "no-results" : "empty"}
+              title={searchQuery
+                ? t("pageFromDataset.noEntriesMatchYourSearch")
+                : t("pageFromDataset.noEntriesAvailable")}
+            />
           {/if}
         </div>
 
@@ -945,22 +916,20 @@
         {@const preview = transformEntryToPage(selectedEntry, selectedDataset!)}
         <div class="space-y-4">
           <div>
-            <label class="label text-xs uppercase text-kitsuden-subtle"
-              >{t("common.pageTitle")}</label
-            >
+            <p class="text-xs uppercase text-kitsuden-subtle">{t("common.pageTitle")}</p>
             <p class="text-lg font-medium text-kitsuden-text">{preview.title}</p>
           </div>
 
           <div>
-            <label class="label text-xs uppercase text-kitsuden-subtle">{t("common.slug")}</label>
+            <p class="text-xs uppercase text-kitsuden-subtle">{t("common.slug")}</p>
             <p class="text-sm text-kitsuden-accent font-mono">/{preview.slug}</p>
           </div>
 
           <div>
-            <label class="label text-xs uppercase text-kitsuden-subtle flex items-center gap-1">
+            <p class="text-xs uppercase text-kitsuden-subtle flex items-center gap-1">
               <Layout class="w-3 h-3" />
               {t("pageFromDataset.generatedBlocks", { blocksCount: preview.blocks.length })}
-            </label>
+            </p>
             <div class="mt-2 space-y-2">
               {#each preview.blocks as block, index}
                 <div
@@ -969,7 +938,7 @@
                   <span class="text-xs text-kitsuden-subtle w-6">{index + 1}.</span>
                   <span class="text-base">{getBlockIcon(block.type)}</span>
                   <span class="text-sm text-kitsuden-text capitalize">{block.type}</span>
-                  <span class="text-xs text-kitsuden-subtle ml-auto truncate max-w-[200px]">
+                  <span class="text-xs text-kitsuden-subtle ml-auto truncate min-w-0 max-w-[200px]">
                     {block.name ||
                       block.content.headline ||
                       block.content.title ||
@@ -1000,9 +969,8 @@
         {t("common.cancel")}
       </Button>
       {#if step === "preview"}
-        <Button onclick={handleConfirm} disabled={loading}>
+        <Button onclick={handleConfirm} {loading}>
           {#if loading}
-            <Loader2 class="w-4 h-4 animate-spin" />
             {t("pageFromDataset.processing")}
           {:else}
             <Check class="w-4 h-4" />

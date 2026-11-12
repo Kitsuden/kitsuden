@@ -4,7 +4,11 @@
 -->
 <script lang="ts">
   import {
+    Alert,
+    Badge,
     Button,
+    EmptyState,
+    Spinner,
     Table,
     TableBody,
     TableCell,
@@ -66,47 +70,46 @@
 </script>
 
 <div class="space-y-4" data-testid="queue-status">
-  <div class="flex items-center gap-3">
-    <p class="text-xs text-kitsuden-subtle flex-1">{t("systemQueue.help")}</p>
+  <div class="flex flex-wrap items-center gap-3">
+    <p class="text-xs text-kitsuden-subtle flex-1 min-w-0">{t("systemQueue.help")}</p>
     <Button variant="ghost" size="sm" onclick={load}>
-      <RefreshCw size={14} class="mr-1" />{t("systemTraces.refresh")}
+      <RefreshCw size={14} aria-hidden="true" />{t("systemTraces.refresh")}
     </Button>
   </div>
 
   {#if loading && !status}
     <div class="flex items-center justify-center h-24">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-kitsuden-accent"></div>
+      <Spinner />
     </div>
   {:else if error}
-    <div
-      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
-    >
-      {error}
-    </div>
+    <Alert variant="error">{error}</Alert>
   {:else if status}
-    <div class="flex flex-wrap gap-3 text-xs">
-      <span
-        class="px-2 py-1 rounded-sm bg-kitsuden-card border border-kitsuden-border text-kitsuden-text"
-        >{t("systemQueue.worker")}: {workerTag(status.worker)}</span
+    <div class="flex flex-wrap gap-2">
+      <Badge
+        size="md"
+        dot
+        variant={status.worker === "running"
+          ? "success"
+          : status.worker === "stopped"
+            ? "warning"
+            : "default"}>{t("systemQueue.worker")}: {workerTag(status.worker)}</Badge
       >
-      <span
-        class="px-2 py-1 rounded-sm bg-kitsuden-card border border-kitsuden-border text-kitsuden-text"
+      <Badge size="md"
         >{t("systemQueue.listen")}: {status.listens
           ? t("systemQueue.yes")
-          : t("systemQueue.no")}</span
+          : t("systemQueue.no")}</Badge
       >
       {#each STATUSES as e}
-        <span
-          class="px-2 py-1 rounded bg-kitsuden-card border border-kitsuden-border {e === 'dead' &&
-          (status.totals.dead ?? 0) > 0
-            ? 'text-kitsuden-danger'
-            : 'text-kitsuden-text'}">{statusLabel[e]()}: {status.totals[e] ?? 0}</span
+        <Badge
+          size="md"
+          variant={e === "dead" && (status.totals.dead ?? 0) > 0 ? "error" : "default"}
+          >{statusLabel[e]()}: {status.totals[e] ?? 0}</Badge
         >
       {/each}
     </div>
 
     {#if Object.keys(status.byQueue).length > 0}
-      <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
+      <div class="min-w-0">
         <Table density="compact">
           <TableHeader>
             <TableRow>
@@ -130,9 +133,9 @@
 
     <h3 class="text-sm font-medium text-kitsuden-text">{t("systemQueue.deadTitle")}</h3>
     {#if status.dead.length === 0}
-      <p class="text-sm text-kitsuden-subtle">{t("systemQueue.noDead")}</p>
+      <EmptyState size="sm" icon={false} level={null} title={t("systemQueue.noDead")} />
     {:else}
-      <div class="overflow-x-auto border border-kitsuden-border rounded-lg">
+      <div class="min-w-0">
         <Table density="compact">
           <TableHeader>
             <TableRow>
@@ -162,7 +165,7 @@
                     onclick={() => action(j.id, retryJob)}>{t("systemQueue.retry")}</Button
                   >
                   <Button
-                    variant="ghost"
+                    variant="danger-ghost"
                     size="sm"
                     disabled={busy === j.id}
                     onclick={() => action(j.id, discardJob)}>{t("systemQueue.discard")}</Button

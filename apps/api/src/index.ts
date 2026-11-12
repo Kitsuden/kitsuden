@@ -24,6 +24,7 @@ import {
   initKitsudenBrain,
   mail,
   messageOf,
+  noteApprovedProposal,
 } from "@kitsuden/engine";
 import type { ServerWebSocket } from "bun";
 import { eq, count, sql } from "drizzle-orm";
@@ -147,7 +148,17 @@ import { codegenRoutes } from "./routes/codegen";
 import { settingsRoutes, syncRoutes, dataSetsRoutes as dataSetsLiteRoutes } from "./routes/crud";
 import { explorerRoutes } from "./routes/data-explorer";
 import dataSourcesRoutes from "./routes/data-sources";
+import { docsRoutes } from "./routes/docs";
+import { dynamicDocsRouter } from "./routes/docs-dynamic";
+import { functionsRoutes } from "./routes/functions";
+import { graphqlRoutes, invalidateGraphQLCache } from "./routes/graphql";
+import { inlineRelationsRoutes } from "./routes/inline-relations";
+import konAssetsRoutes from "./routes/kon-assets";
+import { mailRoutes } from "./routes/mail";
+import { mcpRoutes } from "./routes/mcp";
 import { EXTERNAL_MCP_ROUTE, externalMcpRoutes } from "./routes/mcp-servers";
+import { modulesRoutes } from "./routes/modules";
+import { oauthCors, mcpChallenge, oauthRoutes } from "./routes/oauth";
 import { queueRoutes } from "./routes/queue";
 import { tracesRoutes } from "./routes/traces";
 // ── A1: problem+json errors and Idempotency-Key (own block) ──
@@ -159,13 +170,8 @@ import { tracesRoutes } from "./routes/traces";
 // Legacy core imports removed — now provided by kons
 
 // ── Engine Routes (Tier 1) — Always-on infrastructure ──
-import { docsRoutes } from "./routes/docs";
-import { dynamicDocsRouter } from "./routes/docs-dynamic";
-import { mailRoutes } from "./routes/mail";
 import { runsRoutes } from "./routes/runs";
 import { systemMapRoutes } from "./routes/system-map";
-import { functionsRoutes } from "./routes/functions";
-import { graphqlRoutes, invalidateGraphQLCache } from "./routes/graphql";
 import { setKonAvailability, versionRoutes } from "./routes/version";
 import { rpcSurface } from "./rpc";
 import {
@@ -176,12 +182,7 @@ import {
 import type { AgentAuthContext } from "./services/agent-auth";
 import { initAgentTelemetry } from "./services/agent-telemetry";
 import { loadSecretsIntoEnv } from "./services/secrets";
-import { inlineRelationsRoutes } from "./routes/inline-relations";
-import { mcpRoutes } from "./routes/mcp";
-import { oauthCors, mcpChallenge, oauthRoutes } from "./routes/oauth";
 import { oauthPanelRoutes } from "./routes/oauth-panel";
-import { modulesRoutes } from "./routes/modules";
-import konAssetsRoutes from "./routes/kon-assets";
 import { schemaIntrospectionRoutes } from "./routes/schema-introspection";
 import { systemRoutes } from "./routes/system";
 
@@ -446,6 +447,7 @@ import { createHash } from "crypto";
 const LEGACY_KEYS_END = Date.UTC(2026, 7, 1);
 
 import { modelsRoutes, MODELS_ROUTE } from "./routes/models";
+import { recordHistoryRoutes, RECORD_HISTORY_ROUTE } from "./routes/record-history";
 import {
   PROMOTION_KON,
   PROMOTION_ROUTE,
@@ -467,6 +469,8 @@ app.use("*", async (c, next) => {
     c.set("agent", internal.agent);
     c.set("user", agentUser(internal.agent) as never);
     c.set("session", null);
+    // What it writes goes into the record history with the proposal and who approved it.
+    noteApprovedProposal(internal.approval);
     return next();
   }
 
@@ -1125,6 +1129,8 @@ app.route("/api/approvals", approvalsRoutes);
 app.route("/api/proposals", proposalsRoutes);
 // The models (defineModel) of the mounted kons, for the panel.
 app.route(MODELS_ROUTE, modelsRoutes);
+// Who changed a row of any table, and which fields (core migration 0076).
+app.route(RECORD_HISTORY_ROUTE, recordHistoryRoutes);
 setApprovalsApp((req, env) => app.fetch(req, env));
 startProposalSweep();
 // Promotion of agent code. The agent's operations

@@ -6,9 +6,20 @@
   it is reassigned.
 -->
 <script lang="ts">
-  import { Button, Skeleton } from "$lib/tallao";
+  import {
+    Alert,
+    Button,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    Field,
+    SaveBar,
+    Select,
+    Skeleton,
+  } from "$lib/tallao";
   import { t } from "$lib/i18n";
-  import { Save, UserX } from "lucide-svelte";
+  import { UserX } from "lucide-svelte";
   import { onMount } from "svelte";
   import { toast } from "$lib/tallao";
 
@@ -26,6 +37,8 @@
   let loading = $state(true);
   let saving = $state(false);
   let error = $state<string | null>(null);
+
+  const dirty = $derived(!!data && chosenItem !== (data.sponsor?.userId ?? ""));
 
   onMount(load);
 
@@ -64,104 +77,92 @@
   };
 </script>
 
-<div class="space-y-4" data-testid="agent-sponsor">
-  <div>
-    <h3 class="text-sm font-semibold text-kitsuden-text">{t("agentSponsor.title")}</h3>
-    <p class="text-xs text-kitsuden-subtle">{t("agentSponsor.help")}</p>
-  </div>
+<div data-testid="agent-sponsor">
+  <Card>
+    <CardHeader>
+      <CardTitle level={2}>{t("agentSponsor.title")}</CardTitle>
+      <p class="text-xs text-kitsuden-subtle">{t("agentSponsor.help")}</p>
+    </CardHeader>
+    <CardContent class="space-y-4">
+      {#if loading}
+        <Skeleton lines={3} />
+      {:else if error}
+        <Alert variant="error">{error}</Alert>
+      {:else if data}
+        <div
+          class="p-3 rounded-lg border {data.sponsor && !data.sponsor.valid
+            ? 'border-kitsuden-danger/40 bg-kitsuden-danger/5'
+            : 'border-kitsuden-border'}"
+          data-testid="sponsor-current"
+        >
+          {#if !data.sponsor}
+            <p class="text-sm text-kitsuden-text-dim">{t("agentSponsor.none")}</p>
+            <p class="text-xs text-kitsuden-subtle">{t("agentSponsor.noneHelp")}</p>
+          {:else}
+            <p class="text-sm text-kitsuden-text">
+              {data.sponsor.name ?? data.sponsor.userId}
+              {#if data.sponsor.email}<span class="text-xs text-kitsuden-subtle ml-1"
+                  >{data.sponsor.email}</span
+                >{/if}
+            </p>
+            {#if data.sponsor.valid}
+              <p class="text-xs text-kitsuden-green">
+                {t("agentSponsor.valid", {
+                  role: ROLE[data.sponsor.role ?? ""]?.() ?? data.sponsor.role ?? "",
+                })}
+              </p>
+            {:else}
+              <p class="text-xs text-kitsuden-danger" data-testid="sponsor-invalid">
+                {data.sponsor.reason === "not_found"
+                  ? t("agentSponsor.invalidDeleted")
+                  : t("agentSponsor.invalidRole")}
+              </p>
+            {/if}
+          {/if}
+        </div>
 
-  {#if loading}
-    <Skeleton lines={3} />
-  {:else if error}
-    <div
-      class="p-4 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-kitsuden-danger"
-    >
-      {error}
-    </div>
-  {:else if data}
-    <div
-      class="p-3 rounded-lg border {data.sponsor && !data.sponsor.valid
-        ? 'border-kitsuden-danger/40 bg-kitsuden-danger/5'
-        : 'border-kitsuden-border'}"
-      data-testid="sponsor-current"
-    >
-      {#if !data.sponsor}
-        <p class="text-sm text-kitsuden-text-dim">{t("agentSponsor.none")}</p>
-        <p class="text-xs text-kitsuden-subtle">{t("agentSponsor.noneHelp")}</p>
-      {:else}
-        <p class="text-sm text-kitsuden-text">
-          {data.sponsor.name ?? data.sponsor.userId}
-          {#if data.sponsor.email}<span class="text-xs text-kitsuden-subtle ml-1"
-              >{data.sponsor.email}</span
-            >{/if}
-        </p>
-        {#if data.sponsor.valid}
-          <p class="text-xs text-kitsuden-green">
-            {t("agentSponsor.valid", {
-              role: ROLE[data.sponsor.role ?? ""]?.() ?? data.sponsor.role ?? "",
-            })}
-          </p>
-        {:else}
-          <p class="text-xs text-kitsuden-danger" data-testid="sponsor-invalid">
-            {data.sponsor.reason === "not_found"
-              ? t("agentSponsor.invalidDeleted")
-              : t("agentSponsor.invalidRole")}
-          </p>
-        {/if}
-      {/if}
-    </div>
+        <ul class="text-xs text-kitsuden-subtle list-disc pl-5 space-y-1">
+          <li>{t("agentSponsor.rule1")}</li>
+          <li>{t("agentSponsor.rule2")}</li>
+          <li>{t("agentSponsor.rule3")}</li>
+        </ul>
 
-    {#if isAdmin()}
-      <div class="flex flex-wrap items-end gap-3">
-        <div class="min-w-64 flex-1">
-          <label for="sponsor-select" class="block text-sm text-kitsuden-text mb-1.5"
-            >{t("agentSponsor.choose")}</label
-          >
-          <select
-            id="sponsor-select"
-            bind:value={chosenItem}
-            class="w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
-          >
-            <option value="">{t("agentSponsor.nobody")}</option>
-            {#each data.candidates as c (c.id)}
-              <option value={c.id}
-                >{t("agentSponsor.candidate", {
+        {#if isAdmin()}
+          <Field label={t("agentSponsor.choose")}>
+            <Select
+              id="sponsor-select"
+              bind:value={chosenItem}
+              placeholder={t("agentSponsor.nobody")}
+              options={data.candidates.map((c) => ({
+                value: c.id,
+                label: t("agentSponsor.candidate", {
                   name: c.name,
                   email: c.email,
                   role: ROLE[c.role]?.() ?? c.role,
-                })}</option
-              >
-            {/each}
-          </select>
-        </div>
-        <Button
-          variant="primary"
-          size="sm"
-          loading={saving}
-          disabled={chosenItem === (data.sponsor?.userId ?? "")}
-          onclick={() => save(chosenItem || null)}
-        >
-          <Save size={14} class="mr-1" />{t("agentSponsor.save")}
-        </Button>
-        {#if data.sponsor}
-          <Button
-            variant="ghost"
-            size="sm"
-            class="text-kitsuden-danger"
-            disabled={saving}
-            onclick={() => save(null)}
+                }),
+              }))}
+            />
+          </Field>
+          <SaveBar
+            sticky={false}
+            {dirty}
+            {saving}
+            disableWhenClean
+            saveLabel={t("agentSponsor.save")}
+            cancelLabel={t("record.discard")}
+            onSave={() => save(chosenItem || null)}
+            onCancel={dirty ? () => (chosenItem = data?.sponsor?.userId ?? "") : undefined}
           >
-            <UserX size={14} class="mr-1" />{t("agentSponsor.remove")}
-          </Button>
+            {#if data.sponsor}
+              <Button variant="danger-ghost" size="sm" disabled={saving} onclick={() => save(null)}>
+                <UserX size={14} aria-hidden="true" />{t("agentSponsor.remove")}
+              </Button>
+            {/if}
+          </SaveBar>
+        {:else}
+          <Alert variant="warning">{t("agentSponsor.readOnly")}</Alert>
         {/if}
-      </div>
-    {:else}
-      <p class="text-xs text-kitsuden-amber">{t("agentSponsor.readOnly")}</p>
-    {/if}
-    <ul class="text-xs text-kitsuden-subtle list-disc pl-5 space-y-1">
-      <li>{t("agentSponsor.rule1")}</li>
-      <li>{t("agentSponsor.rule2")}</li>
-      <li>{t("agentSponsor.rule3")}</li>
-    </ul>
-  {/if}
+      {/if}
+    </CardContent>
+  </Card>
 </div>

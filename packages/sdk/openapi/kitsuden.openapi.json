@@ -73,6 +73,10 @@
       "description": "The Postgres queue: status and dead jobs (administrators only)."
     },
     {
+      "name": "kon-record-history",
+      "description": "The change history of the rows of any explorable table (for the admin panel)."
+    },
+    {
       "name": "kon-traces",
       "description": "The glass box: one trace per request, in Postgres (administrators only)."
     }
@@ -16214,6 +16218,264 @@
         }
       }
     },
+    "/datasets/{id}/entries/{entryId}/history": {
+      "get": {
+        "operationId": "datasets.entry-history",
+        "summary": "Change history of an entry",
+        "description": "Who created, changed or deleted an entry, newest first: the actor (a person or an agent), the action (create, update, delete) and the fields that changed, with their value before and after. A field named like a secret (token, password, hash) is listed as `redacted` without values, and long values are cut to a preview. Same visibility as reading the entry (otherwise 404). Changes made before this history existed are not listed.",
+        "tags": [
+          "kon-datasets"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Dataset id (uuid)"
+            }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Entry id (uuid)"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "1-200, default 50",
+              "type": "string"
+            },
+            "description": "1-200, default 50"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Entries to skip, default 0",
+              "type": "string"
+            },
+            "description": "Entries to skip, default 0"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "history": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete"
+                            ]
+                          },
+                          "at": {
+                            "type": "string",
+                            "description": "ISO timestamp"
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "user",
+                                  "agent",
+                                  "system"
+                                ]
+                              },
+                              "id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ]
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "`title`, `status`… or `data.<key>`"
+                                },
+                                "before": {},
+                                "after": {},
+                                "redacted": {
+                                  "description": "A secret field: values are not kept",
+                                  "type": "boolean",
+                                  "const": true
+                                }
+                              },
+                              "required": [
+                                "field"
+                              ]
+                            }
+                          },
+                          "truncated": {
+                            "type": "boolean",
+                            "description": "Some value or the list was cut to its size limit"
+                          },
+                          "proposalId": {
+                            "description": "The approved proposal this write executed",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "approvedBy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "action",
+                          "at",
+                          "actor",
+                          "changes",
+                          "truncated",
+                          "proposalId",
+                          "approvedBy"
+                        ]
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "history",
+                    "total",
+                    "limit",
+                    "offset"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-kitsuden-operation": {
+          "kon": "kon-datasets",
+          "id": "entry-history",
+          "access": "public",
+          "scope": "kon:datasets:entry-history",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "datasets__entry-history"
+          }
+        }
+      }
+    },
     "/datasets/{id}/entries/{entryId}/restore": {
       "post": {
         "operationId": "datasets.restore-snapshot",
@@ -17538,6 +17800,302 @@
           ],
           "mcp": {
             "tool": "datasets__search-entries"
+          }
+        }
+      }
+    },
+    "/history/{collection}/{id}": {
+      "get": {
+        "operationId": "record-history.record-history",
+        "summary": "Change history of a row",
+        "description": "Who created, changed or deleted a row of a table, when, and which fields, newest first: the actor (a person, an agent or the system), the action and each changed field's value before and after. `collection` and `id` name the row as the data explorer does. Secret columns (token, password, hash) are listed as `redacted` with no values; long values are cut to a preview. Changes made before the history existed are not listed. Admin only.",
+        "tags": [
+          "kon-record-history",
+          "history"
+        ],
+        "parameters": [
+          {
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The table, as /api/explorer names it"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The row's primary key"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "1-200, default 50",
+              "type": "string"
+            },
+            "description": "1-200, default 50"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Entries to skip, default 0",
+              "type": "string"
+            },
+            "description": "Entries to skip, default 0"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "history": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete"
+                            ]
+                          },
+                          "at": {
+                            "type": "string",
+                            "description": "ISO timestamp"
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "user",
+                                  "agent",
+                                  "system"
+                                ]
+                              },
+                              "id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "description": "The name it had when it made the change",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name"
+                            ]
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "The column (or `data.<key>` for a dataset entry)"
+                                },
+                                "before": {},
+                                "after": {},
+                                "redacted": {
+                                  "description": "A secret column: values are not kept",
+                                  "type": "boolean",
+                                  "const": true
+                                }
+                              },
+                              "required": [
+                                "field"
+                              ]
+                            }
+                          },
+                          "truncated": {
+                            "type": "boolean",
+                            "description": "Some value or the list was cut to its size limit"
+                          },
+                          "proposalId": {
+                            "description": "The approved proposal this write executed",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "approvedBy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "action",
+                          "at",
+                          "actor",
+                          "changes",
+                          "truncated",
+                          "proposalId",
+                          "approvedBy"
+                        ]
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "history",
+                    "total",
+                    "limit",
+                    "offset"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-record-history",
+          "id": "record-history",
+          "access": "session",
+          "scope": "kon:record-history:record-history",
+          "grantedBy": [
+            "kon:record-history:record-history",
+            "record-history:*",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Panel read for administrators. A dataset entry's history is the datasets__entry-history tool."
           }
         }
       }

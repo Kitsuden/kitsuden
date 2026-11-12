@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { toast } from "$lib/tallao";
+  import { Badge, Button, Card, CardContent, CardFooter, Spinner, toast } from "$lib/tallao";
   import { t } from "$lib/i18n";
-  import { Castle, Check, Plus } from "lucide-svelte";
+  import { Castle, Plus } from "lucide-svelte";
   import { onMount } from "svelte";
 
   const API_URL = import.meta.env.VITE_API_URL ?? "";
@@ -136,137 +136,199 @@
   }
 </script>
 
-<div class="space-y-6">
-  <!-- Loading State -->
+<div class="grimoires">
   {#if loading}
-    <div class="card p-12 text-center">
-      <div
-        class="w-8 h-8 border-2 border-kitsuden-accent/30 border-t-kitsuden-accent rounded-full animate-spin mx-auto mb-4"
-      ></div>
-      <p class="text-kitsuden-subtle">{t("grimoiresView.loadingGrimoires")}</p>
-    </div>
+    <Card>
+      <CardContent class="grimoires-loading">
+        <Spinner size="lg" label={t("grimoiresView.loadingGrimoires")} />
+        <p>{t("grimoiresView.loadingGrimoires")}</p>
+      </CardContent>
+    </Card>
   {:else}
-    <!-- Grimoires Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div class="grimoires-grid">
       {#each grimoires as grimoire}
         {@const kons = allKons(grimoire)}
-        <div
-          class="card p-5 relative group"
-          class:border-kitsuden-accent={activeGrimoire === grimoire.id}
-        >
-          {#if activeGrimoire === grimoire.id}
-            <div class="absolute top-3 right-3">
-              <span
-                class="px-2 py-1 text-xs font-medium bg-kitsuden-accent/10 text-kitsuden-accent rounded-full flex items-center gap-1"
-              >
-                <Check class="w-3 h-3" />
-                {t("common.active")}
-              </span>
-            </div>
-          {/if}
-
-          <div class="flex items-start gap-4 mb-4">
-            <div
-              class="w-12 h-12 rounded-xl bg-linear-to-br from-kitsuden-purple/20 to-kitsuden-accent/20 flex items-center justify-center text-2xl shrink-0"
-            >
-              <Castle class="w-6 h-6 text-kitsuden-purple" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-kitsuden-text text-lg">{grimoire.name}</h3>
-              <p class="text-xs text-kitsuden-subtle mt-0.5">
-                {t("grimoiresView.konsIncluded", { konsCount: kons.length })}
-              </p>
-            </div>
-          </div>
-
-          <p class="text-sm text-kitsuden-text-dim mb-4 line-clamp-2">
-            {grimoire.description || t("grimoiresView.noDescriptionAvailable")}
-          </p>
-
-          <!-- Included Kons -->
-          <div class="mb-4">
-            <p class="text-xs font-semibold uppercase tracking-wider text-kitsuden-subtle mb-2">
-              {t("grimoiresView.includedKons")}
-            </p>
-            <div class="flex flex-wrap gap-1.5">
-              {#each kons.slice(0, 6) as kon}
-                <span
-                  class="px-2 py-1 text-xs bg-kitsuden-surface rounded-md text-kitsuden-text-dim flex items-center gap-1"
-                >
-                  <span>{getKonIcon(kon)}</span>
-                  {getKonName(kon)}
-                </span>
-              {/each}
-              {#if kons.length > 6}
-                <span class="px-2 py-1 text-xs bg-kitsuden-surface rounded-md text-kitsuden-subtle">
-                  {t("common.more", { v: kons.length - 6 })}
-                </span>
+        {@const active = activeGrimoire === grimoire.id}
+        <Card class={active ? "grimoire grimoire--on" : "grimoire"}>
+          <CardContent class="grimoire-body">
+            <div class="grimoire-head">
+              <div class="grimoire-icon" aria-hidden="true">
+                <Castle size={24} />
+              </div>
+              <div class="grimoire-title">
+                <h3>{grimoire.name}</h3>
+                <p>{t("grimoiresView.konsIncluded", { konsCount: kons.length })}</p>
+              </div>
+              {#if active}
+                <Badge variant="accent" dot>{t("common.active")}</Badge>
               {/if}
             </div>
-          </div>
 
-          <!-- Actions -->
-          <div class="flex items-center gap-2 pt-3 border-t border-kitsuden-border">
-            {#if activeGrimoire === grimoire.id}
-              <button
-                class="btn-secondary flex-1 text-kitsuden-accent-2 border-kitsuden-accent-2/20 hover:bg-kitsuden-accent-2/10"
-                onclick={() => deactivateGrimoire()}
-              >
+            <p class="grimoire-desc">
+              {grimoire.description || t("grimoiresView.noDescriptionAvailable")}
+            </p>
+
+            <div>
+              <p class="grimoire-label">{t("grimoiresView.includedKons")}</p>
+              <div class="grimoire-kons">
+                {#each kons.slice(0, 6) as kon}
+                  <Badge>
+                    <span aria-hidden="true">{getKonIcon(kon)}</span>
+                    {getKonName(kon)}
+                  </Badge>
+                {/each}
+                {#if kons.length > 6}
+                  <Badge variant="secondary">{t("common.more", { v: kons.length - 6 })}</Badge>
+                {/if}
+              </div>
+            </div>
+          </CardContent>
+
+          <!-- Activating is the primary move; deactivating stays quiet. -->
+          <CardFooter class="grimoire-actions">
+            {#if active}
+              <Button variant="danger-ghost" size="sm" onclick={() => deactivateGrimoire()}>
                 {t("grimoiresView.deactivate")}
-              </button>
+              </Button>
             {:else}
-              <button class="btn-primary flex-1" onclick={() => activateGrimoire(grimoire.id)}>
+              <Button size="sm" onclick={() => activateGrimoire(grimoire.id)}>
                 {t("common.activate")}
-              </button>
+              </Button>
             {/if}
             <!-- There was a "view details" button with no action: there is no detail screen. -->
-          </div>
-        </div>
+          </CardFooter>
+        </Card>
       {/each}
 
       <!--
         Create Custom Grimoire Card. It did nothing when clicked; putting together a
         custom ecosystem IS activating kons one by one, so it leads to Kons.
       -->
-      <a
-        href="/kons"
-        class="card p-5 border-dashed border-2 border-kitsuden-border hover:border-kitsuden-accent/50 transition-colors flex flex-col items-center justify-center min-h-[280px] gap-3"
-      >
-        <div class="w-12 h-12 rounded-xl bg-kitsuden-surface flex items-center justify-center">
-          <Plus class="w-6 h-6 text-kitsuden-accent" />
-        </div>
-        <div class="text-center">
-          <h3 class="font-semibold text-kitsuden-text">
-            {t("grimoiresView.createCustomGrimoire")}
-          </h3>
-          <p class="text-xs text-kitsuden-subtle mt-0.5 max-w-[200px]">
-            {t("grimoiresView.buildYourOwnEcosystemBy")}
-          </p>
-        </div>
+      <a href="/kons" class="grimoire-new">
+        <span class="grimoire-icon" aria-hidden="true"><Plus size={24} /></span>
+        <span class="grimoire-new-title">{t("grimoiresView.createCustomGrimoire")}</span>
+        <span class="grimoire-new-text">{t("grimoiresView.buildYourOwnEcosystemBy")}</span>
       </a>
     </div>
   {/if}
 </div>
 
 <style>
-  @reference "../../style.css";
-
-  .card {
-    @apply rounded-xl border border-kitsuden-border bg-kitsuden-card;
+  .grimoires {
+    min-width: 0;
   }
-
-  .animate-fade-in {
-    animation: fadeIn 0.2s ease-out;
+  :global(.grimoires-loading) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding-block: 3rem;
+    color: rgb(var(--ta-text-dim));
   }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  :global(.grimoires-loading p) {
+    margin: 0;
+  }
+  .grimoires-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1rem;
+  }
+  :global(.grimoire) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  :global(.grimoire--on) {
+    border-color: rgb(var(--ta-accent) / 0.45);
+  }
+  :global(.grimoire-body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .grimoire-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .grimoire-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--ta-radius-lg);
+    background: rgb(var(--ta-accent) / 0.1);
+    color: rgb(var(--ta-accent));
+  }
+  .grimoire-title {
+    flex: 1;
+    min-width: 0;
+  }
+  .grimoire-title h3 {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .grimoire-title p,
+  .grimoire-label {
+    margin: 0.125rem 0 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+  .grimoire-label {
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .grimoire-desc {
+    margin: 0;
+    font-size: 0.875rem;
+    color: rgb(var(--ta-text-dim));
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .grimoire-kons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+  :global(.ta-card-footer.grimoire-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .grimoire-new {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 16rem;
+    padding: 1.25rem;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    border: 2px dashed rgb(var(--ta-border));
+    border-radius: var(--ta-radius-lg);
+    transition: border-color 150ms;
+  }
+  .grimoire-new:hover,
+  .grimoire-new:focus-visible {
+    border-color: rgb(var(--ta-accent) / 0.5);
+  }
+  .grimoire-new-title {
+    font-weight: 600;
+  }
+  .grimoire-new-text {
+    max-width: 14rem;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
   }
 </style>

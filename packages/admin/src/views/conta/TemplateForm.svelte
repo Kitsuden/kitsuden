@@ -2,7 +2,7 @@
   import { t } from "$lib/i18n";
   import { ArrowLeft, Save, Play } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast, Button, Input, Label, Textarea } from "$lib/tallao";
+  import { toast, Button, Card, Checkbox, Field, Input, Spinner, Textarea } from "$lib/tallao";
 
   import { api } from "$lib/api";
 
@@ -96,50 +96,31 @@
   onMount(load);
 </script>
 
-<div class="space-y-6">
-  <Button variant="ghost" onclick={onBack}
-    ><ArrowLeft class="w-4 h-4 mr-2" /> {t("common.back")}</Button
-  >
+<div class="space-y-6 min-w-0">
+  <Button variant="ghost" onclick={onBack}><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button>
 
   {#if loading}
-    <div class="flex items-center justify-center h-48">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <div class="flex items-center justify-center h-48"><Spinner size="lg" /></div>
   {:else}
     <div class="grid gap-4 md:grid-cols-2">
-      <div>
-        <Label>{t("common.name")}</Label><Input
-          bind:value={template.name}
-          placeholder={t("templateForm.legalFeesWithTax")}
-        />
-      </div>
-      <div>
-        <Label>{t("templateForm.templateType")}</Label><Input
-          bind:value={template.templateType}
-          placeholder="legal_fees"
-        />
-      </div>
-      <div class="md:col-span-2">
-        <Label>{t("common.description")}</Label><Textarea
-          bind:value={template.description}
-          rows={2}
-        />
-      </div>
-      <div>
-        <Label>{t("common.active")}</Label>
-        <select
-          bind:value={template.isActive}
-          class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm"
-        >
-          <option value={true as any}>{t("common.yes")}</option>
-          <option value={false as any}>{t("common.no")}</option>
-        </select>
+      <Field label={t("common.name")}>
+        <Input bind:value={template.name} placeholder={t("templateForm.legalFeesWithTax")} />
+      </Field>
+      <Field label={t("templateForm.templateType")}>
+        <Input bind:value={template.templateType} placeholder="legal_fees" />
+      </Field>
+      <Field label={t("common.description")} class="md:col-span-2">
+        <Textarea bind:value={template.description} rows={2} />
+      </Field>
+      <div class="flex items-center">
+        <Checkbox bind:checked={template.isActive} label={t("common.active")} />
       </div>
     </div>
 
     <div class="space-y-2">
-      <Label>{t("templateForm.rulesJson")}</Label>
-      <Textarea bind:value={rulesJson} rows={10} class="font-mono text-xs" />
+      <Field label={t("templateForm.rulesJson")}>
+        <Textarea bind:value={rulesJson} rows={10} mono />
+      </Field>
       <p class="text-xs text-kitsuden-subtle">
         {t("templateForm.eachRule", {
           v: `{ "accountCode": "1200", "side": "debit|credit", "amountFormula": "total", "description": "..." }`,
@@ -147,36 +128,35 @@
       </p>
     </div>
 
-    <div class="space-y-2">
-      <Label>{t("templateForm.requiredMetadataJsonArray")}</Label>
-      <Textarea bind:value={reqMetaJson} rows={3} class="font-mono text-xs" />
-    </div>
+    <Field label={t("templateForm.requiredMetadataJsonArray")}>
+      <Textarea bind:value={reqMetaJson} rows={3} mono />
+    </Field>
 
     {#if templateId}
-      <div class="border border-kitsuden-border rounded-lg p-4 space-y-3">
+      <Card class="p-4 space-y-3">
         <h3 class="text-sm font-semibold text-kitsuden-text flex items-center gap-2">
           <Play class="w-4 h-4" />
           {t("templateForm.testApply")}
         </h3>
         <div class="grid gap-3 md:grid-cols-2">
-          <div>
-            <Label class="text-xs">{t("templateForm.variablesJson")}</Label>
+          <Field label={t("templateForm.variablesJson")}>
             <Textarea
               bind:value={testVariables}
               rows={4}
-              class="font-mono text-xs"
+              mono
               placeholder={t("templateForm.total1000Taxrate007")}
             />
-          </div>
-          <div>
-            <Label class="text-xs">{t("templateForm.previewResult")}</Label>
+          </Field>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-kitsuden-text mb-1">
+              {t("templateForm.previewResult")}
+            </p>
             <div
+              aria-live="polite"
               class="bg-kitsuden-card border border-kitsuden-border rounded-lg p-3 text-xs font-mono h-full min-h-[100px] overflow-auto"
             >
               {#if testLoading}
-                <div
-                  class="animate-spin rounded-full h-4 w-4 border-b-2 border-kitsuden-accent"
-                ></div>
+                <Spinner size="sm" />
               {:else if testResult}
                 <pre>{JSON.stringify(testResult, null, 2)}</pre>
               {:else}
@@ -185,16 +165,18 @@
             </div>
           </div>
         </div>
-        <Button variant="outline" size="sm" onclick={testApply} loading={testLoading}
-          ><Play class="w-4 h-4 mr-2" /> {t("templateForm.test")}</Button
+        <Button variant="secondary" size="sm" onclick={testApply} loading={testLoading}
+          ><Play class="w-4 h-4" /> {t("templateForm.test")}</Button
         >
-      </div>
+      </Card>
     {/if}
 
-    <div class="flex items-center justify-between pt-4 border-t border-kitsuden-border">
-      <Button variant="outline" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
+    <div
+      class="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-kitsuden-border"
+    >
+      <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
       <Button onclick={save} loading={saving}
-        ><Save class="w-4 h-4 mr-2" /> {t("templateForm.saveTemplate")}</Button
+        ><Save class="w-4 h-4" /> {t("templateForm.saveTemplate")}</Button
       >
     </div>
   {/if}

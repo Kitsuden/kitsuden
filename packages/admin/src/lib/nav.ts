@@ -4,8 +4,9 @@
  * shortcuts sheet all read it from here, so an entry is declared once.
  *
  *   Home
- *   DATA      Datasets, Models, Media, Pages, Blog + the generic kons (tables the panel draws)
- *   APPS      kons that bring their own screens (only when there are any)
+ *   DATA      Datasets, Models, Media, Pages, Blog (+ any other core kon the panel draws)
+ *   APPS      every installed kon that is not a core kon, whether it brings its own screens
+ *             or is drawn by the panel's generic list screen (only when there are any)
  *   AGENTS    Approvals, Agents, Activity, Connections
  *   PLATFORM  Kons, Actions, Brain, Vault
  *   Settings
@@ -46,6 +47,8 @@ export interface NavKon {
   name?: string;
   icon?: string;
   source?: string;
+  /** `core` / `grimoire-core` = a core kon (as /kons groups them); the rest are apps. */
+  category?: string;
 }
 
 export interface NavContext {
@@ -55,7 +58,11 @@ export interface NavContext {
   activeKon: (key: string) => boolean;
   /** Every kon the API listed. */
   kons: NavKon[];
-  /** Kons that bring their own screens; the rest are drawn by the panel (generic). */
+  /**
+   * Kons that bring their own screens; the rest are drawn by the panel (generic). Only a
+   * core kon's place depends on it (generic under Data, own screens under Apps): every
+   * other kon is an app.
+   */
   hasOwnScreens: (key: string) => boolean;
 }
 
@@ -163,6 +170,10 @@ const INFRA_KONS = new Set(["webhooks", "connectors", "ai-memories"]);
 
 const bare = (key: string) => key.replace(/^kon-/, "");
 
+/** A core kon, as the Kons page groups them ("Core kons"). */
+export const isCoreCategory = (category: string | undefined) =>
+  category === "core" || category === "grimoire-core";
+
 /**
  * Routes that moved when the sidebar was regrouped. The old address still works: the
  * layout replaces it with the new one (query string kept, `tab` added where the old page
@@ -204,7 +215,7 @@ export function buildNav(ctx: NavContext): NavGroup[] {
     return !e.moduleKey || ctx.activeKon(e.moduleKey);
   };
 
-  const konEntries: NavEntry[] = ctx.isAdmin
+  const konEntries: Array<{ entry: NavEntry; app: boolean }> = ctx.isAdmin
     ? ctx.kons
         .filter(
           (k) =>
@@ -214,13 +225,17 @@ export function buildNav(ctx: NavContext): NavGroup[] {
             (k.key.startsWith("kon-") || k.source === "filesystem" || k.source === "grimoire")
         )
         .map((k) => ({
-          id: `kon:${k.key}`,
-          path: `/g/${k.key}`,
-          label: k.name || bare(k.key),
-          icon: k.icon ?? "PackageOpen",
-          moduleKey: k.key,
+          entry: {
+            id: `kon:${k.key}`,
+            path: `/g/${k.key}`,
+            label: k.name || bare(k.key),
+            icon: k.icon ?? "PackageOpen",
+            moduleKey: k.key,
+          } as NavEntry,
+          // A core kon keeps its old place: Data when the panel draws it, Apps otherwise.
+          app: !isCoreCategory(k.category) || ctx.hasOwnScreens(k.key),
         }))
-        .sort((a, b) => a.label!.localeCompare(b.label!))
+        .sort((a, b) => a.entry.label!.localeCompare(b.entry.label!))
     : [];
 
   const groups: NavGroup[] = [
@@ -228,15 +243,12 @@ export function buildNav(ctx: NavContext): NavGroup[] {
     {
       id: "data",
       labelKey: "shell.groupData",
-      entries: [
-        ...DATA.filter(visible),
-        ...konEntries.filter((e) => !ctx.hasOwnScreens(e.moduleKey!)),
-      ],
+      entries: [...DATA.filter(visible), ...konEntries.filter((k) => !k.app).map((k) => k.entry)],
     },
     {
       id: "apps",
       labelKey: "shell.groupApps",
-      entries: konEntries.filter((e) => ctx.hasOwnScreens(e.moduleKey!)),
+      entries: konEntries.filter((k) => k.app).map((k) => k.entry),
     },
     { id: "agents", labelKey: "shell.groupAgents", entries: AGENTS.filter(visible) },
     { id: "platform", labelKey: "shell.groupPlatform", entries: PLATFORM.filter(visible) },

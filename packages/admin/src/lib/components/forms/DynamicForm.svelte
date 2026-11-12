@@ -13,7 +13,6 @@
    */
   import {
     Save,
-    Loader2,
     Upload,
     X,
     ImageIcon,
@@ -28,7 +27,16 @@
   import MediaPicker from "$lib/components/media/MediaPicker.svelte";
   import { t } from "$lib/i18n";
   import { uploadMedia } from "$lib/media/upload";
-  import { Button, Checkbox, Input, NumberInput, Select, Switch, Textarea } from "$lib/tallao";
+  import {
+    Button,
+    Checkbox,
+    Input,
+    NumberInput,
+    Select,
+    Spinner,
+    Switch,
+    Textarea,
+  } from "$lib/tallao";
 
   import type { FieldDefinition } from "../../../types/datasets";
 
@@ -350,24 +358,24 @@
               >
                 <span class="text-xs text-white truncate max-w-[200px]">{fileNameOf(value)}</span>
                 <div class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    class="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  <Button
+                    variant="secondary"
+                    size="icon"
                     onclick={() => pickFile(path, update, "image/*")}
                     title={t("dynamicForm.replaceImage")}
-                    aria-label={t("dynamicForm.replaceImage")}
+                    ariaLabel={t("dynamicForm.replaceImage")}
                   >
                     <Upload class="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    class="p-1.5 rounded-lg bg-black/40 hover:bg-black/60 text-white transition-colors"
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
                     onclick={() => update(null)}
                     title={t("dynamicForm.removeImage")}
-                    aria-label={t("dynamicForm.removeImage")}
+                    ariaLabel={t("dynamicForm.removeImage")}
                   >
                     <X class="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -375,10 +383,11 @@
         {:else if uploadingStates[path]}
           <div
             class="w-full h-40 rounded-xl border-2 border-dashed border-kitsuden-accent/30 bg-kitsuden-accent/5 flex flex-col items-center justify-center gap-3"
-            role="status"
           >
-            <Loader2 class="w-8 h-8 text-kitsuden-accent animate-spin" />
-            <span class="text-sm text-kitsuden-accent">{t("dynamicForm.uploading")}</span>
+            <Spinner size="lg" class="text-kitsuden-accent" label={t("dynamicForm.uploading")} />
+            <span class="text-sm text-kitsuden-accent" aria-hidden="true"
+              >{t("dynamicForm.uploading")}</span
+            >
           </div>
         {:else}
           <button
@@ -418,10 +427,9 @@
         {#if uploadingStates[path]}
           <div
             class="flex items-center gap-3 rounded-lg border border-dashed border-kitsuden-accent/30 bg-kitsuden-accent/5 px-3 py-3 text-sm text-kitsuden-accent"
-            role="status"
           >
-            <Loader2 class="w-4 h-4 animate-spin" />
-            {t("dynamicForm.uploading")}
+            <Spinner size="sm" label={t("dynamicForm.uploading")} />
+            <span aria-hidden="true">{t("dynamicForm.uploading")}</span>
           </div>
         {:else if value}
           <div
@@ -570,10 +578,8 @@
       </div>
       <div class="flex items-center gap-3">
         <Button variant="ghost" onclick={onCancel}>{t("common.cancel")}</Button>
-        <Button type="submit" disabled={submitting}>
-          {#if submitting}
-            <Loader2 class="w-4 h-4 animate-spin" />
-          {:else}
+        <Button type="submit" loading={submitting}>
+          {#if !submitting}
             <Save class="w-4 h-4" />
           {/if}
           {submitLabel}

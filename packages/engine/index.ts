@@ -477,6 +477,27 @@ export type {
   RlsUser,
 } from "./src/rls-request";
 
+// ── Per-record change history (core migration 0076) ──
+export {
+  recordChange,
+  recordChanges,
+  readRecordHistory,
+  diffRecord,
+  actorOf,
+  noteApprovedProposal,
+  tableEntity,
+  DATASET_ENTRY_ENTITY,
+  RECORD_HISTORY_LIMITS,
+} from "./src/record-history";
+export type {
+  FieldChange as RecordFieldChange,
+  RecordAction,
+  RecordActor,
+  RecordChange,
+  RecordHistoryPage,
+} from "./src/record-history";
+export { isSecretColumn } from "./src/secret-columns";
+
 // ── ORM sugar: chainable repository over Drizzle (respects RLS) ──
 export { repo, isInvalidInputSyntax } from "./src/repository";
 export type { Repository, RepositoryOptions, PaginatedResult } from "./src/repository";

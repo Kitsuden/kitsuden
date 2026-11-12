@@ -2,7 +2,7 @@
   import { t as tr } from "$lib/i18n";
   import { ArrowLeft } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast, Button, Input, Label, Textarea } from "$lib/tallao";
+  import { toast, Button, Input, Label, NumberInput, Select, Textarea } from "$lib/tallao";
 
   import { api } from "$lib/api";
 
@@ -160,9 +160,7 @@
       <div class="grid gap-4 md:grid-cols-2">
         <!-- Title -->
         <div class="space-y-2 md:col-span-2">
-          <Label for="title"
-            >{tr("dealForm.dealTitle")} <span class="text-kitsuden-danger">*</span></Label
-          >
+          <Label for="title" required>{tr("dealForm.dealTitle")}</Label>
           <Input
             id="title"
             bind:value={formData.title}
@@ -184,11 +182,10 @@
         <!-- Value -->
         <div class="space-y-2">
           <Label for="value">{tr("dealForm.valueCents")}</Label>
-          <input
+          <NumberInput
             id="value"
-            type="number"
-            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-subtle"
-            bind:value={formData.value}
+            value={formData.value ?? null}
+            onchange={(v) => (formData.value = v ?? undefined)}
             placeholder="10000"
           />
         </div>
@@ -202,74 +199,55 @@
         <!-- Status -->
         <div class="space-y-2">
           <Label for="status">{tr("common.status")}</Label>
-          <select
+          <Select
             id="status"
-            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text"
-            bind:value={formData.status}
-          >
-            {#each statuses as status}
-              <option value={status.value}>{status.label}</option>
-            {/each}
-          </select>
+            options={statuses}
+            value={formData.status ?? "open"}
+            onchange={(e: Event) =>
+              (formData.status = (e.currentTarget as HTMLSelectElement).value as CrmDeal["status"])}
+          />
         </div>
 
         <!-- Probability -->
         <div class="space-y-2">
           <Label for="probability">{tr("dealForm.probability")}</Label>
-          <input
+          <NumberInput
             id="probability"
-            type="number"
-            min="0"
-            max="100"
-            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-subtle"
-            bind:value={formData.probability}
+            min={0}
+            max={100}
+            clamp={false}
+            value={formData.probability ?? null}
+            onchange={(v) => (formData.probability = v ?? undefined)}
             placeholder="50"
           />
         </div>
 
         <!-- Pipeline -->
         <div class="space-y-2">
-          <Label for="pipelineId"
-            >{tr("dealForm.pipeline")} <span class="text-kitsuden-danger">*</span></Label
-          >
-          <select
-            id="pipelineId"
-            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text"
-            bind:value={formData.pipelineId}
-          >
+          <Label for="pipelineId" required>{tr("dealForm.pipeline")}</Label>
+          <Select id="pipelineId" bind:value={formData.pipelineId}>
             <option value="">{tr("dealForm.selectPipeline")}</option>
             {#each pipelines as pipeline}
               <option value={pipeline.id}>{pipeline.name}</option>
             {/each}
-          </select>
+          </Select>
         </div>
 
         <!-- Stage -->
         <div class="space-y-2">
-          <Label for="stageId"
-            >{tr("dealForm.stage")} <span class="text-kitsuden-danger">*</span></Label
-          >
-          <select
-            id="stageId"
-            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text"
-            bind:value={formData.stageId}
-          >
+          <Label for="stageId" required>{tr("dealForm.stage")}</Label>
+          <Select id="stageId" bind:value={formData.stageId}>
             <option value="">{tr("dealForm.selectStage")}</option>
             {#each stages as stage}
               <option value={stage.id}>{stage.name}</option>
             {/each}
-          </select>
+          </Select>
         </div>
 
         <!-- Expected Close Date -->
         <div class="space-y-2">
           <Label for="expectedCloseDate">{tr("dealForm.expectedCloseDate")}</Label>
-          <input
-            id="expectedCloseDate"
-            type="date"
-            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-subtle"
-            bind:value={formData.expectedCloseDate}
-          />
+          <Input id="expectedCloseDate" type="date" bind:value={formData.expectedCloseDate} />
         </div>
 
         <!-- Source -->
@@ -313,29 +291,21 @@
       <div class="grid gap-4 md:grid-cols-2">
         <div class="space-y-2">
           <Label for="contactId">{tr("dealForm.relatedContact")}</Label>
-          <select
-            id="contactId"
-            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text"
-            bind:value={formData.contactId}
-          >
+          <Select id="contactId" bind:value={formData.contactId}>
             <option value="">{tr("dealForm.none")}</option>
             {#each contacts as c}
               <option value={c.id}>{c.firstName} {c.lastName}</option>
             {/each}
-          </select>
+          </Select>
         </div>
         <div class="space-y-2">
           <Label for="companyId">{tr("dealForm.relatedCompany")}</Label>
-          <select
-            id="companyId"
-            class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm text-kitsuden-text"
-            bind:value={formData.companyId}
-          >
+          <Select id="companyId" bind:value={formData.companyId}>
             <option value="">{tr("dealForm.none")}</option>
             {#each companies as c}
               <option value={c.id}>{c.name}</option>
             {/each}
-          </select>
+          </Select>
         </div>
         <div class="space-y-2">
           <Label for="assignedTo">{tr("dealForm.assignedTo")}</Label>
@@ -348,15 +318,15 @@
       </div>
     </section>
 
-    <div class="border-t border-kitsuden-border pt-4 flex gap-2">
-      <Button onclick={handleSubmit} disabled={loading}>
+    <div class="border-t border-kitsuden-border pt-4 flex flex-wrap gap-2">
+      <Button onclick={handleSubmit} {loading}>
         {loading
           ? tr("common.saving")
           : dealId
             ? tr("dealForm.saveChanges")
             : tr("dealForm.createDeal")}
       </Button>
-      <Button variant="outline" onclick={onBack} disabled={loading}>{tr("common.cancel")}</Button>
+      <Button variant="secondary" onclick={onBack} disabled={loading}>{tr("common.cancel")}</Button>
     </div>
   </div>
 </div>

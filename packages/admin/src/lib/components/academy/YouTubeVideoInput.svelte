@@ -1,6 +1,8 @@
 <script lang="ts">
   import { t } from "$lib/i18n";
-  import { Video, Loader2, AlertCircle, Check, ExternalLink } from "lucide-svelte";
+  import { Video, Check, ExternalLink } from "lucide-svelte";
+
+  import { Alert, Card, Input, Label, Spinner } from "$lib/tallao";
 
   import { api } from "$lib/api";
 
@@ -25,6 +27,8 @@
     label = t("youTubeVideoInput.youtubeVideo"),
     required = false,
   }: Props = $props();
+
+  const inputId = $props.id();
 
   let loading = $state(false);
   let error = $state<string | null>(null);
@@ -95,47 +99,34 @@
   });
 </script>
 
-<div class="space-y-3">
-  <label class="block text-sm font-medium text-kitsuden-text">
-    {label}
-    {#if required}
-      <span class="text-kitsuden-danger">*</span>
-    {/if}
-  </label>
+<div class="space-y-3 min-w-0">
+  <Label for={inputId} {required}>{label}</Label>
 
-  <div class="relative">
-    <div class="absolute left-3 top-1/2 -translate-y-1/2 text-kitsuden-subtle">
-      <Video class="w-5 h-5" />
-    </div>
-    <input
+  <div class="flex items-center gap-2">
+    <Video class="w-5 h-5 shrink-0 text-kitsuden-subtle" aria-hidden="true" />
+    <Input
+      id={inputId}
       type="url"
+      class="flex-1 min-w-0"
       bind:value={inputValue}
       oninput={handleInput}
       onblur={handleValidate}
       placeholder="https://www.youtube.com/watch?v=..."
-      class="w-full pl-10 pr-10 py-2 bg-kitsuden-surface border border-kitsuden-input rounded-lg text-kitsuden-text placeholder:text-kitsuden-subtle focus:outline-hidden focus:border-kitsuden-accent/50"
     />
     {#if loading}
-      <div class="absolute right-3 top-1/2 -translate-y-1/2">
-        <Loader2 class="w-4 h-4 animate-spin text-kitsuden-accent" />
-      </div>
+      <Spinner size="sm" />
     {:else if videoInfo}
-      <div class="absolute right-3 top-1/2 -translate-y-1/2 text-kitsuden-green">
-        <Check class="w-4 h-4" />
-      </div>
+      <Check class="w-4 h-4 shrink-0 text-kitsuden-green" aria-hidden="true" />
     {/if}
   </div>
 
   {#if error}
-    <div class="flex items-center gap-2 text-sm text-kitsuden-danger">
-      <AlertCircle class="w-4 h-4" />
-      {error}
-    </div>
+    <Alert variant="error">{error}</Alert>
   {/if}
 
   <!-- Video preview -->
   {#if videoInfo}
-    <div class="card p-3 border-kitsuden-accent/20">
+    <Card class="p-3">
       <div class="flex gap-3">
         <div class="w-32 h-20 bg-kitsuden-surface rounded-lg overflow-hidden shrink-0">
           <img
@@ -162,14 +153,6 @@
           </a>
         </div>
       </div>
-    </div>
+    </Card>
   {/if}
 </div>
-
-<style>
-  @reference "../../../style.css";
-
-  .card {
-    @apply bg-kitsuden-card border border-kitsuden-border rounded-xl;
-  }
-</style>

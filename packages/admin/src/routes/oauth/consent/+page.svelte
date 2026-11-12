@@ -11,7 +11,7 @@
   import { onMount } from "svelte";
 
   import Page from "$lib/components/layout/Page.svelte";
-  import { Alert, Button, Skeleton } from "$lib/tallao";
+  import { Alert, Button, Card, CardContent, Checkbox, Input, Skeleton } from "$lib/tallao";
   import { decide, readConsent, inputScopes, type ConsentView } from "$lib/services/oauth";
 
   import { page } from "$app/stores";
@@ -122,27 +122,29 @@
         <Alert variant="error">{error}</Alert>
       </div>
     {:else}
-      <section class="p-4 rounded-lg border border-kitsuden-border space-y-1 text-sm">
-        <p class="text-kitsuden-text">
-          {t("oauthConsent.clientId")}
-          <code class="text-xs text-kitsuden-text-dim break-all">{view.client.id}</code>
-        </p>
-        <p class="text-kitsuden-text">
-          {view.client.kind === "cimd" ? t("oauthConsent.kindCimd") : t("oauthConsent.kindDcr")}
-        </p>
-        <p class="text-kitsuden-text" data-testid="oauth-redirect-host">
-          {t("oauthConsent.redirectsTo", { host: view.client.redirectHost })}
-        </p>
-        {#if view.client.localhostRedirect}
-          <p
-            class="flex items-start gap-2 text-kitsuden-amber text-xs pt-1"
-            data-testid="oauth-localhost-warning"
-          >
-            <AlertTriangle size={14} class="mt-0.5 shrink-0" />
-            {t("oauthConsent.localhostWarning", { host: view.client.redirectHost })}
+      <Card>
+        <CardContent class="space-y-1 text-sm">
+          <p class="text-kitsuden-text">
+            {t("oauthConsent.clientId")}
+            <code class="text-xs text-kitsuden-text-dim break-all">{view.client.id}</code>
           </p>
-        {/if}
-      </section>
+          <p class="text-kitsuden-text">
+            {view.client.kind === "cimd" ? t("oauthConsent.kindCimd") : t("oauthConsent.kindDcr")}
+          </p>
+          <p class="text-kitsuden-text" data-testid="oauth-redirect-host">
+            {t("oauthConsent.redirectsTo", { host: view.client.redirectHost })}
+          </p>
+          {#if view.client.localhostRedirect}
+            <p
+              class="flex items-start gap-2 text-kitsuden-amber text-xs pt-1"
+              data-testid="oauth-localhost-warning"
+            >
+              <AlertTriangle size={14} class="mt-0.5 shrink-0" />
+              {t("oauthConsent.localhostWarning", { host: view.client.redirectHost })}
+            </p>
+          {/if}
+        </CardContent>
+      </Card>
 
       <section class="space-y-2">
         <h2 class="text-sm font-semibold text-kitsuden-text flex items-center gap-2">
@@ -198,13 +200,12 @@
             <span class="flex-1">
               <span class="block text-sm text-kitsuden-text">{t("oauthConsent.newAgent")}</span>
               {#if chosenAgent === NEW}
-                <input
-                  type="text"
+                <Input
                   bind:value={newName}
                   maxlength="100"
                   aria-label={t("oauthConsent.newAgentName")}
                   placeholder={t("oauthConsent.newAgentName")}
-                  class="mt-2 w-full px-3 py-2 bg-kitsuden-bg border border-kitsuden-input rounded-lg text-sm text-kitsuden-text"
+                  class="mt-2"
                 />
               {/if}
             </span>
@@ -223,19 +224,14 @@
           {/if}
           <div class="grid gap-1">
             {#each offered as s (s)}
-              <label class="flex items-center gap-2 text-sm text-kitsuden-text">
-                <input
-                  type="checkbox"
-                  checked={chosenItems.includes(s)}
-                  onchange={() => toggle(s)}
-                />
+              <Checkbox checked={chosenItems.includes(s)} onchange={() => toggle(s)}>
                 <code class="text-xs">{s}</code>
                 {#if view.request.requestedScopes.includes(s)}
                   <span class="text-xs uppercase tracking-wide text-kitsuden-accent"
                     >{t("oauthConsent.requested")}</span
                   >
                 {/if}
-              </label>
+              </Checkbox>
             {/each}
           </div>
           {#if agent && agent.notDelegable.length}
@@ -261,15 +257,12 @@
       </ul>
 
       {#if error}
-        <div
-          class="p-3 bg-kitsuden-danger/10 border border-kitsuden-danger/20 rounded-lg text-sm text-kitsuden-danger"
-          data-testid="oauth-consent-error"
-        >
-          {error}
+        <div data-testid="oauth-consent-error">
+          <Alert variant="error">{error}</Alert>
         </div>
       {/if}
 
-      <div class="flex justify-end gap-3">
+      <div class="flex flex-wrap justify-end gap-3">
         <Button variant="ghost" disabled={sending} onclick={() => send("deny")}>
           <X size={14} class="mr-1" />{t("oauthConsent.deny")}
         </Button>

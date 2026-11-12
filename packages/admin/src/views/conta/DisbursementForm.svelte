@@ -2,7 +2,7 @@
   import { t } from "$lib/i18n";
   import { ArrowLeft, Save, FileText, DollarSign } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { toast, Badge, Button, Input, Label, Textarea } from "$lib/tallao";
+  import { toast, Badge, Button, Field, Input, Select, Spinner, Textarea } from "$lib/tallao";
 
   import { api } from "$lib/api";
 
@@ -106,19 +106,15 @@
   onMount(load);
 </script>
 
-<div class="space-y-6">
-  <Button variant="ghost" onclick={onBack}
-    ><ArrowLeft class="w-4 h-4 mr-2" /> {t("common.back")}</Button
-  >
+<div class="space-y-6 min-w-0">
+  <Button variant="ghost" onclick={onBack}><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button>
 
   {#if loading}
-    <div class="flex items-center justify-center h-48">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-kitsuden-accent"></div>
-    </div>
+    <div class="flex items-center justify-center h-48"><Spinner size="lg" /></div>
   {:else}
     {#if disbursement}
       {@const sb = statusBadge(disbursement.status)}
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
         <Badge variant={sb.variant}>{sb.label}</Badge>
         <span class="text-sm text-kitsuden-text-dim"
           >{disbursement.matterNumber ||
@@ -129,34 +125,23 @@
     {/if}
 
     <div class="grid gap-4 md:grid-cols-2">
-      <div>
-        <Label>{t("disbursementForm.matter")}</Label>
-        <select
-          bind:value={matterId}
-          disabled={!!disbursement}
-          class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm disabled:opacity-50"
-        >
+      <Field label={t("disbursementForm.matter")}>
+        <Select bind:value={matterId} disabled={!!disbursement}>
           <option value="">{t("common.select")}</option>
           {#each matters as m}
             <option value={m.id}>{m.matterNumber} - {m.name}</option>
           {/each}
-        </select>
-      </div>
-      <div>
-        <Label>{t("disbursementForm.paidFromAccount")}</Label>
-        <select
-          bind:value={paidFromAccountId}
-          disabled={!!disbursement}
-          class="w-full bg-kitsuden-card border border-kitsuden-input rounded-lg px-3 py-2 text-sm disabled:opacity-50"
-        >
+        </Select>
+      </Field>
+      <Field label={t("disbursementForm.paidFromAccount")}>
+        <Select bind:value={paidFromAccountId} disabled={!!disbursement}>
           <option value="">{t("common.select")}</option>
           {#each accounts as a}
             <option value={a.id}>{a.code} - {a.name}</option>
           {/each}
-        </select>
-      </div>
-      <div>
-        <Label>{t("disbursementForm.amount")}</Label>
+        </Select>
+      </Field>
+      <Field label={t("disbursementForm.amount")}>
         <Input
           type="number"
           step="0.01"
@@ -164,36 +149,36 @@
           disabled={!!disbursement}
           placeholder="0.00"
         />
-      </div>
-      <div class="md:col-span-2">
-        <Label>{t("common.description")}</Label>
+      </Field>
+      <Field label={t("common.description")} class="md:col-span-2">
         <Textarea
           bind:value={description}
           disabled={!!disbursement}
           rows={2}
           placeholder={t("disbursementForm.whatWasPaidFor")}
         />
-      </div>
+      </Field>
     </div>
 
-    <div class="flex items-center justify-between pt-4 border-t border-kitsuden-border">
-      <Button variant="outline" onclick={onBack} disabled={saving}>{t("common.back")}</Button>
+    <div
+      class="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-kitsuden-border"
+    >
+      <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.back")}</Button>
       {#if disbursement}
         <div class="flex items-center gap-2">
           {#if disbursement.status === "pending"}
-            <Button variant="outline" onclick={bill}
-              ><FileText class="w-4 h-4 mr-2" /> {t("disbursementForm.bill")}</Button
+            <Button variant="secondary" onclick={bill}
+              ><FileText class="w-4 h-4" /> {t("disbursementForm.bill")}</Button
             >
           {/if}
           {#if disbursement.status === "billed"}
-            <Button onclick={pay}
-              ><DollarSign class="w-4 h-4 mr-2" /> {t("disbursementForm.pay")}</Button
+            <Button onclick={pay}><DollarSign class="w-4 h-4" /> {t("disbursementForm.pay")}</Button
             >
           {/if}
         </div>
       {:else}
         <Button onclick={save} loading={saving}
-          ><Save class="w-4 h-4 mr-2" /> {t("common.create")}</Button
+          ><Save class="w-4 h-4" /> {t("common.create")}</Button
         >
       {/if}
     </div>

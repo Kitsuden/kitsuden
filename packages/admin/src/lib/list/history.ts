@@ -1,15 +1,19 @@
 /**
  * The history of a record, mapped from what the API keeps about it:
  *
- *   - the row's own timestamps (created, last updated, and by whom when the row says so);
+ *   - its change history (GET …/entries/:entryId/history for a dataset entry,
+ *     GET /api/history/:table/:id for a table row): who created, changed or
+ *     deleted it, a person or an agent, and the fields that changed;
+ *   - the row's own timestamps (created, last updated, and by whom when the row says so),
+ *     for what happened before the change history existed;
  *   - a dataset entry's snapshots (GET /api/datasets/:id/entries/:entryId/snapshots), each
  *     compared with the one before it;
  *   - the approval proposals that targeted the record (GET /api/approvals/proposals, matched
  *     by the API path they would call): which agent asked, what it would change, and which
  *     person approved or rejected it.
  *
- * There is no general per-record audit log in the API: a table without snapshots or
- * proposals shows only its timestamps, and the page says so rather than inventing entries.
+ * A record changed before the change history existed shows only what the rest keeps, and
+ * the page says so rather than inventing entries.
  */
 
 /** tallao's DiffChange. */
@@ -20,7 +24,7 @@ export interface Change {
   after?: unknown;
 }
 
-export type HistoryKind = "created" | "updated" | "snapshot" | "proposal";
+export type HistoryKind = "created" | "updated" | "snapshot" | "proposal" | "change";
 
 export interface HistoryEvent {
   id: string;
@@ -35,6 +39,8 @@ export interface HistoryEvent {
   status?: string;
   /** The person who decided an agent's proposal. */
   decidedBy?: string;
+  /** For a recorded change: what was done to the record. */
+  action?: "create" | "update" | "delete";
   note?: string;
   changes: Change[];
 }
@@ -43,6 +49,17 @@ export interface SnapshotLike {
   timestamp: string;
   data: Record<string, unknown>;
   meta?: { triggeredBy?: string; reason?: string; source?: string };
+}
+
+/** One entry of the API's change history of a record. */
+export interface ChangeLike {
+  id: string;
+  action: "create" | "update" | "delete";
+  at: string;
+  actor: { type: "user" | "agent" | "system"; id: string | null; name: string | null };
+  changes: Array<{ field: string; before?: unknown; after?: unknown; redacted?: boolean }>;
+  truncated?: boolean;
+  proposalId?: string | null;
 }
 
 export interface ProposalLike {
@@ -142,16 +159,69 @@ export interface HistoryInput {
   about: { created?: string; updated?: string; createdBy?: string; updatedBy?: string };
   snapshots?: SnapshotLike[];
   proposals?: ProposalLike[];
+  /** The API's change history of the record. */
+  changes?: ChangeLike[];
   /** Field key → label, for the diff. */
   labels?: Record<string, string>;
+  /** Shown instead of the value of a secret field (the API never sends it). */
+  redactedText?: string;
+}
+
+/**
+ * A recorded change's fields as DiffView changes: `data.price` is shown as `price` (an
+ * entry's own field); a secret field shows that it changed, never its value.
+ */
+export function changeFields(
+  change: ChangeLike,
+  labels: Record<string, string> = {},
+  redactedText = "hidden"
+): Change[] {
+  return change.changes.map((c) => {
+    const field = c.field.replace(/^data\./, "");
+    if (c.redacted) {
+      return { field, label: labels[field], before: redactedText, after: redactedText };
+    }
+    return {
+      field,
+      label: labels[field],
+      before: change.action === "create" ? null : (c.before ?? null),
+      after: change.action === "delete" ? null : (c.after ?? null),
+    };
+  });
 }
 
 /** Every known event of the record, newest first. */
 export function recordHistory(input: HistoryInput): HistoryEvent[] {
   const events: HistoryEvent[] = [];
   const { about, labels = {} } = input;
+  const recorded = input.changes ?? [];
+  const proposalIds = new Set(
+    (input.proposals ?? [])
+      .filter((p) => proposalTargets(p, input.apiPath, input.id))
+      .map((p) => p.id)
+  );
+  // The newest recorded change covers the row's own "last updated" when it is that write.
+  const newest = recorded.reduce<string>((max, c) => (c.at > max ? c.at : max), "");
+  const sameMoment = (a: string, b: string) =>
+    Math.abs(new Date(a).getTime() - new Date(b).getTime()) < 5_000;
 
-  if (about.created) {
+  for (const c of recorded) {
+    // An approved proposal's write is already its proposal's event (agent and approver).
+    if (c.proposalId && proposalIds.has(c.proposalId)) continue;
+    const agent = c.actor.type === "agent";
+    events.push({
+      id: `change:${c.id}`,
+      at: c.at,
+      kind: "change",
+      action: c.action,
+      actor: agent ? undefined : (c.actor.name ?? undefined),
+      agent: agent ? (c.actor.name ?? c.actor.id ?? undefined) : undefined,
+      changes: changeFields(c, labels, input.redactedText),
+    });
+  }
+  const recordedCreate = recorded.some((c) => c.action === "create");
+
+  if (about.created && !recordedCreate) {
     events.push({
       id: "created",
       at: about.created,
@@ -161,7 +231,11 @@ export function recordHistory(input: HistoryInput): HistoryEvent[] {
     });
   }
   // "Updated" is only worth a line when it is not the creation itself.
-  if (about.updated && about.updated !== about.created) {
+  if (
+    about.updated &&
+    about.updated !== about.created &&
+    !(newest && sameMoment(newest, about.updated))
+  ) {
     events.push({
       id: "updated",
       at: about.updated,
@@ -215,6 +289,8 @@ export interface HistoryLine {
   current?: boolean;
 }
 
+const ACTION_KEY = { create: "Created", update: "Updated", delete: "Deleted" } as const;
+
 const PROPOSAL_TONE: Record<string, HistoryLine["tone"]> = {
   pending: "warning",
   approved: "success",
@@ -257,6 +333,34 @@ export function historyLine(
       description: [changed, event.note].filter(Boolean).join(" · ") || undefined,
       tag: t("record.tagAgent"),
       tone: PROPOSAL_TONE[status] ?? "default",
+    };
+  }
+  if (event.kind === "change") {
+    const action = event.action ?? "update";
+    const description = [changed, event.note].filter(Boolean).join(" · ") || undefined;
+    if (event.agent) {
+      return {
+        date,
+        title: t(`record.agent${ACTION_KEY[action]}`, { agent: event.agent }),
+        description,
+        tag: t("record.tagAgent"),
+        tone: action === "delete" ? "error" : "accent",
+      };
+    }
+    return {
+      date,
+      title: event.actor
+        ? t(`record.change${ACTION_KEY[action]}By`, { who: event.actor })
+        : t(`record.change${ACTION_KEY[action]}`),
+      description,
+      tag: t(
+        action === "create"
+          ? "record.tagCreate"
+          : action === "delete"
+            ? "record.tagDelete"
+            : "record.tagEdit"
+      ),
+      tone: action === "create" ? "accent" : action === "delete" ? "error" : "default",
     };
   }
   if (event.kind === "created") {

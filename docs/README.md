@@ -28,6 +28,8 @@ from here is reference.
 - [Human approval](agents/approvals.md), and being told when a proposal is
   resolved (SSE or signed webhook)
 - [Typed clients](agents/clients.md) (TypeScript, Python, MCP)
+- [Record history](record-history.md): who changed a record, an agent or a person, and
+  which fields; and the explorer's search and filters
 - [Local AI](agents/local-ai.md): embeddings, semantic search, a second opinion
   on proposals
 - [Limit on what leaves](agents/egress.md): customer data marks and where the

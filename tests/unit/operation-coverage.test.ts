@@ -55,6 +55,7 @@ import { modelsKon } from "../../apps/api/src/routes/models";
 import { oauthKon } from "../../apps/api/src/routes/oauth-panel";
 import { adminPromotionKon, promotionKon } from "../../apps/api/src/routes/promotion";
 import { queueKon } from "../../apps/api/src/routes/queue";
+import { recordHistoryKon } from "../../apps/api/src/routes/record-history";
 import { tracesKon } from "../../apps/api/src/routes/traces";
 import { kon as blocksKon } from "../../packages/core/blocks/index";
 import { kon as datasetsKon } from "../../packages/core/datasets/index";
@@ -82,6 +83,8 @@ const SDK_KONS: KonDefinition[] = [
   queueKon as unknown as KonDefinition,
   tracesKon as unknown as KonDefinition,
   notificationsKon as unknown as KonDefinition,
+  // Who changed a row of any table (core migration 0076).
+  recordHistoryKon as unknown as KonDefinition,
 ];
 
 interface MountedOp {
