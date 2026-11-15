@@ -178,6 +178,24 @@ export function createKitsuden(options: ClientOptions) {
       },
 
       /**
+       * Every published page, page by page: the API serves at most 100 per request, so
+       * `list()` alone left a site with more pages out of its sitemap. Stops at `max`.
+       */
+      async listAll(max = 5000): Promise<PageSummary[]> {
+        const all: PageSummary[] = [];
+        for (let offset = 0; all.length < max; offset += 100) {
+          const data = await get<{ docs?: PageSummary[]; totalDocs?: number }>(
+            `/api/page-builder/pages?limit=100&offset=${offset}`
+          );
+          const docs = Array.isArray(data?.docs) ? data.docs : [];
+          all.push(...docs);
+          const total = typeof data?.totalDocs === "number" ? data.totalDocs : 0;
+          if (docs.length < 100 || all.length >= total) break;
+        }
+        return all.slice(0, max);
+      },
+
+      /**
        * A published page with its visible blocks, ordered as the API orders
        * them (`sortOrder`). This is the same read `@intijs/adapter-kitsuden`
        * does, so block positions match when Inti is on.

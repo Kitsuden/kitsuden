@@ -7,6 +7,28 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Page builder: `POST /api/page-builder/pages/:id/publish-draft` publishes a draft (a page made
+  with `clone`) onto its page in one transaction. It replaces the shown blocks, keeps hidden and
+  scheduled ones, copies title, description and SEO fields, and deletes the draft. Contract
+  `page-builder-publish: 1`.
+- Page builder: `PATCH /blocks/:id` accepts `contentPatch: [{ path, value }]` to change single
+  content fields, and `If-Match` (or `expectedUpdatedAt`) to refuse a write over a newer version
+  with 409 and the current block. Contract `page-builder-patch: 1`.
+- Page builder: `GET /pages/:id` sends `ETag` and `Last-Modified` and answers `If-None-Match` with 304.
+- Page builder: events `page:updated` and `page:deleted` (`{ id, slug }`), after commit, so an
+  action or a webhook can purge a site cache.
+
+### Fixed
+
+- Page builder: `clone` and `duplicate` keep `visibleFrom` and `visibleUntil`. A scheduled block
+  was public at once in the copy, and publishing the copy duplicated it.
+- Page builder: creating, editing, moving, duplicating or deleting a block moves the page's
+  `updatedAt`, so the sitemap `lastmod` follows block edits.
+- Page builder: `GET /block-types` lists every type the API saves (36), not only the 12 it
+  describes. The others carry `described: false` and an empty `schema`.
+
 ## [0.9.0-beta]
 
 First public release. Kitsuden is a JS backend where a model is declared once and agents can use
