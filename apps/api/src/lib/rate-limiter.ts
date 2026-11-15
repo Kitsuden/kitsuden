@@ -12,7 +12,7 @@
  * parallel reads. With several replicas, Valkey.
  */
 
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 
 import { readEnv } from "@kitsuden/shared";
 
@@ -38,8 +38,22 @@ import type { Context, Next } from "hono";
  * Returns the visitor identifier, or `null` if the request is not
  * signed by the site (or no key is configured).
  */
-/** Per-process key for comparing the site key in constant time (see `siteVisitor`) */
-const COMPARE_KEY = randomBytes(32);
+/**
+ * Constant-time equality of two secrets, with no hash. Both are copied into buffers of the
+ * longer length, so `timingSafeEqual` always runs over equal lengths; the length check comes
+ * after it. Hashing the site key first (bare sha256, then an HMAC) made CodeQL read it as a
+ * password hashed insecurely (js/insufficient-password-hash), and a hash adds nothing here.
+ */
+function sameSecret(expected: string, received: string): boolean {
+  const a = Buffer.from(expected, "utf8");
+  const b = Buffer.from(received, "utf8");
+  const size = Math.max(a.length, b.length);
+  const pa = Buffer.alloc(size);
+  const pb = Buffer.alloc(size);
+  a.copy(pa);
+  b.copy(pb);
+  return timingSafeEqual(pa, pb) && a.length === b.length;
+}
 
 export function siteVisitor(c: Context<any>): string | null {
   // `SITIO_API_CLAVE` is the 0.8 name of the variable, read for one version.
@@ -52,12 +66,7 @@ export function siteVisitor(c: Context<any>): string | null {
    */
   const received = c.req.header("x-kitsuden-site") ?? c.req.header("x-kitsuden-sitio") ?? "";
   if (!key || !received) return null;
-  // Constant-time comparison over MACs of equal length. A keyed MAC, not a bare hash:
-  // the site key is a secret, and CodeQL rightly reads a plain sha256 of it as a weak
-  // password hash. The MAC key lives only in this process; nothing is stored.
-  const a = createHmac("sha256", COMPARE_KEY).update(key).digest();
-  const b = createHmac("sha256", COMPARE_KEY).update(received).digest();
-  if (!timingSafeEqual(a, b)) return null;
+  if (!sameSecret(key, received)) return null;
   const client = (c.req.header("x-kitsuden-client") ?? c.req.header("x-kitsuden-cliente") ?? "")
     .trim()
     .slice(0, 64);

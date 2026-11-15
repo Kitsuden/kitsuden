@@ -60,6 +60,16 @@ describe("siteVisitor", () => {
     ).toBeNull();
   });
 
+  it("a key that is a prefix of the real one, or extends it, is not the site", () => {
+    /** The comparison pads both keys to one length: the length check must still refuse these. */
+    process.env.SITE_API_KEY = "test-key";
+    for (const sent of ["test-ke", "test-key\0", "test-key-longer"]) {
+      expect(
+        siteVisitor(context({ "x-kitsuden-site": sent, "x-kitsuden-client": "203.0.113.7" }))
+      ).toBeNull();
+    }
+  });
+
   it("without a key configured in the API, nobody is the site", () => {
     delete process.env.SITE_API_KEY;
     expect(

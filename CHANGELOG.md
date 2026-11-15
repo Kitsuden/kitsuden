@@ -43,8 +43,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
-- Rate limiter: the site key is compared through an HMAC with a per-process key, not a bare
-  SHA-256 (CodeQL `js/insufficient-password-hash`).
+- Rate limiter: the site key is compared in constant time over buffers padded to one length,
+  with no hash in between. A bare SHA-256 and then an HMAC of it were both flagged by CodeQL
+  as a password hashed insecurely (`js/insufficient-password-hash`).
 - Dependencies: every open osv-scanner alert is closed.
   - `@hono/node-server` 2.1.8 everywhere, including the copy used by the MCP SDK.
   - `astro` 7.4.12 and `@astrojs/node` 11.1.13 in the starter.
