@@ -39,14 +39,21 @@ import type { Context, Next } from "hono";
  * signed by the site (or no key is configured).
  */
 export function siteVisitor(c: Context<any>): string | null {
-  const key = readEnv("SITE_API_KEY") ?? "";
-  const received = c.req.header("x-kitsuden-site") ?? c.req.header("x-kitsuden-site") ?? "";
+  // `SITIO_API_CLAVE` is the 0.8 name of the variable, read for one version.
+  const key = readEnv("SITE_API_KEY") ?? readEnv("SITIO_API_CLAVE") ?? "";
+  /**
+   * The 0.8 names (`x-kitsuden-sitio`, `x-kitsuden-cliente`) are still read for one version,
+   * like the other renamed fields. The rename had left `x-kitsuden-site ?? x-kitsuden-site`,
+   * so a site still on the old names fell back to one bucket for all its visitors: the
+   * 429s that a site serves as 404s.
+   */
+  const received = c.req.header("x-kitsuden-site") ?? c.req.header("x-kitsuden-sitio") ?? "";
   if (!key || !received) return null;
   // Constant-time comparison over digests of equal length
   const a = createHash("sha256").update(key).digest();
   const b = createHash("sha256").update(received).digest();
   if (!timingSafeEqual(a, b)) return null;
-  const client = (c.req.header("x-kitsuden-client") ?? c.req.header("x-kitsuden-client") ?? "")
+  const client = (c.req.header("x-kitsuden-client") ?? c.req.header("x-kitsuden-cliente") ?? "")
     .trim()
     .slice(0, 64);
   return `site:${client || "no-ip"}`;

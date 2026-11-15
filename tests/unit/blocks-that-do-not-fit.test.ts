@@ -40,7 +40,7 @@
  * from 0002 to 0008) and only guarded the pages, because articles go in a
  * jsonb without constraint.
  *
- * The authority is now `TIPOS_DE_BLOQUE` in `blocks.schema.ts`, and the route that
+ * The authority is now `BLOCK_TYPES` in `blocks.schema.ts`, and the route that
  * publishes validates against it. That is: THIS test is what remains of the
  * guardian Postgres used to be. If it is relaxed, the failure comes back silently.
  */
@@ -66,8 +66,8 @@ function offered(): string[] {
 }
 
 /** The types the schema list accepts. */
-function almacenables(): string[] {
-  const i = SCHEMA.indexOf("export const TIPOS_DE_BLOQUE = [");
+function storable(): string[] {
+  const i = SCHEMA.indexOf("export const BLOCK_TYPES = [");
   expect(i, "the block types list was not found").toBeGreaterThan(-1);
   /**
    * It is cut from the `[`, not from the `export const`. Cutting earlier, the
@@ -82,10 +82,10 @@ function almacenables(): string[] {
 }
 
 /** The ones the renderer knows how to render: static `case`s + map of interactive ones. */
-function pintables(): string[] {
+function renderable(): string[] {
   const cases = [...RENDER.matchAll(/case "([a-z0-9-]+)":/g)].map((m) => m[1]);
 
-  const i = RENDER.indexOf("const INTERACTIVOS");
+  const i = RENDER.indexOf("const INTERACTIVE:");
   const map = RENDER.slice(i, RENDER.indexOf("\n};", i));
   const interactive = [...map.matchAll(/^\s{2}"?([a-z0-9-]+)"?:\s*\{/gm)].map((m) => m[1]);
 
@@ -94,17 +94,17 @@ function pintables(): string[] {
 
 describe("the three block vocabularies", () => {
   const offers = offered();
-  const saves = almacenables();
-  const renders = pintables();
+  const saves = storable();
+  const renders = renderable();
 
   it("all three were read, and they are not empty", () => {
     /**
      * Without this, changing the shape of any of the three files would leave the
      * test comparing empty lists and passing green.
      */
-    expect(offers.length, `registro: ${offers.join(", ")}`).toBeGreaterThan(10);
-    expect(saves.length, `lista: ${saves.join(", ")}`).toBeGreaterThan(10);
-    expect(renders.length, `renderizador: ${renders.join(", ")}`).toBeGreaterThan(10);
+    expect(offers.length, `registry: ${offers.join(", ")}`).toBeGreaterThan(10);
+    expect(saves.length, `list: ${saves.join(", ")}`).toBeGreaterThan(10);
+    expect(renders.length, `renderer: ${renders.join(", ")}`).toBeGreaterThan(10);
   });
 
   it("everything the editor offers can be SAVED", () => {
@@ -112,9 +112,9 @@ describe("the three block vocabularies", () => {
 
     expect(
       doNotFit,
-      `The editor offers ${doNotFit.map((t) => `«${t}»`).join(", ")} y ` +
-        `\`TIPOS_DE_BLOQUE\` does not admit them: when the page is published, the route ` +
-        `responds 422 «Tipo de bloque desconocido». Add them to the list in ` +
+      `The editor offers ${doNotFit.map((t) => `«${t}»`).join(", ")} and ` +
+        `\`BLOCK_TYPES\` does not admit them: when the page is published, the route ` +
+        `responds 422 «Unknown block type». Add them to the list in ` +
         `\`blocks.schema.ts\` — no migration is needed any more.`
     ).toEqual([]);
   });
@@ -124,7 +124,7 @@ describe("the three block vocabularies", () => {
 
     expect(
       invisibles,
-      `The editor offers ${invisibles.map((t) => `«${t}»`).join(", ")} y ` +
+      `The editor offers ${invisibles.map((t) => `«${t}»`).join(", ")} and ` +
         `\`render-blocks.ts\` does not know how to render them: they are saved and the page comes out without ` +
         `them, without any error.`
     ).toEqual([]);
@@ -139,7 +139,7 @@ describe("publish as a page", () => {
      * publish something. Here the pages' owner offers the service.
      */
     // From the kon SDK the route is a declared operation (`defineOperation`).
-    expect(ROUTES).toContain('ruta: "/pages/from-block"');
+    expect(ROUTES).toContain('route: "/pages/from-block"');
 
     const route = ROUTES.slice(
       ROUTES.indexOf('id: "publish-block-as-page"'),
@@ -147,10 +147,8 @@ describe("publish as a page", () => {
     );
 
     expect(route.length, "the route was not found").toBeGreaterThan(0);
-    expect(route, "publishing is writing: it requires a session").toMatch(
-      /(acceso|access): "(sesion|session)"/
-    );
-    expect(route, "and the permission to create pages").toMatch(/(accion|action): "create"/);
+    expect(route, "publishing is writing: it requires a session").toMatch(/access: "session"/);
+    expect(route, "and the permission to create pages").toMatch(/action: "create"/);
   });
 
   it("the type is validated against the schema's list, not against a parallel one", () => {
@@ -163,7 +161,7 @@ describe("publish as a page", () => {
      * A hand-written list in the route is exactly how we ended up with
      * three vocabularies that did not match.
      */
-    expect(route).toContain("TIPOS_DE_BLOQUE");
+    expect(route).toContain("BLOCK_TYPES");
   });
 
   it("the block type does NOT become a Postgres enum again", () => {
@@ -176,7 +174,7 @@ describe("publish as a page", () => {
     expect(
       SCHEMA.includes('pgEnum("block_content_type"'),
       "the block type would again require a production migration for every " +
-        "new block; the TIPOS_DE_BLOQUE list exists precisely to avoid that."
+        "new block; the BLOCK_TYPES list exists precisely to avoid that."
     ).toBe(false);
   });
 
@@ -191,7 +189,7 @@ describe("publish as a page", () => {
      * the exception. Without this, the second time fails with "that slug already
      * exists" or leaves stray pages.
      */
-    expect(route).toContain("existente");
+    expect(route).toContain("existing");
     expect(
       route.includes("delete(blocks)"),
       "when updating, the previous blocks must be cleaned: otherwise the page " +
@@ -227,27 +225,26 @@ describe("an interactive block's gap does not publish internal jargon", () => {
    * whoever implements the frontend, not for whoever reads the article.
    */
   it("each interactive block declares label and reason separately", () => {
-    const i = RENDER.indexOf("const INTERACTIVOS");
+    const i = RENDER.indexOf("const INTERACTIVE:");
     const map = RENDER.slice(i, RENDER.indexOf("\n};", i));
 
     const inputs = [...map.matchAll(/^\s{2}"?([a-z0-9-]+)"?:\s*\{/gm)].map((m) => m[1]);
     expect(inputs.length, "no interactive block was read").toBeGreaterThan(5);
 
-    expect(
-      (map.match(/etiqueta:/g) ?? []).length,
-      "each interactive block needs a human label"
-    ).toBe(inputs.length);
+    expect((map.match(/label:/g) ?? []).length, "each interactive block needs a human label").toBe(
+      inputs.length
+    );
   });
 
   it("what gets rendered is the label, not the reason", () => {
-    const i = RENDER.indexOf("const reserva =");
+    const i = RENDER.indexOf("const reservation =");
+    expect(i, "the fallback content was not found").toBeGreaterThan(-1);
     const chunk = RENDER.slice(i, i + 400);
 
-    expect(chunk.length, "the fallback content was not found").toBeGreaterThan(0);
-    expect(chunk).toContain(".etiqueta");
+    expect(chunk).toContain(".label");
 
     expect(
-      /\$\{escapeHtml\(tipo\)\}<\/strong>/.test(chunk),
+      /\$\{escapeHtml\(type\)\}<\/strong>/.test(chunk),
       "the block identifier is not text for a reader."
     ).toBe(false);
   });

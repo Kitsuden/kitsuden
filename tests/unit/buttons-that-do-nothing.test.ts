@@ -21,7 +21,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "..", "..");
-const EXPLORER = join(
+/**
+ * Since the panel was rebuilt on tallao (5c89d2e) the old `DataExplorer.svelte` is gone:
+ * a kon's page is `GrimoirePage.svelte` and its table is `ListView.svelte`. The four
+ * failures below are checked where that code lives now.
+ */
+const KON_PAGE = join(
   ROOT,
   "packages",
   "admin",
@@ -29,13 +34,27 @@ const EXPLORER = join(
   "lib",
   "components",
   "admin",
-  "DataExplorer.svelte"
+  "GrimoirePage.svelte"
+);
+const LIST_VIEW = join(
+  ROOT,
+  "packages",
+  "admin",
+  "src",
+  "lib",
+  "components",
+  "list",
+  "ListView.svelte"
 );
 const GAMES_VIEW = join(ROOT, "packages", "admin", "src", "views", "games", "GamesView.svelte");
 const GAMES_SCHEMA = join(ROOT, "packages", "kons", "kon-games", "games.schema.ts");
 
 describe("the add button's label", () => {
-  const explorer = readFileSync(EXPLORER, "utf-8");
+  const konPage = readFileSync(KON_PAGE, "utf-8");
+  const singularLine = () => {
+    const i = konPage.indexOf("singular:");
+    return konPage.slice(i, konPage.indexOf("apiEndpoint:", i));
+  };
 
   it("the singular is not invented by trimming letters", () => {
     /**
@@ -45,85 +64,74 @@ describe("the add button's label", () => {
      *     "All Games".replace(/e?s$/i, "")  →  "All Gam"
      *
      * A rule that is right sometimes is worse than one that always fails: nobody
-     * reviews it until a broken word shows up on screen.
+     * reviews it until a broken word shows up on screen. The rebuilt panel brought it
+     * back as `tableLabel.replace(/s$/, "")`.
      */
-    const tag = explorer.slice(
-      explorer.indexOf("const signupTag"),
-      explorer.indexOf("const columns")
-    );
-
-    expect(tag.length, "`signupTag` was not found").toBeGreaterThan(0);
+    expect(singularLine().length, "the list source's `singular` was not found").toBeGreaterThan(0);
 
     expect(
-      /\.replace\(\/[^/]*s\$/.test(tag),
-      "the button's name cannot come from trimming letters off the title of the " +
-        "view. If the kon does not declare a name, the button says just «Add»: " +
-        "it is not as pretty, but it is never a word that does not exist."
+      /\.replace\(\/[^/]*s\$/.test(singularLine()),
+      "the button's name cannot come from trimming letters off a label. Use what the " +
+        "kon declares, or `singularOf`, which leaves alone what it cannot singularize safely."
     ).toBe(false);
   });
 
   it("the name comes from what the kon declares", () => {
-    const tag = explorer.slice(
-      explorer.indexOf("const signupTag"),
-      explorer.indexOf("const columns")
-    );
-
-    expect(tag).toContain("singularName");
+    expect(singularLine()).toContain("singularName");
   });
 });
 
-describe("«Export» says something when there is nothing", () => {
-  const explorer = readFileSync(EXPLORER, "utf-8");
+describe("«Export» says something", () => {
+  const list = readFileSync(LIST_VIEW, "utf-8");
 
-  it("it does not return silently with an empty table", () => {
+  it("it does not return silently", () => {
     /**
      * It was `if (data.length === 0) return;`. It was pressed, nothing happened, no
      * message appeared and no file was downloaded — indistinguishable
-     * from a broken button, and it is the most frequent case in a new installation.
+     * from a broken button. Export now acts on the selected rows and always reports.
      */
-    const body = explorer.slice(
-      explorer.indexOf("function handleExportCsv"),
-      explorer.indexOf("async function openCreateModal")
+    const body = list.slice(
+      list.indexOf("function exportRows"),
+      list.indexOf("async function runBulk")
     );
 
-    expect(body.length, "`handleExportCsv` was not found").toBeGreaterThan(0);
-
+    expect(body.length, "`exportRows` was not found").toBeGreaterThan(0);
     expect(
-      /if \(data\.length === 0\) return;/.test(body),
+      /^\s*return;/m.test(body),
       "a bare `return` leaves the user not knowing whether the button failed or there " +
         "was nothing. They have to be told."
     ).toBe(false);
-
     expect(body).toContain("toast");
   });
 });
 
 describe("«New Game» opens the form", () => {
   const games = readFileSync(GAMES_VIEW, "utf-8");
-  const explorer = readFileSync(EXPLORER, "utf-8");
+  const konPage = readFileSync(KON_PAGE, "utf-8");
 
   it("the link explicitly asks for the creation form", () => {
     /**
      * It led to a bare `/g/kon-games`: you navigated to the kon's screen and that
-     * was it. No form, no notice.
+     * was it. No form, no notice. Then it led to `?crear=1`, which nothing read.
      */
     expect(
-      games.includes("/g/kon-games?crear=1"),
+      games.includes("/g/kon-games?create=1"),
       "«New Game» has to open the creation form, not leave the user on a list " +
         "hoping they guess the next click."
     ).toBe(true);
   });
 
-  it("the explorer handles that parameter and clears it", () => {
-    expect(explorer).toContain('searchParams.get("create")');
+  it("the kon's page handles that parameter and does not repeat it", () => {
+    expect(konPage).toContain('searchParams.get("create")');
 
     /**
-     * And it is removed from the URL: otherwise reloading or going back reopens the
+     * And the URL is replaced: otherwise reloading or going back reopens the
      * form over and over.
      */
+    const handler = konPage.slice(konPage.indexOf('searchParams.get("create")'));
     expect(
-      explorer.includes('searchParams.delete("create")'),
-      "the parameter has to be cleared after opening the creation form."
+      /goto\(`\$\{viewBase\}\/new`, \{ replaceState: true \}\)/.test(handler.slice(0, 200)),
+      "the parameter has to go to the create form replacing the URL."
     ).toBe(true);
   });
 });

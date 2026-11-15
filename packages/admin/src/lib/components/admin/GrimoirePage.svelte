@@ -24,7 +24,7 @@
   import QuickAddDialog from "$lib/components/list/QuickAddDialog.svelte";
   import RecordPage from "$lib/components/list/RecordPage.svelte";
   import { konViewActions } from "$lib/list/kon-actions";
-  import { explorerSource, type RecordSource } from "$lib/list/source";
+  import { explorerSource, singularOf, type RecordSource } from "$lib/list/source";
   import { Button, EmptyState, Skeleton, Tabs, type TabItem } from "$lib/tallao";
   import { moduleStore } from "$lib/states/modules.svelte";
   import {
@@ -44,6 +44,7 @@
   } from "$lib/types/admin";
 
   import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
 
   const {
     grimoireId,
@@ -333,7 +334,15 @@
       viewId: view.id,
       table,
       label: view.title || tableLabel,
-      singular: tableLabel.replace(/s$/, "") || tr("dataExplorer.record"),
+      /**
+       * The name the kon declares for one record (`singularName` in its view). Without one,
+       * `singularOf`, which leaves alone what it cannot singularize safely. Trimming an
+       * "s" off the label wrote words that do not exist (the old explorer's "All Gam").
+       */
+      singular:
+        (view as GridView & { singularName?: string }).singularName ||
+        singularOf(tableLabel) ||
+        tr("dataExplorer.record"),
       apiEndpoint: endpoint,
       fixedFilter: (view as GridView & { defaultFilter?: Record<string, unknown> }).defaultFilter,
       ...konViewActions(view as GridView, endpoint, table),
@@ -363,6 +372,17 @@
       grimoireId.replace(/^kon-/, "")
   );
   const viewBase = $derived(`/g/${grimoireId}/${activeViewId || explorerView?.id || "default"}`);
+  /**
+   * `?create=1` (a link such as the games screen's «New game») opens the create form.
+   * It used to point at a parameter nobody read: the link left the user on the list.
+   * `replaceState`, so going back or reloading does not open the form again.
+   */
+  $effect(() => {
+    if (recordId || !source || source.formFields.length === 0) return;
+    if ($page.url.searchParams.get("create") !== "1") return;
+    void goto(`${viewBase}/new`, { replaceState: true });
+  });
+
   const manyViews = $derived((grimoireConfig?.views.length ?? 0) > 1);
   const activeViewLabel = $derived.by(() => {
     const view = grimoireConfig?.views.find((v) => v.id === activeViewId);

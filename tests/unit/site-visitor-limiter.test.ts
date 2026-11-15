@@ -11,29 +11,34 @@ const context = (headers: Record<string, string>) =>
   ({ req: { header: (n: string) => headers[n.toLowerCase()] } }) as never;
 
 const before = process.env.SITE_API_KEY;
+const beforeOld = process.env.SITIO_API_CLAVE;
 afterEach(() => {
   if (before === undefined) delete process.env.SITE_API_KEY;
   else process.env.SITE_API_KEY = before;
+  if (beforeOld === undefined) delete process.env.SITIO_API_CLAVE;
+  else process.env.SITIO_API_CLAVE = beforeOld;
 });
 
+/**
+ * The two cases below are about the 0.8 names (`x-kitsuden-sitio`, `x-kitsuden-cliente`,
+ * `SITIO_API_CLAVE`). The 0.9 rename rewrote them to the new names too, so for a while they
+ * tested the new names twice and the old ones not at all, while the limiter really had
+ * stopped reading them.
+ */
 describe("siteVisitor", () => {
   it("the header names it had before keep working", () => {
     process.env.SITE_API_KEY = "test-key";
     expect(
-      siteVisitor(context({ "x-kitsuden-site": "test-key", "x-kitsuden-client": "203.0.113.7" }))
+      siteVisitor(context({ "x-kitsuden-sitio": "test-key", "x-kitsuden-cliente": "203.0.113.7" }))
     ).toBe("site:203.0.113.7");
   });
 
   it("the key's former variable name keeps working", () => {
     delete process.env.SITE_API_KEY;
-    process.env.SITE_API_KEY = "test-key";
-    try {
-      expect(
-        siteVisitor(context({ "x-kitsuden-site": "test-key", "x-kitsuden-client": "203.0.113.7" }))
-      ).toBe("site:203.0.113.7");
-    } finally {
-      delete process.env.SITE_API_KEY;
-    }
+    process.env.SITIO_API_CLAVE = "test-key";
+    expect(
+      siteVisitor(context({ "x-kitsuden-site": "test-key", "x-kitsuden-client": "203.0.113.7" }))
+    ).toBe("site:203.0.113.7");
   });
 
   it("with the right key, the quota belongs to the visitor", () => {
