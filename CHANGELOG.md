@@ -28,6 +28,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `updatedAt`, so the sitemap `lastmod` follows block edits.
 - Page builder: `GET /block-types` lists every type the API saves (36), not only the 12 it
   describes. The others carry `described: false` and an empty `schema`.
+- Rate limiter: a site that signs its requests with the 0.8 names (`x-kitsuden-sitio`,
+  `x-kitsuden-cliente`, variable `SITIO_API_CLAVE`) is counted per visitor again. The rename had
+  left the fallback reading the new header twice, so those sites shared one bucket.
+- Admin panel: «New game» opens the create form (`?create=1`); its link pointed at a parameter
+  nothing read. The «New …» button uses the kon's `singularName`, or a safe singular, instead of
+  trimming an «s» off the table label.
+- `sdk:check` and `sdk:openapi` leave out kons installed locally from kitsuden-kons whose
+  operations are not in the core snapshot (`--with-local-kons` brings them in). With kons
+  installed, `--check` failed and a plain write pulled them into the core SDK.
+- Core guards that read installed kons follow their current code (English names, Svelte
+  `admin-src` sources, the rebuilt panel) and accept a partial install; they failed whenever
+  kons were installed locally.
 
 ## [0.9.0-beta]
 
