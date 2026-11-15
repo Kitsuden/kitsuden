@@ -44,7 +44,7 @@
   } from "$lib/types/admin";
 
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   const {
     grimoireId,
@@ -379,8 +379,8 @@
    */
   $effect(() => {
     if (recordId || !source || source.formFields.length === 0) return;
-    if ($page.url.searchParams.get("create") !== "1") return;
-    void goto(`${viewBase}/new`, { replaceState: true });
+    if (page.url.searchParams.get("create") !== "1") return;
+    void goto(`${viewBase}/new`, { replace: true });
   });
 
   const manyViews = $derived((grimoireConfig?.views.length ?? 0) > 1);

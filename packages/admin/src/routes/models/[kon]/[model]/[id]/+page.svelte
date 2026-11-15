@@ -7,11 +7,11 @@
   import { findModel } from "$lib/services/models";
   import { EmptyState, Skeleton } from "$lib/tallao";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
-  const kon = $derived($page.params.kon ?? "");
-  const name = $derived($page.params.model ?? "");
-  const id = $derived($page.params.id ?? "new");
+  const kon = $derived(page.params.kon ?? "");
+  const name = $derived(page.params.model ?? "");
+  const id = $derived(page.params.id ?? "new");
   const base = $derived(`/models/${encodeURIComponent(kon)}/${encodeURIComponent(name)}`);
 
   let source = $state<RecordSource | null>(null);

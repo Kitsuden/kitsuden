@@ -12,7 +12,7 @@
  * parallel reads. With several replicas, Valkey.
  */
 
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { readEnv } from "@kitsuden/shared";
 
@@ -38,6 +38,9 @@ import type { Context, Next } from "hono";
  * Returns the visitor identifier, or `null` if the request is not
  * signed by the site (or no key is configured).
  */
+/** Per-process key for comparing the site key in constant time (see `siteVisitor`) */
+const COMPARE_KEY = randomBytes(32);
+
 export function siteVisitor(c: Context<any>): string | null {
   // `SITIO_API_CLAVE` is the 0.8 name of the variable, read for one version.
   const key = readEnv("SITE_API_KEY") ?? readEnv("SITIO_API_CLAVE") ?? "";
@@ -49,9 +52,11 @@ export function siteVisitor(c: Context<any>): string | null {
    */
   const received = c.req.header("x-kitsuden-site") ?? c.req.header("x-kitsuden-sitio") ?? "";
   if (!key || !received) return null;
-  // Constant-time comparison over digests of equal length
-  const a = createHash("sha256").update(key).digest();
-  const b = createHash("sha256").update(received).digest();
+  // Constant-time comparison over MACs of equal length. A keyed MAC, not a bare hash:
+  // the site key is a secret, and CodeQL rightly reads a plain sha256 of it as a weak
+  // password hash. The MAC key lives only in this process; nothing is stored.
+  const a = createHmac("sha256", COMPARE_KEY).update(key).digest();
+  const b = createHmac("sha256", COMPARE_KEY).update(received).digest();
   if (!timingSafeEqual(a, b)) return null;
   const client = (c.req.header("x-kitsuden-client") ?? c.req.header("x-kitsuden-cliente") ?? "")
     .trim()

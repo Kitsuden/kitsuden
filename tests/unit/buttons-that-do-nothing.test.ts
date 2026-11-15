@@ -130,7 +130,7 @@ describe("«New Game» opens the form", () => {
      */
     const handler = konPage.slice(konPage.indexOf('searchParams.get("create")'));
     expect(
-      /goto\(`\$\{viewBase\}\/new`, \{ replaceState: true \}\)/.test(handler.slice(0, 200)),
+      /goto\(`\$\{viewBase\}\/new`, \{ replace: true \}\)/.test(handler.slice(0, 200)),
       "the parameter has to go to the create form replacing the URL."
     ).toBe(true);
   });

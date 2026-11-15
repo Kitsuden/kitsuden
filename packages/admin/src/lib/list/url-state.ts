@@ -56,8 +56,16 @@ export const formatSort = (sort: ListSort): string =>
   `${sort.direction === "desc" ? "-" : ""}${sort.key}`;
 
 /** The list's state from a query string; anything malformed falls back to the default. */
+/**
+ * What these helpers read from a URL. SvelteKit 3 hands out `page.url` as a read-only
+ * URL (its `searchParams` has no `set`/`append`/`delete`/`sort`), so they take that shape
+ * and copy before writing; a plain `URL` still fits.
+ */
+export type ReadParams = Omit<URLSearchParams, "append" | "delete" | "set" | "sort">;
+export type ReadUrl = Omit<URL, "searchParams"> & { readonly searchParams: ReadParams };
+
 export function readListState(
-  params: URLSearchParams,
+  params: ReadParams,
   filters: FilterShape[],
   defaults: ListDefaults = {}
 ): ListState {
@@ -116,7 +124,7 @@ export function listStateQuery(
 }
 
 /** `url` with the list's parameters replaced by `state`; other parameters stay. */
-export function withListState(url: URL, state: ListState, defaults: ListDefaults = {}): string {
+export function withListState(url: ReadUrl, state: ListState, defaults: ListDefaults = {}): string {
   const kept = new URLSearchParams();
   for (const [key, value] of url.searchParams) {
     if (!OWN_KEYS.has(key) && !key.startsWith(FILTER_PREFIX)) kept.append(key, value);

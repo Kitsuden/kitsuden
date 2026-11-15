@@ -10,10 +10,10 @@
   import GrimoiresView from "$views/grimoires/GrimoiresView.svelte";
   import Kons from "$views/Kons.svelte";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   const TABS = ["kons", "grimoires"] as const;
-  const active = $derived(queryChoice($page.url, "tab", TABS, "kons"));
+  const active = $derived(queryChoice(page.url, "tab", TABS, "kons"));
   const items = $derived<TabItem[]>(
     TABS.map((id) => ({
       id,
@@ -22,7 +22,7 @@
       tabId: `kons-tab-${id}`,
     }))
   );
-  const select = (tab: string) => void setQuery($page.url, { tab: tab === "kons" ? null : tab });
+  const select = (tab: string) => void setQuery(page.url, { tab: tab === "kons" ? null : tab });
 </script>
 
 <Page

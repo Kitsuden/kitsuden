@@ -74,9 +74,9 @@
   import type { Proposal } from "$lib/types/approvals";
 
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
-  const agentId = $derived($page.params.id ?? "");
+  const agentId = $derived(page.params.id ?? "");
 
   let agent = $state<Agent | null>(null);
   let loading = $state(true);
@@ -97,12 +97,12 @@
     playground: "overview",
   };
   const activeTab = $derived.by<Tab>(() => {
-    const raw = $page.url.searchParams.get("tab") ?? "";
+    const raw = page.url.searchParams.get("tab") ?? "";
     if ((TABS as readonly string[]).includes(raw)) return raw as Tab;
     return MOVED[raw] ?? "overview";
   });
   function selectTab(tab: string) {
-    void setQuery($page.url, { tab: tab === "overview" ? null : tab });
+    void setQuery(page.url, { tab: tab === "overview" ? null : tab });
   }
   const TAB_LABELS: Record<Tab, () => string> = {
     overview: () => t("agentPage.tabOverview"),
@@ -115,13 +115,13 @@
 
   // ── Playground (a Sheet; `?playground=1`, and the older `?tab=playground`) ───────
   const playgroundOpen = $derived(
-    $page.url.searchParams.get("playground") === "1" ||
-      $page.url.searchParams.get("tab") === "playground"
+    page.url.searchParams.get("playground") === "1" ||
+      page.url.searchParams.get("tab") === "playground"
   );
   function setPlayground(open: boolean) {
     if (open === playgroundOpen) return;
     void setQuery(
-      $page.url,
+      page.url,
       {
         playground: open ? "1" : null,
         ...(open ? {} : { tab: activeTab === "overview" ? null : activeTab }),

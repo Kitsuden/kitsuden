@@ -12,10 +12,10 @@
   import { findModel, type MountedModel } from "$lib/services/models";
   import { Button, EmptyState, Skeleton } from "$lib/tallao";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
-  const kon = $derived($page.params.kon ?? "");
-  const name = $derived($page.params.model ?? "");
+  const kon = $derived(page.params.kon ?? "");
+  const name = $derived(page.params.model ?? "");
   const base = $derived(`/models/${encodeURIComponent(kon)}/${encodeURIComponent(name)}`);
 
   let model = $state<MountedModel | null>(null);

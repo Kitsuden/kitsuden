@@ -41,6 +41,30 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `admin-src` sources, the rebuilt panel) and accept a partial install; they failed whenever
   kons were installed locally.
 
+### Security
+
+- Rate limiter: the site key is compared through an HMAC with a per-process key, not a bare
+  SHA-256 (CodeQL `js/insufficient-password-hash`).
+- Dependencies: every open osv-scanner alert is closed.
+  - `@hono/node-server` 2.1.8 everywhere, including the copy used by the MCP SDK.
+  - `astro` 7.4.12 and `@astrojs/node` 11.1.13 in the starter.
+  - `esbuild` 0.28.2 and `minimatch` 11 through overrides.
+- Dependencies: `deepmerge` has no release that fixes GHSA-gcqx-w48m-w2h4 (prototype poisoning).
+  The repository keeps a fixed copy in `packages/deepmerge`, and a pnpm override points every
+  `deepmerge` at it.
+
+### Changed
+
+- Admin panel: SvelteKit 3, Vite 8 and `@sveltejs/vite-plugin-svelte` 7, which closes the two
+  SvelteKit 2 advisories (an open redirect in `use:enhance`, and XSS through `cache-control` in
+  prerendered pages).
+  - The configuration moved from `svelte.config.js`, which SvelteKit 3 refuses, to `kit.config.js`,
+    passed to `sveltekit()`.
+  - `page` comes from `$app/state`.
+  - Tailwind runs as a Vite plugin.
+  - Two stale compiled `vite.config.js` and `vitest.config.js` files are gone. The first one had
+    shadowed `vite.config.ts`, so production builds never dropped `console` calls.
+
 ## [0.9.0-beta]
 
 First public release. Kitsuden is a JS backend where a model is declared once and agents can use

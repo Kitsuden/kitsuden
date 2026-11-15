@@ -9,9 +9,9 @@
   import { datasetStore } from "$lib/states/datasets.svelte";
 
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
-  const datasetId = $derived($page.params.id);
+  const datasetId = $derived(page.params.id ?? "");
 
   let loading = $state(true);
   let error = $state<string | null>(null);
