@@ -375,6 +375,61 @@ export type PublishBlockAsPageResponse = {
   created: boolean;
 };
 
+/** Body of `blocks.publish-draft`. */
+export type PublishDraftBody = {
+  /** Uuid of the draft page (made with clone) */
+  draftId?: string;
+  [key: string]: unknown;
+};
+
+/** Arguments of `blocks.publish-draft`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
+export type PublishDraftParams = {
+  /** Page/block/template id (uuid; anything else is a 404) */
+  id: string | number;
+  /** JSON body. */
+  body?: PublishDraftBody;
+};
+
+/** Success response of `blocks.publish-draft`. */
+export type PublishDraftResponse = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  status: "draft" | "published" | "archived";
+  metaTitle: string | null;
+  metaDescription: string | null;
+  ogImageId: string | null;
+  layout: string;
+  cssClass: string | null;
+  customCss: string | null;
+  publishedAt: string | null;
+  isHomepage: boolean;
+  requireAuth: boolean;
+  createdAt: string;
+  updatedAt: string;
+  blocks: {
+    id: string;
+    pageId: string;
+    type: string;
+    name: string | null;
+    sortOrder: number;
+    columnSpan: number;
+    content: Record<string, unknown>;
+    cssClass: string | null;
+    backgroundColor: string | null;
+    textColor: string | null;
+    padding: string | null;
+    isVisible: boolean;
+    visibleFrom: string | null;
+    visibleUntil: string | null;
+    createdAt: string;
+    updatedAt: string;
+    [key: string]: unknown;
+  }[];
+  [key: string]: unknown;
+};
+
 /** Arguments of `blocks.render-page`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
 export type RenderPageParams = {
   /** Path parameter. */
@@ -446,6 +501,14 @@ export type UpdateBlockBody = {
   isVisible?: boolean;
   visibleFrom?: string | null;
   visibleUntil?: string | null;
+  /** Field changes instead of `content`: dot paths, numeric segments index arrays (contract page-builder-patch) */
+  contentPatch?: {
+    path: string;
+    value: unknown;
+    [key: string]: unknown;
+  }[];
+  /** The block's updatedAt as read; same as If-Match. A mismatch is a 409 */
+  expectedUpdatedAt?: string;
   [key: string]: unknown;
 };
 
@@ -562,9 +625,10 @@ export const operations = {
   "listPages": {"kon":"kon-blocks","id":"list-pages","operationId":"blocks.list-pages","method":"GET","path":"/page-builder/pages","pathParams":[],"queryParams":["status","limit","offset","layout","search"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:list-pages","mcpTool":"blocks__list-pages","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"docs","limit":"limit"}},
   "listTemplates": {"kon":"kon-blocks","id":"list-templates","operationId":"blocks.list-templates","method":"GET","path":"/page-builder/templates","pathParams":[],"queryParams":["category","type"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:list-templates","mcpTool":"blocks__list-templates","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "publishBlockAsPage": {"kon":"kon-blocks","id":"publish-block-as-page","operationId":"blocks.publish-block-as-page","method":"POST","path":"/page-builder/pages/from-block","pathParams":[],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:blocks:publish-block-as-page","mcpTool":"blocks__publish-block-as-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "publishDraft": {"kon":"kon-blocks","id":"publish-draft","operationId":"blocks.publish-draft","method":"POST","path":"/page-builder/pages/{id}/publish-draft","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:publish-draft","mcpTool":"blocks__publish-draft","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "renderPage": {"kon":"kon-blocks","id":"render-page","operationId":"blocks.render-page","method":"GET","path":"/page-builder/render/{slug}","pathParams":["slug"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:render-page","mcpTool":"blocks__render-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "reorderBlocks": {"kon":"kon-blocks","id":"reorder-blocks","operationId":"blocks.reorder-blocks","method":"POST","path":"/page-builder/pages/{pageId}/blocks/reorder","pathParams":["pageId"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:blocks:reorder-blocks","mcpTool":"blocks__reorder-blocks","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "updateBlock": {"kon":"kon-blocks","id":"update-block","operationId":"blocks.update-block","method":"PATCH","path":"/page-builder/blocks/{id}","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:update-block","mcpTool":"blocks__update-block","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "updateBlock": {"kon":"kon-blocks","id":"update-block","operationId":"blocks.update-block","method":"PATCH","path":"/page-builder/blocks/{id}","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:update-block","mcpTool":"blocks__update-block","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "updatePage": {"kon":"kon-blocks","id":"update-page","operationId":"blocks.update-page","method":"PATCH","path":"/page-builder/pages/{id}","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:update-page","mcpTool":"blocks__update-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "useTemplate": {"kon":"kon-blocks","id":"use-template","operationId":"blocks.use-template","method":"POST","path":"/page-builder/templates/{id}/use","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:use-template","mcpTool":"blocks__use-template","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
 } as const satisfies Record<string, OperationInfo>;
@@ -696,6 +760,16 @@ export interface BlocksApi {
    */
   readonly publishBlockAsPage: Operation<PublishBlockAsPageParams, PublishBlockAsPageResponse>;
   /**
+   * Publish a draft onto its page
+   *
+   * Atomically replaces the page's currently shown blocks with the draft's, copies title, description, metaTitle, metaDescription and ogImageId, and deletes the draft. Hidden and scheduled blocks of the page are kept. Returns the page with its shown blocks.
+   *
+   * REST: `POST /api/page-builder/pages/{id}/publish-draft` · scope `kon:blocks:publish-draft`
+   * not idempotent (an Idempotency-Key is sent automatically) · MCP tool `blocks__publish-draft`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   */
+  readonly publishDraft: Operation<PublishDraftParams, PublishDraftResponse>;
+  /**
    * Render a published page
    *
    * A published page ready to paint: page metadata plus visible blocks (scheduled visibility applied) with transform URLs for their media. Session-only pages need a session.
@@ -718,11 +792,11 @@ export interface BlocksApi {
   /**
    * Update a block
    *
-   * Changes the given block fields; new content is sanitized for the block type.
+   * Changes the given block fields; new content is sanitized for the block type. `contentPatch: [{ path, value }]` changes single content fields (dot paths, numeric segments index arrays) instead of replacing `content`. With `If-Match: "<updatedAt>"` (or `expectedUpdatedAt`) the write only happens if the block was not changed since; otherwise 409 with the current block.
    *
    * REST: `PATCH /api/page-builder/blocks/{id}` · scope `kon:blocks:update-block`
    * not idempotent (an Idempotency-Key is sent automatically) · MCP tool `blocks__update-block`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly updateBlock: Operation<UpdateBlockParams, UpdateBlockResponse>;
   /**

@@ -21,7 +21,7 @@ import { join } from "node:path";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { HAS_INSTALLED_KONS } from "./helpers/known-kons";
+import { HAS_INSTALLED_KONS, MIN_KONS_TO_REVIEW } from "./helpers/known-kons";
 
 const ROOT = join(__dirname, "..", "..");
 const KONS = join(ROOT, "packages", "kons");
@@ -78,7 +78,7 @@ describe("kons can be mounted", () => {
   it.skipIf(!HAS_INSTALLED_KONS)("there are kons to inspect", () => {
     // Without this, a discovery failure would leave the list empty and the
     // checks below would pass without looking at anything.
-    expect(kons.length).toBeGreaterThan(20);
+    expect(kons.length).toBeGreaterThanOrEqual(MIN_KONS_TO_REVIEW);
   });
 
   /**

@@ -7,6 +7,65 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Page builder: `POST /api/page-builder/pages/:id/publish-draft` publishes a draft (a page made
+  with `clone`) onto its page in one transaction. It replaces the shown blocks, keeps hidden and
+  scheduled ones, copies title, description and SEO fields, and deletes the draft. Contract
+  `page-builder-publish: 1`.
+- Page builder: `PATCH /blocks/:id` accepts `contentPatch: [{ path, value }]` to change single
+  content fields, and `If-Match` (or `expectedUpdatedAt`) to refuse a write over a newer version
+  with 409 and the current block. Contract `page-builder-patch: 1`.
+- Page builder: `GET /pages/:id` sends `ETag` and `Last-Modified` and answers `If-None-Match` with 304.
+- Page builder: events `page:updated` and `page:deleted` (`{ id, slug }`), after commit, so an
+  action or a webhook can purge a site cache.
+
+### Fixed
+
+- Page builder: `clone` and `duplicate` keep `visibleFrom` and `visibleUntil`. A scheduled block
+  was public at once in the copy, and publishing the copy duplicated it.
+- Page builder: creating, editing, moving, duplicating or deleting a block moves the page's
+  `updatedAt`, so the sitemap `lastmod` follows block edits.
+- Page builder: `GET /block-types` lists every type the API saves (36), not only the 12 it
+  describes. The others carry `described: false` and an empty `schema`.
+- Rate limiter: a site that signs its requests with the 0.8 names (`x-kitsuden-sitio`,
+  `x-kitsuden-cliente`, variable `SITIO_API_CLAVE`) is counted per visitor again. The rename had
+  left the fallback reading the new header twice, so those sites shared one bucket.
+- Admin panel: «New game» opens the create form (`?create=1`); its link pointed at a parameter
+  nothing read. The «New …» button uses the kon's `singularName`, or a safe singular, instead of
+  trimming an «s» off the table label.
+- `sdk:check` and `sdk:openapi` leave out kons installed locally from kitsuden-kons whose
+  operations are not in the core snapshot (`--with-local-kons` brings them in). With kons
+  installed, `--check` failed and a plain write pulled them into the core SDK.
+- Core guards that read installed kons follow their current code (English names, Svelte
+  `admin-src` sources, the rebuilt panel) and accept a partial install; they failed whenever
+  kons were installed locally.
+
+### Security
+
+- Rate limiter: the site key is compared in constant time over buffers padded to one length,
+  with no hash in between. A bare SHA-256 and then an HMAC of it were both flagged by CodeQL
+  as a password hashed insecurely (`js/insufficient-password-hash`).
+- Dependencies: every open osv-scanner alert is closed.
+  - `@hono/node-server` 2.1.8 everywhere, including the copy used by the MCP SDK.
+  - `astro` 7.4.12 and `@astrojs/node` 11.1.13 in the starter.
+  - `esbuild` 0.28.2 and `minimatch` 11 through overrides.
+- Dependencies: `deepmerge` has no release that fixes GHSA-gcqx-w48m-w2h4 (prototype poisoning).
+  The repository keeps a fixed copy in `packages/deepmerge`, and a pnpm override points every
+  `deepmerge` at it.
+
+### Changed
+
+- Admin panel: SvelteKit 3, Vite 8 and `@sveltejs/vite-plugin-svelte` 7, which closes the two
+  SvelteKit 2 advisories (an open redirect in `use:enhance`, and XSS through `cache-control` in
+  prerendered pages).
+  - The configuration moved from `svelte.config.js`, which SvelteKit 3 refuses, to `kit.config.js`,
+    passed to `sveltekit()`.
+  - `page` comes from `$app/state`.
+  - Tailwind runs as a Vite plugin.
+  - Two stale compiled `vite.config.js` and `vitest.config.js` files are gone. The first one had
+    shadowed `vite.config.ts`, so production builds never dropped `console` calls.
+
 ## [0.9.0-beta]
 
 First public release. Kitsuden is a JS backend where a model is declared once and agents can use

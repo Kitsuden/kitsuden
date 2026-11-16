@@ -12,7 +12,7 @@
  * parallel reads. With several replicas, Valkey.
  */
 
-import { createHash, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 
 import { readEnv } from "@kitsuden/shared";
 
@@ -38,15 +38,36 @@ import type { Context, Next } from "hono";
  * Returns the visitor identifier, or `null` if the request is not
  * signed by the site (or no key is configured).
  */
+/**
+ * Constant-time equality of two secrets, with no hash. Both are copied into buffers of the
+ * longer length, so `timingSafeEqual` always runs over equal lengths; the length check comes
+ * after it. Hashing the site key first (bare sha256, then an HMAC) made CodeQL read it as a
+ * password hashed insecurely (js/insufficient-password-hash), and a hash adds nothing here.
+ */
+function sameSecret(expected: string, received: string): boolean {
+  const a = Buffer.from(expected, "utf8");
+  const b = Buffer.from(received, "utf8");
+  const size = Math.max(a.length, b.length);
+  const pa = Buffer.alloc(size);
+  const pb = Buffer.alloc(size);
+  a.copy(pa);
+  b.copy(pb);
+  return timingSafeEqual(pa, pb) && a.length === b.length;
+}
+
 export function siteVisitor(c: Context<any>): string | null {
-  const key = readEnv("SITE_API_KEY") ?? "";
-  const received = c.req.header("x-kitsuden-site") ?? c.req.header("x-kitsuden-site") ?? "";
+  // `SITIO_API_CLAVE` is the 0.8 name of the variable, read for one version.
+  const key = readEnv("SITE_API_KEY") ?? readEnv("SITIO_API_CLAVE") ?? "";
+  /**
+   * The 0.8 names (`x-kitsuden-sitio`, `x-kitsuden-cliente`) are still read for one version,
+   * like the other renamed fields. The rename had left `x-kitsuden-site ?? x-kitsuden-site`,
+   * so a site still on the old names fell back to one bucket for all its visitors: the
+   * 429s that a site serves as 404s.
+   */
+  const received = c.req.header("x-kitsuden-site") ?? c.req.header("x-kitsuden-sitio") ?? "";
   if (!key || !received) return null;
-  // Constant-time comparison over digests of equal length
-  const a = createHash("sha256").update(key).digest();
-  const b = createHash("sha256").update(received).digest();
-  if (!timingSafeEqual(a, b)) return null;
-  const client = (c.req.header("x-kitsuden-client") ?? c.req.header("x-kitsuden-client") ?? "")
+  if (!sameSecret(key, received)) return null;
+  const client = (c.req.header("x-kitsuden-client") ?? c.req.header("x-kitsuden-cliente") ?? "")
     .trim()
     .slice(0, 64);
   return `site:${client || "no-ip"}`;

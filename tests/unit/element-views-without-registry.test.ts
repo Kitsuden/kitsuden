@@ -42,7 +42,7 @@
  * opened from a record— but it cannot be the ONLY source.
  */
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -51,18 +51,47 @@ import { withoutComments } from "./helpers/comments";
 
 const ROOT = join(__dirname, "..", "..");
 const CONTRACT = join(ROOT, "packages", "shared", "src", "admin-view.ts");
+const KONS = join(ROOT, "packages", "kons");
+
+/**
+ * Reads packages/kons/kon-esports, packages/kons/kon-broadcast and packages/kons/kon-tierlist
+ * (named here so tests/unit/vitest.config.ts excludes this file when they are not installed).
+ *
+ * The views are Svelte now: `admin-src/` is the source and `admin/*.js` the compiled,
+ * minified bundle (kitsuden-kons `pnpm build:admin`). The guards read the SOURCE: a string
+ * search in a bundle says nothing about the code.
+ */
+function adminSource(kon: string, files: string[]): string {
+  return files
+    .map((f) => withoutComments(readFileSync(join(KONS, kon, "admin-src", f), "utf-8")))
+    .join("\n");
+}
+
+/** Every .svelte/.ts file of a kon's admin views, without the vendored tallao kit. */
+function adminSourceFiles(kon: string): string[] {
+  const base = join(KONS, kon, "admin-src");
+  return (readdirSync(base, { recursive: true }) as string[])
+    .filter((f) => /\.(svelte|ts)$/.test(f) && !/^tallao[\\/]/.test(f))
+    .map((f) => join(base, f));
+}
 
 /** The booths: `type: "element"` views that operate on a record. */
 const BOOTHS = [
   {
     name: "TO panel (esports)",
-    file: join(ROOT, "packages", "kons", "kon-esports", "admin", "to-panel.js"),
-    listing: "tournaments",
+    kon: "kon-esports",
+    files: ["ToPanel.svelte", "store.svelte.ts", "sections/TournamentPick.svelte"],
+    listing: '"/tournaments"',
+    param: "params?.tournamentId",
+    emptyTitle: 'emptyTitle="No tournaments yet"',
   },
   {
     name: "Broadcast live booth",
-    file: join(ROOT, "packages", "kons", "kon-broadcast", "admin", "live-control.js"),
-    listing: "matches",
+    kon: "kon-broadcast",
+    files: ["LiveControl.svelte"],
+    listing: '"/matches"',
+    param: "params?.gameId",
+    emptyTitle: '"No matchups yet"',
   },
 ];
 
@@ -98,37 +127,28 @@ describe("the host contract carries no record", () => {
   });
 });
 
-describe.each(BOOTHS)("$name", ({ file: file, listing }) => {
-  const source = readFileSync(file, "utf-8");
-  const code = withoutComments(source);
+describe.each(BOOTHS)("$name", ({ kon, files, listing, param, emptyTitle }) => {
+  const code = adminSource(kon, files);
 
   it("does not depend only on a `params` that never arrives", () => {
     /**
-     * We look for the exact pattern that was broken: the id taken from `ctx` and
-     * nothing else. With a selector in front, `params` may stay as
-     * priority — what it cannot be is the only path.
+     * The broken pattern was the id taken from the host and nothing else. `params` may stay
+     * as priority (in case the view is ever opened from a record), but the booth also has
+     * to load the list itself.
      */
-    const contextOnly = /this\.#ctx\?\.params\?\.\w+\s*\?\?\s*this\.#ctx\?\.recordId/;
-
+    expect(code, "the record from the host is still honoured when present").toContain(param);
     expect(
-      contextOnly.test(code),
-      "the id comes solely from `ctx.params`/`ctx.recordId`, and the contract does not " +
-        "carry either: it will always be `null` and the booth will load nothing."
-    ).toBe(false);
+      code,
+      `the booth loads its own list (\`${listing}\`): the host contract carries no record`
+    ).toContain(listing);
   });
 
   it("offers choosing the record", () => {
     expect(
-      code.includes("data-pick-"),
+      code.includes("<Select"),
       "the booth must have its own selector: it is the only way for it to " +
         "know which record it is working on."
     ).toBe(true);
-
-    expect(code, "and something that fills it at startup").toContain("async #boot()");
-    expect(
-      code,
-      `the selector is filled from the API (\`${listing}\`), not from a hand-written list`
-    ).toContain(listing);
   });
 
   it("when there is nothing to choose, it says so and says where to create one", () => {
@@ -137,11 +157,8 @@ describe.each(BOOTHS)("$name", ({ file: file, listing }) => {
      * the lesson of the tier list editor: the empty state is exactly when someone
      * needs to know what to do.
      */
-    expect(code).toContain("data-pick-hint");
-    expect(
-      /No hay ning[uú]n/.test(code),
-      "the empty state has to be named in text, not left blank."
-    ).toBe(true);
+    expect(code, "the empty state has to be named in text, not left blank").toContain(emptyTitle);
+    expect(code, "and say where to create one").toMatch(/Create one in the \w+ tab/);
   });
 });
 
@@ -176,13 +193,8 @@ describe("theme colors are channels, not colors", () => {
    * The `kon-broadcast` views did it right from the start; the esports,
    * MOBA and tier list ones did not. Three out of five.
    */
-  const VIEWS = [
-    join(ROOT, "packages", "kons", "kon-esports", "admin", "to-panel.js"),
-    join(ROOT, "packages", "kons", "kon-broadcast", "admin", "live-control.js"),
-    join(ROOT, "packages", "kons", "kon-tierlist", "admin", "tierlist-editor.js"),
-    join(ROOT, "packages", "kons", "kon-broadcast", "admin", "scoreboard.js"),
-    join(ROOT, "packages", "kons", "kon-broadcast", "admin", "clasificaciones.js"),
-  ];
+  // The views' Svelte sources (the vendored tallao kit has its own tokens and tests)
+  const VIEWS = ["kon-esports", "kon-broadcast", "kon-tierlist"].flatMap(adminSourceFiles);
 
   /** The ones the theme defines as channels. `radius` and `font` are not colors. */
   const HEX_COLOR =
@@ -243,7 +255,7 @@ describe("the TO panel does not work for just one format", () => {
    * THROWS when the tournament is not elimination:
    *
    *     if (tournament.bracketFormat === "swiss") {
-   *       throw new Error("[bracket] este torneo es suizo; usa swiss.persistence");
+   *       throw new Error("[bracket] this tournament is Swiss; use swiss.persistence");
    *
    * So opening a Swiss tournament left that message —true, and useless to whoever
    * is running a tournament— in the error box, and not a single set in view.
@@ -259,10 +271,10 @@ describe("the TO panel does not work for just one format", () => {
    * Not anymore: `POST /matches/tournament/:id/report` has its Swiss branch, and
    * `PUT` rejects Swiss and round robin with 409 saying which route to use.
    */
-  const PANEL = join(ROOT, "packages", "kons", "kon-esports", "admin", "to-panel.js");
-  const ROUTES = join(ROOT, "packages", "kons", "kon-esports", "esports.routes.ts");
-  const SWISS = join(ROOT, "packages", "kons", "kon-esports", "swiss.persistence.ts");
-  const panel = withoutComments(readFileSync(PANEL, "utf-8"));
+  const ROUTES = join(KONS, "kon-esports", "esports.routes.ts");
+  // The panel's logic is in its store; the Swiss table is its own section.
+  const panel = adminSource("kon-esports", ["store.svelte.ts", "ToPanel.svelte"]);
+  const swissSection = adminSource("kon-esports", ["sections/Swiss.svelte"]);
 
   it("the premise is still true: the bracket throws outside elimination", () => {
     /**
@@ -274,8 +286,8 @@ describe("the TO panel does not work for just one format", () => {
       join(ROOT, "packages", "kons", "kon-esports", "bracket.persistence.ts"),
       "utf-8"
     );
-    expect(persistence).toContain("este torneo es suizo");
-    expect(persistence).toContain("este torneo es round robin");
+    expect(persistence).toContain("this tournament is Swiss");
+    expect(persistence).toContain("this tournament is round robin");
   });
 
   it("`PUT /matches/:id` can no longer close a Swiss or round robin tournament", () => {
@@ -285,7 +297,9 @@ describe("the TO panel does not work for just one format", () => {
      * set. It has to look at the format BEFORE writing anything.
      */
     const routes = readFileSync(ROUTES, "utf-8");
-    const put = routes.slice(routes.indexOf('id: "reportar-set-manual"'));
+    const from = routes.indexOf('id: "report-set-manual"');
+    expect(from, "the manual report route was not found").toBeGreaterThan(-1);
+    const put = routes.slice(from);
     const body = put.slice(0, put.indexOf(".update(matches)"));
 
     expect(body, "the PUT has to look at the format before touching the row").toContain('"swiss"');
@@ -304,7 +318,7 @@ describe("the TO panel does not work for just one format", () => {
     expect(body, "the table is recomputed from the rows, not made up").toContain("loadSwissState");
     // SDK operation of kons: the schema is declared and the SDK enforces it
     expect(body, "the body goes through a schema: a misnamed field cannot be lost").toContain(
-      "cuerpo: ReportResult"
+      "body: ReportResult"
     );
   });
 
@@ -319,16 +333,19 @@ describe("the TO panel does not work for just one format", () => {
      * With the Swiss branch, its sets are clicked like any other. `matchId`
      * —the row— is sent because with phases the engine id can repeat.
      */
-    expect(panel).toContain('=== "swiss") return this.#rowSets(false)');
-    expect(panel).toContain("matchId: match.rowId");
+    expect(panel).toContain(
+      'if (this.format === "swiss" || this.format === "round_robin") return this.setsFromRows()'
+    );
+    expect(panel).toContain("matchId: set.rowId");
   });
 
   it("Swiss can advance a round and show its cut", () => {
     // What is safe: pairing and querying. Those are Swiss's own routes.
     expect(panel).toContain("swiss/next-round");
     expect(panel).toContain("swiss/cut");
-    expect(panel, "the Swiss tiebreak is OMW; without it the table looks arbitrary").toContain(
-      "OMW"
-    );
+    expect(
+      swissSection,
+      "the Swiss tiebreak is OMW; without it the table looks arbitrary"
+    ).toContain("OMW");
   });
 });

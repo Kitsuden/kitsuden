@@ -58,6 +58,12 @@ export const KITSUDEN_VERSION = "0.9.0-beta";
 
 export const CONTRACTS = {
   "page-builder": 1,
+  // Capabilities added on top of `page-builder` 1, each announced on its own so a client
+  // (the Inti adapter) uses it only when present and falls back to the old calls otherwise:
+  //   page-builder-publish  POST /pages/:id/publish-draft { draftId }: one transaction
+  //   page-builder-patch    PATCH /blocks/:id with `contentPatch` and If-Match (409 on change)
+  "page-builder-publish": 1,
+  "page-builder-patch": 1,
   // 2 (0.9): block data and editorial keys in English (`title`, `description`, `hidden`,
   // `order`…) and the editorial routes under `/blocks/`. See block-keys.ts and the CHANGELOG.
   games: 2,

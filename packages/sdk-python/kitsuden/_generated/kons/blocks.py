@@ -204,6 +204,10 @@ class PublishBlockAsPageResponse(TypedDict):
     created: bool
 
 
+class PublishDraftBody(TypedDict, total=False):
+    draftId: str
+
+
 class RenderPageResponsePage(TypedDict):
     id: str
     title: str
@@ -242,6 +246,28 @@ class ReorderBlocksBody(TypedDict, total=False):
     blockOrders: List[ReorderBlocksBodyBlockOrdersItem]
 
 
+class UpdateBlockBodyContentPatchItem(TypedDict):
+    path: str
+    value: Any
+
+
+class UpdateBlockBody(TypedDict, total=False):
+    type: str
+    name: Optional[str]
+    sortOrder: int
+    columnSpan: int
+    content: Dict[str, Any]
+    cssClass: Optional[str]
+    backgroundColor: Optional[str]
+    textColor: Optional[str]
+    padding: Optional[str]
+    isVisible: bool
+    visibleFrom: Optional[str]
+    visibleUntil: Optional[str]
+    contentPatch: List[UpdateBlockBodyContentPatchItem]
+    expectedUpdatedAt: str
+
+
 BlockTypesResult = BlockTypesResponse
 ClonePageResult = ClonePageResponse
 CreateBlockResult = CreateBlockResponse
@@ -254,6 +280,7 @@ GetPageResult = GetPageResponse
 ListPagesResult = ListPagesResponse
 ListTemplatesResult = ListTemplatesResponse
 PublishBlockAsPageResult = PublishBlockAsPageResponse
+PublishDraftResult = GetPageResponse
 RenderPageResult = RenderPageResponse
 ReorderBlocksResult = DeleteBlockResponse
 UpdateBlockResult = CreateBlockResponse
@@ -467,6 +494,23 @@ OPERATIONS: Dict[str, OperationInfo] = {
         mcp_tool="blocks__publish-block-as-page",
         errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
+    "publish-draft": OperationInfo(
+        kon="kon-blocks",
+        id="publish-draft",
+        operation_id="blocks.publish-draft",
+        method="POST",
+        path="/page-builder/pages/{id}/publish-draft",
+        path_params=("id",),
+        query_params=(),
+        body="json",
+        responses={200: "json"},
+        idempotent=False,
+        read_only=False,
+        sensitive=False,
+        scope="kon:blocks:publish-draft",
+        mcp_tool="blocks__publish-draft",
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+    ),
     "render-page": OperationInfo(
         kon="kon-blocks",
         id="render-page",
@@ -516,7 +560,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:blocks:update-block",
         mcp_tool="blocks__update-block",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_CONFLICT", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "update-page": OperationInfo(
         kon="kon-blocks",
@@ -725,6 +769,20 @@ class BlocksApi(KonApi):
         """
         return self._call(OPERATIONS["publish-block-as-page"], {}, body, request_options)
 
+    def publish_draft(self, *, id: Union[str, int], body: Optional[PublishDraftBody] = None, request_options: Optional[RequestOptions] = None) -> Outcome[PublishDraftResult]:
+        """Publish a draft onto its page
+
+        Atomically replaces the page's currently shown blocks with the draft's, copies title, description, metaTitle, metaDescription and ogImageId, and deletes the draft. Hidden and scheduled blocks of the page are kept. Returns the page with its shown blocks.
+
+        REST: `POST /api/page-builder/pages/{id}/publish-draft` · scope `kon:blocks:publish-draft`
+        not idempotent (an Idempotency-Key is sent automatically) · MCP tool `blocks__publish-draft`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+
+        Args:
+            id: Page/block/template id (uuid; anything else is a 404)
+        """
+        return self._call(OPERATIONS["publish-draft"], {"id": id}, body, request_options)
+
     def render_page(self, *, slug: Union[str, int], request_options: Optional[RequestOptions] = None) -> Outcome[RenderPageResult]:
         """Render a published page
 
@@ -750,14 +808,14 @@ class BlocksApi(KonApi):
         """
         return self._call(OPERATIONS["reorder-blocks"], {"pageId": page_id}, body, request_options)
 
-    def update_block(self, *, id: Union[str, int], body: Optional[CreateBlockBody] = None, request_options: Optional[RequestOptions] = None) -> Outcome[UpdateBlockResult]:
+    def update_block(self, *, id: Union[str, int], body: Optional[UpdateBlockBody] = None, request_options: Optional[RequestOptions] = None) -> Outcome[UpdateBlockResult]:
         """Update a block
 
-        Changes the given block fields; new content is sanitized for the block type.
+        Changes the given block fields; new content is sanitized for the block type. `contentPatch: [{ path, value }]` changes single content fields (dot paths, numeric segments index arrays) instead of replacing `content`. With `If-Match: "<updatedAt>"` (or `expectedUpdatedAt`) the write only happens if the block was not changed since; otherwise 409 with the current block.
 
         REST: `PATCH /api/page-builder/blocks/{id}` · scope `kon:blocks:update-block`
         not idempotent (an Idempotency-Key is sent automatically) · MCP tool `blocks__update-block`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Page/block/template id (uuid; anything else is a 404)
@@ -963,6 +1021,20 @@ class AsyncBlocksApi(AsyncKonApi):
         """
         return await self._call(OPERATIONS["publish-block-as-page"], {}, body, request_options)
 
+    async def publish_draft(self, *, id: Union[str, int], body: Optional[PublishDraftBody] = None, request_options: Optional[RequestOptions] = None) -> Outcome[PublishDraftResult]:
+        """Publish a draft onto its page
+
+        Atomically replaces the page's currently shown blocks with the draft's, copies title, description, metaTitle, metaDescription and ogImageId, and deletes the draft. Hidden and scheduled blocks of the page are kept. Returns the page with its shown blocks.
+
+        REST: `POST /api/page-builder/pages/{id}/publish-draft` · scope `kon:blocks:publish-draft`
+        not idempotent (an Idempotency-Key is sent automatically) · MCP tool `blocks__publish-draft`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+
+        Args:
+            id: Page/block/template id (uuid; anything else is a 404)
+        """
+        return await self._call(OPERATIONS["publish-draft"], {"id": id}, body, request_options)
+
     async def render_page(self, *, slug: Union[str, int], request_options: Optional[RequestOptions] = None) -> Outcome[RenderPageResult]:
         """Render a published page
 
@@ -988,14 +1060,14 @@ class AsyncBlocksApi(AsyncKonApi):
         """
         return await self._call(OPERATIONS["reorder-blocks"], {"pageId": page_id}, body, request_options)
 
-    async def update_block(self, *, id: Union[str, int], body: Optional[CreateBlockBody] = None, request_options: Optional[RequestOptions] = None) -> Outcome[UpdateBlockResult]:
+    async def update_block(self, *, id: Union[str, int], body: Optional[UpdateBlockBody] = None, request_options: Optional[RequestOptions] = None) -> Outcome[UpdateBlockResult]:
         """Update a block
 
-        Changes the given block fields; new content is sanitized for the block type.
+        Changes the given block fields; new content is sanitized for the block type. `contentPatch: [{ path, value }]` changes single content fields (dot paths, numeric segments index arrays) instead of replacing `content`. With `If-Match: "<updatedAt>"` (or `expectedUpdatedAt`) the write only happens if the block was not changed since; otherwise 409 with the current block.
 
         REST: `PATCH /api/page-builder/blocks/{id}` · scope `kon:blocks:update-block`
         not idempotent (an Idempotency-Key is sent automatically) · MCP tool `blocks__update-block`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Page/block/template id (uuid; anything else is a 404)

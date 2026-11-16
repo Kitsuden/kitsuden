@@ -28,11 +28,11 @@
    *
    * Without `?id` it is a new post. With `?id` that one is loaded.
    */
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   import BlogPostEditor from "$lib/components/blog/BlogPostEditor.svelte";
 
-  const postId = $derived($page.url.searchParams.get("id"));
+  const postId = $derived(page.url.searchParams.get("id"));
 </script>
 
 <BlogPostEditor {postId} />

@@ -14,7 +14,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { HAS_INSTALLED_KONS } from "./helpers/known-kons";
+import { HAS_INSTALLED_KONS, MIN_KONS_TO_REVIEW } from "./helpers/known-kons";
 
 const ROOT = join(__dirname, "..", "..");
 const LEVELS = ["stable", "beta", "experimental"];
@@ -37,7 +37,7 @@ const all = [...installed, ...ofTheCore];
 describe("kon maturity", () => {
   it("there are manifests to review", () => {
     // Without installed kons, the three core ones remain.
-    expect(all.length).toBeGreaterThan(HAS_INSTALLED_KONS ? 20 : 2);
+    expect(all.length).toBeGreaterThanOrEqual(HAS_INSTALLED_KONS ? MIN_KONS_TO_REVIEW : 3);
   });
 
   it.each(all)("%s declares a valid maturity", (_route, manifest) => {

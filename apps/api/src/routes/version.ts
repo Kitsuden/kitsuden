@@ -45,6 +45,8 @@ import { Hono } from "hono";
  */
 export const CONTRACT_KON: Partial<Record<ContractName, string>> = {
   "page-builder": "kon-blocks",
+  "page-builder-publish": "kon-blocks",
+  "page-builder-patch": "kon-blocks",
   games: "kon-games",
   "games-editorial": "kon-games",
 };

@@ -82,16 +82,19 @@ describe("concurrent editing of posts", () => {
   });
 
   it("a conflict writes nothing and is distinguished from a nonexistent post", () => {
-    // The blog is an SDK kon: PATCH /:id is the `editar-entrada` operation.
-    const patch = routes.slice(routes.indexOf('id: "editar-entrada"'));
-    const body = patch.slice(0, patch.indexOf('id: "borrar-entrada"'));
+    // The blog is an SDK kon: PATCH /:id is the `update-post` operation.
+    const from = routes.indexOf('id: "update-post"');
+    const body = from < 0 ? "" : routes.slice(from, routes.indexOf('id: "delete-post"', from));
 
     expect(body.length, "the PATCH /:id handler was not found").toBeGreaterThan(0);
 
     // The condition goes in the UPDATE's WHERE: if the filter were applied after
     // writing, the overwrite would already have happened.
+    expect(body.indexOf("const condition"), "the version condition was not found").toBeGreaterThan(
+      -1
+    );
     expect(
-      body.indexOf("const condicion") < body.indexOf(".update(blogPosts)"),
+      body.indexOf("const condition") < body.indexOf(".update(blogPosts)"),
       "the version condition has to be part of the UPDATE's WHERE, not " +
         "checked afterwards: afterwards it has already been overwritten."
     ).toBe(true);
@@ -130,7 +133,7 @@ describe("blog categories", () => {
      */
     const create = routes.slice(
       routes.indexOf("const createPostSchema"),
-      routes.indexOf("const categoriaSchema")
+      routes.indexOf("const categorySchema")
     );
 
     expect(
@@ -161,7 +164,7 @@ describe("blog categories", () => {
      * bring them".
      */
     expect(
-      routes.includes("categoryIds: categorias.map"),
+      routes.includes("categoryIds: categories.map"),
       "`GET /api/blog/:id` has to return `categoryIds`. Otherwise the editor " +
         "shows the post WITHOUT categories however many it has, and the next " +
         "save really deletes them."

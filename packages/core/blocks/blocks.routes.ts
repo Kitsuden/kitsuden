@@ -12,6 +12,8 @@
  * at the start of the handler, with the same 401/403 responses.
  */
 
+import { createHash } from "node:crypto";
+
 import {
   can,
   defineOperation,
@@ -54,6 +56,7 @@ import {
   TemplateEntry,
   PageListQuery,
   PageQuery,
+  PublishDraft,
   TemplatesQuery,
   Reordenar,
   BlockTypes,
@@ -144,6 +147,165 @@ function validType(type: unknown): boolean {
 /** A page `:id` can be a uuid or a slug; only the uuid is compared with `pages.id` */
 const IS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Is this block shown right now (switched on and inside its scheduled window)? */
+function shownNow(
+  block: { isVisible?: boolean | null; visibleFrom?: unknown; visibleUntil?: unknown },
+  now: Date
+): boolean {
+  if (!block.isVisible) return false;
+  if (block.visibleFrom && new Date(block.visibleFrom as string) > now) return false;
+  if (block.visibleUntil && new Date(block.visibleUntil as string) < now) return false;
+  return true;
+}
+
+/** Limits of a `contentPatch`: it edits fields, it is not a way to send a whole document. */
+const MAX_PATCH_OPS = 100;
+const MAX_PATCH_DEPTH = 20;
+const FORBIDDEN_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
+
+type PatchOp = { segments: string[]; value: unknown };
+
+/**
+ * Reads `contentPatch: [{ path: "cards.0.title", value }]`. Dots separate keys and
+ * numeric segments index arrays. Returns the operations or the 400 message.
+ */
+function parseContentPatch(raw: unknown): PatchOp[] | string {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return "`contentPatch` must be a non-empty array of { path, value }";
+  }
+  if (raw.length > MAX_PATCH_OPS) return `\`contentPatch\` accepts up to ${MAX_PATCH_OPS} changes`;
+  const ops: PatchOp[] = [];
+  for (const item of raw) {
+    const path = (item as { path?: unknown } | null)?.path;
+    if (typeof path !== "string" || !path || path.length > 200) {
+      return "Each `contentPatch` change needs a `path` (up to 200 characters)";
+    }
+    if (!Object.prototype.hasOwnProperty.call(item, "value")) {
+      return `\`contentPatch\` change "${path}" has no \`value\``;
+    }
+    const segments = path.split(".");
+    if (segments.length > MAX_PATCH_DEPTH || segments.some((s) => !s)) {
+      return `Invalid \`contentPatch\` path: "${path}"`;
+    }
+    if (segments.some((s) => FORBIDDEN_SEGMENTS.has(s))) {
+      return `\`contentPatch\` path not allowed: "${path}"`;
+    }
+    ops.push({ segments, value: (item as { value: unknown }).value });
+  }
+  return ops;
+}
+
+/**
+ * Applies the changes to a copy of the content. Missing objects on the way are
+ * created; an array is only indexed by a number. Returns the new content or the 400 message.
+ */
+function applyContentPatch(content: unknown, ops: PatchOp[]): Record<string, unknown> | string {
+  const root: Record<string, unknown> =
+    content && typeof content === "object" && !Array.isArray(content)
+      ? structuredClone(content as Record<string, unknown>)
+      : {};
+  for (const { segments, value } of ops) {
+    let node: unknown = root;
+    for (let i = 0; i < segments.length; i++) {
+      const key = segments[i];
+      const last = i === segments.length - 1;
+      if (Array.isArray(node)) {
+        if (!/^\d+$/.test(key)) return `"${segments.join(".")}": "${key}" is not an array index`;
+        const index = Number(key);
+        if (index > node.length) return `"${segments.join(".")}": index ${index} is past the end`;
+        if (last) node[index] = value;
+        else {
+          if (node[index] === null || typeof node[index] !== "object") node[index] = {};
+          node = node[index];
+        }
+      } else {
+        const obj = node as Record<string, unknown>;
+        if (last) obj[key] = value;
+        else {
+          if (obj[key] === null || typeof obj[key] !== "object") obj[key] = {};
+          node = obj[key];
+        }
+      }
+    }
+  }
+  return root;
+}
+
+/**
+ * The version a write expects: `If-Match: "<updatedAt ISO>"` (quotes and `W/` optional) or
+ * `expectedUpdatedAt` in the body. `undefined` = no check; `null` = unreadable (400).
+ */
+function expectedVersion(header: string | undefined, bodyValue: unknown): Date | null | undefined {
+  const raw =
+    typeof header === "string" && header.trim()
+      ? header
+          .trim()
+          .replace(/^W\//, "")
+          .replace(/^"(.*)"$/, "$1")
+      : bodyValue;
+  if (raw === undefined || raw === null || raw === "") return undefined;
+  if (typeof raw !== "string") return null;
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** The `ETag` of a GET body: weak, because the JSON is re-serialized on every request. */
+function etagOf(body: unknown): string {
+  return `W/"${createHash("sha1").update(JSON.stringify(body)).digest("base64url")}"`;
+}
+
+/** Does `If-None-Match` name this ETag (weak comparison, as RFC 9110 asks for GET)? */
+function notModified(ifNoneMatch: string | undefined, etag: string): boolean {
+  if (!ifNoneMatch) return false;
+  const bare = (t: string) => t.trim().replace(/^W\//, "");
+  return ifNoneMatch.split(",").some((t) => t.trim() === "*" || bare(t) === bare(etag));
+}
+
+/** The latest `updatedAt` of a page and its blocks, for `Last-Modified`. */
+function lastModifiedOf(
+  page: { updatedAt?: unknown },
+  list: Array<{ updatedAt?: unknown }>
+): Date | null {
+  let latest = 0;
+  for (const v of [page.updatedAt, ...list.map((b) => b.updatedAt)]) {
+    const t = v ? new Date(v as string).getTime() : NaN;
+    if (Number.isFinite(t) && t > latest) latest = t;
+  }
+  return latest ? new Date(latest) : null;
+}
+
+/**
+ * Block types the editor can save but whose content this kon does not describe: their
+ * fields belong to the site component (or the kon) that renders them. They are listed so a
+ * client does not reject a type the API accepts; `schema` stays empty.
+ */
+const UNDESCRIBED_TYPE_CATEGORY: Record<string, string> = {
+  richtext: "content",
+  callout: "content",
+  "facebook-group": "marketing",
+  "image-gallery": "media",
+  "comparison-slider": "media",
+  "dynamic-carousel": "layout",
+  "smart-grid": "layout",
+  "smart-filter": "layout",
+};
+
+function undescribedType(type: string) {
+  const name = type
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+  return {
+    type,
+    name,
+    category: UNDESCRIBED_TYPE_CATEGORY[type] ?? "interactive",
+    icon: "puzzle-piece",
+    description: `${name} block. Its fields are defined by the component that renders it.`,
+    schema: {},
+    described: false,
+  };
+}
+
 /**
  * The page builder's operations, with the kon's context injected.
  */
@@ -225,17 +387,33 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
     return null;
   }
 
-  /** After touching a block: the page by id and by slug, the list and the render. */
-  async function invalidatePage(pageId: string): Promise<void> {
+  /**
+   * After a page or one of its blocks changed: the page's `updatedAt` (the sitemap's
+   * `lastmod` and `Last-Modified` read it; a block edit used to leave it old), the cache
+   * by id, by slug, the list and the render, and the `page:updated` event, which goes out
+   * after commit so an action or a webhook can purge a site's cache.
+   *
+   * `touch: false` when the caller already wrote `updatedAt` in the same statement.
+   */
+  async function invalidatePage(pageId: string, opts: { touch?: boolean } = {}): Promise<void> {
+    const [page] =
+      opts.touch === false
+        ? await dbInstance
+            .select({ slug: pages.slug })
+            .from(pages)
+            .where(eq(pages.id, pageId))
+            .limit(1)
+        : await dbInstance
+            .update(pages)
+            .set({ updatedAt: new Date() })
+            .where(eq(pages.id, pageId))
+            .returning({ slug: pages.slug });
     await invalidateCache(`page:${pageId}:*`);
-    const [page] = await dbInstance
-      .select({ slug: pages.slug })
-      .from(pages)
-      .where(eq(pages.id, pageId))
-      .limit(1);
+    await invalidateCache("pages:*");
     if (page?.slug) {
       await invalidateCache(`page:${page.slug}:*`);
       await invalidateCache(`render:${page.slug}`);
+      ctx.events?.emit("page:updated", { id: pageId, slug: page.slug });
     }
   }
 
@@ -370,12 +548,7 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
 
             // Filter out invisible blocks based on visibility settings
             const now = new Date();
-            pageBlocks = pageBlocks.filter((block) => {
-              if (!block.isVisible) return false;
-              if (block.visibleFrom && new Date(block.visibleFrom) > now) return false;
-              if (block.visibleUntil && new Date(block.visibleUntil) < now) return false;
-              return true;
-            });
+            pageBlocks = pageBlocks.filter((block) => shownNow(block, now));
           }
 
           return { ...page, blocks: pageBlocks };
@@ -388,11 +561,33 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
           return c.json({ error: "Page not found" }, 404);
         }
 
-        return c.json({
+        const body = {
           ...pageData,
           customCss: cssToServe(pageData.customCss),
           blocks: (pageData.blocks ?? []).map(blockToServe),
-        });
+        };
+
+        /**
+         * Conditional GET. The ETag hashes the body, so it also changes when a scheduled
+         * block enters or leaves its window (no `updatedAt` moves then). `no-cache`: a
+         * client may keep the copy but must revalidate it; drafts and session pages stay
+         * `private` so a shared cache never holds them.
+         */
+        const etag = etagOf(body);
+        const lastModified = lastModifiedOf(pageData, pageData.blocks ?? []);
+        c.header("ETag", etag);
+        if (lastModified) c.header("Last-Modified", lastModified.toUTCString());
+        c.header(
+          "Cache-Control",
+          pageData.status === "published" && !pageData.requireAuth
+            ? "no-cache"
+            : "private, no-cache"
+        );
+        if (notModified(c.req.header("if-none-match"), etag)) {
+          return c.body(null, 304);
+        }
+
+        return c.json(body);
       },
     })
   );
@@ -650,10 +845,8 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
           content: sanitizeBlockContent(body.blockType, body.content ?? {}) as never,
         });
 
-        await invalidateCache("pages:*");
-        await invalidateCache(`page:${pageId}:*`);
-        await invalidateCache(`page:${slug}:*`);
-        await invalidateCache(`render:${slug}`);
+        // `updatedAt` was already written above (or by the insert)
+        await invalidatePage(pageId, { touch: false });
 
         return c.json(
           {
@@ -755,6 +948,7 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
         await invalidateCache(`page:${updated.slug}:*`);
         await invalidateCache("pages:*");
         await invalidateCache("render:*");
+        ctx.events?.emit("page:updated", { id: updated.id, slug: updated.slug });
         return c.json(updated);
       },
     })
@@ -787,6 +981,7 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
         await invalidateCache(`page:${deleted.slug}:*`);
         await invalidateCache("pages:*");
         await invalidateCache("render:*");
+        ctx.events?.emit("page:deleted", { id: deleted.id, slug: deleted.slug });
         return c.json({ success: true, id: deleted.id });
       },
     })
@@ -868,12 +1063,13 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
       method: "PATCH",
       route: "/blocks/:id",
       summary: "Update a block",
-      description: "Changes the given block fields; new content is sanitized for the block type.",
+      description:
+        'Changes the given block fields; new content is sanitized for the block type. `contentPatch: [{ path, value }]` changes single content fields (dot paths, numeric segments index arrays) instead of replacing `content`. With `If-Match: "<updatedAt>"` (or `expectedUpdatedAt`) the write only happens if the block was not changed since; otherwise 409 with the current block.',
       access: "session",
       permission: { policy: { resource: "page", action: "update" } },
       input: { params: ParamId, body: BlockChanges.optional() },
       output: { schema: Block },
-      errors: ["KITSUDEN_E_NOT_FOUND"],
+      errors: ["KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_CONFLICT"],
       handle: async (input, { c }) => {
         const { id } = c.req.param();
         if (!IS_UUID.test(id)) return c.json({ error: "Block not found" }, 404);
@@ -882,43 +1078,100 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
         const styleError = invalidStyle(body);
         if (styleError) return c.json({ error: styleError }, 400);
 
-        const updates: Record<string, unknown> = { updatedAt: new Date() };
+        const rawPatch = (body as { contentPatch?: unknown }).contentPatch;
+        if (rawPatch !== undefined && body.content !== undefined) {
+          return c.json({ error: "Send `content` or `contentPatch`, not both" }, 400);
+        }
+        const patch = rawPatch === undefined ? null : parseContentPatch(rawPatch);
+        if (typeof patch === "string") return c.json({ error: patch }, 400);
 
-        if (body.name !== undefined) updates.name = body.name;
-        if (body.content !== undefined) {
-          // The type is needed to sanitize according to it (`embed`, `text`…).
-          const [actual] = await dbInstance
-            .select({ type: blocks.type })
+        const expected = expectedVersion(
+          c.req.header("if-match"),
+          (body as { expectedUpdatedAt?: unknown }).expectedUpdatedAt
+        );
+        if (expected === null) {
+          return c.json(
+            { error: "`If-Match` / `expectedUpdatedAt` must be the block's `updatedAt`" },
+            400
+          );
+        }
+
+        /**
+         * Read, compare and write under a row lock: two editors saving the same block at
+         * once are serialized, and with `contentPatch` each one changes only its own field
+         * on top of what the other saved (the whole `content` used to win last).
+         */
+        type Outcome =
+          | { kind: "missing" }
+          | { kind: "conflict"; current: Record<string, unknown> }
+          | { kind: "rejected"; status: 400 | 422; body: unknown }
+          | { kind: "updated"; block: { pageId: string } & Record<string, unknown> };
+
+        const outcome: Outcome = await dbInstance.transaction(async (trx: any) => {
+          const [current] = await trx
+            .select()
             .from(blocks)
             .where(eq(blocks.id, id))
-            .limit(1);
-          if (!actual) return c.json({ error: "Block not found" }, 404);
-          const oldKeys = oldKeysError([{ type: actual.type, content: body.content }]);
-          if (oldKeys) return c.json(oldKeys, 422);
-          updates.content = sanitizeBlockContent(actual.type, body.content);
+            .limit(1)
+            .for("update");
+          if (!current) return { kind: "missing" };
+          if (expected && new Date(current.updatedAt).getTime() !== expected.getTime()) {
+            return { kind: "conflict", current: blockToServe(current) };
+          }
+
+          const updates: Record<string, unknown> = { updatedAt: new Date() };
+
+          if (body.name !== undefined) updates.name = body.name;
+          if (body.content !== undefined || patch) {
+            // The type is needed to sanitize according to it (`embed`, `text`…).
+            let next: unknown = body.content;
+            if (patch) {
+              const patched = applyContentPatch(
+                readBlockData(current.type, current.content),
+                patch
+              );
+              if (typeof patched === "string") {
+                return { kind: "rejected", status: 400, body: { error: patched } };
+              }
+              next = patched;
+            }
+            const oldKeys = oldKeysError([{ type: current.type, content: next }]);
+            if (oldKeys) return { kind: "rejected", status: 422, body: oldKeys };
+            updates.content = sanitizeBlockContent(current.type, next);
+          }
+          if (body.sortOrder !== undefined) updates.sortOrder = body.sortOrder;
+          if (body.columnSpan !== undefined) updates.columnSpan = body.columnSpan;
+          if (body.cssClass !== undefined) updates.cssClass = body.cssClass;
+          if (body.backgroundColor !== undefined) updates.backgroundColor = body.backgroundColor;
+          if (body.textColor !== undefined) updates.textColor = body.textColor;
+          if (body.padding !== undefined) updates.padding = body.padding;
+          if (body.isVisible !== undefined) updates.isVisible = body.isVisible;
+          if (body.visibleFrom !== undefined) updates.visibleFrom = body.visibleFrom;
+          if (body.visibleUntil !== undefined) updates.visibleUntil = body.visibleUntil;
+
+          const [updated] = await trx
+            .update(blocks)
+            .set(updates)
+            .where(eq(blocks.id, id))
+            .returning();
+          return updated ? { kind: "updated", block: updated } : { kind: "missing" };
+        });
+
+        if (outcome.kind === "missing") return c.json({ error: "Block not found" }, 404);
+        if (outcome.kind === "rejected") return c.json(outcome.body as object, outcome.status);
+        if (outcome.kind === "conflict") {
+          return c.json(
+            {
+              error: "The block changed since you read it",
+              code: "KITSUDEN_E_CONFLICT",
+              current: outcome.current,
+            },
+            409
+          );
         }
-        if (body.sortOrder !== undefined) updates.sortOrder = body.sortOrder;
-        if (body.columnSpan !== undefined) updates.columnSpan = body.columnSpan;
-        if (body.cssClass !== undefined) updates.cssClass = body.cssClass;
-        if (body.backgroundColor !== undefined) updates.backgroundColor = body.backgroundColor;
-        if (body.textColor !== undefined) updates.textColor = body.textColor;
-        if (body.padding !== undefined) updates.padding = body.padding;
-        if (body.isVisible !== undefined) updates.isVisible = body.isVisible;
-        if (body.visibleFrom !== undefined) updates.visibleFrom = body.visibleFrom;
-        if (body.visibleUntil !== undefined) updates.visibleUntil = body.visibleUntil;
 
-        const [updated] = await dbInstance
-          .update(blocks)
-          .set(updates)
-          .where(eq(blocks.id, id))
-          .returning();
-
-        if (!updated) {
-          return c.json({ error: "Block not found" }, 404);
-        }
-
-        await invalidatePage(updated.pageId);
-        return c.json(updated);
+        await invalidatePage(outcome.block.pageId);
+        return c.json(outcome.block);
       },
     })
   );
@@ -1054,6 +1307,9 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
             textColor: original.textColor,
             padding: original.padding,
             isVisible: original.isVisible,
+            // Without them a scheduled block's copy was public at once
+            visibleFrom: original.visibleFrom,
+            visibleUntil: original.visibleUntil,
           })
           .returning();
 
@@ -1623,7 +1879,18 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
           },
         ];
 
-        return c.json({ blockTypes });
+        /**
+         * Every type the API accepts, not only the twelve described above: a client that
+         * built its palette from this list refused types `BLOCK_TYPES` saves (`richtext`,
+         * `tier-list`…). The extra ones carry an empty `schema` and `described: false`.
+         */
+        const described = new Set(blockTypes.map((t) => t.type));
+        const all = [
+          ...blockTypes.map((t) => ({ ...t, described: true })),
+          ...BLOCK_TYPES.filter((t) => !described.has(t)).map(undescribedType),
+        ];
+
+        return c.json({ blockTypes: all });
       },
     })
   );
@@ -1720,12 +1987,171 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
               textColor: block.textColor,
               padding: block.padding,
               isVisible: block.isVisible,
+              /**
+               * The schedule travels with the block. Without it a block scheduled for next
+               * week was visible in the copy, and publishing the copy (Inti's drafts) made
+               * it public early and next to the original, which stays hidden.
+               */
+              visibleFrom: block.visibleFrom,
+              visibleUntil: block.visibleUntil,
             }))
           );
         }
 
         await invalidateCache("pages:*");
         return c.json(cloned, 201);
+      },
+    })
+  );
+
+  // ═══════════════════════════════════════════════
+  // PUBLISH A DRAFT ONTO ITS PAGE
+  // ═══════════════════════════════════════════════
+
+  /**
+   * Takes a draft (a copy made with `clone`) to the page it was copied from, in ONE
+   * transaction.
+   *
+   * Before this route a client (Inti) did it with about 3N+6 calls: create the new
+   * blocks hidden, delete the old ones, show the new ones, patch the page, delete the
+   * copy. A 25-block page hit the agent quota halfway and was left public with 3 of its
+   * 25 blocks. Here it all commits or nothing does.
+   *
+   * What it replaces is what a reader sees NOW: the page's blocks shown right now go,
+   * and the draft's blocks shown right now take their places (their `sortOrder`, so a
+   * hidden block keeps its spot when it is switched back on). Hidden and scheduled
+   * blocks of the page stay as they are; the draft's own hidden ones are not copied,
+   * since nobody editing the draft could see them. The id, slug, status, homepage flag
+   * and session requirement of the page do not change.
+   */
+  ops.push(
+    defineOperation({
+      id: "publish-draft",
+      method: "POST",
+      route: "/pages/:id/publish-draft",
+      summary: "Publish a draft onto its page",
+      description:
+        "Atomically replaces the page's currently shown blocks with the draft's, copies title, description, metaTitle, metaDescription and ogImageId, and deletes the draft. Hidden and scheduled blocks of the page are kept. Returns the page with its shown blocks.",
+      access: "session",
+      permission: { policy: { resource: "page", action: "update" } },
+      input: { params: ParamId, body: PublishDraft.optional() },
+      output: { schema: PageWithBlocks },
+      errors: ["KITSUDEN_E_NOT_FOUND"],
+      handle: async (input, { c }) => {
+        const { id } = c.req.param();
+        if (!IS_UUID.test(id)) return c.json({ error: "Page not found" }, 404);
+        const draftId = (input.body as { draftId?: unknown } | undefined)?.draftId;
+        if (typeof draftId !== "string" || !IS_UUID.test(draftId)) {
+          return c.json({ error: "`draftId` must be the uuid of the draft page" }, 400);
+        }
+        if (draftId === id) return c.json({ error: "A page cannot be its own draft" }, 400);
+
+        type Outcome =
+          | { kind: "missing"; what: "page" | "draft" }
+          | { kind: "not-draft"; status: string }
+          | { kind: "done"; slug: string; draftSlug: string };
+
+        const outcome: Outcome = await dbInstance.transaction(async (trx: any) => {
+          // Both rows locked, in a fixed order so two publishes cannot deadlock
+          const locked = await trx
+            .select()
+            .from(pages)
+            .where(sql`${pages.id} IN (${id}, ${draftId})`)
+            .orderBy(asc(pages.id))
+            .for("update");
+          const page = locked.find((p: { id: string }) => p.id === id);
+          const draft = locked.find((p: { id: string }) => p.id === draftId);
+          if (!page) return { kind: "missing", what: "page" };
+          if (!draft) return { kind: "missing", what: "draft" };
+          if (draft.status !== "draft") return { kind: "not-draft", status: String(draft.status) };
+
+          const now = new Date();
+          const byOrder = (a: { sortOrder: number }, b: { sortOrder: number }) =>
+            a.sortOrder - b.sortOrder;
+          const pageBlocks = (await trx.select().from(blocks).where(eq(blocks.pageId, id))).sort(
+            byOrder
+          );
+          const draftBlocks = (await trx.select().from(blocks).where(eq(blocks.pageId, draftId)))
+            .filter((b: any) => shownNow(b, now))
+            .sort(byOrder);
+
+          const replaced = pageBlocks.filter((b: any) => shownNow(b, now));
+          const orders = replaced.map((b: { sortOrder: number }) => b.sortOrder);
+          const highest = Math.max(
+            -1,
+            ...pageBlocks.map((b: { sortOrder: number }) => b.sortOrder)
+          );
+
+          for (const b of replaced) {
+            await trx.delete(blocks).where(eq(blocks.id, b.id));
+          }
+          if (draftBlocks.length) {
+            await trx.insert(blocks).values(
+              draftBlocks.map((b: any, i: number) => ({
+                pageId: id,
+                type: b.type,
+                name: b.name,
+                sortOrder: orders[i] ?? highest + 1 + (i - orders.length),
+                columnSpan: b.columnSpan,
+                content: contentToServe(b.type, b.content),
+                cssClass: b.cssClass,
+                backgroundColor: b.backgroundColor,
+                textColor: b.textColor,
+                padding: b.padding,
+                isVisible: true,
+                visibleFrom: b.visibleFrom,
+                visibleUntil: b.visibleUntil,
+              }))
+            );
+          }
+
+          await trx
+            .update(pages)
+            .set({
+              title: draft.title,
+              description: draft.description,
+              metaTitle: draft.metaTitle,
+              metaDescription: draft.metaDescription,
+              ogImageId: draft.ogImageId,
+              updatedAt: now,
+            })
+            .where(eq(pages.id, id));
+          // The draft's blocks go with it (on delete cascade)
+          await trx.delete(pages).where(eq(pages.id, draftId));
+          return { kind: "done", slug: page.slug, draftSlug: draft.slug };
+        });
+
+        if (outcome.kind === "missing") {
+          return c.json(
+            { error: outcome.what === "page" ? "Page not found" : "Draft not found" },
+            404
+          );
+        }
+        if (outcome.kind === "not-draft") {
+          return c.json(
+            { error: `Page ${draftId} is not a draft (status: ${outcome.status})` },
+            400
+          );
+        }
+
+        await invalidatePage(id, { touch: false });
+        await invalidateCache(`page:${draftId}:*`);
+        await invalidateCache(`page:${outcome.draftSlug}:*`);
+
+        const [page] = await dbInstance.select().from(pages).where(eq(pages.id, id)).limit(1);
+        const now = new Date();
+        const shown = (
+          await dbInstance
+            .select()
+            .from(blocks)
+            .where(eq(blocks.pageId, id))
+            .orderBy(asc(blocks.sortOrder))
+        ).filter((b: any) => shownNow(b, now));
+        return c.json({
+          ...page,
+          customCss: cssToServe(page?.customCss),
+          blocks: shown.map(blockToServe),
+        });
       },
     })
   );

@@ -9,13 +9,13 @@
   import type { Crumb } from "$lib/nav";
   import { pageMeta } from "$lib/page-meta.svelte";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   const { crumbs }: { crumbs: Crumb[] } = $props();
 
   let own = "";
   $effect(() => {
-    const path = $page.url.pathname;
+    const path = page.url.pathname;
     const next = crumbs;
     own = path;
     untrack(() => pageMeta.set(path, next));

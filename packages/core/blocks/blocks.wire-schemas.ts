@@ -47,7 +47,25 @@ export const BlockInput = z
   .passthrough();
 
 /** The changes to a block (PATCH): everything optional. */
-export const BlockChanges = BlockInput.partial().passthrough();
+export const BlockChanges = BlockInput.partial()
+  .extend({
+    contentPatch: z
+      .array(z.object({ path: z.string(), value: z.unknown() }).passthrough())
+      .optional()
+      .describe(
+        "Field changes instead of `content`: dot paths, numeric segments index arrays (contract page-builder-patch)"
+      ),
+    expectedUpdatedAt: z
+      .string()
+      .optional()
+      .describe("The block's updatedAt as read; same as If-Match. A mismatch is a 409"),
+  })
+  .passthrough();
+
+/** Publishing a draft onto its page (contract page-builder-publish). */
+export const PublishDraft = z
+  .object({ draftId: z.string().optional().describe("Uuid of the draft page (made with clone)") })
+  .passthrough();
 
 /** A page as it comes in (create or edit). */
 export const PageInput = z

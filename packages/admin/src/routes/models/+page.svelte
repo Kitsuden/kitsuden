@@ -11,7 +11,7 @@
   import { listModels, modelPath, type MountedModel } from "$lib/services/models";
 
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   let models = $state<MountedModel[]>([]);
   let total = $state<number | null>(null);
@@ -71,11 +71,11 @@
 
   // `?model=<kon>/<name>` was how a model was opened before each had its own address.
   $effect(() => {
-    const legacy = $page.url.searchParams.get("model");
+    const legacy = page.url.searchParams.get("model");
     if (!legacy || !legacy.includes("/")) return;
     const [kon, name] = legacy.split("/");
     void goto(`/models/${encodeURIComponent(kon!)}/${encodeURIComponent(name!)}`, {
-      replaceState: true,
+      replace: true,
     });
   });
 

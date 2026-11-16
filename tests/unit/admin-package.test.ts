@@ -72,11 +72,14 @@ describe("admin package extraction to packages/admin", () => {
     expect(content).toContain("packages/*");
   });
 
-  it("packages/admin has svelte.config.js and vite.config.ts", () => {
-    const svelteConfigPath = path.join(PROJECT_ROOT, "packages", "admin", "svelte.config.js");
+  it("packages/admin has kit.config.js and vite.config.ts (SvelteKit 3 refuses svelte.config.js)", () => {
+    const svelteConfigPath = path.join(PROJECT_ROOT, "packages", "admin", "kit.config.js");
     const viteConfigPath = path.join(PROJECT_ROOT, "packages", "admin", "vite.config.ts");
 
     expect(fs.existsSync(svelteConfigPath)).toBe(true);
     expect(fs.existsSync(viteConfigPath)).toBe(true);
+    expect(fs.existsSync(path.join(PROJECT_ROOT, "packages", "admin", "svelte.config.js"))).toBe(
+      false
+    );
   });
 });
