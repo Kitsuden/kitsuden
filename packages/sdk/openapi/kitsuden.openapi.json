@@ -41,6 +41,10 @@
       "description": "Agent memory: notes with an owner (private by default, optionally shared), connections with provenance, claims with evidence, OKF export and graphify import."
     },
     {
+      "name": "kon-connections",
+      "description": "Accounts at other services (Google, Microsoft, API keys) that kons use without seeing a credential."
+    },
+    {
       "name": "kon-datasets",
       "description": "Dynamic data collections with automatic REST API"
     },
@@ -11989,6 +11993,1165 @@
               "then": "the default embeddings are lexical: search with the words the note uses"
             }
           ]
+        }
+      }
+    },
+    "/connections/api-keys": {
+      "post": {
+        "operationId": "connections.add-api-key",
+        "summary": "Connect a provider with an API key",
+        "description": "Stores an API key for a provider that takes one (registered by a kon: `stripe`, `resend`…), sealed; it is never returned. `scope: organization` (the default) is admin only; `user` is your own. 404 for an unknown provider, 422 for a provider that connects with OAuth or a key that does not look like one, 503 without a secrets key. A person only.",
+        "tags": [
+          "kon-connections",
+          "connections"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "scope": {
+                    "default": "organization",
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "organization"
+                    ],
+                    "description": "`user`: your own account. `organization`: the installation's (admin)"
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 4096,
+                    "description": "Stored sealed; never returned"
+                  },
+                  "label": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "accountId": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "provider",
+                  "apiKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-connections",
+          "id": "add-api-key",
+          "access": "session",
+          "scope": "kon:connections:add-api-key",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "A key is typed by a person, not passed through an agent."
+          }
+        }
+      }
+    },
+    "/connections/connections": {
+      "get": {
+        "operationId": "connections.list-connections",
+        "summary": "Your connections",
+        "description": "Your connected accounts, and the organization's if you are an admin: provider, account, granted scopes, status (`active`, `expired`, `revoked`, `error`), expiry and last use. Never a token or a key. Nobody sees another person's connections, an admin included.",
+        "tags": [
+          "kon-connections",
+          "connections"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": {}
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-connections",
+          "id": "list-connections",
+          "access": "session",
+          "scope": "kon:connections:list-connections",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "connections__list-connections"
+          }
+        }
+      }
+    },
+    "/connections/connections/{id}": {
+      "get": {
+        "operationId": "connections.get-connection",
+        "summary": "One connection and its status",
+        "description": "One of your connections (or an organization's, for an admin), without its credential. 404 if it is not yours.",
+        "tags": [
+          "kon-connections",
+          "connections"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "The connection"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-connections",
+          "id": "get-connection",
+          "access": "session",
+          "scope": "kon:connections:get-connection",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "connections__get-connection"
+          }
+        }
+      }
+    },
+    "/connections/connections/{id}/refresh": {
+      "post": {
+        "operationId": "connections.refresh-connection",
+        "summary": "Check a connection and refresh its token now",
+        "description": "Refreshes an OAuth connection's access token now and returns `outcome`: `refreshed`, `expired` (connect it again), `failed` (the provider did not answer; try later) or `not-needed` (an API key). 404 if it is not yours.",
+        "tags": [
+          "kon-connections",
+          "connections"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "The connection"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {}
+                    },
+                    "outcome": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "outcome"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-connections",
+          "id": "refresh-connection",
+          "access": "session",
+          "scope": "kon:connections:refresh-connection",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "connections__refresh-connection"
+          }
+        }
+      }
+    },
+    "/connections/connections/{id}/revoke": {
+      "post": {
+        "operationId": "connections.revoke-connection",
+        "summary": "Disconnect an account",
+        "description": "Revokes the token at the provider when it allows it, deletes the credential, and keeps the connection as `revoked` for the record. Kons using it stop at once (kon-inbox deletes what it synced from it). Cannot be undone: connect again instead. 404 if it is not yours.",
+        "tags": [
+          "kon-connections",
+          "connections"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "The connection"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {}
+                    },
+                    "atProvider": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "atProvider"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-connections",
+          "id": "revoke-connection",
+          "access": "session",
+          "scope": "kon:connections:revoke-connection",
+          "grantedBy": [],
+          "sensitive": true,
+          "readOnly": false,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "connections__revoke-connection"
+          }
+        }
+      }
+    },
+    "/connections/oauth/callback": {
+      "get": {
+        "operationId": "connections.finish-connection",
+        "summary": "Where the provider sends the person back",
+        "description": "The provider's redirect after consent. The `state` authenticates it (one use, ten minutes); no session is needed. Exchanges the code, stores the credential sealed, and redirects to `returnTo` with `?connection=<id>`, or answers JSON without one. 400 for an unknown, used or refused consent.",
+        "tags": [
+          "kon-connections",
+          "connections"
+        ],
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 4000
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirect",
+            "headers": {
+              "Location": {
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-kitsuden-operation": {
+          "kon": "kon-connections",
+          "id": "finish-connection",
+          "access": "public",
+          "scope": "kon:connections:finish-connection",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "The provider's browser redirect, not a tool."
+          }
+        }
+      }
+    },
+    "/connections/oauth/start": {
+      "post": {
+        "operationId": "connections.start-connection",
+        "summary": "Start connecting an account (OAuth)",
+        "description": "Returns the provider's consent `url` to send the person to; it is valid for ten minutes and works once (PKCE). `scope: organization` is admin only. `returnTo` must be one of the site's origins (CONNECTIONS_RETURN_ORIGINS or ALLOWED_ORIGINS). 404 for an unknown provider, 422 for an unknown scope set, 503 when the provider is not configured here or this Kitsuden has no secrets key. A person only.",
+        "tags": [
+          "kon-connections",
+          "connections"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40,
+                    "description": "`google` or `microsoft` (GET /providers lists them)"
+                  },
+                  "scope": {
+                    "default": "user",
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "organization"
+                    ],
+                    "description": "`user`: your own account. `organization`: the installation's (admin)"
+                  },
+                  "scopeSets": {
+                    "default": [],
+                    "description": "What to ask for: `mail.read`, `mail.send`, `calendar.read`",
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 60
+                    }
+                  },
+                  "returnTo": {
+                    "description": "Where to send the person after consenting: one of the site's origins",
+                    "type": "string",
+                    "maxLength": 2000,
+                    "format": "uri"
+                  },
+                  "label": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "provider"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "url",
+                        "expiresAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-connections",
+          "id": "start-connection",
+          "access": "session",
+          "scope": "kon:connections:start-connection",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "A consent happens in a browser, by a person."
+          }
+        }
+      }
+    },
+    "/connections/providers": {
+      "get": {
+        "operationId": "connections.list-providers",
+        "summary": "The providers you can connect",
+        "description": "Each provider in the catalog: `id`, `name`, how it connects (`oauth`, `api_key`), whether this installation has it `configured`, and the scope sets you can ask for. Never a secret. Signed-in people.",
+        "tags": [
+          "kon-connections",
+          "connections"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": {}
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-connections",
+          "id": "list-providers",
+          "access": "session",
+          "scope": "kon:connections:list-providers",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "connections__list-providers"
+          }
         }
       }
     },

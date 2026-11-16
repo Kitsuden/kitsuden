@@ -8,6 +8,7 @@ import { operations as approvalsOps, type ApprovalsApi } from "./kons/approvals"
 import { operations as automationOps, type AutomationApi } from "./kons/automation";
 import { operations as blocksOps, type BlocksApi } from "./kons/blocks";
 import { operations as brainOps, type BrainApi } from "./kons/brain";
+import { operations as connectionsOps, type ConnectionsApi } from "./kons/connections";
 import { operations as datasetsOps, type DatasetsApi } from "./kons/datasets";
 import { operations as externalMcpOps, type ExternalMcpApi } from "./kons/external-mcp";
 import { operations as externalMcpOauthOps, type ExternalMcpOauthApi } from "./kons/external-mcp-oauth";
@@ -29,6 +30,7 @@ export * as Approvals from "./kons/approvals";
 export * as Automation from "./kons/automation";
 export * as Blocks from "./kons/blocks";
 export * as Brain from "./kons/brain";
+export * as Connections from "./kons/connections";
 export * as Datasets from "./kons/datasets";
 export * as ExternalMcp from "./kons/external-mcp";
 export * as ExternalMcpOauth from "./kons/external-mcp-oauth";
@@ -66,6 +68,8 @@ export interface KitsudenKons {
   readonly blocks: BlocksApi;
   /** kon-brain: Agent memory: notes with an owner (private by default, optionally shared), connections with provenance, claims with evidence, OKF export and graphify import. */
   readonly brain: BrainApi;
+  /** kon-connections: Accounts at other services (Google, Microsoft, API keys) that kons use without seeing a credential. */
+  readonly connections: ConnectionsApi;
   /** kon-datasets: Dynamic data collections with automatic REST API */
   readonly datasets: DatasetsApi;
   /** kon-external-mcp: External MCP servers and the human review of their tools (human administrators only). */
@@ -104,6 +108,7 @@ export const KONS = {
   automation: automationOps,
   blocks: blocksOps,
   brain: brainOps,
+  connections: connectionsOps,
   datasets: datasetsOps,
   externalMcp: externalMcpOps,
   externalMcpOauth: externalMcpOauthOps,

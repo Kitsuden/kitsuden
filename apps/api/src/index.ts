@@ -65,6 +65,7 @@ import { auth } from "./lib/auth";
 import { bodyLimit } from "./lib/body-limit";
 import { clientIp } from "./lib/client-ip";
 import { config, features, corsConfig } from "./lib/config";
+import { startConnectionsWorker } from "./lib/connections";
 import { incompleteCorsWarning, allowedOrigin } from "./lib/cors-origins";
 import { registerCriticalFeatures } from "./lib/critical-features";
 import { initCronScheduler } from "./lib/cron-scheduler";
@@ -125,13 +126,6 @@ import { httpProblems } from "./middleware/problems-http";
 import { requestContextMiddleware, accessLogAndMetrics } from "./middleware/telemetry";
 import { withTransactionalRLS } from "./middleware/transactional-rls";
 import { enrichUserContext } from "./middleware/user-context";
-import {
-  AUTOMATION_ROUTE,
-  automationRoutes,
-  SECRET_ACCESS_ROUTE,
-  secretAccessRoutes,
-} from "./routes/automation";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { requireOriginOnWrites } from "./middleware/write-origin";
 import { actionsRoutes } from "./routes/actions";
 import { adminRegistryRoutes } from "./routes/admin-registry";
@@ -142,6 +136,19 @@ import { agentNotificationsRoutes } from "./routes/agent-notifications";
 import { agentPermissionsRoutes } from "./routes/agent-permissions";
 import agentPlaygroundRoutes from "./routes/agent-playground";
 import agentRoutes from "./routes/agents";
+import {
+  AUTOMATION_ROUTE,
+  automationRoutes,
+  SECRET_ACCESS_ROUTE,
+  secretAccessRoutes,
+} from "./routes/automation";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
+import {
+  CONNECTIONS_KON,
+  CONNECTIONS_ROUTE,
+  connectionsKon,
+  connectionsRoutes,
+} from "./routes/connections";
 import { apiKeysRoutes } from "./routes/api-keys";
 import { approvalsRoutes, proposalsRoutes } from "./routes/approvals";
 import { brainRoutes } from "./routes/brain";
@@ -1196,6 +1203,18 @@ app.route(SECRET_ACCESS_ROUTE, secretAccessRoutes);
 mountKonRls(app, REPORTS_ROUTE);
 app.route(REPORTS_ROUTE, reportsRoutes);
 registerMountedOperations(REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes);
+// Connections (docs/connections.md): accounts at other services that kons use through ctx.connections.
+// In the request's transaction: row security decides whose connections a person sees. The OAuth
+// callback runs as the system inside the handler.
+mountKonRls(app, CONNECTIONS_ROUTE);
+app.route(CONNECTIONS_ROUTE, connectionsRoutes);
+registerMountedOperations(
+  CONNECTIONS_KON,
+  CONNECTIONS_ROUTE,
+  connectionsKon.operations,
+  connectionsRoutes
+);
+startConnectionsWorker();
 console.log("  🧠 KITSUDEN Brain → /api/brain");
 app.route("/api/map", systemMapRoutes);
 console.log("  🗺️  System Map → /api/map");

@@ -44,6 +44,7 @@ import { Hono } from "hono";
 import type { ZodTypeAny } from "zod";
 
 import type { AutomationHandlerDefinition, KonAutomation } from "./automation";
+import type { KonConnections } from "./connections";
 import type { KonEntities, KonEntityDefinition, KonSecretColumn, KonSecrets } from "./kon-entities";
 import type { KonEventsDeclaration } from "./kon-events";
 import type { KonOperation } from "./operations";
@@ -428,6 +429,13 @@ export interface KonContext<TDb = any> {
    * credential instead of storing it readable.
    */
   secrets?: KonSecrets;
+
+  /**
+   * Accounts at other services, connected once in the core (docs/connections.md): a client that carries
+   * the credential to the provider without the kon ever seeing it. Optional: absent on a host without a
+   * secrets key or without the connections battery.
+   */
+  connections?: KonConnections;
 
   /**
    * Automation rules the kon keeps for its own configuration, run by the

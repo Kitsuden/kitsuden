@@ -60,6 +60,9 @@ import { TABLES_ONLY_VIA_THEIR_ROUTE } from "./actions-code";
  */
 export const FORBIDDEN_TABLES = new Set([
   "kitsuden_secrets",
+  // Connections (0082): sealed credentials of accounts at other services, and OAuth round trips
+  "conn_connections",
+  "conn_oauth_states",
   "auth_accounts",
   "auth_sessions",
   "auth_verifications",
