@@ -72,6 +72,7 @@ import { logger } from "@/lib/logger";
 import { WRAPPER_MODES, type WrapperMode } from "@/lib/mcp-settings";
 import { wrapRows, rowProvenance, type Provenance } from "@/lib/provenance";
 import { emailQueue } from "@/lib/queue";
+import { projectFields } from "@/lib/tool-discovery";
 import { KON_REGISTRY } from "@/services/module-registry";
 
 import { generateReact } from "../../../../packages/codegen/src/generators/react";
@@ -140,8 +141,8 @@ const JSON_SCHEMA_FORMAT = {
   type: "string",
   enum: ["auto", "json", "toon", "tron"] as string[],
   default: "auto",
-  description:
-    "Result format. 'auto' (default) returns compact JSON, TOON or TRON, whichever is shortest for this result without losing data; the result's _meta['kitsuden/format'] says which. 'json' always returns compact JSON.",
+  // Repeated in every read tool's definition, so on every turn: kept short.
+  description: "'auto': shortest lossless of JSON/TOON/TRON (_meta['kitsuden/format']).",
 };
 /**
  * How to wrap text written by others (lib/provenance.ts). Without it,
@@ -152,10 +153,23 @@ const WRAPPER_JSON_SCHEMA = {
   type: "string",
   enum: [...WRAPPER_MODES] as string[],
   description:
-    "Wrap text written by users/other agents: 'delimiters' (<untrusted-content>…</untrusted-content>) or 'object' ({\"untrusted\": \"…\"}). Default: the agent's setting, else 'none'. Who wrote each record is always in _meta['kitsuden/provenance'].",
+    "Wrap text others wrote. Default: the agent's setting. Authors: _meta['kitsuden/provenance'].",
 };
 /** A record: plain object. Never an array or a scalar. */
 const DATA = z.record(z.string(), z.unknown());
+
+/**
+ * Rows a query returns when the agent does not say: small, because every row
+ * goes into the model's context. `limit` + `offset` page through the rest.
+ */
+const DEFAULT_ROWS = 20;
+/** Only these keys of each row (lib/tool-discovery.ts `projectFields`). */
+const FIELDS = z.array(z.string().min(1).max(120)).min(1).max(50).optional();
+const FIELDS_JSON_SCHEMA = {
+  type: "array",
+  items: { type: "string" },
+  description: "Return only these keys of each row (plus id), e.g. ['title','status'].",
+};
 
 /**
  * Status of an entry. It is a Postgres ENUM (`content_status`), not free
@@ -195,11 +209,12 @@ const ARGS_SCHEMAS = {
     collection: z.string().min(1),
     // The cap belongs to the server, not the model: a huge `limit` is the
     // easiest way for a read tool to take the database down.
-    limit: z.number().int().min(1).max(1000).default(50),
+    limit: z.number().int().min(1).max(1000).default(DEFAULT_ROWS),
     offset: z.number().int().min(0).default(0),
     search: z.string().max(500).optional(),
     sort: z.string().max(120).optional(),
     where: DATA.optional(),
+    fields: FIELDS,
     format: FORMAT,
     untrusted_wrap: WRAPPER,
   }),
@@ -249,9 +264,10 @@ const ARGS_SCHEMAS = {
 
   kitsuden_query_dataset: z.object({
     datasetId: z.string().min(1),
-    limit: z.number().int().min(1).max(100).default(50),
+    limit: z.number().int().min(1).max(100).default(DEFAULT_ROWS),
     offset: z.number().int().min(0).default(0),
     status: STATUS.optional(),
+    fields: FIELDS,
     format: FORMAT,
     untrusted_wrap: WRAPPER,
   }),
@@ -1031,7 +1047,7 @@ const HARD_CODED_TOOLS: LLMTool[] = [
             type: "string",
             description: "Dataset slug or table name, e.g. 'blog-posts', 'games', 'tasks'",
           },
-          limit: { type: "number", default: 50, description: "Max records (max 1000)" },
+          limit: { type: "number", default: DEFAULT_ROWS, description: "Max records (max 1000)" },
           offset: { type: "number", default: 0, description: "Pagination offset" },
           search: { type: "string", description: "Full-text search on title/name fields" },
           sort: {
@@ -1042,6 +1058,7 @@ const HARD_CODED_TOOLS: LLMTool[] = [
             type: "object",
             description: "JSON filter object, e.g. {status: 'published'}",
           },
+          fields: FIELDS_JSON_SCHEMA,
           format: JSON_SCHEMA_FORMAT,
           untrusted_wrap: WRAPPER_JSON_SCHEMA,
         },
@@ -1115,13 +1132,14 @@ const HARD_CODED_TOOLS: LLMTool[] = [
         type: "object",
         properties: {
           datasetId: { type: "string", description: "UUID of the dataset" },
-          limit: { type: "number", default: 50, description: "Max records (max 100)" },
+          limit: { type: "number", default: DEFAULT_ROWS, description: "Max records (max 100)" },
           offset: { type: "number", default: 0, description: "Pagination offset" },
           status: {
             type: "string",
             enum: ["draft", "published", "archived"],
             description: "Filter by status",
           },
+          fields: FIELDS_JSON_SCHEMA,
           format: JSON_SCHEMA_FORMAT,
           untrusted_wrap: WRAPPER_JSON_SCHEMA,
         },
@@ -1526,11 +1544,12 @@ async function kitsudenQueryCollection(
 ): Promise<string> {
   const {
     collection,
-    limit = 50,
+    limit = DEFAULT_ROWS,
     offset = 0,
     search,
     sort,
     where,
+    fields,
     format = "auto",
     untrusted_wrap,
   } = args;
@@ -1558,7 +1577,7 @@ async function kitsudenQueryCollection(
       .select()
       .from(dataEntries)
       .where(and(...conditions))
-      .limit(Math.min(Number(limit) || 50, 1000))
+      .limit(Math.min(Number(limit) || DEFAULT_ROWS, 1000))
       .offset(Number(offset) || 0);
   } else {
     const table = allowedNativeTable("kitsuden_query_collection", scopes, collection, "read");
@@ -1567,13 +1586,17 @@ async function kitsudenQueryCollection(
       await bd()
         .select()
         .from(table)
-        .limit(Math.min(Number(limit) || 50, 1000))
+        .limit(Math.min(Number(limit) || DEFAULT_ROWS, 1000))
         .offset(Number(offset) || 0)
     ) as any[];
   }
 
+  // Provenance first (it reads who wrote each row), then the projection.
   return outputValue(
-    await withProvenance(results, untrusted_wrap, ds ? "dataset_entry" : `table:${collection}`),
+    projectFields(
+      await withProvenance(results, untrusted_wrap, ds ? "dataset_entry" : `table:${collection}`),
+      fields
+    ),
     format,
     "kitsuden_query_collection"
   );
@@ -1773,7 +1796,15 @@ async function kitsudenQueryDataset(
   args: ArgsOf<"kitsuden_query_dataset">,
   scopes: string[]
 ): Promise<string> {
-  const { datasetId, limit = 50, offset = 0, status, format = "auto", untrusted_wrap } = args;
+  const {
+    datasetId,
+    limit = DEFAULT_ROWS,
+    offset = 0,
+    status,
+    fields,
+    format = "auto",
+    untrusted_wrap,
+  } = args;
   if (!datasetId) return "Missing: datasetId";
 
   const [dataset] = await bd().select().from(dataSets).where(eq(dataSets.id, datasetId)).limit(1);
@@ -1791,11 +1822,11 @@ async function kitsudenQueryDataset(
     .select()
     .from(dataEntries)
     .where(and(...conditions))
-    .limit(Math.min(Number(limit) || 50, 100))
+    .limit(Math.min(Number(limit) || DEFAULT_ROWS, 100))
     .offset(Number(offset) || 0);
 
   return outputValue(
-    await withProvenance(results, untrusted_wrap, "dataset_entry"),
+    projectFields(await withProvenance(results, untrusted_wrap, "dataset_entry"), fields),
     format,
     "kitsuden_query_dataset"
   );

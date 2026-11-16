@@ -85,6 +85,7 @@ import { META_FORMAT, autoResult, type Format } from "../lib/formats";
 import { logger } from "../lib/logger";
 import {
   inAll,
+  mentionsAll,
   parseToolset,
   toolsetText,
   type McpSettings,
@@ -102,6 +103,22 @@ import {
 } from "../lib/operations-mcp";
 import { withProblem, errorJsonRpc, exceptionProblem, errorResult } from "../lib/problems-mcp";
 import { META_PROVENANCE, type Provenance } from "../lib/provenance";
+import {
+  CALL_TOOL,
+  CALL_TOOL_DEFINITION,
+  FIND_TOOL,
+  FIND_TOOL_DEFINITION,
+  META_TOOLS,
+  capToolResult,
+  definitionBytes,
+  isDiscoveryTool,
+  searchTools,
+  stableOrder,
+  toolGroup,
+  toolOverview,
+  useDiscovery,
+  type ToolDefinition,
+} from "../lib/tool-discovery";
 import { logAgentAction } from "../services/agent-audit";
 import {
   authenticateAgent,
@@ -160,6 +177,13 @@ interface McpSession {
    */
   connectionToolset?: Toolset;
   toolsets?: Toolset[];
+  /**
+   * `all` named explicitly (URL or preset): the full `tools/list` even when it is
+   * over budget. Without it and without a toolset, a big list switches to
+   * discovery mode (lib/tool-discovery.ts).
+   */
+  connectionAll?: boolean;
+  explicitAll?: boolean;
   /** Wrapper for the agent's untrusted content (panel), refreshed on every POST. */
   untrustedWrap?: McpSettings["untrustedWrap"];
   /** `Kitsuden-Unattended: true` on THIS POST: nobody waits (lib/approvals.ts). */
@@ -487,6 +511,7 @@ mcpRoutes.get("/", async (c) => {
     scopes: auth.scopes,
     allowedTools: auth.allowedTools,
     connectionToolset: request.toolset,
+    connectionAll: mentionsAll(c.req.query("toolset")),
   };
   refreshSettings(session, auth.mcpSettings);
   sessions.set(sessionId, session);
@@ -627,7 +652,7 @@ mcpRoutes.post("/", async (c) => {
       agentId: session.agentId,
       agentName: session.agentName,
       method: body.method,
-      tool: body.method === "tools/call" ? body.params?.name : undefined,
+      tool: body.method === "tools/call" ? calledTool(body).name : undefined,
       resource: body.method === "resources/read" ? body.params?.uri : undefined,
       durationMs: Date.now() - start,
       success: true,
@@ -646,7 +671,7 @@ mcpRoutes.post("/", async (c) => {
       agentId: session.agentId,
       agentName: session.agentName,
       method: body.method,
-      tool: body.method === "tools/call" ? body.params?.name : undefined,
+      tool: body.method === "tools/call" ? calledTool(body).name : undefined,
       durationMs: Date.now() - start,
       success: false,
       error: messageOf(err),
@@ -665,18 +690,31 @@ mcpRoutes.post("/", async (c) => {
  */
 function auditCall(session: McpSession, body: any, response: unknown, durationMs: number): void {
   if (body?.method !== "tools/call" || !isNhiAgent(session)) return;
-  const name = typeof body.params?.name === "string" ? body.params.name : "(no name)";
-  const summary = summarizeCall(response, body.params?.arguments);
+  const { name, args, via } = calledTool(body);
+  const summary = summarizeCall(response, args);
   logAgentAction({
     agentId: session.agentId,
     keyId: session.apiKeyId,
     action: "tool_call",
     resource: name,
-    details: { origin: "mcp", ...summary },
+    details: { origin: "mcp", ...(via ? { via } : {}), ...summary },
     durationMs,
     success: summary.success,
     errorMessage: summary.code && !summary.success ? summary.code : undefined,
   });
+}
+
+/**
+ * The tool a `tools/call` ran: through `kitsuden_call_tool` it is the inner one,
+ * so the audit and the friction report name what actually ran.
+ */
+function calledTool(body: any): { name: string; args: unknown; via?: string } {
+  const name = typeof body?.params?.name === "string" ? body.params.name : "(no name)";
+  const args = body?.params?.arguments;
+  if (name === CALL_TOOL && typeof args?.name === "string" && args.name) {
+    return { name: args.name, args: args.arguments, via: CALL_TOOL };
+  }
+  return { name, args };
 }
 
 /**
@@ -754,7 +792,8 @@ async function handleMcpMessage(message: any, session: McpSession) {
       return await listTools(id, session);
 
     case "tools/call":
-      return await executeTool(params?.name, params?.arguments, id, session);
+      // One unfiltered query must not fill the agent's context (lib/tool-discovery.ts)
+      return capToolResult(await callTool(params?.name, params?.arguments, id, session));
 
     default:
       return errorJsonRpc(-32601, `Method not found: ${method}`, id);
@@ -890,6 +929,8 @@ async function readResource(uri: string, id: string | number, session: McpSessio
  * scope decides when it runs.
  */
 function allowedTool(session: McpSession, name: string): boolean {
+  // They reach nothing themselves: the inner tool goes through this same check.
+  if (isDiscoveryTool(name)) return true;
   if (session.allowedTools.length > 0 && !session.allowedTools.includes(name)) return false;
   const toolsets = session.toolsets ?? [];
   return toolsets.length === 0 || inAll(toolsets, cardOf(name));
@@ -941,6 +982,7 @@ async function openStreamableSession(
     scopes: auth.scopes,
     allowedTools: auth.allowedTools,
     connectionToolset: request.toolset,
+    connectionAll: mentionsAll(c.req.query("toolset")),
   };
   refreshSettings(session, auth.mcpSettings);
   sessions.set(id, session);
@@ -958,6 +1000,7 @@ function refreshSettings(session: McpSession, settings: McpSettings | undefined)
     ...(preset.ok ? [preset.toolset] : []),
     ...(session.connectionToolset ? [session.connectionToolset] : []),
   ].filter((t) => !t.all);
+  session.explicitAll = Boolean(session.connectionAll) || mentionsAll(settings?.toolset);
   session.untrustedWrap = settings?.untrustedWrap;
 }
 
@@ -967,6 +1010,7 @@ function cardOf(name: string): ToolCard {
   // Like the status tool, in every toolset: recording that it did NOT act must
   // always be possible (lib/agent-decisions.ts).
   if (name === DECISION_TOOL) return { name, source: "proposals", readOnly: false };
+  if (isDiscoveryTool(name)) return { name, source: "proposals", readOnly: name === FIND_TOOL };
   const sdk = operationToolCard(name);
   if (sdk) return { name, source: "kon", kon: sdk.kon, readOnly: sdk.readOnly };
   if (listMCPTools().some((t) => t.name === name))
@@ -982,6 +1026,83 @@ function cardOf(name: string): ToolCard {
 }
 
 async function listTools(id: string | number, session: McpSession) {
+  const { tools, approval } = await toolsOfSession(session);
+  // Nobody chose a toolset and the list is over budget: two discovery tools
+  // instead of every definition on every turn (lib/tool-discovery.ts).
+  if (!session.toolsets?.length && !session.explicitAll && useDiscovery(tools)) {
+    return {
+      jsonrpc: "2.0",
+      result: {
+        tools: [FIND_TOOL_DEFINITION, CALL_TOOL_DEFINITION, ...approval],
+        _meta: {
+          [META_TOOLS]: {
+            mode: "discovery",
+            available: tools.length,
+            bytes: definitionBytes(tools),
+            hint: "Find tools with kitsuden_find_tools and call them with kitsuden_call_tool, or reconnect with ?toolset=<set> (or ?toolset=all) to list them directly.",
+          },
+        },
+      },
+      id,
+    };
+  }
+  return { jsonrpc: "2.0", result: { tools: [...tools, ...approval] }, id };
+}
+
+/** `kitsuden_find_tools` and `kitsuden_call_tool`, then every other tool. */
+async function callTool(name: unknown, args: any, id: string | number, session: McpSession) {
+  if (name === FIND_TOOL) return findTools(args, id, session);
+  if (name === CALL_TOOL) {
+    const inner = typeof args?.name === "string" ? args.name : "";
+    if (!inner || isDiscoveryTool(inner)) {
+      return jsonRpcError(
+        -32602,
+        `kitsuden_call_tool needs 'name': a tool from kitsuden_find_tools${inner ? ", not a discovery tool" : ""}.`,
+        id,
+        "KITSUDEN_E_VALIDATION"
+      );
+    }
+    return executeTool(inner, args?.arguments ?? {}, id, session);
+  }
+  return executeTool(name as string, args, id, session);
+}
+
+/** `kitsuden_find_tools`: search what this session may call. */
+async function findTools(args: any, id: string | number, session: McpSession) {
+  const { tools } = await toolsOfSession(session);
+  const group = typeof args?.group === "string" ? args.group.trim().toLowerCase() : "";
+  const pool = group ? tools.filter((t) => toolGroup(t.name) === group) : tools;
+  const query = typeof args?.query === "string" ? args.query : "";
+  const found = query
+    ? searchTools(pool, query, Number(args?.limit) || 8)
+    : group
+      ? stableOrder(pool).slice(0, 20)
+      : null;
+  const value = found
+    ? {
+        tools: found.map((t) => ({
+          name: t.name,
+          description: t.description,
+          inputSchema: t.inputSchema,
+        })),
+        ...(found.length === 0 ? { hint: "No match. Call without query to see the groups." } : {}),
+      }
+    : toolOverview(tools);
+  return {
+    jsonrpc: "2.0",
+    result: { content: [{ type: "text", text: JSON.stringify(value) }] },
+    id,
+  };
+}
+
+/**
+ * What this session may call (allowed tools, toolsets, scopes), in a stable
+ * order so clients can cache it, and the approval tools apart: those go in
+ * every list.
+ */
+async function toolsOfSession(
+  session: McpSession
+): Promise<{ tools: ToolDefinition[]; approval: ToolDefinition[] }> {
   // Dynamically retrieve tools from the Actions engine
   const dynamicTools = listMCPTools().map((t) => ({
     name: t.name,
@@ -1028,17 +1149,13 @@ async function listTools(id: string | number, session: McpSession) {
   ];
 
   return {
-    jsonrpc: "2.0",
-    result: {
-      // Only those this agent can call: announcing the others invites failure
-      tools: [
-        ...[...dynamicTools, ...hardcodedTools].filter((t) => allowedTool(session, t.name)),
-        ...ofOperations,
-        ...ofExternal,
-        ...ofApproval,
-      ],
-    },
-    id,
+    // Only those this agent can call: announcing the others invites failure
+    tools: stableOrder<ToolDefinition>([
+      ...[...dynamicTools, ...hardcodedTools].filter((t) => allowedTool(session, t.name)),
+      ...ofOperations,
+      ...ofExternal,
+    ]),
+    approval: ofApproval,
   };
 }
 
