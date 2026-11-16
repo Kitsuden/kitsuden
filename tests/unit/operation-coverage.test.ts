@@ -50,12 +50,14 @@ import { MATRIX } from "../../apps/api/src/middleware/authorization-matrix";
 import { notificationsKon } from "../../apps/api/src/routes/agent-notifications";
 import { agentsKon } from "../../apps/api/src/routes/agent-permissions";
 import { approvalsKon, proposalsKon } from "../../apps/api/src/routes/approvals";
+import { automationKon, secretAccessKon } from "../../apps/api/src/routes/automation";
 import { memoryKon } from "../../apps/api/src/routes/brain-memory";
 import { modelsKon } from "../../apps/api/src/routes/models";
 import { oauthKon } from "../../apps/api/src/routes/oauth-panel";
 import { adminPromotionKon, promotionKon } from "../../apps/api/src/routes/promotion";
 import { queueKon } from "../../apps/api/src/routes/queue";
 import { recordHistoryKon } from "../../apps/api/src/routes/record-history";
+import { reportsKon } from "../../apps/api/src/routes/reports";
 import { tracesKon } from "../../apps/api/src/routes/traces";
 import { kon as blocksKon } from "../../packages/core/blocks/index";
 import { kon as datasetsKon } from "../../packages/core/datasets/index";
@@ -85,6 +87,11 @@ const SDK_KONS: KonDefinition[] = [
   notificationsKon as unknown as KonDefinition,
   // Who changed a row of any table (core migration 0076).
   recordHistoryKon as unknown as KonDefinition,
+  // Aggregate queries, saved reports, kon reports and dashboards (docs/reports.md).
+  reportsKon as unknown as KonDefinition,
+  // The catalog and dry run of automation rules, and the access log of sealed secrets.
+  automationKon as unknown as KonDefinition,
+  secretAccessKon as unknown as KonDefinition,
 ];
 
 interface MountedOp {

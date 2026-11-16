@@ -43,7 +43,11 @@ import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
 import type { ZodTypeAny } from "zod";
 
+import type { AutomationHandlerDefinition, KonAutomation } from "./automation";
+import type { KonEntities, KonEntityDefinition, KonSecretColumn, KonSecrets } from "./kon-entities";
+import type { KonEventsDeclaration } from "./kon-events";
 import type { KonOperation } from "./operations";
+import type { ReportDefinition } from "./reports";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DEPENDENCY TYPES (Abstractions)
@@ -416,6 +420,29 @@ export interface KonContext<TDb = any> {
   ai?: {
     embed(texts: string[]): Promise<number[][] | null>;
   };
+
+  /**
+   * Seals a third party's credential for storage and records every time it is
+   * opened (docs/kons/secrets.md). Optional: a host without a secrets key, or a
+   * test, leaves it undefined, and a kon must then refuse to store the
+   * credential instead of storing it readable.
+   */
+  secrets?: KonSecrets;
+
+  /**
+   * Automation rules the kon keeps for its own configuration, run by the
+   * core's rule engine with the steps the kon contributed in
+   * `defineKon({ actionHandlers })` (docs/automation.md). Its presence is the
+   * capability: a host without it does not run kon steps.
+   */
+  automation?: KonAutomation;
+
+  /**
+   * Records of the entities the kon declared in `defineKon({ entities })`:
+   * datasets the kon owns, with fields and no migration (docs/kons/entities.md).
+   * Optional: absent when the datasets battery is not installed.
+   */
+  entities?: KonEntities;
 }
 
 export interface KonAgentRun {
@@ -648,6 +675,37 @@ export interface KonDefinition {
 
   /** Version of the SDK contract the kon uses (`KONS_SDK_VERSION`). */
   sdk?: number;
+
+  /**
+   * The events this kon emits and the ones it reacts to (docs/kons/events.md).
+   * A declaration, not a subscription: it feeds the catalog the panel and
+   * agents read to write automation rules. Emitting is still `ctx.events.emit`.
+   */
+  events?: KonEventsDeclaration;
+
+  /**
+   * Steps this kon contributes to automation rules (docs/automation.md): the
+   * things only it knows how to do. Exposed as `<kon id>:<handler id>`.
+   */
+  actionHandlers?: AutomationHandlerDefinition[];
+
+  /**
+   * Reports this kon ships (docs/reports.md): aggregate queries over its own
+   * tables, listed next to the ones people save. Served as `kon:<kon id>/<id>`.
+   */
+  reports?: ReportDefinition[];
+
+  /**
+   * Entities the kon owns: datasets with fields, created at load with no
+   * migration (docs/kons/entities.md). Read and written through `ctx.entities`.
+   */
+  entities?: KonEntityDefinition[];
+
+  /**
+   * The columns where this kon stores secrets sealed with `ctx.secrets`
+   * (docs/kons/secrets.md), so a key rotation re-encrypts them.
+   */
+  secretColumns?: KonSecretColumn[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

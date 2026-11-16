@@ -5,6 +5,7 @@ import type { OperationInfo } from "../api/types";
 import { operations as agentNotificationsOps, type AgentNotificationsApi } from "./kons/agent-notifications";
 import { operations as agentsOps, type AgentsApi } from "./kons/agents";
 import { operations as approvalsOps, type ApprovalsApi } from "./kons/approvals";
+import { operations as automationOps, type AutomationApi } from "./kons/automation";
 import { operations as blocksOps, type BlocksApi } from "./kons/blocks";
 import { operations as brainOps, type BrainApi } from "./kons/brain";
 import { operations as datasetsOps, type DatasetsApi } from "./kons/datasets";
@@ -17,11 +18,14 @@ import { operations as promotionAdminOps, type PromotionAdminApi } from "./kons/
 import { operations as proposalsOps, type ProposalsApi } from "./kons/proposals";
 import { operations as queueOps, type QueueApi } from "./kons/queue";
 import { operations as recordHistoryOps, type RecordHistoryApi } from "./kons/record-history";
+import { operations as reportsOps, type ReportsApi } from "./kons/reports";
+import { operations as secretAccessOps, type SecretAccessApi } from "./kons/secret-access";
 import { operations as tracesOps, type TracesApi } from "./kons/traces";
 
 export * as AgentNotifications from "./kons/agent-notifications";
 export * as Agents from "./kons/agents";
 export * as Approvals from "./kons/approvals";
+export * as Automation from "./kons/automation";
 export * as Blocks from "./kons/blocks";
 export * as Brain from "./kons/brain";
 export * as Datasets from "./kons/datasets";
@@ -34,6 +38,8 @@ export * as PromotionAdmin from "./kons/promotion-admin";
 export * as Proposals from "./kons/proposals";
 export * as Queue from "./kons/queue";
 export * as RecordHistory from "./kons/record-history";
+export * as Reports from "./kons/reports";
+export * as SecretAccess from "./kons/secret-access";
 export * as Traces from "./kons/traces";
 
 /** Version of the Kitsuden API this client was generated from. */
@@ -52,6 +58,8 @@ export interface KitsudenKons {
   readonly agents: AgentsApi;
   /** kon-approvals: Human approval of agent proposals (team members only; never an agent). */
   readonly approvals: ApprovalsApi;
+  /** kon-automation: The catalog of events and steps for automation rules, and the dry run of an action. */
+  readonly automation: AutomationApi;
   /** kon-blocks: Lego-style block system for dynamic page layouts with drag & drop. Includes Hero, Text, Image, Video, Grid, Cards, Quote, CTA, Embed, Divider, and Spacer blocks. */
   readonly blocks: BlocksApi;
   /** kon-brain: Agent memory: notes with an owner (private by default, optionally shared), connections with provenance, claims with evidence, OKF export and graphify import. */
@@ -76,6 +84,10 @@ export interface KitsudenKons {
   readonly queue: QueueApi;
   /** kon-record-history: The change history of the rows of any explorable table (for the admin panel). */
   readonly recordHistory: RecordHistoryApi;
+  /** kon-reports: Aggregate queries over kon tables and datasets, saved reports, kon-shipped reports and dashboards. */
+  readonly reports: ReportsApi;
+  /** kon-secret-access: Who opened which secret a kon sealed with ctx.secrets (for administrators). */
+  readonly secretAccess: SecretAccessApi;
   /** kon-traces: The glass box: one trace per request, in Postgres (administrators only). */
   readonly traces: TracesApi;
 }
@@ -85,6 +97,7 @@ export const KONS = {
   agentNotifications: agentNotificationsOps,
   agents: agentsOps,
   approvals: approvalsOps,
+  automation: automationOps,
   blocks: blocksOps,
   brain: brainOps,
   datasets: datasetsOps,
@@ -97,5 +110,7 @@ export const KONS = {
   proposals: proposalsOps,
   queue: queueOps,
   recordHistory: recordHistoryOps,
+  reports: reportsOps,
+  secretAccess: secretAccessOps,
   traces: tracesOps,
 } as const satisfies Record<string, Record<string, OperationInfo>>;

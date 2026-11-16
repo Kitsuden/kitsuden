@@ -21,6 +21,7 @@ import {
   executeAgentAction,
   type WebhookInRequest,
 } from "./handlers";
+import { checkTriggerConditions, executeRuleAction } from "./rules";
 import type {
   Action,
   ActionContext,
@@ -187,6 +188,9 @@ export async function executeAction(
       }
       case "agent":
         result = await executeAgentAction(action, context);
+        break;
+      case "rule":
+        result = await executeRuleAction(action, context);
         break;
       default:
         result = {
@@ -502,7 +506,9 @@ export async function dispatchEvent(
         return false;
       }
 
-      return true;
+      // The action's own conditions over the payload. An event that does not meet them is not an
+      // execution: nothing is recorded, or a busy event would bury the runs that matter.
+      return checkTriggerConditions(a.triggerConfig, data).passed;
     });
 
     if (filteredActions.length === 0) return;

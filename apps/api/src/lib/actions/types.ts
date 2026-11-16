@@ -5,6 +5,8 @@
  * This replaces the separate types for workers and webhooks.
  */
 
+import type { RuleCondition, RuleConfig, RuleMatch } from "@kitsuden/shared";
+
 import type { actions, actionExecutions } from "../../db/schema";
 import type { ActionExecutor } from "../sandbox/identity";
 
@@ -19,7 +21,8 @@ export type ActionExecution = typeof actionExecutions.$inferSelect;
 // Action Types
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type ActionType = "code" | "webhook_out" | "webhook_in" | "agent";
+/** `rule`: a list of steps with conditions (lib/actions/rules.ts, docs/automation.md). */
+export type ActionType = "code" | "webhook_out" | "webhook_in" | "agent" | "rule";
 export type ActionTrigger = "manual" | "cron" | "event" | "http";
 
 /**
@@ -46,8 +49,12 @@ export interface CronTriggerConfig {
 }
 
 export interface EventTriggerConfig {
-  eventName: string; // "entry:created", "entry:updated", "post:published", etc.
+  eventName: string; // "entry.created", "post.published", or a kon's own: "crm:deal.won"
   datasetId?: string; // Optional: filter by specific dataset
+  /** Optional: the payload must meet these for the action to run (docs/automation.md). */
+  conditions?: RuleCondition[];
+  /** `all` (default): every condition; `any`: at least one. */
+  match?: RuleMatch;
 }
 
 export interface HttpTriggerConfig {
@@ -108,6 +115,7 @@ export type ActionConfig =
   | WebhookOutConfig
   | WebhookInConfig
   | AgentActionConfig
+  | RuleConfig
   | Record<string, unknown>;
 
 // ═══════════════════════════════════════════════════════════════════════════

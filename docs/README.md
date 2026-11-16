@@ -17,6 +17,12 @@ from here is reference.
   with rows
 - [Writing a kon](kons/README.md): operations, the request transaction,
   streaming operations (`output.flow`)
+- What a kon can build on: [events](kons/events.md) between kons,
+  [links](kons/links.md) and their relation names, [entities](kons/entities.md)
+  (records with fields and no migration) and [sealed secrets](kons/secrets.md)
+- [Automation rules](automation.md): when an event meets conditions, run steps;
+  dry run and run history
+- [Reports](reports.md): aggregate queries, saved reports and dashboards
 
 ## 3. Permissions
 

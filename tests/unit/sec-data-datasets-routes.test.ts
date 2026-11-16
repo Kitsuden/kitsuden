@@ -83,6 +83,8 @@ beforeAll(async () => {
       slug VARCHAR(200) NOT NULL UNIQUE,
       description TEXT,
       icon VARCHAR(50),
+      kon_id VARCHAR(100),
+      kon_settings JSONB,
       schema JSONB DEFAULT '[]',
       display_config JSONB,
       policy_json JSONB,

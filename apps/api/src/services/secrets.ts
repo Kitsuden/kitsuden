@@ -60,12 +60,12 @@ function getMasterKey(): Buffer {
 // CRYPTO (AES-256-GCM)
 // ═══════════════════════════════════════════════════════════════
 
-export function encryptSecret(plaintext: string): EncryptedValue {
-  return encryptWith(getMasterKey(), plaintext);
+export function encryptSecret(plaintext: string, aad?: string): EncryptedValue {
+  return encryptWith(getMasterKey(), plaintext, aad);
 }
 
-export function decryptSecret(payload: EncryptedValue): string {
-  return decryptWith(getMasterKey(), payload);
+export function decryptSecret(payload: EncryptedValue, aad?: string): string {
+  return decryptWith(getMasterKey(), payload, aad);
 }
 
 // ═══════════════════════════════════════════════════════════════

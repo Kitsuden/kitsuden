@@ -58,7 +58,10 @@ BEGIN
       ('kitsuden_functions'),
       -- External MCP servers (0070): an auth header and the approved fingerprints
       ('external_mcp_servers'),
-      ('external_mcp_tools')
+      ('external_mcp_tools'),
+      -- Secrets for kons (0078): who opened which credential, and where kons keep them
+      ('secret_access_log'),
+      ('kitsuden_secret_columns')
     ) AS s(table_name)
   LOOP
     IF EXISTS (

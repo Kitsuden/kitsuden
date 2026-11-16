@@ -16,7 +16,7 @@ Key primitives:
 - **JSONB Datasets** — User-defined schemas stored in `data_entries` (no `ALTER TABLE`, no DDL locks).
 - **Kons** — Pre-built domain modules (blog, CRM, booking, etc.) that install as plugins.
 - **RLS (Row-Level Security)** — PostgreSQL-native policies injected per transaction via `app.current_user_id`.
-- **Actions Engine** — Unified trigger system: HTTP, event (Postgres queue), cron, or agent (MCP).
+- **Actions Engine** — Stored actions triggered by hand, by cron or by an event (the core's or a kon's, delivered in process after commit); a `rule` runs a list of steps under conditions (`docs/automation.md`).
 - **Response formats** — tool results come in the shortest lossless format (compact JSON, TOON or TRON); see §7.
 
 ### Kon operation tools (`<kon>__<operation>`)

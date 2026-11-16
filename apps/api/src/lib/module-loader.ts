@@ -82,7 +82,10 @@ import { file } from "./file";
 import { readGrimoireKons, readKonJsonManifest } from "./grimoire-manifest";
 import { konIdOf, installedKon, listInstalledKons, incompatibleSdkReason } from "./installed-kons";
 import { checkKonCompatibility } from "./kitsuden-compat";
+import { registerKonContributions } from "./kon-contributions";
+import { konEntities, syncKonEntities } from "./kon-entities";
 import { registerKonRouter } from "./kon-routes";
+import { konSecrets, registerKonSecretColumns } from "./kon-secrets";
 import { logger } from "./logger";
 import { registerKonToolsets } from "./mcp-settings";
 import { limiterEnabled, rateLimit } from "./rate-limiter";
@@ -539,6 +542,23 @@ export function createKonContext(): KonContext {
     // General settings → Site URL, live (see site-settings.ts)
     site: {
       publicUrl: sitePublicUrl,
+    },
+
+    // Sealed secrets with an access log (lib/kon-secrets.ts)
+    secrets: konSecrets,
+
+    // Records of the entities kons declare (lib/kon-entities.ts)
+    entities: konEntities,
+
+    // Rules the kon keeps, run by the core's rule engine (lib/actions/kon-automation.ts). Imported on
+    // first use: the actions engine reaches the agent engine, which reaches this loader.
+    automation: {
+      upsertRule: async (konId, rule) =>
+        (await import("./actions/kon-automation")).konAutomation.upsertRule(konId, rule),
+      removeRule: async (konId, slug) =>
+        (await import("./actions/kon-automation")).konAutomation.removeRule(konId, slug),
+      listRules: async (konId) =>
+        (await import("./actions/kon-automation")).konAutomation.listRules(konId),
     },
   };
 
@@ -1249,6 +1269,29 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
         applyKonRateLimits(app, konDef, finalMountPath);
         // Its tool groups for agents (`kon:<id>/<set>`), before any MCP session reads them.
         registerKonToolsets(konDef.id, konDef.mcpToolsets);
+        // Its events, its automation steps and its reports (lib/kon-contributions.ts). A malformed one
+        // is reported and skipped: it must not take the kon's routes down with it.
+        for (const problem of registerKonContributions(konDef, context)) {
+          console.warn(`  ⚠️  ${kon.id}: ${problem}`);
+        }
+        // The entities it owns: one dataset each, created here with no migration (lib/kon-entities.ts).
+        if (konDef.entities) {
+          for (const problem of await syncKonEntities(konDef.id, konDef.entities)) {
+            console.warn(`  ⚠️  ${kon.id}: ${problem}`);
+          }
+        }
+        // Where it keeps sealed secrets, so a key rotation reaches them (lib/kon-secrets.ts).
+        if (konDef.secretColumns) {
+          try {
+            for (const problem of await registerKonSecretColumns(konDef.id, konDef.secretColumns)) {
+              console.warn(`  ⚠️  ${kon.id}: ${problem}`);
+            }
+          } catch (err: unknown) {
+            console.warn(
+              `  ⚠️  ${kon.id}: its secret columns were not recorded (${messageOf(err)}); a key rotation would miss them`
+            );
+          }
+        }
 
         // Every request to the kon, in its RLS transaction (see `theRequestDb`).
         mountKonRls(app, finalMountPath);

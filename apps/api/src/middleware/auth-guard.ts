@@ -263,6 +263,8 @@ export const ADMIN_ONLY_ROUTES: GateRule[] = [
   { prefix: "/api/modules" },
   { prefix: "/api/functions" },
   { prefix: "/api/actions" },
+  // The catalog and the dry run of automation rules (routes/automation.ts), as /api/actions.
+  { prefix: "/api/automation" },
   { prefix: "/api/relations" },
   // What agents chose not to do: the team reads it (an editor, without the
   // agents they sponsor; routes/agent-permissions.ts). No agent: the operation
@@ -281,6 +283,9 @@ export const ADMIN_ONLY_ROUTES: GateRule[] = [
   // operation (brain:read / brain:write / kon:brain:<op>). BEFORE the general one:
   // the first match wins. The rest of /api/brain remains admin-only.
   { prefix: "/api/brain/memory", role: "staff" },
+  // Reports (routes/reports.ts): a table with no row policies counts every row, so it is the
+  // administrator's; an agent, only with the scopes of each operation (reports:read / reports:write).
+  { prefix: "/api/reports" },
   { prefix: "/api/brain" },
   { prefix: "/api/sync" },
   { prefix: "/api/graphql" },

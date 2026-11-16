@@ -9,6 +9,7 @@ if TYPE_CHECKING:  # the kon modules are imported lazily, on first use of the at
     from .kons.agent_notifications import AsyncAgentNotificationsApi, AgentNotificationsApi
     from .kons.agents import AsyncAgentsApi, AgentsApi
     from .kons.approvals import AsyncApprovalsApi, ApprovalsApi
+    from .kons.automation import AsyncAutomationApi, AutomationApi
     from .kons.blocks import AsyncBlocksApi, BlocksApi
     from .kons.brain import AsyncBrainApi, BrainApi
     from .kons.datasets import AsyncDatasetsApi, DatasetsApi
@@ -21,6 +22,8 @@ if TYPE_CHECKING:  # the kon modules are imported lazily, on first use of the at
     from .kons.proposals import AsyncProposalsApi, ProposalsApi
     from .kons.queue import AsyncQueueApi, QueueApi
     from .kons.record_history import AsyncRecordHistoryApi, RecordHistoryApi
+    from .kons.reports import AsyncReportsApi, ReportsApi
+    from .kons.secret_access import AsyncSecretAccessApi, SecretAccessApi
     from .kons.traces import AsyncTracesApi, TracesApi
 
 API_VERSION = "0.9.0-beta"
@@ -88,6 +91,7 @@ KONS: Tuple[Tuple[str, str, str, str], ...] = (
     ("agent_notifications", "kon-agent-notifications", "kitsuden._generated.kons.agent_notifications", "AgentNotificationsApi"),
     ("agents", "kon-agents", "kitsuden._generated.kons.agents", "AgentsApi"),
     ("approvals", "kon-approvals", "kitsuden._generated.kons.approvals", "ApprovalsApi"),
+    ("automation", "kon-automation", "kitsuden._generated.kons.automation", "AutomationApi"),
     ("blocks", "kon-blocks", "kitsuden._generated.kons.blocks", "BlocksApi"),
     ("brain", "kon-brain", "kitsuden._generated.kons.brain", "BrainApi"),
     ("datasets", "kon-datasets", "kitsuden._generated.kons.datasets", "DatasetsApi"),
@@ -100,6 +104,8 @@ KONS: Tuple[Tuple[str, str, str, str], ...] = (
     ("proposals", "kon-proposals", "kitsuden._generated.kons.proposals", "ProposalsApi"),
     ("queue", "kon-queue", "kitsuden._generated.kons.queue", "QueueApi"),
     ("record_history", "kon-record-history", "kitsuden._generated.kons.record_history", "RecordHistoryApi"),
+    ("reports", "kon-reports", "kitsuden._generated.kons.reports", "ReportsApi"),
+    ("secret_access", "kon-secret-access", "kitsuden._generated.kons.secret_access", "SecretAccessApi"),
     ("traces", "kon-traces", "kitsuden._generated.kons.traces", "TracesApi"),
 )
 """(attribute, kon id, module, sync class) of every kon; the async class is `Async` + the sync one."""
@@ -111,6 +117,7 @@ class GeneratedKons:
     agent_notifications: AgentNotificationsApi
     agents: AgentsApi
     approvals: ApprovalsApi
+    automation: AutomationApi
     blocks: BlocksApi
     brain: BrainApi
     datasets: DatasetsApi
@@ -123,6 +130,8 @@ class GeneratedKons:
     proposals: ProposalsApi
     queue: QueueApi
     record_history: RecordHistoryApi
+    reports: ReportsApi
+    secret_access: SecretAccessApi
     traces: TracesApi
 
 
@@ -132,6 +141,7 @@ class AsyncGeneratedKons:
     agent_notifications: AsyncAgentNotificationsApi
     agents: AsyncAgentsApi
     approvals: AsyncApprovalsApi
+    automation: AsyncAutomationApi
     blocks: AsyncBlocksApi
     brain: AsyncBrainApi
     datasets: AsyncDatasetsApi
@@ -144,4 +154,6 @@ class AsyncGeneratedKons:
     proposals: AsyncProposalsApi
     queue: AsyncQueueApi
     record_history: AsyncRecordHistoryApi
+    reports: AsyncReportsApi
+    secret_access: AsyncSecretAccessApi
     traces: AsyncTracesApi

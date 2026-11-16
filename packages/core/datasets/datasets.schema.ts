@@ -17,6 +17,14 @@ export const dataSets = pgTable("data_sets", {
   icon: varchar("icon", { length: 50 }),
 
   /**
+   * The kon this dataset belongs to, when a kon declared it as an entity
+   * (`defineKon({ entities })`, core migration 0080). NULL: a person made it.
+   */
+  konId: varchar("kon_id", { length: 100 }),
+  /** Settings the owning kon keeps for the entity (core migration 0080). The core never reads it. */
+  konSettings: jsonb("kon_settings"),
+
+  /**
    * Field definition of the dataset.
    *
    * The `$type<>` comes from `apps/api/src/db/schema-core.ts`, which was the other

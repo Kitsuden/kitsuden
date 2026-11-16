@@ -70,6 +70,38 @@ async function reasonNotToDefineAgent(
   return reasonNotToDefine(agentId, scopes);
 }
 
+/**
+ * The rule engine (lib/actions/rules.ts). Deferred import, like the others: it
+ * reaches the webhook and agent handlers.
+ */
+async function rules() {
+  return import("../lib/actions/rules");
+}
+
+/**
+ * Why this request may not store this rule, or `null`.
+ *
+ * Only a PERSON writes a rule. A rule can call a webhook, send mail and make
+ * an agent act; each of those has its own guard when it is a single-purpose
+ * action (target check, customer-data policy, "an agent does not define an
+ * action against an agent with more permissions"). Rather than re-derive every
+ * one of them per step for an agent author, a rule is a person's decision.
+ */
+async function ruleRefusal(
+  executorType: string | undefined,
+  config: unknown
+): Promise<{ status: 400 | 403; error: string; code?: string } | null> {
+  if (executorType !== "human") {
+    return {
+      status: 403,
+      error: "Only a person creates or changes a rule; an agent may propose it to one.",
+      code: "FORBIDDEN",
+    };
+  }
+  const problem = await (await rules()).ruleProblem(config);
+  return problem ? { status: 400, error: problem } : null;
+}
+
 function requestIdOf(c: Context): string | null {
   return ((c.get as (k: string) => unknown)("requestId") as string | undefined) ?? null;
 }
@@ -118,7 +150,7 @@ export async function createActionHandler(c: Context) {
   }
 
   // Validate type
-  const validTypes = ["code", "webhook_out", "webhook_in", "agent"];
+  const validTypes = ["code", "webhook_out", "webhook_in", "agent", "rule"];
   if (!validTypes.includes(body.type)) {
     return c.json(
       {
@@ -144,8 +176,18 @@ export async function createActionHandler(c: Context) {
     return c.json({ error: "triggerConfig.cronExpression required for cron trigger" }, 400);
   }
 
+  // Conditions over the event payload: any type of action may carry them.
+  {
+    const problem = (await rules()).triggerConditionsProblem(body.triggerConfig);
+    if (problem) return c.json({ error: `triggerConfig: ${problem}` }, 400);
+  }
+
   // An agent does not create code here, only through promotion.
   const executor = requestExecutor(c);
+  if (body.type === "rule") {
+    const refusal = await ruleRefusal(executor?.type, body.config);
+    if (refusal) return c.json({ error: refusal.error, code: refusal.code }, refusal.status);
+  }
   if (executor?.type === "agent" && (body.type === "code" || bringsCode(body.config))) {
     return respondProblem(c as never, codeOutsidePromotionProblem(c.req.path, requestIdOf(c)));
   }
@@ -235,6 +277,22 @@ export async function updateActionHandler(c: Context) {
     changesCustomerDataPolicy(before.config, body.config)
   ) {
     return respondProblem(c as never, customerDataPolicyProblem(c.req.path, requestIdOf(c)));
+  }
+  if (body.triggerConfig !== undefined) {
+    const problem = (await rules()).triggerConditionsProblem(body.triggerConfig);
+    if (problem) return c.json({ error: `triggerConfig: ${problem}` }, 400);
+  }
+  // A rule: only a person changes what it does or when it runs.
+  {
+    const current = before ?? (await getAction(c.req.param("id")!));
+    if (current?.type === "rule") {
+      const changesWhatOrWhen =
+        body.config !== undefined || SCHEDULE_KEYS.some((k) => body[k] !== undefined);
+      if (changesWhatOrWhen) {
+        const refusal = await ruleRefusal(executor?.type, body.config ?? current.config);
+        if (refusal) return c.json({ error: refusal.error, code: refusal.code }, refusal.status);
+      }
+    }
   }
   // A new config for a webhook_out passes the same target check as at creation.
   if (before?.type === "webhook_out" && body.config !== undefined) {

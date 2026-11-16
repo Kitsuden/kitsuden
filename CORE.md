@@ -187,6 +187,9 @@ await link(
 const around = await neighbors({ type: "crm_contacts", id: contact.id });
 ```
 
+The relation names kons share (`same_person`, `ordered_by`, `paid_by`, `about`)
+and their direction are in [docs/kons/links.md](docs/kons/links.md).
+
 > **If both sides live in the same kon, it is a foreign key. If they cross
 > kons, it is a link.** `metadata` is for context (which channel, who
 > confirmed it), never for fields someone will query.

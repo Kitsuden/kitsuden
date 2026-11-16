@@ -73,6 +73,10 @@ export const FORBIDDEN_TABLES = new Set([
   "oauth_codes",
   "oauth_tokens",
   "kitsuden_migrations",
+  // Secrets for kons (0078): who opened which credential, and where kons keep them.
+  // The log is read through its own operation (routes/automation.ts), by administrators.
+  "secret_access_log",
+  "kitsuden_secret_columns",
   "rate_limit_logs",
   "member_sessions",
   // kon-members magic access links: their token_hash opens another
