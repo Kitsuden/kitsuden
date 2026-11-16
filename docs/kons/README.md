@@ -40,6 +40,19 @@ KITSUDEN_DIR=../kitsuden pnpm link-core && pnpm install && pnpm test
 kitsuden kon add recipes --from ../kitsuden-kon-recipes
 ```
 
+**Its own columns from the start.** Without options the items have a title, a body and a
+draft/published status. `--fields` replaces the title and body with the kon's real columns, in the
+schema, the migration, the create/update input, the output, the docs and the generated test:
+
+```bash
+kitsuden make kon recipes --fields "name:string!,servings:integer,cost:number,vegan:boolean!,steps:json"
+```
+
+`name:type`, comma-separated, `!` for required. Types: `string` (varchar 200), `text`, `integer`
+(32-bit), `number` (exact `numeric(19, 4)`), `boolean`, `date`, `datetime` (timestamptz), `json`
+(jsonb, object or array) and `uuid`. Names are camelCase; columns are their snake_case. `id`,
+`status`, `createdAt` and `updatedAt` are reserved. The full mapping is in the CLI's README.
+
 **One place for each fact.** A kon's id, version, tables and mount path are written in `kon.json`;
 the generated `index.ts` reads them (`import manifest from "./kon.json" with { type: "json" }`).
 npm needs the version in `package.json` too, and `files[]` must list what is shipped: in a kons

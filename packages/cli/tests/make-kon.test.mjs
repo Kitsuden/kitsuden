@@ -22,6 +22,10 @@ import { after, before, describe, it } from "node:test";
 const CLI = resolve(import.meta.dirname, "..", "dist", "index.js");
 const REPO = resolve(import.meta.dirname, "..", "..", "..");
 const shell = process.platform === "win32";
+/** Every type, required and optional. No spaces: on Windows the arguments go through a shell. */
+const FIELDS =
+  "title:string!,summary:text,price:number!,stock:integer,published:boolean!," +
+  "dueOn:date,startsAt:datetime!,endsAt:datetime,meta:json,ownerRef:uuid";
 
 let work;
 let repo;
@@ -99,6 +103,20 @@ describe("kitsuden make kon --standalone", () => {
       readFileSync(join(repo, "package.json"), "utf8"),
       /"name": "kitsuden-kon-demo-notes"/
     );
+    // Without --fields: the template's title and body, as before the option existed.
+    const schema = readFileSync(join(k, "demo-notes.schema.ts"), "utf8");
+    assert.ok(
+      schema.includes(
+        'import { pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";'
+      )
+    );
+    assert.ok(
+      schema.includes(
+        '  title: varchar("title", { length: 200 }).notNull(),\n  body: text("body"),\n'
+      )
+    );
+    assert.doesNotMatch(schema, /JsonValue/);
+    assert.deepEqual(manifest.tables[0].searchableFields, ["title"]);
   });
 
   it("refuses a folder that is not empty and a kon that already exists", () => {
@@ -111,6 +129,114 @@ describe("kitsuden make kon --standalone", () => {
     assert.equal(r.status, 0, r.stderr + r.stdout);
     assert.ok(existsSync(join(repo, "kons", "kon-second", "kon.json")));
     assert.ok(existsSync(join(repo, "tests", "unit", "kon-second.test.ts")));
+  });
+
+  it("--fields writes the kon's own columns into every file that knows them", () => {
+    const r = cli(["make", "kon", "field-demo", "--fields", FIELDS], repo);
+    assert.equal(r.status, 0, r.stderr + r.stdout);
+    const k = join(repo, "kons", "kon-field-demo");
+    const read = (f) => readFileSync(join(k, f), "utf8");
+
+    const schema = read("field-demo.schema.ts");
+    for (const line of [
+      'title: varchar("title", { length: 200 }).notNull(),',
+      'summary: text("summary"),',
+      'price: numeric("price", { precision: 19, scale: 4, mode: "number" }).notNull(),',
+      'stock: integer("stock"),',
+      'published: boolean("published").notNull(),',
+      'dueOn: date("due_on"),',
+      'startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),',
+      'endsAt: timestamp("ends_at", { withTimezone: true }),',
+      'meta: jsonb("meta").$type<JsonValue>(),',
+      'ownerRef: uuid("owner_ref"),',
+    ]) {
+      assert.ok(schema.includes(line), `schema lacks ${line}`);
+    }
+    assert.doesNotMatch(schema, /body:/);
+
+    const sql = read("migrations/0000_initial.sql");
+    for (const re of [
+      /title\s+varchar\(200\) NOT NULL,/,
+      /summary\s+text,/,
+      /price\s+numeric\(19, 4\) NOT NULL,/,
+      /stock\s+integer,/,
+      /published\s+boolean NOT NULL,/,
+      /due_on\s+date,/,
+      /starts_at\s+timestamptz NOT NULL,/,
+      /ends_at\s+timestamptz,/,
+      /meta\s+jsonb,/,
+      /owner_ref\s+uuid,/,
+      /status\s+varchar\(20\) NOT NULL DEFAULT 'draft'/,
+    ]) {
+      assert.match(sql, re);
+    }
+    assert.doesNotMatch(sql, /\bbody\b/);
+
+    const routes = read("field-demo.routes.ts");
+    for (const line of [
+      "title: z.string().trim().min(1).max(200),",
+      "summary: z.string().max(100_000).nullable().optional(),",
+      "price: z.number().gt(-1e15).lt(1e15),",
+      "stock: z.int32().nullable().optional(),",
+      "published: z.boolean(),",
+      "dueOn: z.iso.date().nullable().optional(),",
+      "startsAt: z.iso.datetime({ offset: true }),",
+      "meta: Json.nullable().optional(),",
+      "ownerRef: z.guid().nullable().optional(),",
+      "startsAt: new Date(body.startsAt),",
+      "endsAt: body.endsAt == null ? null : new Date(body.endsAt),",
+    ]) {
+      assert.ok(routes.includes(line), `routes lack ${line}`);
+    }
+    assert.match(routes, /const Edit = Create\.partial\(\);/);
+
+    const manifest = JSON.parse(read("kon.json"));
+    assert.deepEqual(manifest.tables[0].searchableFields, ["title", "summary"]);
+    assert.match(manifest.description, /items with title, summary, price/);
+    for (const doc of ["README.md", "AGENTS.md"]) {
+      assert.match(
+        read(doc),
+        /\| `dueOn` \| `due_on` \| date \| `date` \| no \(nullable\) \|/,
+        doc
+      );
+      assert.match(
+        read(doc),
+        /\| `price` \| `price` \| number \| `numeric\(19, 4\)` \| yes \|/,
+        doc
+      );
+    }
+
+    const test = readFileSync(join(repo, "tests", "unit", "kon-field-demo.test.ts"), "utf8");
+    assert.match(
+      test,
+      /const valid = \{ title: "Sample", price: 12\.5, published: true, startsAt: /
+    );
+    assert.match(test, /stores and returns every declared field/);
+    assert.match(test, /a missing required field is rejected \(422\)/);
+  });
+
+  it("--fields refuses a bad spec and reserved names before writing anything", () => {
+    for (const [spec, message] of [
+      ["title", /Invalid field "title"/],
+      ["title:strng", /Unknown type "strng"/],
+      ["title:string,,body:text", /empty entry/],
+      ["Title:string", /Invalid field name "Title"/],
+      ["due_on:date", /Invalid field name "due_on".*"dueOn"/],
+      ["id:uuid", /reserved/],
+      ["createdAt:datetime", /reserved/],
+      ["created_at:datetime", /reserved/],
+      ["updatedAt:datetime", /reserved/],
+      ["status:string", /reserved/],
+      ["order:integer", /reserved word in SQL/],
+      ["name:string,name:text", /declared twice/],
+      ["imageURL:string,imageUrl:string", /both be the SQL column "image_url"/],
+    ]) {
+      const r = cli(["make", "kon", "bad-spec", "--fields", spec], repo);
+      assert.equal(r.status, 1, `${spec}: ${r.stdout}`);
+      assert.match(r.stderr, message, spec);
+      assert.ok(!existsSync(join(repo, "kons", "kon-bad-spec")), `${spec} wrote the kon`);
+      assert.ok(!existsSync(join(repo, "tests", "unit", "kon-bad-spec.test.ts")));
+    }
   });
 
   it("the other generators work inside the kons repository", () => {
@@ -171,13 +297,14 @@ describe("kitsuden make kon --standalone", () => {
         "tests/unit/kon-demo-notes.test.ts",
         "tests/unit/kon-second.test.ts",
         "tests/unit/kon-demo-notes-flow.test.ts",
+        "tests/unit/kon-field-demo.test.ts",
       ],
       repo
     );
     assert.equal(tests.status, 0, (tests.stdout + tests.stderr).slice(-6000));
 
     const tsc = join(repo, "node_modules", "typescript", "bin", "tsc");
-    for (const k of ["kon-demo-notes", "kon-second"]) {
+    for (const k of ["kon-demo-notes", "kon-second", "kon-field-demo"]) {
       const t = run(process.execPath, [tsc, "--noEmit", "-p", `kons/${k}`], repo);
       // Errors inside the linked core (.kitsuden/…) are the checkout's, not the generated kon's.
       const own = (t.stdout + t.stderr)
@@ -192,6 +319,19 @@ describe("kitsuden make kon --standalone", () => {
 });
 
 describe("kitsuden make kon in a project", () => {
+  it("--fields in a project; an empty spec is an error", async () => {
+    const { planKon } = await import("../dist/commands/make-kon.js");
+    const root = join(work, "project-fields");
+    mkdirSync(join(root, "packages", "kons"), { recursive: true });
+    writeFileSync(join(root, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+    assert.throws(() => planKon("demo", { root, fields: "" }), /--fields is empty/);
+    assert.throws(() => planKon("demo", { root, fields: " , " }), /empty entry/);
+    const withFields = planKon("demo", { root, fields: "name:string!" });
+    const routes = withFields.files.find((f) => f.path.endsWith("demo.routes.ts")).content;
+    assert.match(routes, /name: z\.string\(\)\.trim\(\)\.min\(1\)\.max\(200\),/);
+    assert.doesNotMatch(routes, /title/);
+  });
+
   it("plans packages/kons/<id> and imports the project's helpers", async () => {
     const { planKon } = await import("../dist/commands/make-kon.js");
     const root = join(work, "project");

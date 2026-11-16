@@ -17,7 +17,7 @@ PUT /api/v1/agents/:id/mcp-settings   { "toolset": "data" }    (null or "all" = 
 
 | Toolset    | Tools                                                                                                 |
 | ---------- | ----------------------------------------------------------------------------------------------------- |
-| `all`      | no restriction (the default)                                                                          |
+| `all`      | no restriction, and always the direct list (see discovery mode below)                                 |
 | `read`     | read-only: core tools with `mcp:read`, kon `GET` operations                                           |
 | `data`     | core dataset/collection tools: list, describe, query, create/update/delete/insert record              |
 | `core`     | every core `kitsuden_*` tool                                                                          |
@@ -37,6 +37,50 @@ uses the **intersection**: the URL can narrow the agent's default, never widen
 it. `tools/call` on a tool outside the toolset fails with
 `KITSUDEN_E_FORBIDDEN`, like a tool outside `allowedTools`. The panel default
 is re-read on every MCP message, so a change applies without reconnecting.
+
+### Discovery mode: the default when nobody chose
+
+An agent with no toolset (no panel default, no `?toolset=`) used to get every
+definition. Now, when those definitions are over `MCP_TOOLS_LIST_MAX_BYTES`
+(default 64 000 bytes ≈ 16k tokens), `tools/list` returns only:
+
+| Tool                  | What it does                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| `kitsuden_find_tools` | with `query`, the best matches with their input schemas; without it, tool counts per group |
+| `kitsuden_call_tool`  | `{ name, arguments }`: calls one of them                                                   |
+
+plus `kitsuden_proposal_status` and `kitsuden_record_decision`. The result's
+`_meta["kitsuden/tools"]` says `mode: "discovery"`, how many tools are behind it
+and their size.
+
+- **Nothing is granted.** `kitsuden_call_tool` runs the inner tool through the
+  same path as a direct call: `allowedTools`, toolsets, scopes, quota, human
+  approval. The audit log and the friction report record the inner tool's name
+  (`details.via = "kitsuden_call_tool"`).
+- **An installation that fits the budget sees no change.** Neither does an
+  agent with any toolset, or with `all` named explicitly (`?toolset=all` or the
+  panel default `all`): they get the direct list.
+- `MCP_TOOLS_LIST_MAX_BYTES=0` turns the mode off. The list is sorted by name in
+  both modes, so the same agent gets the same bytes on every connection and
+  clients can cache the prefix.
+
+The saving of discovery mode and of the smaller results, measured before and after
+on the same install, is in [benchmarks.md §4](benchmarks.md#4-agent-context-tokens-per-call).
+
+### Smaller results
+
+- `MCP_RESULT_MAX_CHARS` (default 100 000 characters ≈ 25k tokens; `0` = off):
+  a longer tool result is cut, ends with a note saying how much was shown, drops
+  `structuredContent`, and carries `_meta["kitsuden/truncated"]`
+  (`shownChars`, `totalChars`).
+- `kitsuden_query_collection` and `kitsuden_query_dataset` return **20** rows
+  unless `limit` says otherwise (was 50), and accept `fields: ["title", …]`:
+  only those keys of each row (read from the row, else from its `data`), plus
+  `id`.
+- Kon tool schemas leave out what tells a model nothing: the ±2⁵³ bounds
+  `z.number().int()` emits, and a `pattern` next to a `format` that already says
+  it (`uuid`, `email`). The OpenAPI keeps the full schema, and the server still
+  validates with it.
 
 ### Measured
 
@@ -83,7 +127,8 @@ _Tokens saved by the auto format_).
 
 ## Implementation
 
-`apps/api/src/lib/mcp-settings.ts` (toolsets, settings), `lib/format-measure.ts`
+`apps/api/src/lib/mcp-settings.ts` (toolsets, settings), `lib/tool-discovery.ts`
+(discovery mode, result cap, `fields`), `lib/format-measure.ts`
 (the per-call measurement, no database), `lib/format-savings.ts` (the daily
 aggregate), `routes/mcp.ts` (wiring) and `routes/agent-permissions.ts`
 (`/mcp-settings`, `formatSavings`). Panel: `AgentMcpSettings.svelte`,

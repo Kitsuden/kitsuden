@@ -106,6 +106,37 @@ describe("errors speak to the agent", () => {
   });
 });
 
+describe("kitsuden_guide", () => {
+  it("without `kon` it asks for the index; with it, that kon's routes", async () => {
+    const { api, calls } = fakeApi({
+      "GET /llms.txt": "# index",
+      "GET /llms.txt?kon=blog%2Ckon-esports": "### kon-blog",
+    });
+    expect((await runDomainTool("kitsuden_guide", {}, api))?.content[0].text).toBe("# index");
+    expect(
+      (await runDomainTool("kitsuden_guide", { kon: " blog,kon-esports " }, api))?.content[0].text
+    ).toBe("### kon-blog");
+    expect(calls.map((c) => c.path)).toEqual(["/llms.txt", "/llms.txt?kon=blog%2Ckon-esports"]);
+  });
+
+  it("an unknown kon reaches the agent as the API's 404", async () => {
+    const { api } = fakeApi({
+      "GET /llms.txt?kon=nope": new Error(
+        "API GET /llms.txt?kon=nope failed (404): Unknown kon: nope.\nMounted kons: kon-blog."
+      ),
+    });
+    const r = await runDomainTool("kitsuden_guide", { kon: "nope" }, api);
+    expect(r?.isError).toBe(true);
+    expect(r?.content[0].text).toContain("Mounted kons: kon-blog.");
+  });
+
+  it("the description says the index is the default", () => {
+    const d = DOMAIN_TOOL_DEFINITIONS.find((t) => t.name === "kitsuden_guide")!;
+    expect(d.description).toContain("Without `kon` it returns the index");
+    expect(Object.keys(d.inputSchema.properties)).toEqual(["kon"]);
+  });
+});
+
 describe("the tools use the domain routes", () => {
   it("the catalog asks for an image field of type url", async () => {
     // `image` stores the id of an uploaded media item; here external URLs are pasted.

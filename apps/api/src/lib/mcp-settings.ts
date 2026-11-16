@@ -129,6 +129,15 @@ export function readMcpSettings(raw: unknown): McpSettings {
   return output;
 }
 
+/**
+ * Was `all` named explicitly? Empty and `all` parse the same (no restriction),
+ * but only an explicit `all` keeps the full `tools/list` when it is over budget
+ * (lib/tool-discovery.ts).
+ */
+export function mentionsAll(text: string | null | undefined): boolean {
+  return (text ?? "").split(",").some((p) => p.trim().toLowerCase() === "all");
+}
+
 export type Toolset =
   | { all: true }
   | { all: false; fixedItems: Set<FixedToolset>; kons: Set<string>; konSets?: Set<string> };

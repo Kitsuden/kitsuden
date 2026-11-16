@@ -56,6 +56,8 @@ export interface MakeOptions {
   icon?: string;
   title?: string;
   description?: string;
+  /** make kon: `name:type[!],…`, the kon's own columns (make-kon.ts, kon-fields.ts). */
+  fields?: string;
   /** make kon: a new kons repository of your own (`true` or a folder). */
   standalone?: boolean | string;
 }

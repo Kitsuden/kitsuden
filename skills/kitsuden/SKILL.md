@@ -35,12 +35,19 @@ it into the chat.
 ## Load the live guide before calling Kitsuden
 
 ```text
-GET API/llms.txt
+GET API/llms.txt                 # the index: rules, building something new, recipes, one line per kon
+GET API/llms.txt?kon=<id>        # then only the kon the task needs (several: ?kon=a,b)
 ```
 
-If an MCP server named `kitsuden` is connected, its `kitsuden_guide` tool returns the same text.
-Read the guide's rules section before the first write: it lists the mistakes agents make here
-and the error each one produces.
+Read the index first, then ask for `?kon=<id>` only for the kons the task touches; do not load
+`?full=1` (every kon's routes) unless you really need all of them. If an MCP server named
+`kitsuden` is connected, its `kitsuden_guide` tool returns the same text (`kon` argument for one
+kon). The index is cacheable: re-send its `ETag` in `If-None-Match` and a `304` means it has not
+changed. Read the rules section before the first write: it lists the mistakes agents make here and
+the error each one produces.
+
+Building something new: a dataset needs no code; own tables, rules or routes need a kon
+(`kitsuden make kon <name>`, then `makemigrations`): see the index's "Building something new".
 
 ## Rules
 
