@@ -153,6 +153,11 @@ program
   .option("--icon <name>", "make kon: lucide icon name from the admin icon map", "Package")
   .option("--title <title>", "make kon: display name")
   .option("--description <text>", "make kon: description")
+  .option(
+    "--fields <spec>",
+    'make kon: its columns instead of title/body, "name:type[!],…" (! = required); types: ' +
+      "string, text, integer, number (numeric 19,4), boolean, date, datetime, json, uuid"
+  )
   .action(makeCommand);
 
 program

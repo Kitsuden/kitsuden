@@ -137,6 +137,39 @@ The generated kon is a list of items, each with a title, a body and a status (`d
 with the kon's scope) sees drafts and writes. The tables are created by the migration, never at
 runtime.
 
+With `--fields "<spec>"` the items get your own columns instead of the title and body, and they
+reach every file that knows the columns: the Drizzle schema, `migrations/0000_initial.sql`, the
+zod `Create` input (required or optional; update takes every field as optional) and the `Item`
+output in the routes, `searchableFields` in `kon.json` (the string and text fields), a table of
+fields in README.md and AGENTS.md, and the generated test, which creates an item with sample
+values for every field, reads it back, updates one field and expects a 422 for a wrong value and
+for a missing required one.
+
+```bash
+kitsuden make kon events --fields "title:string!,price:number,seats:integer,published:boolean,dueOn:date,startsAt:datetime!,meta:json,venueId:uuid"
+```
+
+The spec is a comma-separated list of `name:type`, with `!` after the type for a required field
+(`NOT NULL`; without it the column is nullable and the field optional). Names are camelCase
+(TypeScript, zod, API); the SQL column is their snake_case (`dueOn` → `due_on`).
+
+| Type       | SQL              | zod input                          | Notes                                                     |
+| ---------- | ---------------- | ---------------------------------- | --------------------------------------------------------- |
+| `string`   | `varchar(200)`   | `z.string().trim().max(200)`       | `!` adds `.min(1)`                                        |
+| `text`     | `text`           | `z.string().max(100_000)`          | `!` adds `.min(1)`                                        |
+| `integer`  | `integer`        | `z.int32()`                        | whole numbers, 32-bit                                     |
+| `number`   | `numeric(19, 4)` | `z.number().gt(-1e15).lt(1e15)`    | exact decimal (Drizzle `mode: "number"`); 4 decimals kept |
+| `boolean`  | `boolean`        | `z.boolean()`                      |                                                           |
+| `date`     | `date`           | `z.iso.date()`                     | `"YYYY-MM-DD"`                                            |
+| `datetime` | `timestamptz`    | `z.iso.datetime({ offset: true })` | stored as a Date, returned as ISO 8601                    |
+| `json`     | `jsonb`          | object or array                    | typed `JsonValue` in the schema                           |
+| `uuid`     | `uuid`           | `z.guid()`                         |                                                           |
+
+`id`, `status` (`draft`/`published`, which drives the public read and row security), `createdAt`
+and `updatedAt` are always generated, so they are reserved. Before writing anything, the command
+also refuses SQL reserved words (`order`, `user`…), names that are not camelCase, unknown types,
+empty entries and two fields with the same column. Without `--fields` the output is unchanged.
+
 Options: `--icon <Name>` takes a lucide icon that must be in the admin's icon map (default
 `Package`). `--title <text>` and `--description <text>` set the kon's name and description.
 `--standalone [dir]` picks the new repository's folder. `--force` overwrites the generated files
@@ -179,7 +212,7 @@ pnpm --filter @kitsuden/cli test
 
 - `tests/new.test.mjs` runs `kitsuden new` in a temporary folder with an API URL where nothing listens. It checks what was copied, the package name and `.env`. Then it runs `pnpm install` and `pnpm build` on the new project, so it needs network access. Set `KITSUDEN_CLI_SKIP_INSTALL=1` to skip that last step.
 - `tests/kon.test.mjs` runs `kon add|list|remove` with the built CLI on a fake project and a fake kons repository in a temporary folder: copy without `node_modules`, kon dependencies (manifest and peers), the migration runner called with `--kon <id>`, SDK refusal, local-change protection, `--link`, `--enable`, and `remove` refusing a kon another one depends on.
-- `tests/make-kon.test.mjs` copies the parts of the monorepo that the kon guards read into a temporary folder and links the existing `node_modules`. It then runs `make kon` and `make policy` there. It also runs the repository's kon guards (`kon-manifest`, `kon-loadable`, `kon-tables`, `kons-do-not-create-tables`, `kon-icons`, `full-published-package`, `kon-typecheck-coverage`, `kon-registry-full`), the generated route test and `tsc --noEmit` on the new kon. The real repository is not modified.
+- `tests/make-kon.test.mjs` generates a standalone kons repository in a temporary folder with `make kon` (one kon without options, one with `--fields` covering every type) and the other generators, links it to this checkout (`link-core`, `pnpm install --offline`), and runs there the generated route tests, `tsc --noEmit` on each kon and `kon-sync --check`. It also checks the `--fields` errors (nothing is written) and plans a kon inside a project. The real repository is not modified. It is not in `pnpm test`: run it with `node --test tests/make-kon.test.mjs` or `pnpm test:all`.
 
 ## License
 
