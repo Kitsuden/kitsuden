@@ -68,8 +68,11 @@ describe("index.ts: what comes out without a session", () => {
     expect(health).not.toMatch(/error: messageOf\(err\)/);
   });
 
-  it("the WebSocket checks Origin against ALLOWED_ORIGINS", () => {
-    expect(source).toMatch(/origin && !corsConfig\.origins\.includes\(origin\)/);
+  it("the WebSocket checks Origin against ALLOWED_ORIGINS (or the API's own host)", () => {
+    // Formatting may split the condition across lines.
+    expect(source).toMatch(
+      /origin &&\s*!corsConfig\.origins\.includes\(origin\) &&\s*!sameOrigin\(origin, req\.headers\.get\("host"\)\)/
+    );
   });
 
   it("the legacy kitsuden_sk_ keys no longer get in (removed)", () => {

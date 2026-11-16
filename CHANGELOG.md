@@ -80,6 +80,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   was blocked. They are now `cross-origin`, like `/media`.
 - The admin icon map gains `MessagesSquare` (kon-koe). `/api/koe/media` sets its own body limit for
   WhatsApp video and documents.
+- Lite mode (PGlite, one connection) wedged the whole database when a kon route or queue job opened a
+  sealed secret, or when a site admin or editor called a kon route: the secret access log and the
+  fresh session read used another connection while the request transaction held the only one. In lite
+  mode both now go through the request (Postgres is unchanged).
 - `createTestKonContext` silently dropped `secrets`, `automation` and `entities` overrides, so a kon
   under test took the "host without it" branch.
 - A stored action listening to `entry.created`, `entry.updated`, `entry.deleted` or
