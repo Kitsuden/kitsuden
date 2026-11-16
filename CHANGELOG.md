@@ -9,6 +9,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Analytics in the core** ([docs/analytics.md](docs/analytics.md)): views per subject and day with no
+  personal data, at `/api/analytics` as before. It was the kon `kon-analytics`; ids, routes, scopes and MCP
+  tools are the same, and migration 0083 keeps the data of an installation that had the kon. An installed
+  `kon-analytics` is no longer mounted (the loader says how to remove it). `hit` gets its per-IP limit
+  (30 a minute) from the core limiter.
 - **Automation rules** ([docs/automation.md](docs/automation.md)): a stored action of type `rule`
   runs a list of steps (`core:webhook`, `core:send-mail`, `core:run-agent`, or a step a kon
   contributes with `defineKon({ actionHandlers })`) when the trigger's conditions over the event

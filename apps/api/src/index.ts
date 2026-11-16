@@ -108,13 +108,6 @@ import {
 import { toonMiddleware } from "./lib/toon";
 import { toonProtocolMiddleware } from "./lib/toon-protocol";
 import { startTraces, stopTraces, requestTraces } from "./lib/traces";
-import {
-  AUTOMATION_ROUTE,
-  automationRoutes,
-  SECRET_ACCESS_ROUTE,
-  secretAccessRoutes,
-} from "./routes/automation";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { closeValkey, valkeyConfigured } from "./lib/valkey";
 import { registerSystemMails } from "./mail/system-mails";
 import {
@@ -131,6 +124,19 @@ import { httpProblems } from "./middleware/problems-http";
 import { requestContextMiddleware, accessLogAndMetrics } from "./middleware/telemetry";
 import { withTransactionalRLS } from "./middleware/transactional-rls";
 import { enrichUserContext } from "./middleware/user-context";
+import {
+  ANALYTICS_KON,
+  ANALYTICS_ROUTE,
+  analyticsOperations,
+  analyticsRoutes,
+} from "./routes/analytics";
+import {
+  AUTOMATION_ROUTE,
+  automationRoutes,
+  SECRET_ACCESS_ROUTE,
+  secretAccessRoutes,
+} from "./routes/automation";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { requireOriginOnWrites } from "./middleware/write-origin";
 import { actionsRoutes } from "./routes/actions";
 import { adminRegistryRoutes } from "./routes/admin-registry";
@@ -1185,6 +1191,12 @@ app.route(SECRET_ACCESS_ROUTE, secretAccessRoutes);
 mountKonRls(app, REPORTS_ROUTE);
 app.route(REPORTS_ROUTE, reportsRoutes);
 registerMountedOperations(REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes);
+// Analytics (docs/analytics.md): views per subject and day, with no personal data. It was kon-analytics;
+// same id, routes, scopes and MCP tools. In the request's transaction: `hit` checks the subject in a
+// savepoint so a table with another shape cannot abort the count.
+mountKonRls(app, ANALYTICS_ROUTE);
+app.route(ANALYTICS_ROUTE, analyticsRoutes);
+registerMountedOperations(ANALYTICS_KON, ANALYTICS_ROUTE, analyticsOperations, analyticsRoutes);
 console.log("  🧠 KITSUDEN Brain → /api/brain");
 app.route("/api/map", systemMapRoutes);
 console.log("  🗺️  System Map → /api/map");

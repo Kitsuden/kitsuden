@@ -1534,3 +1534,44 @@ export const kitsudenSecrets = pgTable(
   },
   (table) => [uniqueIndex("kitsuden_secrets_key_unique").on(table.key)]
 );
+
+// ── Analytics (0083, routes/analytics.ts): views per subject and day ──
+
+/**
+ * What can be counted. Every type lives in a table with a uuid `id`; the kons that own
+ * `games`, `blog_posts`, `wiki_pages`… may not be installed, and then the type just has no rows.
+ */
+export const MEASURABLE_SUBJECTS = [
+  "game",
+  "blog_post",
+  "wiki_page",
+  "wiki",
+  "dataset",
+  "tournament",
+  "streamer",
+] as const;
+
+export type MeasurableSubject = (typeof MEASURABLE_SUBJECTS)[number];
+
+/**
+ * ONE row per (subject, day) with a counter. No IP, no cookie, no user agent: nobody's path can be
+ * rebuilt from this and no consent banner is needed. It counts VIEWS, never unique visitors.
+ */
+export const analyticsViews = pgTable(
+  "analytics_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    subjectType: varchar("subject_type", { length: 40 }).notNull(),
+    /** Id of the viewed row. No foreign key: each subject lives in its own table. */
+    subjectId: uuid("subject_id").notNull(),
+    day: date("day").notNull(),
+    views: integer("views").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    /** The natural key: it is what makes the counter's UPSERT atomic. */
+    uniqueIndex("analytics_views_subject_day_idx").on(t.subjectType, t.subjectId, t.day),
+    index("analytics_views_type_day_idx").on(t.subjectType, t.day),
+  ]
+);

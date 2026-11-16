@@ -762,6 +762,10 @@ const CORE_MATRIX: Record<string, Level> = {
   "GET /api/automation/catalog": "admin",
   "POST /api/automation/actions/:id/dry-run": "admin",
   "GET /api/admin/secret-access": "admin",
+  // Analytics (0083): public counters with no personal data; `hit` has its own per-IP limit.
+  "POST /api/analytics/hit": "public",
+  "GET /api/analytics/top": "public",
+  "GET /api/analytics/subject/:type/:id": "public",
   "POST /api/reports/aggregate": "admin",
   "GET /api/reports": "admin",
   "POST /api/reports/run": "admin",
