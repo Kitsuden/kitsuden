@@ -37,9 +37,9 @@
   import { t, localeFormat } from "$lib/i18n";
   import {
     MessageCircle,
-    Facebook,
-    Twitter,
-    Linkedin,
+    Users,
+    AtSign,
+    Briefcase,
     Send,
     AlertCircle,
     CheckCircle,
@@ -135,9 +135,10 @@
   const tabIcons = {
     whatsapp: MessageCircle,
     telegram: Send,
-    facebook: Facebook,
-    twitter: Twitter,
-    linkedin: Linkedin,
+    // lucide 1.0 dropped its brand icons: neutral ones stand in for the three networks
+    facebook: Users,
+    twitter: AtSign,
+    linkedin: Briefcase,
   } as const;
   let isRefreshing = $state(false);
   let showDebug = $state(false);
@@ -592,7 +593,7 @@
         <div class="twitter-card">
           <div class="twitter-header">
             <div class="twitter-avatar">
-              <Twitter size={20} />
+              <AtSign size={20} />
             </div>
             <div class="twitter-user">
               <div class="twitter-name">{t("socialPreview.yourAccount")}</div>
