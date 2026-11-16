@@ -176,7 +176,12 @@ describe("tables declared by the kons", () => {
       for (const f of readdirSync(dir).filter((n) => n.endsWith(".sql"))) {
         const num = f.slice(0, 4);
         const prior = seen.get(num);
-        if (prior) {
+        // Same rule as kitsuden-kons' own guard (tests/guards/kon-tables.test.ts):
+        // `0000_base_tables.sql` has to go before an existing, checksummed 0000_* file, and
+        // only the alphabet can do that. It creates the tables in their final shape and is
+        // a no-op otherwise.
+        const baseTables = (n: string) => n.endsWith("0000_base_tables.sql");
+        if (prior && !baseTables(f) && !baseTables(prior)) {
           repeatedValues.push(`${dir.split(/[\\/]/).at(-2)}: ${prior} and ${f} share the ${num}`);
         }
         seen.set(num, f);

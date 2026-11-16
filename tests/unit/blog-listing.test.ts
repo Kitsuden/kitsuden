@@ -42,7 +42,8 @@ import { withoutComments } from "./helpers/comments";
 const ROOT = join(__dirname, "..", "..");
 const ROUTES = join(ROOT, "packages", "kons", "kon-blog", "src", "routes.ts");
 const LOADER = join(ROOT, "packages", "admin", "src", "lib", "grimoire-loader.ts");
-const EXPLORER = join(
+// Since the tallao rebuild (5c89d2e) a kon's list is `GrimoirePage.svelte` + `lib/list/source.ts`.
+const KON_PAGE = join(
   ROOT,
   "packages",
   "admin",
@@ -50,25 +51,25 @@ const EXPLORER = join(
   "lib",
   "components",
   "admin",
-  "DataExplorer.svelte"
+  "GrimoirePage.svelte"
 );
+const LIST_SOURCE = join(ROOT, "packages", "admin", "src", "lib", "list", "source.ts");
 const POSTS_VIEW = join(ROOT, "packages", "admin", "src", "views", "content", "PostsView.svelte");
 
 describe("who can see unpublished posts", () => {
   const routes = withoutComments(readFileSync(ROUTES, "utf-8"));
-  // The blog is an SDK kon: `GET /` is the `listar-entradas` operation, and
-  // `acceso: "optional"` is what mounts `optionalAuth`.
+  // The blog is an SDK kon: `GET /` is the `list-posts` operation, and
+  // `access: "optional"` is what mounts `optionalAuth`.
   const listing = routes.slice(
-    routes.indexOf('id: "listar-entradas"'),
-    routes.indexOf('id: "obtener-por-slug"')
+    routes.indexOf('id: "list-posts"'),
+    routes.indexOf('id: "get-by-slug"')
   );
 
   it("the listing checks who is asking", () => {
     expect(listing.length, "the GET / handler was not found").toBeGreaterThan(0);
 
     expect(
-      /(acceso|access): "(opcional|optional)"/.test(listing) ||
-        listing.includes("auth.optionalAuth"),
+      /access: "optional"/.test(listing) || listing.includes("auth.optionalAuth"),
       "`GET /api/blog` has to go through `optionalAuth`. Without that there is no way " +
         "to know whether the asker can see drafts, and the route ends up " +
         "serving them to anyone."
@@ -92,7 +93,7 @@ describe("who can see unpublished posts", () => {
     ).toBe(false);
 
     expect(
-      listing.includes("puedeVerloTodo"),
+      listing.includes("canViewEverything"),
       "it has to be distinguished who is allowed to request statuses other than " + "`published`."
     ).toBe(true);
   });
@@ -107,7 +108,7 @@ describe("who can see unpublished posts", () => {
     const key = listing.slice(listing.indexOf("const cacheKey"), listing.indexOf("const cached"));
 
     expect(
-      /priv|pub|puedeVerloTodo/.test(key),
+      key.length > 0 && /canViewEverything \? "priv" : "pub"/.test(key),
       "the cache key has to include the privilege of whoever asks. If " +
         "not, the first cached response is served to everyone alike and the " +
         "drafts leak through the cache."
@@ -122,7 +123,7 @@ describe("who can see unpublished posts", () => {
      * API answered **500**. Verified against a real installation.
      */
     expect(
-      listing.includes("ESTADOS.includes"),
+      listing.includes("STATUSES.includes"),
       "the requested status has to be validated against the list before it reaches " +
         "the query: the column is an enum and an unknown value does not give an " +
         "empty list, it gives a 500."
@@ -132,7 +133,8 @@ describe("who can see unpublished posts", () => {
 
 describe("the kon's tabs show different things", () => {
   const loader = readFileSync(LOADER, "utf-8");
-  const explorer = readFileSync(EXPLORER, "utf-8");
+  const konPage = readFileSync(KON_PAGE, "utf-8");
+  const listSource = readFileSync(LIST_SOURCE, "utf-8");
 
   it("`defaultFilter` survives the trip through the config generator", () => {
     const from = loader.indexOf("      default:");
@@ -147,12 +149,14 @@ describe("the kon's tabs show different things", () => {
   });
 
   it("the view's filter is applied and wins over the user's", () => {
-    expect(explorer).toContain("viewFilter");
+    // The kon's page hands the view's `defaultFilter` to the list source as its fixed filter
+    expect(konPage).toMatch(/fixedFilter:[^\n]*\.defaultFilter/);
 
-    const load = explorer.slice(explorer.indexOf("async function loadData"));
-    const iUser = load.indexOf("Object.entries(activeFilters)");
-    const iView = load.indexOf("Object.entries(viewFilter)");
+    const build = listSource.slice(listSource.indexOf("export function explorerParams"));
+    const iUser = build.indexOf("filterEntries(query.filters)");
+    const iView = build.indexOf("Object.entries(fixed)");
 
+    expect(iUser, "the viewer's filters are not read").toBeGreaterThan(-1);
     expect(iView, "the view's filter is not applied in the query").toBeGreaterThan(-1);
     expect(
       iView > iUser,
@@ -169,9 +173,14 @@ describe("the kon's tabs show different things", () => {
      * grid kept the previous one's rows — now that the filter is
      * in place, that would be showing drafts under the title "Scheduled".
      */
+    // The source's id carries the view, and the list is keyed on it: a new view, a new list.
     expect(
-      explorer.includes("viewAlreadyLoaded"),
-      "there has to be a reload tied to `activeViewId`, not just to the table."
+      listSource.includes("id: `kon:${input.konId}:${input.viewId}:${input.table}`"),
+      "the list source has to be told apart by view, not just by table."
+    ).toBe(true);
+    expect(
+      konPage.includes("{#key source.id}"),
+      "the list has to be rebuilt when the source (the view) changes."
     ).toBe(true);
   });
 });
@@ -232,7 +241,7 @@ describe('"All Posts" shows all the posts', () => {
 
   it("explicitly asks for all statuses", () => {
     expect(
-      view.includes('queryParams={{ status: "all" }}'),
+      /getPosts\(\{[^}]*status: "all"/.test(view),
       "`/api/blog` returns only what is published by default. A screen that " +
         'is called "All Posts" has to ask for the rest, or it lies in the title.'
     ).toBe(true);

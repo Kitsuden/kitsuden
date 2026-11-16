@@ -30,7 +30,8 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, normalize, posix } from "node:path";
 
 import { describe, expect, it } from "vitest";
-import { HAS_INSTALLED_KONS } from "./helpers/known-kons";
+
+import { HAS_INSTALLED_KONS, MIN_KONS_TO_REVIEW } from "./helpers/known-kons";
 
 const KONS = join(__dirname, "..", "..", "packages", "kons");
 
@@ -78,7 +79,7 @@ const kons = readdirSync(KONS).filter(
 
 describe("each kon's tarball includes what its index.ts imports", () => {
   it.skipIf(!HAS_INSTALLED_KONS)("there are kons to review", () => {
-    expect(kons.length).toBeGreaterThan(20);
+    expect(kons.length).toBeGreaterThanOrEqual(MIN_KONS_TO_REVIEW);
   });
 
   for (const kon of kons) {

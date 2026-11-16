@@ -19,15 +19,10 @@ import Consent from "../routes/oauth/consent/+page.svelte";
 
 vi.setConfig({ testTimeout: 60_000 });
 
-vi.mock("$app/stores", () => ({
+vi.mock("$app/state", () => ({
   page: {
-    subscribe(run: (v: unknown) => void) {
-      run({
-        url: new URL("http://localhost/oauth/consent?request=11111111-1111-1111-1111-111111111111"),
-        params: {},
-      });
-      return () => {};
-    },
+    url: new URL("http://localhost/oauth/consent?request=11111111-1111-1111-1111-111111111111"),
+    params: {},
   },
 }));
 

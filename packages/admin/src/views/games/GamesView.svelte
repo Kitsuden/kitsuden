@@ -497,10 +497,10 @@
       and that was it. No form, no notice — from the outside, a
       button that does nothing.
 
-      `?crear=1` really opens it: the explorer reads that parameter on mount,
-      opens the create form and cleans it from the URL so reloading does not repeat it.
+      `?create=1` really opens it: the kon's page reads that parameter, opens the
+      create form and replaces the URL so reloading does not repeat it.
     -->
-    <Button href="/g/kon-games?crear=1"><Plus class="w-4 h-4" /> {tr("gamesView.newGame")}</Button>
+    <Button href="/g/kon-games?create=1"><Plus class="w-4 h-4" /> {tr("gamesView.newGame")}</Button>
   {/snippet}
 
   <div class="space-y-6">

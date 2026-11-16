@@ -46,6 +46,28 @@ export const INSTALLED_KONS = new Set([
 /** Is any kon installed besides the core ones? */
 export const HAS_INSTALLED_KONS = idsIn(join(ROOT, "packages", "kons")).size > 0;
 
+/**
+ * How many kons `kitsuden.kons.json` declares AND have their folder in packages/kons.
+ *
+ * The guards that ask «are there kons to review?» used to expect more than 20: true when
+ * all of kitsuden-kons was installed, false with any partial install (15 kons failed five
+ * guards that had nothing wrong). Comparing with what is declared still catches a broken
+ * discovery, which is what those checks are for, whatever the number installed.
+ */
+export const DECLARED_INSTALLED_KONS: number = (() => {
+  const file = join(ROOT, "kitsuden.kons.json");
+  if (!existsSync(file)) return 0;
+  try {
+    const kons = JSON.parse(readFileSync(file, "utf8"))?.kons ?? {};
+    return Object.keys(kons).filter((id) => existsSync(join(ROOT, "packages", "kons", id))).length;
+  } catch {
+    return 0;
+  }
+})();
+
+/** The floor for «there are kons to review»: every declared kon, and at least one. */
+export const MIN_KONS_TO_REVIEW = Math.max(1, DECLARED_INSTALLED_KONS);
+
 /** The kons of the sibling kitsuden-kons checkout, or `null` if it is not there. */
 export const SIBLING_REPO_KONS: Set<string> | null = existsSync(
   join(ROOT, "..", "kitsuden-kons", "kons")

@@ -1,6 +1,8 @@
 /**
  * Small page helpers: the document title and state kept in the query string.
  */
+import type { ReadUrl } from "./list/url-state";
+
 import { goto } from "$app/navigation";
 
 /** "<Page> · Kitsuden", for `<svelte:head><title>`. */
@@ -10,8 +12,8 @@ export function pageTitle(name?: string | null): string {
 }
 
 /** `url` with the given query parameters set (`null`, `undefined` or "" removes one). */
-export function withQuery(url: URL, params: Record<string, string | null | undefined>): string {
-  const next = new URL(url);
+export function withQuery(url: ReadUrl, params: Record<string, string | null | undefined>): string {
+  const next = new URL(url.href);
   for (const [key, value] of Object.entries(params)) {
     if (value === null || value === undefined || value === "") next.searchParams.delete(key);
     else next.searchParams.set(key, value);
@@ -24,18 +26,19 @@ export function withQuery(url: URL, params: Record<string, string | null | undef
  * back/forward and a shared link restore it. No scroll jump, focus stays where it is.
  */
 export function setQuery(
-  url: URL,
+  url: ReadUrl,
   params: Record<string, string | null | undefined>,
   { replace = false }: { replace?: boolean } = {}
 ): Promise<void> {
   const target = withQuery(url, params);
   if (target === `${url.pathname}${url.search}${url.hash}`) return Promise.resolve();
-  return goto(target, { keepFocus: true, noScroll: true, replaceState: replace });
+  // `reset: false` keeps scroll and focus (SvelteKit 3 folded `keepFocus` and `noScroll` into it)
+  return goto(target, { reset: false, replace });
 }
 
 /** The value of `?key=` when it is one of `allowed`, otherwise `fallback`. */
 export function queryChoice<T extends string>(
-  url: URL,
+  url: ReadUrl,
   key: string,
   allowed: readonly T[],
   fallback: T

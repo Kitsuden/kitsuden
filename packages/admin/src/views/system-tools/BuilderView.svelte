@@ -24,12 +24,12 @@
   import type { PageBlock } from "$types/blocks";
 
   import { goto, replaceState } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   const SITE = import.meta.env.VITE_SITE_URL ?? "";
   const LISTING = "/g/kon-blocks";
 
-  let pageId = $state<string | null>($page.url.searchParams.get("id"));
+  let pageId = $state<string | null>(page.url.searchParams.get("id"));
   let pageTitle = $state(t("builderView.newPage"));
   let pageSlug = $state("");
   let blocks = $state<PageBlock[]>([]);

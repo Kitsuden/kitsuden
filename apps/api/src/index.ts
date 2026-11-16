@@ -50,7 +50,7 @@ import {
 } from "./db/schema-core";
 import { initActionsEngine } from "./lib/actions";
 import { adminMfaGate } from "./lib/admin-mfa";
-import { generateAgentGuide } from "./lib/agent-guide";
+import { agentGuideResponse } from "./lib/agent-guide";
 import { agentQuotas } from "./lib/agent-quotas";
 import {
   startProposalSweep,
@@ -122,6 +122,13 @@ import {
   connectionsRoutes,
 } from "./routes/connections";
 import { startTraces, stopTraces, requestTraces } from "./lib/traces";
+import {
+  AUTOMATION_ROUTE,
+  automationRoutes,
+  SECRET_ACCESS_ROUTE,
+  secretAccessRoutes,
+} from "./routes/automation";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { closeValkey, valkeyConfigured } from "./lib/valkey";
 import { registerSystemMails } from "./mail/system-mails";
 import {
@@ -1369,8 +1376,8 @@ app.notFound((c) => {
         didYouMean,
         hint: features.swaggerEnabled
           ? "All kon routes are in GET /api/docs/openapi.json, " +
-            "and the agent guide at GET /llms.txt."
-          : "All kon routes are in the agent guide: GET /llms.txt.",
+            "and the agent guide at GET /llms.txt (one kon: ?kon=<id>)."
+          : "All kon routes are in the agent guide: GET /llms.txt (one kon: ?kon=<id>).",
         requestId: c.get("requestId"),
       },
       404
@@ -1423,18 +1430,20 @@ if (features.swaggerEnabled) app.route("/api/docs", dynamicDocsRouter);
  * Agent guide. At the root because that is where an agent looks for it by
  * convention, and under `/api` because that is where the standalone MCP knows to call.
  * It is generated on every request: routes come from the mounted router, so it
- * cannot fall behind what the API serves.
+ * cannot fall behind what the API serves. Without a query it is an index;
+ * `?kon=<id>[,<id>]` gives those kons' routes and `?full=1` everything (lib/agent-guide.ts).
+ * Deterministic, with an ETag: an agent that asks again with `If-None-Match` gets a 304.
  */
-const serveGuideForAgents = (c: Context) =>
-  c.text(
-    generateAgentGuide({
-      baseUrl: `${new URL(c.req.url).origin}/api`,
-      routes: konRoutes(),
-      publishedContract: features.swaggerEnabled,
-    }),
-    200,
-    { "content-type": "text/markdown; charset=utf-8" }
-  );
+const serveGuideForAgents = (c: Context) => {
+  const r = agentGuideResponse({
+    baseUrl: `${new URL(c.req.url).origin}/api`,
+    routes: konRoutes(),
+    publishedContract: features.swaggerEnabled,
+    query: { kon: c.req.query("kon"), full: c.req.query("full") },
+    ifNoneMatch: c.req.header("if-none-match"),
+  });
+  return r.status === 304 ? c.body(null, 304, r.headers) : c.body(r.body, r.status, r.headers);
+};
 app.get("/llms.txt", serveGuideForAgents);
 app.get("/api/llms.txt", serveGuideForAgents);
 

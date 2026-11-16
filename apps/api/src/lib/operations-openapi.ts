@@ -71,6 +71,30 @@ export function jsonSchema(schema: ZodTypeAny | undefined): JsonSchema | undefin
   return rest;
 }
 
+/**
+ * The same JSON Schema without what costs tokens and tells a model nothing.
+ * Only for MCP: every tool definition goes into the model's context on every
+ * turn, while the OpenAPI keeps the full schema.
+ *
+ * - `z.number().int()` emits ±9007199254740991 bounds: they are the default.
+ * - `z.string().uuid()` / `.email()` emit `format` AND a long `pattern`: the
+ *   format says it; the server still validates with the full schema.
+ */
+export function compactSchema<T>(schema: T): T {
+  if (Array.isArray(schema)) return schema.map(compactSchema) as T;
+  if (!schema || typeof schema !== "object") return schema;
+  const out: Record<string, unknown> = {};
+  const s = schema as Record<string, unknown>;
+  for (const [k, v] of Object.entries(s)) {
+    if (k === "$schema") continue;
+    if ((k === "minimum" || k === "maximum") && Math.abs(Number(v)) === Number.MAX_SAFE_INTEGER)
+      continue;
+    if (k === "pattern" && typeof s.format === "string") continue;
+    out[k] = compactSchema(v);
+  }
+  return out as T;
+}
+
 function isOptional(schema: ZodTypeAny | undefined): boolean {
   return !!schema && schema.safeParse(undefined).success;
 }
@@ -390,8 +414,8 @@ export function mcpTool(konId: string, mountPath: string, op: Operation): McpToo
       minLength: 8,
       maxLength: 128,
       pattern: "^[A-Za-z0-9_.:-]+$",
-      description:
-        "Optional. Send the same key when retrying this call: it runs once and the retry gets the first result.",
+      // On every non-idempotent tool, every turn: short. The notes below say the rest.
+      description: "Same key on a retry: it runs once.",
     };
   }
 
@@ -430,7 +454,7 @@ export function mcpTool(konId: string, mountPath: string, op: Operation): McpToo
       .join("\n\n"),
     inputSchema: {
       type: "object",
-      properties,
+      properties: compactSchema(properties),
       ...(required.length > 0 ? { required } : {}),
       additionalProperties: false,
     },

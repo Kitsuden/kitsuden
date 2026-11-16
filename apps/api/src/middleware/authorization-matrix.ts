@@ -655,7 +655,7 @@ const CORE_MATRIX: Record<string, Level> = {
   "POST /api/media/folders": "staff",
   "POST /api/media/upload": "staff",
 
-  // ── content (14) — Team or agent with `content:edit` (Inti).
+  // ── content (15) — Team or agent with `content:edit` (Inti).
   "DELETE /api/page-builder/blocks/:id": "content",
   "DELETE /api/page-builder/pages/:id": "content",
 
@@ -664,6 +664,7 @@ const CORE_MATRIX: Record<string, Level> = {
   "POST /api/page-builder/blocks/:id/duplicate": "content",
   "POST /api/page-builder/pages": "content",
   "POST /api/page-builder/pages/:id/clone": "content",
+  "POST /api/page-builder/pages/:id/publish-draft": "content",
   "POST /api/page-builder/pages/:pageId/blocks": "content",
   "POST /api/page-builder/pages/:pageId/blocks/reorder": "content",
   "POST /api/page-builder/pages/from-block": "content",

@@ -11,9 +11,9 @@
   import { datasetSource, type RecordSource } from "$lib/list/source";
   import { Button, EmptyState, Skeleton } from "$lib/tallao";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
-  const datasetId = $derived($page.params.id ?? "");
+  const datasetId = $derived(page.params.id ?? "");
 
   let source = $state<RecordSource | null>(null);
   let error = $state<string | null>(null);

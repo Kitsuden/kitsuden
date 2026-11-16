@@ -1,6 +1,6 @@
 <script lang="ts">
   import Page from "$lib/components/layout/Page.svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { confirmDialog } from "$lib/confirm.svelte";
   import { toast } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
@@ -80,9 +80,9 @@
     "datasources",
     "system",
   ] as const;
-  const activeTab = $derived<string>(queryChoice($page.url, "tab", TAB_IDS, "general"));
+  const activeTab = $derived<string>(queryChoice(page.url, "tab", TAB_IDS, "general"));
   function selectTab(tab: string) {
-    void setQuery($page.url, { tab: tab === "general" ? null : tab });
+    void setQuery(page.url, { tab: tab === "general" ? null : tab });
   }
 
   const SETTINGS_TABS: TabItem[] = [

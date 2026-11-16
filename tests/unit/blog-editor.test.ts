@@ -167,7 +167,7 @@ describe("the body it saves fits the API", () => {
     // `GET /:id` returned the raw row, and the tags live in a relation
     // table: opening an existing post always showed it without tags.
     expect(
-      /tagIds:\s*etiquetas\.map/.test(apiRoutes),
+      /tagIds:\s*tags\.map/.test(apiRoutes),
       "`GET /api/blog/:id` no longer returns `tagIds`. Without it the editor opens all " +
         "posts without tags and they can be neither seen nor removed."
     ).toBe(true);
@@ -189,9 +189,13 @@ describe("blocks tab", () => {
   const editor = withoutComments(readFileSync(EDITOR, "utf-8"));
 
   it("the button and the panel exist", () => {
+    // Since the tallao rebuild the tabs are `<Tabs items={EDITOR_TABS} bind:value>`, not
+    // one button per tab: the "blocks" id has to be in that list, bound to `activeTab`.
+    const list = editor.slice(editor.indexOf("const EDITOR_TABS"));
     expect(
-      /activeTab = "blocks"/.test(editor),
-      'there is no button that sets `activeTab` to "blocks": the blocks ' +
+      /^[^\n]*\(\[[^\]]*"blocks"/.test(list) &&
+        /items=\{EDITOR_TABS\}\s*bind:value=\{\(\) => activeTab/.test(editor),
+      'there is no tab that sets `activeTab` to "blocks": the blocks ' +
         "panel exists but is unreachable."
     ).toBe(true);
 

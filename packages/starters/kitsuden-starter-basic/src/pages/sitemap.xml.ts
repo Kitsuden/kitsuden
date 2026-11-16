@@ -27,7 +27,7 @@ export const GET: APIRoute = async ({ locals, site, url }) => {
   const base = site ?? new URL(url.origin);
   const { kitsuden } = locals;
 
-  const pages = await kitsuden.pages.list(100);
+  const pages = await kitsuden.pages.listAll();
   const posts: Post[] = [];
   let hasBlog = false;
   for (let page = 1; posts.length < MAX_POSTS; page++) {

@@ -19,7 +19,7 @@
   import { pageMeta } from "$lib/page-meta.svelte";
   import { PageHeader } from "$lib/tallao";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   interface Props {
     title: string;
@@ -52,7 +52,7 @@
 
   let own = "";
   $effect(() => {
-    const path = $page.url.pathname;
+    const path = page.url.pathname;
     const next = crumbs;
     const name = title;
     own = path;

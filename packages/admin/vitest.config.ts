@@ -36,7 +36,7 @@ export default defineConfig({
       $stores: path.resolve(__dirname, "./src/stores"),
       // SvelteKit runtime mocks for unit tests
       "$app/navigation": path.resolve(__dirname, "./src/tests/mocks/app-navigation.ts"),
-      "$app/stores": path.resolve(__dirname, "./src/tests/mocks/app-stores.ts"),
+      "$app/state": path.resolve(__dirname, "./src/tests/mocks/app-state.ts"),
     },
   },
 });

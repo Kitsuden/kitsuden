@@ -4,13 +4,14 @@
  *
  * Checks that Broadcast's custom view is really loadable from end to
  * end: the manifest declares it, the descriptor resolves to a URL, the file
- * exists on disk, and it is plain JS with no framework or build step.
+ * exists on disk, and it is a self-contained bundle with no framework import (its source is
+ * Svelte, in `admin-src/`, compiled by kitsuden-kons' `pnpm build:admin`).
  *
  * And above all: that paths that try to escape the package do NOT resolve to
  * a real file. That is the reason for this test to exist.
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 
 import { describe, expect, test } from "vitest";
@@ -35,7 +36,8 @@ describe("declaration in the manifest", () => {
     expect(view).toBeDefined();
     expect(view.type).toBe("element");
     expect(view.element).toBe("broadcast-scoreboard");
-    expect(view.src).toBe("./admin/scoreboard.js");
+    // With or without a leading "./": both resolve to the same file (see the next test).
+    expect(view.src.replace(/^\.\//, "")).toBe("admin/scoreboard.js");
   });
 
   test("the descriptor is extracted and resolves to a servable URL", () => {
@@ -86,24 +88,24 @@ describe("the artifact exists and is framework-agnostic", () => {
   });
 
   test("does not inject user data as HTML", () => {
-    const source = readFileSync(assetPath, "utf8");
-
-    // The gamertag and the champion duos are user data; painting them with
-    // innerHTML would be an XSS inside the admin panel itself.
+    // The gamertag and the champion duos are user data; painting them as HTML would be
+    // an XSS inside the admin panel itself.
     //
-    // ONE assignment to innerHTML is allowed: the one for the constructor's
-    // static template. Any other —especially with interpolation— is the one that
-    // would do harm, so they are checked one by one.
-    const assignments = [...source.matchAll(/\.innerHTML\s*=\s*(.+)/g)].map((m) => m[1].trim());
+    // The view is Svelte now (`admin-src/`, compiled to `admin/scoreboard.js`). Svelte
+    // escapes every `{expression}`; the two ways to paint raw HTML are `{@html}` and
+    // touching `innerHTML` by hand, and neither may appear in the view's source. (The
+    // compiled bundle does set `innerHTML`: that is Svelte cloning its static templates.)
+    const dir = join(BROADCAST_DIR, "admin-src");
+    const files = (readdirSync(dir, { recursive: true }) as string[]).filter(
+      (f) => /\.(svelte|ts)$/.test(f) && !/^tallao[\\/]/.test(f)
+    );
+    expect(files.length, "the view's Svelte source was not found").toBeGreaterThan(0);
 
-    expect(assignments).toHaveLength(1);
-    expect(assignments[0]).toBe("TEMPLATE;");
-    // And the template interpolates nothing: it is a literal constant.
-    expect(source).toMatch(/^const TEMPLATE = `/m);
-    expect(/const TEMPLATE = `[^`]*\$\{/.test(source)).toBe(false);
-
-    // Dynamic data goes through textContent.
-    expect(source).toMatch(/textContent/);
+    const raw = files.filter((f) => {
+      const code = readFileSync(join(dir, f), "utf8");
+      return /\{@html\b/.test(code) || /\.(innerHTML|outerHTML)\s*=/.test(code);
+    });
+    expect(raw, "these files paint raw HTML").toEqual([]);
   });
 });
 

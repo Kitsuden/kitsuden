@@ -40,14 +40,14 @@
   import NavIcon from "./NavIcon.svelte";
   import UserMenu from "./UserMenu.svelte";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   const { children }: { children?: Snippet } = $props();
 
   const me = $derived(getUser());
   const isAdmin = $derived(currentUserIsAdmin());
   const staff = $derived(isStaff());
-  const currentPath = $derived($page.url.pathname);
+  const currentPath = $derived(page.url.pathname);
 
   let paletteOpen = $state(false);
   let apiOnline = $state<boolean | null>(null);
