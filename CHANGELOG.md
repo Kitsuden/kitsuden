@@ -30,8 +30,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Kon entities** ([docs/kons/entities.md](docs/kons/entities.md)): `defineKon({ entities })`
   creates datasets the kon owns at load, with no migration; `ctx.entities` reads and writes their
   records, validated against the declared fields.
-- Core migrations `0077_action_rules`, `0078_kon_secrets`, `0079_reports` and
-  `0080_kon_entities`.
+- Core migrations `0077_action_rules`, `0078_kon_secrets`, `0079_reports`,
+  `0080_kon_entities` and `0081_try_timestamptz`.
+- Hot activation of a kon now registers what it declares (events, steps, reports, entities, secret
+  columns), like startup does. It used to skip it.
 
 ### Changed
 

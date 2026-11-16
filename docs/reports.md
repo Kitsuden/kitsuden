@@ -67,6 +67,14 @@ Three checks, in this order:
 3. **Which rows.** The query runs as whoever asked, inside the request's
    transaction, so the table's row policies decide what is counted.
 
+A fourth check applies to **agents**. Columns marked as customer or personal data
+(`sensitivity` in a kon's `kon.json`, or on a dataset field) cannot be read through
+the result: an agent cannot group by them, take their `min`/`max`, `sum`/`avg` them
+or filter on their value, because a `GROUP BY` on an email column is a dump of every
+email. Counting rows, `count_distinct` and an `is_null` filter stay allowed. A person
+with the administrator role is not restricted. Mark the columns that hold personal
+data; an unmarked column is readable by any agent that holds `reports:read`.
+
 A table with no row policies counts every row. That is why the operations are
 for **administrators**, and for agents that hold the scope:
 
@@ -77,6 +85,11 @@ for **administrators**, and for agents that hold the scope:
 
 The query is data, not SQL. Identifiers are used only after being found in the
 schema, and values are always bound parameters.
+
+Values are compared as the field's own type: `in [5]` finds `5.00`, a timestamp
+finds the same instant, and `contains` is for text only (it answers 400 on any other
+type). `min` and `max` of a text field return text, so `00123` stays `00123`. A date
+that has the shape but does not exist (`2026-02-31`) counts as no date.
 
 ## Saved reports
 

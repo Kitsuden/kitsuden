@@ -26,17 +26,23 @@ kon must then refuse to store the credential, never store it readable.
   (`KITSUDEN_SECRETS_KEY`, AES-256-GCM): the same key and the same rotation as the
   core's own secrets.
 - **Bound to the kon.** The kon's id is authenticated together with the
-  ciphertext. A value sealed by one kon does not open for another, and editing
-  the label does not help.
+  ciphertext, so a value sealed for one kon does not decrypt under another id,
+  and editing the label does not help. The context each kon receives is tied to
+  its own id: `ctx.secrets` (and `ctx.automation`, `ctx.entities.define`) throw
+  `this kon is "x" and cannot act as "y"` when the first argument is not the
+  kon's own.
 - **Every opening is recorded** before the value is handed over: which kon, the
   purpose, the subject, the account and the request. A refusal is recorded too.
   If the record cannot be written, nothing is opened.
 - **The value is never recorded**, and `seal` and `open` never put it in an error
   message.
 
-A kon is code running in the API's process, so this is not a sandbox. What it
-gives is that the database, a backup and the generic read surfaces never show the
-credential, and that every legitimate use leaves a trace.
+A kon is code running in the API's process, so this is not a sandbox: it has its
+own database connection and the environment, secrets key included, and a hostile
+kon can read what it wants. What it gives is that the database, a backup and the
+generic read surfaces never show the credential, that one kon cannot act as
+another by mistake or by a copied snippet, and that every legitimate use leaves a
+trace that names the right kon. Installing a kon is still a decision to trust it.
 
 ## Storing a sealed secret
 

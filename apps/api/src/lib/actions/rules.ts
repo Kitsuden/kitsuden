@@ -36,6 +36,7 @@ import {
 
 import { messageOf } from "../../../../../packages/engine/src/errors";
 import { mail } from "../../../../../packages/engine/src/mail";
+import { runInRequestScope } from "../../../../../packages/engine/src/request-scope";
 import { konRuleHandler, listKonRuleHandlers } from "../kon-contributions";
 
 import type { Action, ActionContext, ActionResult } from "./types";
@@ -66,6 +67,17 @@ interface RuleHandler {
 /** The step failed and the reused handler already said why. */
 class StepFailed extends Error {}
 
+const PLACEHOLDER = /\{\{[^}]*\}\}/g;
+
+/**
+ * Does a placeholder sit in the authority of the URL (what is between `://` and the first `/`, `?`
+ * or `#`, user info and port included)? A string with no scheme counts as all authority.
+ */
+function hostIsTemplated(url: string): boolean {
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]*)/i.exec(url.trim());
+  return (withScheme ? withScheme[1] : url).includes("{{");
+}
+
 function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 }
@@ -87,8 +99,15 @@ const coreHandlers: RuleHandler[] = [
     },
     async validate(config) {
       const { webhookConfigUrlProblem } = await import("./handlers/webhook-out-handler");
-      // A placeholder in the URL is resolved only when the rule runs; the send checks it again.
-      if (typeof config.url === "string" && config.url.includes("{{")) return null;
+      if (typeof config.url === "string" && config.url.includes("{{")) {
+        // The host is where the whole payload goes: event data (a form a visitor filled in) must not
+        // be able to choose it. A placeholder is fine in the path or the query.
+        if (hostIsTemplated(config.url)) {
+          return "the host of the URL must be written out: a placeholder there lets the event choose where the payload is sent";
+        }
+        // The literal part passes the same target check as any webhook URL.
+        return webhookConfigUrlProblem(config.url.replace(PLACEHOLDER, "x"));
+      }
       return webhookConfigUrlProblem(config.url);
     },
     async run({ input, action, context }) {
@@ -177,7 +196,18 @@ function handlerById(id: string): RuleHandler | undefined {
     description: definition.description,
     config: definition.config ?? {},
     validate: definition.validate ? (config) => definition.validate!(config) : undefined,
-    run: ({ input }) => definition.run(input, konContext),
+    // As the rule's owner. The event was delivered from the request that emitted it, so without this
+    // `useRequest().user` would be whoever triggered the event (a visitor, another user), and
+    // `ctx.entities` and `ctx.secrets` would attribute the write or the opening to them. The scope
+    // has no transaction: the database is the system connection, as for any listener.
+    run: ({ input }) =>
+      runInRequestScope(
+        {
+          user: input.actorUserId ? { id: input.actorUserId } : null,
+          requestId: `rule:${input.rule.id}`,
+        },
+        () => definition.run(input, konContext)
+      ),
     preview: definition.preview ? ({ input }) => definition.preview!(input, konContext) : undefined,
   };
 }

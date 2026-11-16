@@ -168,9 +168,17 @@ async function findReport(id: string): Promise<ReportView | null> {
   return row ? savedView(row) : null;
 }
 
-async function aggregate(query: unknown): Promise<AggregateResult> {
+/**
+ * Is the caller an agent? Agents cannot read the values of columns marked as customer or personal
+ * data through a report (lib/aggregate.ts); a person with the administrator role can.
+ */
+function callerIsAgent(c: unknown): boolean {
+  return Boolean((c as { get?: (key: string) => unknown }).get?.("agent"));
+}
+
+async function aggregate(query: unknown, agent: boolean): Promise<AggregateResult> {
   try {
-    return await runAggregate(query);
+    return await runAggregate(query, { restrictSensitive: agent });
   } catch (err: unknown) {
     if (err instanceof AggregateError) {
       if (err.status === 403) throw AppError.forbidden(err.message);
@@ -241,7 +249,7 @@ export const reportOperations: AnyOperation[] = [
         },
       ],
     },
-    handle: async (e) => aggregate((e.body as { query: unknown }).query),
+    handle: async (e, { c }) => aggregate((e.body as { query: unknown }).query, callerIsAgent(c)),
   }),
   defineOperation({
     ...read,
@@ -272,10 +280,10 @@ export const reportOperations: AnyOperation[] = [
     errors: ["KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_FORBIDDEN"],
     mcp: { name: "reports_run" },
     cost: 2,
-    handle: async (e) => {
+    handle: async (e, { c }) => {
       const report = await findReport((e.body as { report: string }).report);
       if (!report) throw AppError.notFound("There is no such report.");
-      return { report, result: await aggregate(report.query) };
+      return { report, result: await aggregate(report.query, callerIsAgent(c)) };
     },
   }),
   defineOperation({
@@ -421,7 +429,7 @@ export const reportOperations: AnyOperation[] = [
     errors: ["KITSUDEN_E_NOT_FOUND"],
     mcp: { exclude: "Dashboards are a layout for the panel." },
     cost: 5,
-    handle: async (e) => {
+    handle: async (e, { c }) => {
       const { id } = e.params as { id: string };
       const [row] = await ex().select().from(dashboards).where(eq(dashboards.id, id)).limit(1);
       if (!row) throw AppError.notFound("There is no such dashboard.");
@@ -435,7 +443,7 @@ export const reportOperations: AnyOperation[] = [
           error = "The report no longer exists.";
         } else {
           try {
-            result = await runAggregate(report.query);
+            result = await runAggregate(report.query, { restrictSensitive: callerIsAgent(c) });
           } catch (err: unknown) {
             // A failed statement would poison the request's transaction for the next tile; only
             // errors found BEFORE the statement runs are tolerated here.

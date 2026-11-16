@@ -49,6 +49,8 @@ import { resolveExecutor } from "../../../../packages/engine/src/request-scope";
 import { isSecretColumn } from "../../../../packages/engine/src/secret-columns";
 import { db } from "../db";
 
+import type { SensitivityCatalog } from "./customer-data";
+import { loadSensitivityCatalog } from "./customer-data-catalog";
 import { FORBIDDEN_TABLES, isForbiddenNativeTable, tableIsExplorable } from "./explorable-tables";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -185,11 +187,43 @@ const LOOKS_NUMERIC = "^-?[0-9]+(\\.[0-9]+)?$";
 const LOOKS_LIKE_DATE =
   "^[0-9]{4}-[0-9]{2}-[0-9]{2}([T ][0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?(Z|[+-][0-9]{2}(:?[0-9]{2})?)?)?$";
 
-function resolveField(catalog: Catalog, field: string, where: string): Resolved {
+/** What the query may do beyond the three walls: set by who is asking. */
+interface Policy {
+  /**
+   * Columns marked `customer` or `personal` (kon.json `sensitivity`, dataset field `sensitivity`)
+   * cannot be read through the result: no grouping, no min/max, no sum/avg, no filter on their
+   * value. Counting rows and checking for nulls stay allowed. For agents.
+   */
+  marks: SensitivityCatalog | null;
+}
+
+/** `value`: the query can learn what the column holds. `presence`: only whether there is one. */
+type Use = "value" | "presence";
+
+function isMarked(policy: Policy, catalog: Catalog, field: string): boolean {
+  const marks = policy.marks;
+  if (!marks) return false;
+  if (marks.global.has(field)) return true;
+  return catalog.kind === "dataset" && (marks.datasets.get(catalog.slug)?.has(field) ?? false);
+}
+
+function resolveField(
+  policy: Policy,
+  catalog: Catalog,
+  field: string,
+  where: string,
+  use: Use = "value"
+): Resolved {
   if (isSecretColumn(field)) {
     throw new AggregateError(
       403,
       `${where}: "${field}" holds a secret and cannot be used in a report.`
+    );
+  }
+  if (use === "value" && isMarked(policy, catalog, field)) {
+    throw new AggregateError(
+      403,
+      `${where}: "${field}" is marked as customer or personal data, so an agent cannot read its values through a report (counting rows and checking for empty values is allowed).`
     );
   }
   if (catalog.kind === "table") {
@@ -228,7 +262,9 @@ function resolveField(catalog: Catalog, field: string, where: string): Resolved 
     kind,
     raw: value,
     number: sql`CASE WHEN ${value} ~ ${LOOKS_NUMERIC} THEN ${value}::numeric END`,
-    time: sql`CASE WHEN ${value} ~ ${LOOKS_LIKE_DATE} THEN ${value}::timestamptz END`,
+    // The shape is not enough: `2026-02-31` has it and does not exist, and one such row would fail
+    // the whole statement. The function (core migration 0081) turns an impossible date into NULL.
+    time: sql`CASE WHEN ${value} ~ ${LOOKS_LIKE_DATE} THEN kitsuden_try_timestamptz(${value}) END`,
     text: value,
   };
 }
@@ -242,9 +278,16 @@ const BUCKET_UNIT = {
   year: sql.raw("'year'"),
 } as const;
 
-function measureSql(catalog: Catalog, measure: AggregateMeasure, at: string): SQL {
+function measureSql(policy: Policy, catalog: Catalog, measure: AggregateMeasure, at: string): SQL {
   if (measure.fn === "count" && measure.field === undefined) return sql`count(*)`;
-  const field = resolveField(catalog, measure.field as string, at);
+  const presenceOnly = measure.fn === "count" || measure.fn === "count_distinct";
+  const field = resolveField(
+    policy,
+    catalog,
+    measure.field as string,
+    at,
+    presenceOnly ? "presence" : "value"
+  );
   switch (measure.fn) {
     case "count":
       return sql`count(${field.raw})`;
@@ -277,8 +320,25 @@ function measureSql(catalog: Catalog, measure: AggregateMeasure, at: string): SQ
   }
 }
 
-function dimensionSql(catalog: Catalog, dimension: AggregateDimension, at: string): SQL {
-  const field = resolveField(catalog, dimension.field, at);
+/** Does this measure produce a number? `min` and `max` keep the type of what they read. */
+function measureIsNumeric(catalog: Catalog, measure: AggregateMeasure): boolean {
+  if (measure.fn === "count" || measure.fn === "count_distinct") return true;
+  if (measure.fn === "sum" || measure.fn === "avg") return true;
+  if (measure.field === undefined) return true;
+  const kind =
+    catalog.kind === "table"
+      ? catalog.columns.get(measure.field)
+      : (ENTRY_COLUMNS.get(measure.field) ?? catalog.fields.get(measure.field) ?? "text");
+  return kind === "number";
+}
+
+function dimensionSql(
+  policy: Policy,
+  catalog: Catalog,
+  dimension: AggregateDimension,
+  at: string
+): SQL {
+  const field = resolveField(policy, catalog, dimension.field, at);
   if (dimension.bucket) {
     if (field.kind !== "time") {
       throw new AggregateError(
@@ -325,16 +385,39 @@ const COMPARISON = {
   lte: sql.raw("<="),
 } as const;
 
-function filterSql(catalog: Catalog, filter: AggregateFilter, at: string): SQL {
-  const field = resolveField(catalog, filter.field, at);
+function filterSql(policy: Policy, catalog: Catalog, filter: AggregateFilter, at: string): SQL {
+  const field = resolveField(
+    policy,
+    catalog,
+    filter.field,
+    at,
+    filter.op === "is_null" ? "presence" : "value"
+  );
   if (filter.op === "is_null") {
     return filter.value === false ? sql`${field.raw} IS NOT NULL` : sql`${field.raw} IS NULL`;
   }
   if (filter.op === "contains") {
+    if (field.kind !== "text") {
+      throw new AggregateError(
+        400,
+        `${at}: contains looks for text inside a text field, and "${filter.field}" is ${field.kind}.`
+      );
+    }
     return sql`${field.text} ILIKE ${`%${escapeLike(String(filter.value))}%`}`;
   }
   if (filter.op === "in") {
-    const values = (filter.value as unknown[]).map((v) => sql`${String(v)}`);
+    // Compared as the field's own type: `5` must find `5.00`, and a date must find the same
+    // instant however Postgres prints it.
+    const list = filter.value as unknown[];
+    if (field.kind === "number") {
+      const values = list.map((v) => sql`${numberValue(v, at)}::numeric`);
+      return sql`${field.number} IN (${sql.join(values, sql`, `)})`;
+    }
+    if (field.kind === "time") {
+      const values = list.map((v) => sql`${timeValue(v, at)}::timestamptz`);
+      return sql`${field.time} IN (${sql.join(values, sql`, `)})`;
+    }
+    const values = list.map((v) => sql`${String(v)}`);
     return sql`${field.text} IN (${sql.join(values, sql`, `)})`;
   }
   const operator = COMPARISON[filter.op];
@@ -373,17 +456,20 @@ export interface AggregateResult {
 interface Built {
   statement: SQL;
   columns: AggregateColumn[];
+  /** Result columns whose text from Postgres (`numeric`, `bigint`) should become a JS number. */
+  numeric: Set<string>;
   limit: number;
 }
 
-function build(catalog: Catalog, query: AggregateQuery): Built {
+function build(policy: Policy, catalog: Catalog, query: AggregateQuery): Built {
   const columns: AggregateColumn[] = [];
+  const numeric = new Set<string>();
   const selected: SQL[] = [];
   const grouped: SQL[] = [];
 
   for (const [index, dimension] of (query.groupBy ?? []).entries()) {
     const alias = dimensionAlias(dimension);
-    const expression = dimensionSql(catalog, dimension, `groupBy ${index + 1}`);
+    const expression = dimensionSql(policy, catalog, dimension, `groupBy ${index + 1}`);
     selected.push(sql`${expression} AS ${sql.identifier(alias)}`);
     // By POSITION, not by repeating the expression: a jsonb key is a bound parameter, and Postgres
     // does not see `data ->> $1` and `data ->> $6` as the same expression. Dimensions are selected
@@ -394,15 +480,16 @@ function build(catalog: Catalog, query: AggregateQuery): Built {
   for (const [index, measure] of query.measures.entries()) {
     const alias = measureAlias(measure);
     selected.push(
-      sql`${measureSql(catalog, measure, `measure ${index + 1}`)} AS ${sql.identifier(alias)}`
+      sql`${measureSql(policy, catalog, measure, `measure ${index + 1}`)} AS ${sql.identifier(alias)}`
     );
     columns.push({ name: alias, role: "measure" });
+    if (measureIsNumeric(catalog, measure)) numeric.add(alias);
   }
 
   const conditions: SQL[] = [];
   if (catalog.kind === "dataset") conditions.push(sql`data_set_id = ${catalog.datasetId}`);
   for (const [index, filter] of (query.filters ?? []).entries()) {
-    conditions.push(filterSql(catalog, filter, `filter ${index + 1}`));
+    conditions.push(filterSql(policy, catalog, filter, `filter ${index + 1}`));
   }
 
   const from = catalog.kind === "table" ? sql`${sql.identifier(catalog.table)}` : sql`data_entries`;
@@ -420,13 +507,16 @@ function build(catalog: Catalog, query: AggregateQuery): Built {
     // One more than asked: the only way to know there were more without a second query.
   } LIMIT ${limit + 1}`;
 
-  return { statement, columns, limit };
+  return { statement, columns, numeric, limit };
 }
 
-/** What Postgres returns as text (`numeric`, `bigint`) becomes a number when it fits one. */
-function plain(value: unknown, role: AggregateColumn["role"]): unknown {
+/**
+ * What Postgres returns as text (`numeric`, `bigint`) becomes a number when the column is numeric
+ * and it fits one. A `min` of text that happens to look like a number (`00123`) stays text.
+ */
+function plain(value: unknown, isNumeric: boolean): unknown {
   if (value instanceof Date) return value.toISOString();
-  if (role === "measure" && typeof value === "string" && /^-?[0-9]+(\.[0-9]+)?$/.test(value)) {
+  if (isNumeric && typeof value === "string" && /^-?[0-9]+(\.[0-9]+)?$/.test(value)) {
     const n = Number(value);
     if (Number.isFinite(n) && Math.abs(n) <= Number.MAX_SAFE_INTEGER) return n;
   }
@@ -438,11 +528,27 @@ function plain(value: unknown, role: AggregateColumn["role"]): unknown {
   return value;
 }
 
+export interface AggregateOptions {
+  /**
+   * The caller is an agent: columns marked as customer or personal data cannot be read through the
+   * result (see `Policy`). A person with the administrator role sees everything the explorer shows.
+   */
+  restrictSensitive?: boolean;
+}
+
+async function policyFor(options: AggregateOptions): Promise<Policy> {
+  // Fails closed: if the marks cannot be read, the query is not run.
+  return { marks: options.restrictSensitive ? await loadSensitivityCatalog() : null };
+}
+
 /**
  * Runs an aggregate query as whoever is asking. Throws `AggregateError` for
  * anything the caller can fix or may not do.
  */
-export async function runAggregate(query: unknown): Promise<AggregateResult> {
+export async function runAggregate(
+  query: unknown,
+  options: AggregateOptions = {}
+): Promise<AggregateResult> {
   const problem = aggregateQueryProblem(query);
   if (problem) throw new AggregateError(400, problem);
   const q = query as AggregateQuery;
@@ -451,17 +557,17 @@ export async function runAggregate(query: unknown): Promise<AggregateResult> {
     q.source.table !== undefined
       ? await tableCatalog(q.source.table)
       : await datasetCatalog(q.source.dataset as string);
-  const { statement, columns, limit } = build(catalog, q);
+  const { statement, columns, numeric, limit } = build(await policyFor(options), catalog, q);
 
   // The request's connection: the row policies of the table decide what is counted.
   const rows = rowsOf<Record<string, unknown>>(await resolveExecutor(db).execute(statement));
   const truncated = rows.length > limit;
-  const roles = new Map(columns.map((c) => [c.name, c.role]));
   return {
     columns,
     rows: rows.slice(0, limit).map((row) => {
       const output: Record<string, unknown> = {};
-      for (const [name, role] of roles) output[name] = plain(row[name], role);
+      for (const column of columns)
+        output[column.name] = plain(row[column.name], numeric.has(column.name));
       return output;
     }),
     truncated,
@@ -478,7 +584,9 @@ export async function aggregateProblem(query: unknown): Promise<string | null> {
       q.source.table !== undefined
         ? await tableCatalog(q.source.table)
         : await datasetCatalog(q.source.dataset as string);
-    build(catalog, q);
+    // Saved by a person, run by whoever holds the scope: the check that depends on who runs it
+    // happens when it runs.
+    build({ marks: null }, catalog, q);
     return null;
   } catch (err: unknown) {
     if (err instanceof AggregateError) return err.message;

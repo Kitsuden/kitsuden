@@ -22,18 +22,28 @@
  *     takes over a dataset a person made.
  */
 
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { eq, like, sql } from "drizzle-orm";
 
+import { runInRequestScope, useRequest } from "../../../../packages/engine/src/request-scope";
 import { db } from "../db";
 import { actionExecutions, actions, dashboards, reports, secretAccessLog } from "../db/schema";
 import { app } from "../index";
 import { dispatchEvent } from "../lib/actions";
 import { konAutomation } from "../lib/actions/kon-automation";
+import { invalidateSensitivityCatalog } from "../lib/customer-data-catalog";
+import { cleanDeclaredCache } from "../lib/explorable-tables";
+import { forgetInstalledKons } from "../lib/installed-kons";
 import { forgetKonContributions, registerKonContributions } from "../lib/kon-contributions";
 import { konEntities, syncKonEntities } from "../lib/kon-entities";
 import { konSecrets, registerKonSecretColumns } from "../lib/kon-secrets";
+import { bindKonContext } from "../lib/kon-setup";
 import { rekeySecrets } from "../lib/secrets-rekey";
+import { createAgent } from "../services/agent-auth";
+import { clearPackageScanCache } from "../services/scanner";
 
 import { enterAs, generateTestId, isDatabaseAvailable } from "./setup";
 
@@ -44,6 +54,13 @@ const id = generateTestId()
 const EVENT = `foundry:order.${id}`;
 const ENTITY = `foundry-part-${id}`;
 const TABLE = `zz_foundry_secret_${id}`;
+/** The table the fixture kon (tests/fixtures/kon-reports-test) declares, with `email` marked personal. */
+const FIXTURE_TABLE = "zz_reports_fixture";
+const FIXTURE_KON_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "fixtures/kon-reports-test"
+);
+const previousKons = process.env.KITSUDEN_KONS;
 
 let dbAvailable = false;
 let admin = "";
@@ -123,6 +140,35 @@ beforeAll(async () => {
     name: "Foundry Member",
   }));
 
+  // The fixture kon: it declares `zz_reports_fixture` and marks `email` as personal data. The reports
+  // tests need a declared table, and the CI checkout has no kons installed.
+  process.env.KITSUDEN_KONS = [previousKons, `reports-test=${FIXTURE_KON_DIR}`]
+    .filter(Boolean)
+    .join(",");
+  forgetInstalledKons();
+  clearPackageScanCache();
+  cleanDeclaredCache();
+  invalidateSensitivityCatalog();
+  await db.execute(sql`DROP TABLE IF EXISTS ${sql.identifier(FIXTURE_TABLE)}`);
+  await db.execute(sql`
+    CREATE TABLE ${sql.identifier(FIXTURE_TABLE)} (
+      id serial PRIMARY KEY,
+      material text,
+      email text,
+      code text,
+      amount numeric,
+      born date,
+      closed_at timestamptz,
+      active boolean,
+      password text,
+      api_token text
+    )`);
+  await db.execute(sql`
+    INSERT INTO ${sql.identifier(FIXTURE_TABLE)} (material, email, code, amount, born, closed_at, active, password, api_token) VALUES
+      ('steel', 'ana@example.com',  '00123', 5.00,  '2026-01-10', '2026-03-05T10:00:00Z', true,  'x', 't1'),
+      ('steel', 'luis@example.com', '00456', 7.50,  '2026-02-11', '2026-03-20T10:00:00Z', false, 'y', 't2'),
+      ('brass', 'eva@example.com',  '0099',  40,    '2026-02-12', '2026-04-02T10:00:00Z', true,  'z', 't3')`);
+
   const problems = registerKonContributions(
     {
       id: KON,
@@ -162,6 +208,19 @@ beforeAll(async () => {
             throw new Error("boom");
           },
         },
+        {
+          id: "whoami",
+          label: "Reports who the step runs as",
+          description: "For the tests.",
+          run: async (input) => {
+            calls.push({
+              handler: "whoami",
+              config: { seenUser: useRequest()?.user?.id ?? null },
+              actorUserId: input.actorUserId,
+            });
+            return null;
+          },
+        },
         // Malformed on purpose: reported, not registered.
         { id: "Bad Id", label: "x", description: "x", run: async () => null },
       ],
@@ -198,6 +257,13 @@ afterAll(async () => {
   await db.delete(secretAccessLog).where(eq(secretAccessLog.konId, KON));
   await db.execute(sql`DELETE FROM kitsuden_secret_columns WHERE kon_id = ${KON}`);
   await db.execute(sql`DROP TABLE IF EXISTS ${sql.identifier(TABLE)}`);
+  await db.execute(sql`DROP TABLE IF EXISTS ${sql.identifier(FIXTURE_TABLE)}`);
+  if (previousKons === undefined) delete process.env.KITSUDEN_KONS;
+  else process.env.KITSUDEN_KONS = previousKons;
+  forgetInstalledKons();
+  clearPackageScanCache();
+  cleanDeclaredCache();
+  invalidateSensitivityCatalog();
   await db.execute(sql`DELETE FROM data_sets WHERE slug LIKE ${`%${id}%`}`);
 });
 
@@ -401,7 +467,11 @@ describe("automation rules", () => {
             config: {
               url: "https://example.com/hook",
               secret: "signing-secret-do-not-show",
-              headers: { "X-Api-Token": "t0ken" },
+              headers: {
+                "X-Api-Token": "t0ken",
+                Authorization: "Bearer bearer-do-not-show",
+                "X-Trace": "visible-too",
+              },
             },
           },
         ],
@@ -415,7 +485,73 @@ describe("automation rules", () => {
       secret: "[hidden]",
     });
     expect(JSON.stringify(dry.json)).not.toContain("signing-secret-do-not-show");
+    // Every header value is hidden, whatever the header is called.
+    expect(dry.json.steps[0].config.headers).toEqual({
+      "X-Api-Token": "[hidden]",
+      Authorization: "[hidden]",
+      "X-Trace": "[hidden]",
+    });
+    expect(JSON.stringify(dry.json)).not.toContain("t0ken");
+    expect(JSON.stringify(dry.json)).not.toContain("bearer-do-not-show");
     await db.update(actions).set({ status: "paused" }).where(eq(actions.id, res.json.id));
+  });
+
+  it("a webhook URL may not take its host from the event", async () => {
+    if (!dbAvailable) return;
+    const rule = (url: string) => ({
+      name: `Host ${id}`,
+      slug: `rule-host-${id}-${Math.random().toString(36).slice(2, 7)}`,
+      type: "rule",
+      trigger: "manual",
+      config: { steps: [{ handler: "core:webhook", config: { url } }] },
+    });
+    for (const url of [
+      "https://{{event.host}}/hook",
+      "https://hooks.{{event.domain}}/hook",
+      "https://example.com@{{event.host}}/hook",
+      "{{event.url}}",
+    ]) {
+      const res = await call("POST", "/api/actions", rule(url));
+      expect(res.status, url).toBe(400);
+      expect(res.json.error, url).toMatch(/host/);
+    }
+    // A placeholder in the path or the query is fine; the literal part still passes the target check.
+    const fine = await call(
+      "POST",
+      "/api/actions",
+      rule("https://example.com/hooks/{{event.id}}?o={{event.org}}")
+    );
+    expect(fine.status).toBe(201);
+    await db.update(actions).set({ status: "paused" }).where(eq(actions.id, fine.json.id));
+    const internal = await call(
+      "POST",
+      "/api/actions",
+      rule("http://169.254.169.254/{{event.path}}")
+    );
+    expect(internal.status).toBe(400);
+  });
+
+  it("a kon's step runs as the rule's owner, not as whoever triggered the event", async () => {
+    if (!dbAvailable) return;
+    const rule = await konAutomation.upsertRule(KON, {
+      slug: `whoami-${id}`,
+      name: "Who am I",
+      event: EVENT,
+      conditions: [{ field: "probe", op: "eq", value: "whoami" }],
+      steps: [{ handler: `${KON}:whoami` }],
+      ownerUserId: adminId,
+    });
+    calls.length = 0;
+    // The event is emitted in the request of someone else; the listener inherits that scope.
+    await runInRequestScope({ user: { id: "someone-who-triggered-it" } }, () =>
+      dispatchEvent(EVENT, { probe: "whoami" })
+    );
+    expect(await until(() => calls.some((c) => c.handler === "whoami"))).toBe(true);
+    const seen = calls.find((c) => c.handler === "whoami");
+    expect(seen?.config.seenUser).toBe(adminId);
+    expect(seen?.actorUserId).toBe(adminId);
+    await konAutomation.removeRule(KON, `whoami-${id}`);
+    expect(rule.enabled).toBe(true);
   });
 
   it("a failing step stops the rule unless it says continueOnError", async () => {
@@ -525,6 +661,77 @@ describe("automation rules", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+describe("a kon cannot act as another kon", () => {
+  const shared = { secrets: konSecrets, entities: konEntities, automation: konAutomation } as never;
+
+  /** The message a call fails with, whether it throws or rejects ("" when it works). */
+  async function failed(fn: () => unknown): Promise<string> {
+    try {
+      await fn();
+      return "";
+    } catch (err) {
+      return (err as Error).message;
+    }
+  }
+
+  it("the context a kon receives refuses another kon's id", async () => {
+    if (!dbAvailable) return;
+    const bound = bindKonContext(shared, KON);
+    const sealed = konSecrets.seal("kon-victim", `victim-token-${id}`);
+
+    // Opening another kon's secret by claiming its id: refused before anything is decrypted.
+    expect(
+      await failed(() => bound.secrets!.open("kon-victim", sealed, { purpose: "steal" }))
+    ).toMatch(/cannot act as/);
+    expect(await failed(() => bound.secrets!.seal("kon-victim", "x"))).toMatch(/cannot act as/);
+    expect(await failed(() => bound.automation!.listRules("kon-victim"))).toMatch(/cannot act as/);
+    expect(await failed(() => bound.automation!.removeRule("kon-victim", "any"))).toMatch(
+      /cannot act as/
+    );
+    expect(
+      await failed(() =>
+        bound.automation!.upsertRule("kon-victim", {
+          slug: "x",
+          name: "x",
+          event: EVENT,
+          steps: [{ handler: "kon-victim:thing" }],
+        })
+      )
+    ).toMatch(/cannot act as/);
+    expect(
+      await failed(() =>
+        bound.entities!.define("kon-victim", { slug: `victim-${id}`, name: "x", fields: [] })
+      )
+    ).toMatch(/cannot act as/);
+    expect(await failed(() => bound.entities!.undefine("kon-victim", `victim-${id}`))).toMatch(
+      /cannot act as/
+    );
+    expect(await failed(() => bound.entities!.definitions("kon-victim"))).toMatch(/cannot act as/);
+
+    // Nothing was recorded for the refused attempts: they never reached the secrets service.
+    const logged = await db
+      .select()
+      .from(secretAccessLog)
+      .where(eq(secretAccessLog.purpose, "steal"));
+    expect(logged).toHaveLength(0);
+
+    // Its own id works.
+    const mine = bound.secrets!.seal(KON, "mine");
+    expect(
+      await bound.secrets!.open(KON, mine, { purpose: `own-${id}`, subject: `identity:${id}` })
+    ).toBe("mine");
+    expect(await bound.automation!.listRules(KON)).toBeInstanceOf(Array);
+  });
+
+  it("the services that are not kon-scoped are shared as they were", () => {
+    if (!dbAvailable) return;
+    const base = { secrets: konSecrets, logger: { info() {} } } as never;
+    const bound = bindKonContext(base, KON) as unknown as { logger: unknown; entities?: unknown };
+    expect(bound.logger).toBe((base as unknown as { logger: unknown }).logger);
+    expect(bound.entities).toBeUndefined();
+  });
+});
 
 describe("sealed secrets", () => {
   const TOKEN = `refresh-token-${id}-do-not-log`;
@@ -920,20 +1127,20 @@ describe("reports", () => {
       expect(res.json.rows).toBeUndefined();
     }
     // A table a kon declares can be counted...
-    let res = await aggregate({ source: { table: "blog_posts" }, measures: count });
+    let res = await aggregate({ source: { table: FIXTURE_TABLE }, measures: count });
     expect(res.status).toBe(200);
-    expect(typeof res.json.rows[0].count).toBe("number");
+    expect(res.json.rows).toEqual([{ count: 3 }]);
     // ...but not through a column that does not exist, nor one named like a secret.
     res = await aggregate({
-      source: { table: "blog_posts" },
+      source: { table: FIXTURE_TABLE },
       measures: [{ fn: "max", field: "no_such_column" }],
     });
     expect(res.status).toBe(400);
     for (const field of ["password", "api_token", "password_hash"]) {
-      res = await aggregate({ source: { table: "blog_posts" }, measures: [{ fn: "min", field }] });
+      res = await aggregate({ source: { table: FIXTURE_TABLE }, measures: [{ fn: "min", field }] });
       expect(res.status).toBe(403);
       res = await aggregate({
-        source: { table: "blog_posts" },
+        source: { table: FIXTURE_TABLE },
         measures: count,
         groupBy: [{ field }],
       });
@@ -963,6 +1170,184 @@ describe("reports", () => {
       measures: [{ fn: "sum", field: "weight; DROP TABLE data_sets" }],
     });
     expect(res.status).toBe(400);
+  });
+
+  it("a declared table: sums, buckets and `in` compare as the column's own type", async () => {
+    if (!dbAvailable) return;
+    let res = await aggregate({
+      source: { table: FIXTURE_TABLE },
+      measures: [{ fn: "sum", field: "amount", as: "total" }, { fn: "count" }],
+      groupBy: [{ field: "material" }],
+      orderBy: [{ by: "material" }],
+    });
+    expect(res.status).toBe(200);
+    expect(res.json.rows).toEqual([
+      { material: "brass", total: 40, count: 1 },
+      { material: "steel", total: 12.5, count: 2 },
+    ]);
+
+    res = await aggregate({
+      source: { table: FIXTURE_TABLE },
+      measures: [{ fn: "count" }],
+      groupBy: [{ field: "closed_at", bucket: "month", as: "month" }],
+      orderBy: [{ by: "month" }],
+    });
+    expect(res.json.rows.map((r: any) => [String(r.month).slice(0, 7), r.count])).toEqual([
+      ["2026-03", 2],
+      ["2026-04", 1],
+    ]);
+
+    // `5` finds `5.00`, and a timestamp finds the same instant however Postgres prints it.
+    res = await aggregate({
+      source: { table: FIXTURE_TABLE },
+      measures: [{ fn: "count" }],
+      filters: [{ field: "amount", op: "in", value: [5, 99] }],
+    });
+    expect(res.json.rows).toEqual([{ count: 1 }]);
+    res = await aggregate({
+      source: { table: FIXTURE_TABLE },
+      measures: [{ fn: "count" }],
+      filters: [{ field: "closed_at", op: "in", value: ["2026-03-05T10:00:00Z"] }],
+    });
+    expect(res.json.rows).toEqual([{ count: 1 }]);
+    res = await aggregate({
+      source: { table: FIXTURE_TABLE },
+      measures: [{ fn: "count" }],
+      filters: [{ field: "born", op: "in", value: ["2026-02-11", "2026-02-12"] }],
+    });
+    expect(res.json.rows).toEqual([{ count: 2 }]);
+
+    // `contains` looks for text inside text; on anything else it says so instead of matching nothing.
+    res = await aggregate({
+      source: { table: FIXTURE_TABLE },
+      measures: [{ fn: "count" }],
+      filters: [{ field: "amount", op: "contains", value: "5" }],
+    });
+    expect(res.status).toBe(400);
+    expect(res.json.error?.message ?? res.json.message ?? JSON.stringify(res.json)).toMatch(
+      /contains/
+    );
+  });
+
+  it("min and max of text stay text, even when it looks like a number", async () => {
+    if (!dbAvailable) return;
+    const res = await aggregate({
+      source: { table: FIXTURE_TABLE },
+      measures: [
+        { fn: "min", field: "code", as: "first_code" },
+        { fn: "max", field: "code", as: "last_code" },
+        { fn: "max", field: "amount", as: "biggest" },
+      ],
+    });
+    expect(res.status).toBe(200);
+    // `00123` is a code, not the number 123; a numeric column still gives a number.
+    expect(res.json.rows).toEqual([{ first_code: "00123", last_code: "0099", biggest: 40 }]);
+  });
+
+  it("an impossible date in a dataset counts as no date and does not fail the report", async () => {
+    if (!dbAvailable) return;
+    const [{ id: datasetId }] = await rows(sql`SELECT id FROM data_sets WHERE slug = ${ENTITY}`);
+    await db.execute(
+      sql`INSERT INTO data_entries (title, data_set_id, data) VALUES ('Impossible', ${datasetId}, '{"material":"brass","weight":1,"made_on":"2026-02-31"}'::jsonb)`
+    );
+    try {
+      const res = await aggregate({
+        source: { dataset: ENTITY },
+        measures: [{ fn: "count" }],
+        groupBy: [{ field: "made_on", bucket: "month", as: "month" }],
+        orderBy: [{ by: "month" }],
+      });
+      expect(res.status).toBe(200);
+      // The impossible date sorts last (NULLS LAST) and is counted with the other rows without one.
+      expect(res.json.rows.at(-1)).toMatchObject({ month: null });
+      expect(res.json.rows.reduce((n: number, r: any) => n + r.count, 0)).toBe(
+        (await konEntities.list(ENTITY)).length + 0
+      );
+    } finally {
+      await db.execute(
+        sql`DELETE FROM data_entries WHERE title = 'Impossible' AND data_set_id = ${datasetId}`
+      );
+    }
+  });
+
+  describe("for an agent", () => {
+    let token = "";
+
+    const asAgent = (query: unknown) =>
+      app.request(
+        new Request("http://localhost:3000/api/reports/aggregate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ query }),
+        })
+      );
+
+    it("needs the reports scope, and the scope opens aggregate", async () => {
+      if (!dbAvailable) return;
+      const query = { source: { table: FIXTURE_TABLE }, measures: [{ fn: "count" }] };
+      const bare = await createAgent({
+        name: `Reports bare ${id}`,
+        scopes: ["blog:read"],
+        rateLimit: 100_000,
+      });
+      const denied = await app.request(
+        new Request("http://localhost:3000/api/reports/aggregate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${bare.plainApiKey}`,
+          },
+          body: JSON.stringify({ query }),
+        })
+      );
+      expect([401, 403]).toContain(denied.status);
+
+      const reader = await createAgent({
+        name: `Reports reader ${id}`,
+        scopes: ["reports:read"],
+        rateLimit: 100_000,
+      });
+      token = reader.plainApiKey;
+      const res = await asAgent(query);
+      expect(res.status, await res.clone().text()).toBe(200);
+      expect(((await res.json()) as { rows: unknown }).rows).toEqual([{ count: 3 }]);
+    });
+
+    it("cannot read the values of a column marked as personal data", async () => {
+      if (!dbAvailable) return;
+      const base = { source: { table: FIXTURE_TABLE }, measures: [{ fn: "count" }] };
+      // The dump this closes: one group per distinct value.
+      let res = await asAgent({ ...base, groupBy: [{ field: "email" }] });
+      expect(res.status).toBe(403);
+      expect(await res.text()).not.toContain("ana@example.com");
+      res = await asAgent({ ...base, measures: [{ fn: "min", field: "email" }] });
+      expect(res.status).toBe(403);
+      res = await asAgent({ ...base, filters: [{ field: "email", op: "contains", value: "ana" }] });
+      expect(res.status).toBe(403);
+      // Counting rows and checking for empty values reveal nothing, and stay allowed.
+      res = await asAgent({ ...base, filters: [{ field: "email", op: "is_null", value: false }] });
+      expect(res.status).toBe(200);
+      expect(((await res.json()) as { rows: unknown }).rows).toEqual([{ count: 3 }]);
+      res = await asAgent({
+        source: { table: FIXTURE_TABLE },
+        measures: [{ fn: "count_distinct", field: "email" }],
+      });
+      expect(res.status).toBe(200);
+      // Columns that are not marked still work.
+      res = await asAgent({ ...base, groupBy: [{ field: "material" }] });
+      expect(res.status).toBe(200);
+    });
+
+    it("a person with the administrator role is not restricted", async () => {
+      if (!dbAvailable) return;
+      const res = await aggregate({
+        source: { table: FIXTURE_TABLE },
+        measures: [{ fn: "count" }],
+        groupBy: [{ field: "email" }],
+      });
+      expect(res.status).toBe(200);
+      expect(res.json.rows).toHaveLength(3);
+    });
   });
 
   it("is for administrators", async () => {

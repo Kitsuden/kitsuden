@@ -51,19 +51,30 @@ async function rules() {
 }
 
 /**
- * A step's config as it may be shown: a value under a key that names a secret
- * (`secret`, `…token`, `…password`) is replaced. A dry run is read by whoever
- * is debugging a rule, and a webhook's signing secret is not part of that.
+ * Keys whose value is a credential, by name: `secret`, `apiToken`, `Authorization`, `X-Api-Key`,
+ * `cookie`… Case-insensitive and anywhere in the name (`isSecretColumn` needs a letter or an
+ * underscore before `token`, so `X-Api-Token` slipped through it).
  */
-function withoutSecrets(value: unknown, depth = 0): unknown {
-  if (depth > 12 || value === null || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map((item) => withoutSecrets(item, depth + 1));
+const CREDENTIAL_KEY =
+  /(token|secret|passw(or)?d|authorization|api[-_ ]?key|cookie|credential|signature|bearer)/i;
+
+/**
+ * A step's config as it may be shown: a value under a key that names a credential is replaced, and
+ * so is every value under `headers` (any header may carry one). A dry run is read by whoever is
+ * debugging a rule, and a webhook's signing secret or `Authorization` header is not part of that.
+ */
+function withoutSecrets(value: unknown, depth = 0, hideAll = false): unknown {
+  if (depth > 12 || value === null || typeof value !== "object") {
+    return hideAll && value !== null && value !== undefined ? "[hidden]" : value;
+  }
+  if (Array.isArray(value)) return value.map((item) => withoutSecrets(item, depth + 1, hideAll));
   const output: Record<string, unknown> = {};
   for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-    output[key] =
-      isSecretColumn(key) && item !== null && item !== undefined
-        ? "[hidden]"
-        : withoutSecrets(item, depth + 1);
+    if (hideAll || CREDENTIAL_KEY.test(key) || isSecretColumn(key)) {
+      output[key] = item === null || item === undefined ? item : "[hidden]";
+    } else {
+      output[key] = withoutSecrets(item, depth + 1, key.toLowerCase() === "headers");
+    }
   }
   return output;
 }

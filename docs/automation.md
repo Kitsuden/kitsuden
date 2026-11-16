@@ -79,6 +79,11 @@ guard](agents/egress.md) and the same signing as a `webhook_out` action.
 A string in a step's config may carry `{{event.<path>}}`, filled from the event
 payload. `{{eventName}}`, `{{rule.id}}` and `{{rule.name}}` are also available.
 
+- **The host of a webhook URL must be written out.** A placeholder is allowed in
+  the path and the query (`https://example.com/hooks/{{event.id}}`), not between
+  `://` and the first `/`: event data, such as a form a visitor filled in, must not
+  choose where the payload is sent. The literal part passes the same target check
+  as any webhook URL.
 - A string that is only a placeholder keeps the type it points to:
   `"{{event.amount}}"` becomes the number `500`.
 - A placeholder inside other text becomes text; one that points nowhere becomes
@@ -94,6 +99,10 @@ Returns whether the action would run, the outcome of each condition with the
 value it found, and each step's config with its placeholders filled, plus the
 handler's own preview when it has one. Nothing is sent, nothing is written, and
 no execution is recorded.
+
+Credentials are hidden in the answer: every value under `headers`, and any value
+under a key that names one (`secret`, `token`, `password`, `authorization`,
+`api key`, `cookie`, `signature`…) comes back as `[hidden]`.
 
 For the other types of action a dry run checks the conditions only.
 
@@ -137,8 +146,10 @@ export default defineKon({
 It is exposed as `kon-crm:create-activity`. What a handler must know:
 
 - It runs after the triggering request committed, outside any request:
-  `ctx.db.instance` is the system connection. Apply `input.actorUserId` yourself
-  where ownership matters.
+  `ctx.db.instance` is the system connection. The step runs **as the rule's
+  owner**: `ctx.entities` and `ctx.secrets` attribute writes and openings to
+  `input.actorUserId`, not to whoever triggered the event. Apply
+  `input.actorUserId` yourself where ownership matters in your own queries.
 - Delivery is at most once, but a rule can be run again by hand. Make the handler
   idempotent where a repeat would hurt.
 - `validate` runs when the rule is stored, and again in a dry run with the filled
@@ -172,7 +183,9 @@ if (ctx.automation) {
   `removeRule(konId, slug)` and `listRules(konId)` complete the set.
 - A kon's rule uses only that kon's own handlers. `core:webhook`,
   `core:run-agent` and another kon's steps are refused.
-- A kon sees and changes only the rules it wrote.
+- A kon sees and changes only the rules it wrote: the context it receives refuses
+  any other kon id (see [secrets](kons/secrets.md) for what that does and does not
+  guarantee).
 - `ctx.automation` is optional. Its presence is the capability: a host that has
   it runs kon steps.
 

@@ -82,10 +82,10 @@ import { file } from "./file";
 import { readGrimoireKons, readKonJsonManifest } from "./grimoire-manifest";
 import { konIdOf, installedKon, listInstalledKons, incompatibleSdkReason } from "./installed-kons";
 import { checkKonCompatibility } from "./kitsuden-compat";
-import { registerKonContributions } from "./kon-contributions";
-import { konEntities, syncKonEntities } from "./kon-entities";
+import { konEntities } from "./kon-entities";
 import { registerKonRouter } from "./kon-routes";
-import { konSecrets, registerKonSecretColumns } from "./kon-secrets";
+import { konSecrets } from "./kon-secrets";
+import { announceKon, bindKonContext } from "./kon-setup";
 import { logger } from "./logger";
 import { registerKonToolsets } from "./mcp-settings";
 import { limiterEnabled, rateLimit } from "./rate-limiter";
@@ -1256,8 +1256,12 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
           throw new Error(codeSdkReason);
         }
 
+        // The context this kon receives: the shared one, with its kon-scoped services tied to its id
+        // (lib/kon-setup.ts), so it cannot act as another kon.
+        const konContext = bindKonContext(context, konDef.id);
+
         // Create router with injected context
-        const router = konDef.createRouter(context);
+        const router = konDef.createRouter(konContext);
 
         // Apply custom mount path: kon definition > kon.json > default
         const finalMountPath = konDef.mountPath || customMountPath || mountPath;
@@ -1269,29 +1273,7 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
         applyKonRateLimits(app, konDef, finalMountPath);
         // Its tool groups for agents (`kon:<id>/<set>`), before any MCP session reads them.
         registerKonToolsets(konDef.id, konDef.mcpToolsets);
-        // Its events, its automation steps and its reports (lib/kon-contributions.ts). A malformed one
-        // is reported and skipped: it must not take the kon's routes down with it.
-        for (const problem of registerKonContributions(konDef, context)) {
-          console.warn(`  ⚠️  ${kon.id}: ${problem}`);
-        }
-        // The entities it owns: one dataset each, created here with no migration (lib/kon-entities.ts).
-        if (konDef.entities) {
-          for (const problem of await syncKonEntities(konDef.id, konDef.entities)) {
-            console.warn(`  ⚠️  ${kon.id}: ${problem}`);
-          }
-        }
-        // Where it keeps sealed secrets, so a key rotation reaches them (lib/kon-secrets.ts).
-        if (konDef.secretColumns) {
-          try {
-            for (const problem of await registerKonSecretColumns(konDef.id, konDef.secretColumns)) {
-              console.warn(`  ⚠️  ${kon.id}: ${problem}`);
-            }
-          } catch (err: unknown) {
-            console.warn(
-              `  ⚠️  ${kon.id}: its secret columns were not recorded (${messageOf(err)}); a key rotation would miss them`
-            );
-          }
-        }
+        await announceKon(konDef, konContext);
 
         // Every request to the kon, in its RLS transaction (see `theRequestDb`).
         mountKonRls(app, finalMountPath);
@@ -1304,7 +1286,7 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
           registerMountedOperations(
             kon.id,
             finalMountPath,
-            operationsOf(konDef, context),
+            operationsOf(konDef, konContext),
             router as never
           );
         }
@@ -1322,7 +1304,7 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
 
         // Execute lifecycle hooks
         if (konDef.hooks?.onStartup) {
-          await konDef.hooks.onStartup(context);
+          await konDef.hooks.onStartup(konContext);
           initExecuted = true;
         }
 
