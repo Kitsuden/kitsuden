@@ -114,6 +114,10 @@ async function connectAna(): Promise<string> {
 beforeAll(async () => {
   dbAvailable = await isDatabaseAvailable();
   if (!dbAvailable) return;
+  // The secrets key is cached the first time something is sealed. This file seals before the other
+  // suites that set it, so without this the cache would hold the BETTER_AUTH_SECRET-derived key and
+  // the rotation test (kon-foundations) would seal with one key and read another.
+  process.env.KITSUDEN_SECRETS_KEY ??= "test-suite-secrets-key-0123456789abcdef-0123456789";
   process.env.CONNECTIONS_GOOGLE_CLIENT_ID = "client-id.apps.example";
   process.env.CONNECTIONS_GOOGLE_CLIENT_SECRET = "client-secret-value";
   process.env.CONNECTIONS_RETURN_ORIGINS = "https://site.example";
