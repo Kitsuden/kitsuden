@@ -28,7 +28,7 @@
   "dependencies": {
     "@kitsuden/shared": "workspace:*",
     "drizzle-orm": "^0.45.4",
-    "hono": "^4.13.16",
+    "hono": "^4.13.18",
     "openai": "^6.46.0",
     "zod": "^4.6.7"
   },

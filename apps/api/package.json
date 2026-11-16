@@ -73,7 +73,7 @@
     "drizzle-orm": "^0.45.4",
     "graphql": "^16.9.0",
     "graphql-type-json": "^0.3.2",
-    "hono": "4.13.16",
+    "hono": "4.13.18",
     "hono-rate-limiter": "^0.5.4",
     "nodemailer": "^10.3.1",
     "ollama": "^0.6.4",
