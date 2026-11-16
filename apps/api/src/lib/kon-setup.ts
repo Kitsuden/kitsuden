@@ -28,6 +28,7 @@
 
 import type {
   KonAutomation,
+  KonConnections,
   KonContext,
   KonDefinition,
   KonEntities,
@@ -77,6 +78,24 @@ function bindEntities(owner: string, base: KonEntities): KonEntities {
   };
 }
 
+function bindConnections(owner: string, base: KonConnections): KonConnections {
+  return {
+    client: async (konId, request) => {
+      own(owner, konId, "connections.client");
+      return base.client(konId, request);
+    },
+    registerProvider: (konId, provider) => {
+      own(owner, konId, "connections.registerProvider");
+      base.registerProvider(konId, provider);
+    },
+    visible: async (konId, connectionId) => {
+      own(owner, konId, "connections.visible");
+      return base.visible(konId, connectionId);
+    },
+    covers: (provider, granted, scopeSets) => base.covers(provider, granted, scopeSets),
+  };
+}
+
 function bindAutomation(owner: string, base: KonAutomation): KonAutomation {
   return {
     upsertRule: async (konId, rule) => {
@@ -101,6 +120,7 @@ export function bindKonContext(base: KonContext, konId: string): KonContext {
     ...(base.secrets ? { secrets: bindSecrets(konId, base.secrets) } : {}),
     ...(base.entities ? { entities: bindEntities(konId, base.entities) } : {}),
     ...(base.automation ? { automation: bindAutomation(konId, base.automation) } : {}),
+    ...(base.connections ? { connections: bindConnections(konId, base.connections) } : {}),
   };
 }
 

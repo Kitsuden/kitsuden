@@ -65,6 +65,7 @@ import { auth } from "./lib/auth";
 import { bodyLimit } from "./lib/body-limit";
 import { clientIp } from "./lib/client-ip";
 import { config, features, corsConfig } from "./lib/config";
+import { startConnectionsWorker } from "./lib/connections";
 import { incompleteCorsWarning, allowedOrigin } from "./lib/cors-origins";
 import { registerCriticalFeatures } from "./lib/critical-features";
 import { initCronScheduler } from "./lib/cron-scheduler";
@@ -91,13 +92,6 @@ import { startOAuthSweep } from "./lib/oauth/service";
 import { poolExhaustedTo503 } from "./lib/pool-exhausted";
 import { activateMiddlewareProfile } from "./lib/profile-middleware";
 import { startWatchesSweep } from "./lib/promotion";
-import {
-  AUTOMATION_ROUTE,
-  automationRoutes,
-  SECRET_ACCESS_ROUTE,
-  secretAccessRoutes,
-} from "./routes/automation";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { setupWorkers, emailQueue, queueStatus, shutdownQueues } from "./lib/queue";
 import { realtimeManager, type WSClientData } from "./lib/realtime";
 import { wireRealtimeAuthorization, bridgeEventsToRealtime } from "./lib/realtime-wiring";
@@ -114,6 +108,19 @@ import {
 } from "./lib/store";
 import { toonMiddleware } from "./lib/toon";
 import { toonProtocolMiddleware } from "./lib/toon-protocol";
+import {
+  AUTOMATION_ROUTE,
+  automationRoutes,
+  SECRET_ACCESS_ROUTE,
+  secretAccessRoutes,
+} from "./routes/automation";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
+import {
+  CONNECTIONS_KON,
+  CONNECTIONS_ROUTE,
+  connectionsKon,
+  connectionsRoutes,
+} from "./routes/connections";
 import { startTraces, stopTraces, requestTraces } from "./lib/traces";
 import { closeValkey, valkeyConfigured } from "./lib/valkey";
 import { registerSystemMails } from "./mail/system-mails";
@@ -1185,6 +1192,18 @@ app.route(SECRET_ACCESS_ROUTE, secretAccessRoutes);
 mountKonRls(app, REPORTS_ROUTE);
 app.route(REPORTS_ROUTE, reportsRoutes);
 registerMountedOperations(REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes);
+// Connections (docs/connections.md): accounts at other services that kons use through ctx.connections.
+// In the request's transaction: row security decides whose connections a person sees. The OAuth
+// callback runs as the system inside the handler.
+mountKonRls(app, CONNECTIONS_ROUTE);
+app.route(CONNECTIONS_ROUTE, connectionsRoutes);
+registerMountedOperations(
+  CONNECTIONS_KON,
+  CONNECTIONS_ROUTE,
+  connectionsKon.operations,
+  connectionsRoutes
+);
+startConnectionsWorker();
 console.log("  🧠 KITSUDEN Brain → /api/brain");
 app.route("/api/map", systemMapRoutes);
 console.log("  🗺️  System Map → /api/map");
