@@ -239,7 +239,7 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
         "Returns the provider's consent `url` to send the person to; it is valid for ten minutes and works once (PKCE). `scope: organization` is admin only. `returnTo` must be one of the site's origins (CONNECTIONS_RETURN_ORIGINS or ALLOWED_ORIGINS). 404 for an unknown provider, 422 for an unknown scope set, 503 when the provider is not configured here or this Kitsuden has no secrets key. A person only.",
       input: { body: Start },
       output: { schema: z.object({ data: z.object({ url: z.string(), expiresAt: z.string() }) }) },
-      errors: ["KITSUDEN_E_NOT_FOUND"],
+      errors: ["KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN"],
       mcp: { exclude: "A consent happens in a browser, by a person." },
       handle: async (input, h) => {
         const user = person(h.user, "Connecting an account");
@@ -318,6 +318,7 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
         "Stores an API key for a provider that takes one (registered by a kon: `stripe`, `resend`…), sealed; it is never returned. `scope: organization` (the default) is admin only; `user` is your own. 404 for an unknown provider, 422 for a provider that connects with OAuth or a key that does not look like one, 503 without a secrets key. A person only.",
       input: { body: ApiKey },
       output: { status: 201, schema: z.object({ data: Connection }) },
+      errors: ["KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN"],
       mcp: { exclude: "A key is typed by a person, not passed through an agent." },
       handle: async (input, h) => {
         const user = person(h.user, "Storing a key");
