@@ -9,6 +9,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Connections** ([docs/connections.md](docs/connections.md)): accounts at other services, connected
+  once and used by every kon through `ctx.connections`. Google and Microsoft 365 by OAuth (PKCE), and
+  API key providers a kon registers; per person or for the organization. Credentials are sealed with
+  the installation's secrets key, refreshed before they expire, revocable, and every opening is in
+  `secret_access_log` with the kon that asked. A kon gets a client that sends the credential only to
+  the provider's hosts and never shows it. Row security (migration 0082) and the routes keep each
+  person's connections theirs, admins included. Events `connections:connection.created|expired|revoked`.
+
 - **Automation rules** ([docs/automation.md](docs/automation.md)): a stored action of type `rule`
   runs a list of steps (`core:webhook`, `core:send-mail`, `core:run-agent`, or a step a kon
   contributes with `defineKon({ actionHandlers })`) when the trigger's conditions over the event

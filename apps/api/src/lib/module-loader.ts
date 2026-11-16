@@ -75,6 +75,7 @@ import { KON_REGISTRY } from "../services/module-registry";
 
 import { auth } from "./auth";
 import { invalidateCache } from "./cache";
+import { konConnections } from "./connections";
 import type { DeferredKon } from "./deferred-kons";
 import { rawNodeEnv } from "./environment";
 import { events } from "./events";
@@ -546,6 +547,9 @@ export function createKonContext(): KonContext {
 
     // Sealed secrets with an access log (lib/kon-secrets.ts)
     secrets: konSecrets,
+
+    // Accounts at other services, used through a client that never shows the credential (lib/connections)
+    connections: konConnections,
 
     // Records of the entities kons declare (lib/kon-entities.ts)
     entities: konEntities,
