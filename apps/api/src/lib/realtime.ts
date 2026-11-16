@@ -28,7 +28,8 @@
 
 import type { ServerWebSocket } from "bun";
 
-import { subscribe, publish, getValkeyClient } from "./valkey";
+import { isKonChannel, KON_CHANNEL } from "./realtime-kon-channels";
+import { subscribe, publish } from "./valkey";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -67,6 +68,11 @@ interface IncomingMessage {
  * short; a huge one only burns CPU in a regex or inflates the error echoed back.
  */
 export const MAX_FRAME_NAME_LENGTH = 200;
+
+/** `sendToUser` travels on the bus as `user:<id>`; no socket can subscribe to it. */
+const USER_CHANNEL_PREFIX = "user:";
+/** The channels the bus carries (initialize() listens to these). */
+const BUS_CHANNELS = /^(table|entry|content|kon):/;
 
 /** How often the session of every signed-in socket is re-read. */
 export const SESSION_REVALIDATE_MS = 60_000;
@@ -163,6 +169,16 @@ class RealtimeManager {
         this.broadcastToChannel(channel, message);
       });
 
+      // Channels a kon owns (lib/realtime-kon-channels.ts).
+      await subscribe("kon:*", (channel, message) => {
+        this.broadcastToChannel(channel, message);
+      });
+
+      // `sendToUser` from any replica: delivered to this process's sockets of that user.
+      await subscribe(`${USER_CHANNEL_PREFIX}*`, (channel, message) => {
+        this.deliverToUser(channel.slice(USER_CHANNEL_PREFIX.length), message);
+      });
+
       this.initialized = true;
       console.log("  📡 Real-time Manager initialized (Valkey Pub/Sub)");
     } catch (err: unknown) {
@@ -256,6 +272,12 @@ class RealtimeManager {
   async revalidateAll(): Promise<void> {
     const ids = [...this.clients.values()].filter((c) => c.userId).map((c) => c.id);
     await Promise.all(ids.map((id) => this.revalidateClient(id).catch(() => false)));
+    // A kon decides who may listen to its channels, and that changes (a
+    // conversation reassigned): every sweep asks it again, anonymous sockets
+    // included, and drops what it no longer allows.
+    await Promise.all(
+      [...this.clients.values()].map((c) => this.reauthorizeKonChannels(c.id).catch(() => undefined))
+    );
   }
 
   /** Closes the socket and cleans up its state. Idempotent. */
@@ -328,7 +350,10 @@ class RealtimeManager {
 
     // Validate channel format (table, entry, content channels)
     // The error does not echo the channel back: it is whatever the client sent.
-    if (!validName(channel) || !/^(table|entry|content):[a-zA-Z0-9_-]+$/.test(channel)) {
+    if (
+      !validName(channel) ||
+      !(/^(table|entry|content):[a-zA-Z0-9_-]+$/.test(channel) || KON_CHANNEL.test(channel))
+    ) {
       this.sendError(client.socket, "Invalid channel format");
       return;
     }
@@ -539,32 +564,61 @@ class RealtimeManager {
    * Used by KonContext.realtime.broadcast()
    */
   broadcast(channel: string, message: unknown): void {
-    // Publish to Valkey for horizontal scaling (async, fire-and-forget)
-    getValkeyClient()
-      .then((valkey) => {
-        if (valkey) {
-          valkey.publish(channel, JSON.stringify(message)).catch(() => {
-            // Valkey publish failed, ignore
-          });
-        }
-      })
-      .catch(() => {
-        // Valkey not available, broadcast locally only
-      });
-
-    // Also broadcast locally
+    // Once the bus is listening, the bus is the one way in: it delivers to this
+    // process too (Valkey and the Valkey-less bus both loop back). Delivering
+    // locally as well sent every message twice to this replica's sockets.
+    if (this.initialized && BUS_CHANNELS.test(channel)) {
+      void publish(channel, message).catch(() => this.broadcastToChannel(channel, JSON.stringify(message)));
+      return;
+    }
     this.broadcastToChannel(channel, JSON.stringify(message));
   }
 
   /**
-   * Send a message to a specific user.
+   * Send a message to a specific user, on every replica.
    * Used by KonContext.realtime.sendToUser()
    */
   sendToUser(userId: string, message: unknown): void {
-    // Find all clients for this user
+    if (this.initialized) {
+      // Each replica delivers to the sockets it holds (initialize() listens to user:*).
+      void publish(`${USER_CHANNEL_PREFIX}${userId}`, message).catch(() =>
+        this.deliverToUser(userId, JSON.stringify(message))
+      );
+      return;
+    }
+    this.deliverToUser(userId, JSON.stringify(message));
+  }
+
+  /** This process's sockets of one user. */
+  private deliverToUser(userId: string, raw: string): void {
+    let message: unknown;
+    try {
+      message = JSON.parse(raw);
+    } catch {
+      return;
+    }
     for (const [, client] of this.clients) {
-      if (client.userId === userId) {
+      if (client.userId === userId && !this.sessionExpired(client)) {
         this.send(client.socket, message);
+      }
+    }
+  }
+
+  /** Drops the kon channels the kon no longer lets this socket hear. */
+  async reauthorizeKonChannels(clientId: string): Promise<void> {
+    const client = this.clients.get(clientId);
+    if (!client) return;
+    const user = { id: client.userId, role: client.userRole ?? null };
+    for (const channel of [...client.channels]) {
+      if (!isKonChannel(channel)) continue;
+      const authorize = _authorizer;
+      const allowed = authorize
+        ? await Promise.resolve()
+            .then(() => authorize(channel, user))
+            .catch(() => false)
+        : false;
+      if (!allowed && this.clients.get(clientId) === client) {
+        this.unsubscribeFromChannel(clientId, channel);
       }
     }
   }

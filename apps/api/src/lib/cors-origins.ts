@@ -45,3 +45,18 @@ export function incompleteCorsWarning(
     `will fail there due to CORS even though the site loads fine. Sister sites go too, one per origin.`
   );
 }
+
+/**
+ * Is `origin` the API's own origin? The browser sends `Origin` on a WebSocket handshake, and a page the
+ * API serves itself (kon-koe's inbox) has the API's host there. Compared with the request's `Host`
+ * (which a reverse proxy keeps), never with a list, so it cannot open the door to another site.
+ */
+export function sameOrigin(origin: string, host: string | null | undefined): boolean {
+  if (!host) return false;
+  try {
+    const u = new URL(origin);
+    return (u.protocol === "https:" || u.protocol === "http:") && u.host.toLowerCase() === host.toLowerCase();
+  } catch {
+    return false;
+  }
+}

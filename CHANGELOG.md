@@ -9,6 +9,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Realtime channels for kons** ([docs/kons/realtime.md](docs/kons/realtime.md)): a kon
+  authorizes its own channels, `kon:<id>:<rest>`, with `ctx.realtime.channels(authorize)`. The
+  authorizer runs on subscribe and on every session sweep, so revoked access stops within a
+  minute; a kon channel without an authorizer is denied, admins included.
+
 - **Automation rules** ([docs/automation.md](docs/automation.md)): a stored action of type `rule`
   runs a list of steps (`core:webhook`, `core:send-mail`, `core:run-agent`, or a step a kon
   contributes with `defineKon({ actionHandlers })`) when the trigger's conditions over the event
@@ -63,6 +68,20 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `ctx.realtime.broadcast` delivered every message twice to the sockets of the replica that sent
+  it once the bus was listening (once locally, once looping back through Valkey). It now goes
+  through the bus only. `ctx.realtime.sendToUser` reached only the sockets of the same process;
+  it now travels on the bus and reaches every replica.
+- The realtime WebSocket refused pages the API serves itself (an `Origin` equal to the request's host)
+  unless that origin was listed in `ALLOWED_ORIGINS`. Same-origin is now allowed; other sites still
+  need the list.
+- A kon's public embed scripts (`/api/<kon>/public/…/*.js`, the kon-chat and kon-koe widgets) were
+  served with `Cross-Origin-Resource-Policy: same-origin`, so a plain `<script src>` on another site
+  was blocked. They are now `cross-origin`, like `/media`.
+- The admin icon map gains `MessagesSquare` (kon-koe). `/api/koe/media` sets its own body limit for
+  WhatsApp video and documents.
+- `createTestKonContext` silently dropped `secrets`, `automation` and `entities` overrides, so a kon
+  under test took the "host without it" branch.
 - A stored action listening to `entry.created`, `entry.updated`, `entry.deleted` or
   `post.published` ran twice for each event: the legacy function dispatcher subscribed to the
   same events as the actions engine.

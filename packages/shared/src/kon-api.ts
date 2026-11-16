@@ -81,8 +81,18 @@ export interface KonEvents {
 export interface KonRealtime {
   /** Broadcast a message to all connected clients */
   broadcast(channel: string, message: unknown): void;
-  /** Send to a specific user */
+  /** Send to a specific user, on every replica */
   sendToUser(userId: string, message: unknown): void;
+  /**
+   * Declares who may subscribe to this kon's channels, `kon:<id without "kon-">:<rest>`
+   * (`kon-koe` → `kon:koe:inbox:team-1`). `authorize` receives `<rest>` and the socket's
+   * user (`id: null` when anonymous); it runs on subscribe and again every minute, and a
+   * `false` or a throw denies. Without it every channel of the kon is denied, admins
+   * included. Optional: a host without realtime, or a test, leaves it undefined.
+   */
+  channels?(
+    authorize: (rest: string, user: { id: string | null; role: string | null }) => boolean | Promise<boolean>
+  ): void;
 }
 
 /**
