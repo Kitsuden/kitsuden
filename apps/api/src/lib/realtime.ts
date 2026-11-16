@@ -276,7 +276,9 @@ class RealtimeManager {
     // conversation reassigned): every sweep asks it again, anonymous sockets
     // included, and drops what it no longer allows.
     await Promise.all(
-      [...this.clients.values()].map((c) => this.reauthorizeKonChannels(c.id).catch(() => undefined))
+      [...this.clients.values()].map((c) =>
+        this.reauthorizeKonChannels(c.id).catch(() => undefined)
+      )
     );
   }
 
@@ -568,7 +570,9 @@ class RealtimeManager {
     // process too (Valkey and the Valkey-less bus both loop back). Delivering
     // locally as well sent every message twice to this replica's sockets.
     if (this.initialized && BUS_CHANNELS.test(channel)) {
-      void publish(channel, message).catch(() => this.broadcastToChannel(channel, JSON.stringify(message)));
+      void publish(channel, message).catch(() =>
+        this.broadcastToChannel(channel, JSON.stringify(message))
+      );
       return;
     }
     this.broadcastToChannel(channel, JSON.stringify(message));

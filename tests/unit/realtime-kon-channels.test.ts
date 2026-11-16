@@ -27,7 +27,9 @@ vi.mock("../../apps/api/src/lib/valkey", () => ({
   getValkeyClient: () => Promise.reject(new Error("no Valkey in this test")),
 }));
 
-const state: { session: { userId: string; expiresAt: Date; role: string } | null } = { session: null };
+const state: { session: { userId: string; expiresAt: Date; role: string } | null } = {
+  session: null,
+};
 
 vi.mock("../../apps/api/src/db", () => {
   const select = () => {
@@ -64,14 +66,17 @@ function connect(userId: string | null, role: string | null) {
     id: userId ? `s-${userId}` : null,
     expiresAt: userId ? Date.now() + 3_600_000 : null,
   });
-  if (userId) state.session = { userId, role: role ?? "user", expiresAt: new Date(Date.now() + 3_600_000) };
+  if (userId)
+    state.session = { userId, role: role ?? "user", expiresAt: new Date(Date.now() + 3_600_000) };
   open.push(id);
   return { id, socket };
 }
 
-const received = (s: FakeSocket) => s.send.mock.calls.map((c) => JSON.parse(c[0] as string) as Record<string, unknown>);
+const received = (s: FakeSocket) =>
+  s.send.mock.calls.map((c) => JSON.parse(c[0] as string) as Record<string, unknown>);
 const messages = (s: FakeSocket) => received(s).filter((m) => m.type === "message");
-const subscribed = (s: FakeSocket, channel: string) => received(s).some((m) => m.type === "subscribed" && m.channel === channel);
+const subscribed = (s: FakeSocket, channel: string) =>
+  received(s).some((m) => m.type === "subscribed" && m.channel === channel);
 const flush = async () => {
   for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
 };
@@ -120,7 +125,9 @@ describe("kon channels", () => {
 
     realtimeManager.broadcast("kon:koe:user:ana", { hello: 1 });
     await flush();
-    expect(messages(ana.socket)).toEqual([{ type: "message", channel: "kon:koe:user:ana", data: { hello: 1 } }]);
+    expect(messages(ana.socket)).toEqual([
+      { type: "message", channel: "kon:koe:user:ana", data: { hello: 1 } },
+    ]);
   });
 
   it("an authorizer that throws denies", async () => {

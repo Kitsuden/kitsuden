@@ -140,7 +140,8 @@ export function policyUser(user: RealtimeUser): RLSUser | null {
 export function wireRealtimeAuthorization(): void {
   setSubscriptionAuthorizer(async (channel: string, user: RealtimeUser) => {
     // A kon's channel: only the kon decides, admins included (lib/realtime-kon-channels.ts).
-    if (isKonChannel(channel)) return authorizeKonChannel(channel, { id: user.id ?? null, role: user.role ?? null });
+    if (isKonChannel(channel))
+      return authorizeKonChannel(channel, { id: user.id ?? null, role: user.role ?? null });
     const resource = resourceOf(channel);
     // Channels that are not table ones (entry:, content:) keep the
     // conservative behavior: admin only until they have their own policy.

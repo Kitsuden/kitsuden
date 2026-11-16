@@ -91,7 +91,10 @@ export interface KonRealtime {
    * included. Optional: a host without realtime, or a test, leaves it undefined.
    */
   channels?(
-    authorize: (rest: string, user: { id: string | null; role: string | null }) => boolean | Promise<boolean>
+    authorize: (
+      rest: string,
+      user: { id: string | null; role: string | null }
+    ) => boolean | Promise<boolean>
   ): void;
 }
 

@@ -383,7 +383,9 @@ const mediaHeaders = secureHeaders({ crossOriginResourcePolicy: "cross-origin" }
  */
 const PUBLIC_KON_SCRIPT = /^\/api\/[a-z0-9-]+\/public\/[A-Za-z0-9_/.-]*\.js$/;
 app.use("*", (c, next) =>
-  (c.req.path.startsWith(`${BASE_URL_LOCAL}/`) || PUBLIC_KON_SCRIPT.test(c.req.path) ? mediaHeaders : safeHeaders)(c, next)
+  (c.req.path.startsWith(`${BASE_URL_LOCAL}/`) || PUBLIC_KON_SCRIPT.test(c.req.path)
+    ? mediaHeaders
+    : safeHeaders)(c, next)
 );
 app.use("/api/*", toonMiddleware());
 app.use("/api/*", toonProtocolMiddleware());
@@ -1616,7 +1618,11 @@ export default {
       const origin = req.headers.get("origin");
       // The API's own pages (kon-koe's inbox at /api/koe/inbox) are same-origin: allowed without being
       // listed. Another site's page has another Origin and still needs ALLOWED_ORIGINS.
-      if (origin && !corsConfig.origins.includes(origin) && !sameOrigin(origin, req.headers.get("host"))) {
+      if (
+        origin &&
+        !corsConfig.origins.includes(origin) &&
+        !sameOrigin(origin, req.headers.get("host"))
+      ) {
         return new Response("Origin not allowed", { status: 403 });
       }
       const session = await getSessionFromRequest(req);

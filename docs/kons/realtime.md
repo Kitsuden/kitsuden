@@ -35,14 +35,14 @@ any authorizer runs.
 
 ## What the host guarantees
 
-|                           |                                                                                                                                                           |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Only the kon decides**  | A `kon:` channel is denied until its kon registers an authorizer, admins included: nobody but the kon knows what it carries.                             |
-| **Its own namespace**     | The context each kon receives is bound to its id: `ctx.realtime.channels` registers `kon:<its short id>:` and nothing else.                               |
-| **Asked again**           | The authorizer runs on subscribe and again on every session sweep (every minute). Access the kon revokes stops within it.                                |
-| **Fails closed**          | An authorizer that throws, or returns anything but `true`, denies.                                                                                        |
-| **Anonymous sockets**     | The authorizer receives `id: null`. A kon may allow them (a visitor holding an unguessable key) or not.                                                   |
-| **Every replica**         | `broadcast` and `sendToUser` go through the bus (Valkey, or Postgres NOTIFY without it) and reach the sockets of every API process, each exactly once.   |
+|                          |                                                                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Only the kon decides** | A `kon:` channel is denied until its kon registers an authorizer, admins included: nobody but the kon knows what it carries.                           |
+| **Its own namespace**    | The context each kon receives is bound to its id: `ctx.realtime.channels` registers `kon:<its short id>:` and nothing else.                            |
+| **Asked again**          | The authorizer runs on subscribe and again on every session sweep (every minute). Access the kon revokes stops within it.                              |
+| **Fails closed**         | An authorizer that throws, or returns anything but `true`, denies.                                                                                     |
+| **Anonymous sockets**    | The authorizer receives `id: null`. A kon may allow them (a visitor holding an unguessable key) or not.                                                |
+| **Every replica**        | `broadcast` and `sendToUser` go through the bus (Valkey, or Postgres NOTIFY without it) and reach the sockets of every API process, each exactly once. |
 
 ## What to send
 

@@ -55,7 +55,10 @@ export function sameOrigin(origin: string, host: string | null | undefined): boo
   if (!host) return false;
   try {
     const u = new URL(origin);
-    return (u.protocol === "https:" || u.protocol === "http:") && u.host.toLowerCase() === host.toLowerCase();
+    return (
+      (u.protocol === "https:" || u.protocol === "http:") &&
+      u.host.toLowerCase() === host.toLowerCase()
+    );
   } catch {
     return false;
   }
