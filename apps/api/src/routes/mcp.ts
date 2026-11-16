@@ -708,13 +708,22 @@ function auditCall(session: McpSession, body: any, response: unknown, durationMs
  * The tool a `tools/call` ran: through `kitsuden_call_tool` it is the inner one,
  * so the audit and the friction report name what actually ran.
  */
-function calledTool(body: any): { name: string; args: unknown; via?: string } {
-  const name = typeof body?.params?.name === "string" ? body.params.name : "(no name)";
-  const args = body?.params?.arguments;
-  if (name === CALL_TOOL && typeof args?.name === "string" && args.name) {
-    return { name: args.name, args: args.arguments, via: CALL_TOOL };
+function calledTool(body: unknown): { name: string; args: unknown; via?: string } {
+  const params = asRecord(asRecord(body).params);
+  const name = typeof params.name === "string" ? params.name : "(no name)";
+  const args = params.arguments;
+  const inner = asRecord(args);
+  if (name === CALL_TOOL && typeof inner.name === "string" && inner.name) {
+    return { name: inner.name, args: inner.arguments, via: CALL_TOOL };
   }
   return { name, args };
+}
+
+/** An object's keys, or an empty object for anything else (null, arrays, scalars). */
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 /**
@@ -1050,10 +1059,11 @@ async function listTools(id: string | number, session: McpSession) {
 }
 
 /** `kitsuden_find_tools` and `kitsuden_call_tool`, then every other tool. */
-async function callTool(name: unknown, args: any, id: string | number, session: McpSession) {
+async function callTool(name: unknown, args: unknown, id: string | number, session: McpSession) {
   if (name === FIND_TOOL) return findTools(args, id, session);
   if (name === CALL_TOOL) {
-    const inner = typeof args?.name === "string" ? args.name : "";
+    const wrapper = asRecord(args);
+    const inner = typeof wrapper.name === "string" ? wrapper.name : "";
     if (!inner || isDiscoveryTool(inner)) {
       return jsonRpcError(
         -32602,
@@ -1062,19 +1072,20 @@ async function callTool(name: unknown, args: any, id: string | number, session: 
         "KITSUDEN_E_VALIDATION"
       );
     }
-    return executeTool(inner, args?.arguments ?? {}, id, session);
+    return executeTool(inner, wrapper.arguments ?? {}, id, session);
   }
   return executeTool(name as string, args, id, session);
 }
 
 /** `kitsuden_find_tools`: search what this session may call. */
-async function findTools(args: any, id: string | number, session: McpSession) {
+async function findTools(rawArgs: unknown, id: string | number, session: McpSession) {
+  const args = asRecord(rawArgs);
   const { tools } = await toolsOfSession(session);
-  const group = typeof args?.group === "string" ? args.group.trim().toLowerCase() : "";
+  const group = typeof args.group === "string" ? args.group.trim().toLowerCase() : "";
   const pool = group ? tools.filter((t) => toolGroup(t.name) === group) : tools;
-  const query = typeof args?.query === "string" ? args.query : "";
+  const query = typeof args.query === "string" ? args.query : "";
   const found = query
-    ? searchTools(pool, query, Number(args?.limit) || 8)
+    ? searchTools(pool, query, Number(args.limit) || 8)
     : group
       ? stableOrder(pool).slice(0, 20)
       : null;
