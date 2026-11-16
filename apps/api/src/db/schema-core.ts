@@ -433,7 +433,13 @@ export const functionExecutionsRelations = relations(functionExecutions, ({ one 
 // Actions (Unified Action System)
 // ═══════════════════════════════════════════════
 
-export const actionTypeEnum = pgEnum("action_type", ["code", "webhook_out", "webhook_in", "agent"]);
+export const actionTypeEnum = pgEnum("action_type", [
+  "code",
+  "webhook_out",
+  "webhook_in",
+  "agent",
+  "rule",
+]);
 
 export const actionTriggerEnum = pgEnum("action_trigger", ["manual", "cron", "event", "http"]);
 
@@ -455,6 +461,8 @@ export const actions = pgTable(
         datasetId?: string;
         httpMethod?: string;
         httpPath?: string;
+        conditions?: Array<{ field: string; op: string; value?: unknown }>;
+        match?: "all" | "any";
       }>()
       .default({}),
     config: jsonb("config").default({}),
@@ -1432,6 +1440,74 @@ export const brainConnectionsRelations = relations(brainConnections, ({ one }) =
 // The service lives in services/secrets.ts; it includes bootstrap
 // CREATE TABLE IF NOT EXISTS for environments without applied migrations.
 // ═══════════════════════════════════════════════
+
+/** A saved aggregate query (0079, docs/reports.md). */
+export const reports = pgTable(
+  "reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 200 }).notNull(),
+    description: text("description"),
+    query: jsonb("query").notNull(),
+    chart: jsonb("chart"),
+    createdById: text("created_by_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("reports_updated_idx").on(t.updatedAt)]
+);
+
+/** An ordered list of report tiles (0079, docs/reports.md). */
+export const dashboards = pgTable(
+  "dashboards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 200 }).notNull(),
+    description: text("description"),
+    tiles: jsonb("tiles")
+      .$type<Array<{ report: string; title?: string; width?: number }>>()
+      .default([])
+      .notNull(),
+    createdById: text("created_by_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("dashboards_updated_idx").on(t.updatedAt)]
+);
+
+/** Every opening (or refusal) of a secret a kon sealed with `ctx.secrets` (0078). Never the value. */
+export const secretAccessLog = pgTable(
+  "secret_access_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    konId: varchar("kon_id", { length: 100 }).notNull(),
+    /** `opened` or `refused`. */
+    outcome: varchar("outcome", { length: 20 }).notNull(),
+    purpose: varchar("purpose", { length: 200 }).notNull(),
+    subject: varchar("subject", { length: 300 }),
+    actorUserId: text("actor_user_id"),
+    requestId: text("request_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("secret_access_log_created_idx").on(t.createdAt),
+    index("secret_access_log_kon_idx").on(t.konId, t.createdAt),
+    index("secret_access_log_subject_idx").on(t.subject),
+  ]
+);
+
+/** Where kons keep sealed secrets, for the offline rekey (0078). */
+export const kitsudenSecretColumns = pgTable(
+  "kitsuden_secret_columns",
+  {
+    konId: varchar("kon_id", { length: 100 }).notNull(),
+    tableName: varchar("table_name", { length: 63 }).notNull(),
+    columnName: varchar("column_name", { length: 63 }).notNull(),
+    idColumn: varchar("id_column", { length: 63 }).default("id").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.tableName, t.columnName] })]
+);
 
 export const kitsudenSecrets = pgTable(
   "kitsuden_secrets",

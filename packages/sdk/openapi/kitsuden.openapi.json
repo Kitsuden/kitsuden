@@ -29,6 +29,10 @@
       "description": "Human approval of agent proposals (team members only; never an agent)."
     },
     {
+      "name": "kon-automation",
+      "description": "The catalog of events and steps for automation rules, and the dry run of an action."
+    },
+    {
       "name": "kon-blocks",
       "description": "Lego-style block system for dynamic page layouts with drag & drop. Includes Hero, Text, Image, Video, Grid, Cards, Quote, CTA, Embed, Divider, and Spacer blocks."
     },
@@ -75,6 +79,14 @@
     {
       "name": "kon-record-history",
       "description": "The change history of the rows of any explorable table (for the admin panel)."
+    },
+    {
+      "name": "kon-reports",
+      "description": "Aggregate queries over kon tables and datasets, saved reports, kon-shipped reports and dashboards."
+    },
+    {
+      "name": "kon-secret-access",
+      "description": "Who opened which secret a kon sealed with ctx.secrets (for administrators)."
     },
     {
       "name": "kon-traces",
@@ -2575,6 +2587,202 @@
           ],
           "mcp": {
             "excluded": "Operations panel for administrators: request traces are read by a human."
+          }
+        }
+      }
+    },
+    "/admin/secret-access": {
+      "get": {
+        "operationId": "secret-access.list-secret-access",
+        "summary": "Who opened which sealed secret",
+        "description": "The openings and refusals of secrets kons sealed with `ctx.secrets`, newest first: the kon, the purpose, the subject the kon named, the account and the request. Never a value.",
+        "tags": [
+          "kon-secret-access",
+          "secrets"
+        ],
+        "parameters": [
+          {
+            "name": "kon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "konId": {
+                            "type": "string"
+                          },
+                          "outcome": {
+                            "type": "string"
+                          },
+                          "purpose": {
+                            "type": "string"
+                          },
+                          "subject": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "actorUserId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "requestId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "konId",
+                          "outcome",
+                          "purpose",
+                          "subject",
+                          "actorUserId",
+                          "requestId",
+                          "createdAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "entries"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-secret-access",
+          "id": "list-secret-access",
+          "access": "session",
+          "scope": "kon:secret-access:list-secret-access",
+          "grantedBy": [
+            "kon:secret-access:list-secret-access",
+            "secret-access:*",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "An audit trail for administrators."
           }
         }
       }
@@ -6707,6 +6915,444 @@
           ],
           "mcp": {
             "excluded": "Human approval of agent proposals: a human decides in the admin panel; no agent may approve, reject or reconfigure approvals. Agents read their own proposals with the MCP tool kitsuden_proposal_status."
+          }
+        }
+      }
+    },
+    "/automation/actions/{id}/dry-run": {
+      "post": {
+        "operationId": "automation.dry-run-action",
+        "summary": "What an action would do for an event",
+        "description": "Evaluates the action's conditions against `payload` and, for a rule, fills each step's config and asks its handler for a preview. Nothing is sent, nothing is written and no execution is recorded. For the other types of action only the conditions are checked. Values under keys that name a secret are hidden.",
+        "tags": [
+          "kon-automation",
+          "automation"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "payload": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "wouldRun": {
+                      "type": "boolean"
+                    },
+                    "conditions": {
+                      "type": "object",
+                      "properties": {
+                        "passed": {
+                          "type": "boolean"
+                        },
+                        "outcomes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "condition": {
+                                "type": "object",
+                                "properties": {
+                                  "field": {
+                                    "type": "string"
+                                  },
+                                  "op": {
+                                    "type": "string"
+                                  },
+                                  "value": {}
+                                },
+                                "required": [
+                                  "field",
+                                  "op"
+                                ]
+                              },
+                              "actual": {},
+                              "passed": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "condition",
+                              "passed"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "passed",
+                        "outcomes"
+                      ]
+                    },
+                    "steps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "handler": {
+                            "type": "string"
+                          },
+                          "config": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {}
+                          },
+                          "preview": {},
+                          "problem": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "handler",
+                          "config"
+                        ]
+                      }
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "wouldRun",
+                    "conditions",
+                    "steps"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-automation",
+          "id": "dry-run-action",
+          "access": "session",
+          "scope": "kon:automation:dry-run-action",
+          "grantedBy": [
+            "kon:automation:dry-run-action",
+            "automation:*",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Writing and testing a rule is a person's task in the panel."
+          }
+        }
+      }
+    },
+    "/automation/catalog": {
+      "get": {
+        "operationId": "automation.catalog",
+        "summary": "Events and steps available to rules",
+        "description": "The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, and the ones kons contribute), each with its config fields.",
+        "tags": [
+          "kon-automation",
+          "automation"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "payload": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "listeners": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "source",
+                          "description",
+                          "payload",
+                          "listeners"
+                        ]
+                      }
+                    },
+                    "handlers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "config": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "source",
+                          "label",
+                          "description",
+                          "config"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "handlers"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-automation",
+          "id": "catalog",
+          "access": "session",
+          "scope": "kon:automation:catalog",
+          "grantedBy": [
+            "kon:automation:catalog",
+            "automation:*",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Writing a rule is a person's task in the panel."
           }
         }
       }
@@ -28071,6 +28717,2967 @@
           "stream": true,
           "mcp": {
             "excluded": "Human approval of agent proposals: a human decides in the admin panel; no agent may approve, reject or reconfigure approvals. Agents read their own proposals with the MCP tool kitsuden_proposal_status."
+          }
+        }
+      }
+    },
+    "/reports": {
+      "get": {
+        "operationId": "reports.list-reports",
+        "summary": "List reports",
+        "description": "The reports people saved (`source: saved`) and the ones installed kons ship (`source: kon`, read-only, id `kon:<kon id>/<report id>`), each with its query.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reports": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "saved",
+                              "kon"
+                            ]
+                          },
+                          "konId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "query": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {}
+                          },
+                          "chart": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "updatedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "source",
+                          "konId",
+                          "name",
+                          "description",
+                          "query",
+                          "chart",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "reports"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "list-reports",
+          "access": "session",
+          "scope": "kon:reports:list-reports",
+          "grantedBy": [
+            "kon:reports:list-reports",
+            "reports:*",
+            "reports:read",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "reports_list"
+          }
+        }
+      },
+      "post": {
+        "operationId": "reports.create-report",
+        "summary": "Save a report",
+        "description": "Stores an aggregate query under a name, with an optional chart hint (`type`: table, number, bar, line, donut; `x`; `y`). The query is checked against the real tables first: a report that could not run is not saved.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "query": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "chart": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  }
+                },
+                "required": [
+                  "name",
+                  "query"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "report": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "saved",
+                            "kon"
+                          ]
+                        },
+                        "konId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "query": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        },
+                        "chart": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "source",
+                        "konId",
+                        "name",
+                        "description",
+                        "query",
+                        "chart",
+                        "updatedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "report"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "create-report",
+          "access": "session",
+          "scope": "kon:reports:create-report",
+          "grantedBy": [
+            "kon:reports:create-report",
+            "reports:*",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Saving a report is a panel task; an agent runs queries with reports_aggregate."
+          }
+        }
+      }
+    },
+    "/reports/aggregate": {
+      "post": {
+        "operationId": "reports.aggregate",
+        "summary": "Run an aggregate query",
+        "description": "Computes count, count_distinct, sum, avg, min or max over a table an installed kon declares, or over a dataset, optionally grouped (with day/week/month/quarter/year buckets for dates) and filtered. Runs as you: row policies decide which rows are counted. Columns that hold secrets are refused. Returns one row per group, at most `limit` (default 100, max 1000); `truncated` says there were more.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "dimension",
+                              "measure"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "role"
+                        ]
+                      }
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "columns",
+                    "rows",
+                    "truncated"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "aggregate",
+          "access": "session",
+          "scope": "kon:reports:aggregate",
+          "grantedBy": [
+            "kon:reports:aggregate",
+            "reports:*",
+            "reports:read",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "reports_aggregate"
+          }
+        },
+        "x-kitsuden-guide": {
+          "whenToUse": "To answer 'how many / how much, grouped by what'. Use it instead of listing rows and adding them up.",
+          "examples": [
+            {
+              "title": "Deals won per month",
+              "args": {
+                "body": {
+                  "query": {
+                    "source": {
+                      "table": "crm_deals"
+                    },
+                    "measures": [
+                      {
+                        "fn": "sum",
+                        "field": "amount",
+                        "as": "total"
+                      },
+                      {
+                        "fn": "count"
+                      }
+                    ],
+                    "groupBy": [
+                      {
+                        "field": "closed_at",
+                        "bucket": "month",
+                        "as": "month"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "field": "status",
+                        "op": "eq",
+                        "value": "won"
+                      }
+                    ],
+                    "orderBy": [
+                      {
+                        "by": "month",
+                        "dir": "asc"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "/reports/dashboards": {
+      "get": {
+        "operationId": "reports.list-dashboards",
+        "summary": "List dashboards",
+        "description": "Every dashboard with its tiles. Each tile points at a report; run them with run-dashboard.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dashboards": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "tiles": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "report": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 12
+                                }
+                              },
+                              "required": [
+                                "report"
+                              ]
+                            }
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "tiles",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "dashboards"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "list-dashboards",
+          "access": "session",
+          "scope": "kon:reports:list-dashboards",
+          "grantedBy": [
+            "kon:reports:list-dashboards",
+            "reports:*",
+            "reports:read",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Dashboards are a layout for the panel; an agent uses reports_list and reports_run."
+          }
+        }
+      },
+      "post": {
+        "operationId": "reports.create-dashboard",
+        "summary": "Create a dashboard",
+        "description": "An ordered list of tiles. Each tile names a report (a saved report's id, or `kon:<kon id>/<report id>`), with an optional title and a width from 1 to 12.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "tiles": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "report": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "title": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "width": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 12
+                        }
+                      },
+                      "required": [
+                        "report"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dashboard": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "tiles": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "report": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "title": {
+                                "type": "string",
+                                "maxLength": 200
+                              },
+                              "width": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 12
+                              }
+                            },
+                            "required": [
+                              "report"
+                            ]
+                          }
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "tiles",
+                        "updatedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "dashboard"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "create-dashboard",
+          "access": "session",
+          "scope": "kon:reports:create-dashboard",
+          "grantedBy": [
+            "kon:reports:create-dashboard",
+            "reports:*",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Dashboards are a layout for the panel."
+          }
+        }
+      }
+    },
+    "/reports/dashboards/{id}": {
+      "get": {
+        "operationId": "reports.get-dashboard",
+        "summary": "Read a dashboard",
+        "description": "One dashboard with its tiles.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dashboard": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "tiles": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "report": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "title": {
+                                "type": "string",
+                                "maxLength": 200
+                              },
+                              "width": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 12
+                              }
+                            },
+                            "required": [
+                              "report"
+                            ]
+                          }
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "tiles",
+                        "updatedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "dashboard"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "get-dashboard",
+          "access": "session",
+          "scope": "kon:reports:get-dashboard",
+          "grantedBy": [
+            "kon:reports:get-dashboard",
+            "reports:*",
+            "reports:read",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Dashboards are a layout for the panel."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "reports.delete-dashboard",
+        "summary": "Delete a dashboard",
+        "description": "Deletes the dashboard. Its reports are kept.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional. Repeating this operation already leaves the same state.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "deleted"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "delete-dashboard",
+          "access": "session",
+          "scope": "kon:reports:delete-dashboard",
+          "grantedBy": [
+            "kon:reports:delete-dashboard",
+            "reports:*",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": true,
+          "readOnly": false,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Dashboards are a layout for the panel."
+          }
+        }
+      },
+      "patch": {
+        "operationId": "reports.update-dashboard",
+        "summary": "Change a dashboard",
+        "description": "Changes the name, the description or the whole list of tiles.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "tiles": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "report": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "title": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "width": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 12
+                        }
+                      },
+                      "required": [
+                        "report"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dashboard": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "tiles": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "report": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "title": {
+                                "type": "string",
+                                "maxLength": 200
+                              },
+                              "width": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 12
+                              }
+                            },
+                            "required": [
+                              "report"
+                            ]
+                          }
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "tiles",
+                        "updatedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "dashboard"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "update-dashboard",
+          "access": "session",
+          "scope": "kon:reports:update-dashboard",
+          "grantedBy": [
+            "kon:reports:update-dashboard",
+            "reports:*",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Dashboards are a layout for the panel."
+          }
+        }
+      }
+    },
+    "/reports/dashboards/{id}/run": {
+      "post": {
+        "operationId": "reports.run-dashboard",
+        "summary": "Run every report of a dashboard",
+        "description": "Runs each tile's report and returns the results in tile order. A tile whose report is gone or fails carries `error` instead of `result`; the others still come back.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dashboard": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "tiles": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "report": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "title": {
+                                "type": "string",
+                                "maxLength": 200
+                              },
+                              "width": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 12
+                              }
+                            },
+                            "required": [
+                              "report"
+                            ]
+                          }
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "tiles",
+                        "updatedAt"
+                      ]
+                    },
+                    "tiles": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "report": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "width": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "chart": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "result": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "columns": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": "string"
+                                        },
+                                        "role": {
+                                          "type": "string",
+                                          "enum": [
+                                            "dimension",
+                                            "measure"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "name",
+                                        "role"
+                                      ]
+                                    }
+                                  },
+                                  "rows": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {}
+                                    }
+                                  },
+                                  "truncated": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "columns",
+                                  "rows",
+                                  "truncated"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "error": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "report",
+                          "title",
+                          "width",
+                          "chart",
+                          "result",
+                          "error"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "dashboard",
+                    "tiles"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "run-dashboard",
+          "access": "session",
+          "scope": "kon:reports:run-dashboard",
+          "grantedBy": [
+            "kon:reports:run-dashboard",
+            "reports:*",
+            "reports:read",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Dashboards are a layout for the panel."
+          }
+        }
+      }
+    },
+    "/reports/run": {
+      "post": {
+        "operationId": "reports.run-report",
+        "summary": "Run a report",
+        "description": "Runs a saved report (by id) or a kon's (`kon:<kon id>/<report id>`) and returns its result and its chart hint. Runs as you, like `aggregate`.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "report": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "report"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "report": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "saved",
+                            "kon"
+                          ]
+                        },
+                        "konId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "query": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        },
+                        "chart": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "source",
+                        "konId",
+                        "name",
+                        "description",
+                        "query",
+                        "chart",
+                        "updatedAt"
+                      ]
+                    },
+                    "result": {
+                      "type": "object",
+                      "properties": {
+                        "columns": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "dimension",
+                                  "measure"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "role"
+                            ]
+                          }
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {}
+                          }
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "columns",
+                        "rows",
+                        "truncated"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "report",
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "run-report",
+          "access": "session",
+          "scope": "kon:reports:run-report",
+          "grantedBy": [
+            "kon:reports:run-report",
+            "reports:*",
+            "reports:read",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "reports_run"
+          }
+        }
+      }
+    },
+    "/reports/{id}": {
+      "get": {
+        "operationId": "reports.get-report",
+        "summary": "Read a saved report",
+        "description": "One saved report with its query and chart hint. Kon reports are read from list-reports.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "report": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "saved",
+                            "kon"
+                          ]
+                        },
+                        "konId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "query": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        },
+                        "chart": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "source",
+                        "konId",
+                        "name",
+                        "description",
+                        "query",
+                        "chart",
+                        "updatedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "report"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "get-report",
+          "access": "session",
+          "scope": "kon:reports:get-report",
+          "grantedBy": [
+            "kon:reports:get-report",
+            "reports:*",
+            "reports:read",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "reports_list already returns every report with its query."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "reports.delete-report",
+        "summary": "Delete a saved report",
+        "description": "Deletes the report. A dashboard tile that pointed at it shows that the report is gone.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional. Repeating this operation already leaves the same state.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "deleted"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "delete-report",
+          "access": "session",
+          "scope": "kon:reports:delete-report",
+          "grantedBy": [
+            "kon:reports:delete-report",
+            "reports:*",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": true,
+          "readOnly": false,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Saving a report is a panel task."
+          }
+        }
+      },
+      "patch": {
+        "operationId": "reports.update-report",
+        "summary": "Change a saved report",
+        "description": "Changes the name, the description, the query or the chart hint. A new query is checked like a new report.",
+        "tags": [
+          "kon-reports",
+          "reports"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "query": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "chart": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "report": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "saved",
+                            "kon"
+                          ]
+                        },
+                        "konId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "query": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        },
+                        "chart": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "source",
+                        "konId",
+                        "name",
+                        "description",
+                        "query",
+                        "chart",
+                        "updatedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "report"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-reports",
+          "id": "update-report",
+          "access": "session",
+          "scope": "kon:reports:update-report",
+          "grantedBy": [
+            "kon:reports:update-report",
+            "reports:*",
+            "reports:write",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Saving a report is a panel task."
           }
         }
       }

@@ -134,6 +134,14 @@ const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 30_000; // 30 seconds
 
 /**
+ * Drops the scan cache, so that what is installed is read again at once. For a kon that is installed
+ * or removed while the API runs, and for tests that change `KITSUDEN_KONS`.
+ */
+export function clearPackageScanCache(): void {
+  cache.clear();
+}
+
+/**
  * Scan kons from node_modules (installed via npm)
  */
 export async function scanInstalledKons(): Promise<KitsudenManifest[]> {

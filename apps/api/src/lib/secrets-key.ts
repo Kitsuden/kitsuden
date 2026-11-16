@@ -43,9 +43,15 @@ export function deriveSecretsKey(raw: string): Buffer {
   return scryptSync(raw, KEY_SALT, 32);
 }
 
-export function encryptWith(key: Buffer, plaintext: string): EncryptedValue {
+/**
+ * `aad` binds the ciphertext to a context (a kon's id): the same key will not
+ * open it under another one. It is authenticated, not stored: whoever decrypts
+ * must supply the same value.
+ */
+export function encryptWith(key: Buffer, plaintext: string, aad?: string): EncryptedValue {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
+  if (aad !== undefined) cipher.setAAD(Buffer.from(aad, "utf8"));
   const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   return {
     valueEncrypted: encrypted.toString("hex"),
@@ -54,8 +60,9 @@ export function encryptWith(key: Buffer, plaintext: string): EncryptedValue {
   };
 }
 
-export function decryptWith(key: Buffer, payload: EncryptedValue): string {
+export function decryptWith(key: Buffer, payload: EncryptedValue, aad?: string): string {
   const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(payload.iv, "hex"));
+  if (aad !== undefined) decipher.setAAD(Buffer.from(aad, "utf8"));
   decipher.setAuthTag(Buffer.from(payload.authTag, "hex"));
   const decrypted = Buffer.concat([
     decipher.update(Buffer.from(payload.valueEncrypted, "hex")),

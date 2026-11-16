@@ -15,7 +15,6 @@ import { db } from "../db";
 import { kitsudenFunctions } from "../db/schema";
 
 import { dispatchEvent, executeActionById } from "./actions";
-import { events } from "./events";
 import type { ActionExecutor } from "./sandbox/identity";
 import type { SandboxResult } from "./worker-sandbox";
 
@@ -171,15 +170,8 @@ async function dispatchToActions(
 export function initFunctionDispatcher() {
   console.warn("[DEPRECATED] initFunctionDispatcher called, events now handled by ActionEngine");
 
-  // Keep event listeners for backward compatibility during transition
-  // These will be removed
-  for (const eventName of Object.keys(EVENT_MAP)) {
-    events.on(eventName, (data) => {
-      dispatchToActions(eventName, data).catch((err) => {
-        console.error(`[FunctionDispatcher] Error dispatching ${eventName}:`, err);
-      });
-    });
-  }
+  // It registers NO listeners: the actions engine already subscribes to the same four events
+  // (`initActionsEngine`), and a second subscription here ran every matching action twice.
 
   console.log("  ⚡ Function Dispatcher (legacy) - events delegated to ActionEngine");
 }

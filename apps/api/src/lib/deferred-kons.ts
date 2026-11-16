@@ -56,6 +56,7 @@ import { withTransactionalRLS } from "../middleware/transactional-rls";
 
 import { inProduction } from "./environment";
 import { withHostContext, envForTheKon } from "./host-context";
+import { announceKon, bindKonContext } from "./kon-setup";
 
 export interface DeferredKon {
   /** The kon's id, as in its manifest (`kon-booking`). */
@@ -228,7 +229,10 @@ async function load(kon: DeferredKon): Promise<Hono | null> {
     const exported = mod.kon ?? mod.default;
 
     if (isKonDefinition(exported)) {
-      const router = exported.createRouter(context);
+      // Tied to this kon, like at startup (lib/kon-setup.ts).
+      const konContext = bindKonContext(context, exported.id);
+      await announceKon(exported, konContext);
+      const router = exported.createRouter(konContext);
       // Kon SDK: its operations, for MCP (the path is the one declared
       // by the kon or the first of the reserved candidates).
       if (exported.operations) {
@@ -237,13 +241,13 @@ async function load(kon: DeferredKon): Promise<Hono | null> {
         registerMountedOperations(
           kon.id,
           exported.mountPath ?? kon.mountRoutes[0] ?? `/api/custom/${kon.id}`,
-          operationsOf(exported, context),
+          operationsOf(exported, konContext),
           router as never
         );
       }
       // `onStartup` runs here and not at startup: for this kon, THIS is its
       // startup. If it throws, activation fails and nothing is cached.
-      if (exported.hooks?.onStartup) await exported.hooks.onStartup(context);
+      if (exported.hooks?.onStartup) await exported.hooks.onStartup(konContext);
       withErrorTranslator(router, kon.id);
       const wrappedItem = withErrorTranslator(withHostContext(router), kon.id);
       routers.set(kon.id, wrappedItem);

@@ -38,6 +38,7 @@
  * Kons that want to be clean call `unlinkAll()` when deleting.
  */
 
+import { canonicalEnds, isLinkRelationName, isSymmetricRelation } from "@kitsuden/shared";
 import { sql } from "drizzle-orm";
 
 import { resolveExecutor } from "./request-scope";
@@ -108,6 +109,14 @@ export async function link(
 
   const ex = db ?? resolveExecutor<Executor>(undefined as unknown as Executor);
   const relation = options.relation ?? "related";
+  if (!isLinkRelationName(relation)) {
+    throw new Error(
+      `links: relation "${relation}" must be lower case letters, digits and "_" (docs/kons/links.md)`
+    );
+  }
+  // A relation with no direction is stored with its ends in a fixed order, so
+  // writing A–B and then B–A lands on the same row instead of two.
+  if (isSymmetricRelation(relation)) [from, to] = canonicalEnds(from, to);
 
   await ex.execute(sql`
     INSERT INTO kitsuden_links (from_type, from_id, to_type, to_id, relation, metadata, owner_id, created_by)

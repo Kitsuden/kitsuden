@@ -1,0 +1,12 @@
+{
+  "id": "kon-reports-test",
+  "name": "Reports (fixture)",
+  "version": "1.0.0",
+  "sdk": 1,
+  "type": "kon",
+  "description": "Fixture: declares one table and marks one of its columns as personal data, so the reports tests do not depend on which kons the machine has installed.",
+  "tables": ["zz_reports_fixture"],
+  "sensitivity": {
+    "zz_reports_fixture": { "email": "personal" }
+  }
+}

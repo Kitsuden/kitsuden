@@ -82,7 +82,10 @@ import { file } from "./file";
 import { readGrimoireKons, readKonJsonManifest } from "./grimoire-manifest";
 import { konIdOf, installedKon, listInstalledKons, incompatibleSdkReason } from "./installed-kons";
 import { checkKonCompatibility } from "./kitsuden-compat";
+import { konEntities } from "./kon-entities";
 import { registerKonRouter } from "./kon-routes";
+import { konSecrets } from "./kon-secrets";
+import { announceKon, bindKonContext } from "./kon-setup";
 import { logger } from "./logger";
 import { registerKonToolsets } from "./mcp-settings";
 import { limiterEnabled, rateLimit } from "./rate-limiter";
@@ -539,6 +542,23 @@ export function createKonContext(): KonContext {
     // General settings → Site URL, live (see site-settings.ts)
     site: {
       publicUrl: sitePublicUrl,
+    },
+
+    // Sealed secrets with an access log (lib/kon-secrets.ts)
+    secrets: konSecrets,
+
+    // Records of the entities kons declare (lib/kon-entities.ts)
+    entities: konEntities,
+
+    // Rules the kon keeps, run by the core's rule engine (lib/actions/kon-automation.ts). Imported on
+    // first use: the actions engine reaches the agent engine, which reaches this loader.
+    automation: {
+      upsertRule: async (konId, rule) =>
+        (await import("./actions/kon-automation")).konAutomation.upsertRule(konId, rule),
+      removeRule: async (konId, slug) =>
+        (await import("./actions/kon-automation")).konAutomation.removeRule(konId, slug),
+      listRules: async (konId) =>
+        (await import("./actions/kon-automation")).konAutomation.listRules(konId),
     },
   };
 
@@ -1236,8 +1256,12 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
           throw new Error(codeSdkReason);
         }
 
+        // The context this kon receives: the shared one, with its kon-scoped services tied to its id
+        // (lib/kon-setup.ts), so it cannot act as another kon.
+        const konContext = bindKonContext(context, konDef.id);
+
         // Create router with injected context
-        const router = konDef.createRouter(context);
+        const router = konDef.createRouter(konContext);
 
         // Apply custom mount path: kon definition > kon.json > default
         const finalMountPath = konDef.mountPath || customMountPath || mountPath;
@@ -1249,6 +1273,7 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
         applyKonRateLimits(app, konDef, finalMountPath);
         // Its tool groups for agents (`kon:<id>/<set>`), before any MCP session reads them.
         registerKonToolsets(konDef.id, konDef.mcpToolsets);
+        await announceKon(konDef, konContext);
 
         // Every request to the kon, in its RLS transaction (see `theRequestDb`).
         mountKonRls(app, finalMountPath);
@@ -1261,7 +1286,7 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
           registerMountedOperations(
             kon.id,
             finalMountPath,
-            operationsOf(konDef, context),
+            operationsOf(konDef, konContext),
             router as never
           );
         }
@@ -1279,7 +1304,7 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
 
         // Execute lifecycle hooks
         if (konDef.hooks?.onStartup) {
-          await konDef.hooks.onStartup(context);
+          await konDef.hooks.onStartup(konContext);
           initExecuted = true;
         }
 

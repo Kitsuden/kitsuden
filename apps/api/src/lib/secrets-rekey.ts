@@ -73,24 +73,64 @@ function reencrypt(
   oldKey: Buffer,
   newKey: Buffer,
   payload: EncryptedValue,
-  where: string
+  where: string,
+  /** The context the value is bound to (a kon's sealed secret); see `encryptWith`. */
+  aad?: string
 ): EncryptedValue | null {
   try {
-    decryptWith(newKey, payload);
+    decryptWith(newKey, payload, aad);
     return null;
   } catch {
     // Not on the new key yet
   }
   let plain: string;
   try {
-    plain = decryptWith(oldKey, payload);
+    plain = decryptWith(oldKey, payload, aad);
   } catch {
     throw new RekeyError(
       `${where} decrypts with neither the old nor the new key: nothing was changed. ` +
         "Check KITSUDEN_SECRETS_KEY_OLD (by default BETTER_AUTH_SECRET is the old one)."
     );
   }
-  return encryptWith(newKey, plain);
+  return encryptWith(newKey, plain, aad);
+}
+
+const IDENTIFIER = /^[a-z_][a-z0-9_]{0,62}$/;
+
+interface JsonStore {
+  table: string;
+  column: string;
+  id: string;
+}
+
+/**
+ * The columns kons declared for their sealed secrets (`defineKon({ secretColumns })`), which the
+ * loader writes to `kitsuden_secret_columns`. Read from the database because this runs offline,
+ * with no kon loaded.
+ */
+async function konSecretStores(tx: Executor): Promise<JsonStore[]> {
+  if (!(await tableExists(tx, "kitsuden_secret_columns"))) return [];
+  const rows = rowsOf(
+    await tx.execute(
+      sql`SELECT table_name, column_name, id_column FROM kitsuden_secret_columns ORDER BY 1, 2`
+    )
+  );
+  return rows
+    .map((r) => ({
+      table: String(r.table_name),
+      column: String(r.column_name),
+      id: String(r.id_column),
+    }))
+    .filter((s) => [s.table, s.column, s.id].every((name) => IDENTIFIER.test(name)));
+}
+
+async function columnExists(tx: Executor, table: string, column: string): Promise<boolean> {
+  const r = rowsOf(
+    await tx.execute(sql`
+      SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = ${table} AND column_name = ${column}`)
+  );
+  return r.length > 0;
 }
 
 export async function rekeySecrets(
@@ -145,12 +185,17 @@ export async function rekeySecrets(
     }
 
     // 2 and 3. The jsonb payloads
-    const jsonStores = [
+    const jsonStores: JsonStore[] = [
       { table: "data_sources", column: "encrypted_password", id: "id" },
       { table: "agent_notify_settings", column: "secret", id: "agent_id" },
-    ] as const;
+      // The auth header of an external MCP server (0070). It was missing from this list: after a
+      // rekey those headers no longer decrypted.
+      { table: "external_mcp_servers", column: "auth_header_value", id: "id" },
+      ...(await konSecretStores(tx)),
+    ];
     for (const s of jsonStores) {
       if (!(await tableExists(tx, s.table))) continue;
+      if (!(await columnExists(tx, s.table, s.column))) continue;
       const stats = { rekeyed: 0, alreadyNew: 0 };
       const rows = rowsOf(
         await tx.execute(
@@ -163,7 +208,17 @@ export async function rekeySecrets(
       for (const r of rows) {
         const payload = parseJson(r.payload);
         if (!isEncrypted(payload)) continue;
-        const next = reencrypt(oldKey, newKey, payload, `${s.table}.${s.column} (${String(r.id)})`);
+        // A kon's sealed secret names its kon; the value is bound to that name.
+        const kon = (payload as { kon?: unknown }).kon;
+        const aad = typeof kon === "string" ? `kon:${kon}` : undefined;
+        const next = reencrypt(
+          oldKey,
+          newKey,
+          payload,
+          `${s.table}.${s.column} (${String(r.id)})`,
+          aad
+        );
+        if (next && aad !== undefined) Object.assign(next, { v: 1, kon });
         if (!next) {
           stats.alreadyNew++;
           continue;

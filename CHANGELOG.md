@@ -9,6 +9,31 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Automation rules** ([docs/automation.md](docs/automation.md)): a stored action of type `rule`
+  runs a list of steps (`core:webhook`, `core:send-mail`, `core:run-agent`, or a step a kon
+  contributes with `defineKon({ actionHandlers })`) when the trigger's conditions over the event
+  payload are met. `POST /api/automation/actions/:id/dry-run` says what would happen without doing it, and
+  `GET /api/automation/catalog` lists the events and steps available. Conditions work on every type
+  of action. Kons keep their own rules with `ctx.automation`.
+- **Kon events contract** ([docs/kons/events.md](docs/kons/events.md)): the name format, what
+  delivery guarantees, and `defineKon({ events })` to declare what a kon emits and listens to.
+- **Link relations** ([docs/kons/links.md](docs/kons/links.md)): `related`, `same_person`,
+  `ordered_by`, `paid_by` and `about` in `LINK_RELATIONS`, each with its direction.
+- **Reports** ([docs/reports.md](docs/reports.md)): `POST /api/reports/aggregate` computes count,
+  sum, avg, min and max, grouped and filtered, over tables kons declare and over datasets, as
+  whoever asks; saved reports, reports shipped by kons (`defineKon({ reports })`) and dashboards.
+  MCP tools `reports_aggregate`, `reports_list` and `reports_run`; scopes `reports:read` and
+  `reports:write`.
+- **Sealed secrets for kons** ([docs/kons/secrets.md](docs/kons/secrets.md)): `ctx.secrets` encrypts
+  a credential with the installation's secrets key, bound to the kon, and records every opening
+  in `secret_access_log` (`GET /api/admin/secret-access`).
+- **Kon entities** ([docs/kons/entities.md](docs/kons/entities.md)): `defineKon({ entities })`
+  creates datasets the kon owns at load, with no migration; `ctx.entities` reads and writes their
+  records, validated against the declared fields.
+- Core migrations `0077_action_rules`, `0078_kon_secrets`, `0079_reports`,
+  `0080_kon_entities` and `0081_try_timestamptz`.
+- Hot activation of a kon now registers what it declares (events, steps, reports, entities, secret
+  columns), like startup does. It used to skip it.
 - Page builder: `POST /api/page-builder/pages/:id/publish-draft` publishes a draft (a page made
   with `clone`) onto its page in one transaction. It replaces the shown blocks, keeps hidden and
   scheduled ones, copies title, description and SEO fields, and deletes the draft. Contract
@@ -38,6 +63,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A stored action listening to `entry.created`, `entry.updated`, `entry.deleted` or
+  `post.published` ran twice for each event: the legacy function dispatcher subscribed to the
+  same events as the actions engine.
+- `rekey-secrets.ts` did not re-encrypt `external_mcp_servers.auth_header_value`; after a key
+  rotation those headers no longer decrypted.
 - Page builder: `clone` and `duplicate` keep `visibleFrom` and `visibleUntil`. A scheduled block
   was public at once in the copy, and publishing the copy duplicated it.
 - Page builder: creating, editing, moving, duplicating or deleting a block moves the page's
@@ -72,6 +102,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `link()` refuses a relation that is not lower case letters, digits and `_`, and stores a
+  relation with no direction (`related`, `same_person`) with its ends in a fixed order, so
+  writing it from both sides gives one row. Links written before this are not rewritten.
 - Admin panel: SvelteKit 3, Vite 8 and `@sveltejs/vite-plugin-svelte` 7, which closes the two
   SvelteKit 2 advisories (an open redirect in `use:enhance`, and XSS through `cache-control` in
   prerendered pages).

@@ -108,6 +108,13 @@ import {
 import { toonMiddleware } from "./lib/toon";
 import { toonProtocolMiddleware } from "./lib/toon-protocol";
 import { startTraces, stopTraces, requestTraces } from "./lib/traces";
+import {
+  AUTOMATION_ROUTE,
+  automationRoutes,
+  SECRET_ACCESS_ROUTE,
+  secretAccessRoutes,
+} from "./routes/automation";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { closeValkey, valkeyConfigured } from "./lib/valkey";
 import { registerSystemMails } from "./mail/system-mails";
 import {
@@ -1167,6 +1174,17 @@ mountKonRls(app, MEMORY_ROUTE);
 app.route(MEMORY_ROUTE, brainMemoryRoutes);
 registerMountedOperations(MEMORY_KON, MEMORY_ROUTE, memoryOperations, brainMemoryRoutes);
 app.route("/api/brain", brainRoutes);
+// Reports (docs/reports.md): aggregate queries, saved reports, kon reports and dashboards. In the
+// request's transaction, so a report counts the rows whoever runs it may see; among the MOUNTED
+// operations, so reports_aggregate / reports_list / reports_run are MCP tools.
+// Automation (docs/automation.md): the catalog of events and steps, and the dry run of an action.
+// As the system: `actions` is a system-only table. The stored actions themselves stay at /api/actions.
+app.route(AUTOMATION_ROUTE, automationRoutes);
+// Who opened which secret a kon sealed (docs/kons/secrets.md). Under /api/admin: administrators.
+app.route(SECRET_ACCESS_ROUTE, secretAccessRoutes);
+mountKonRls(app, REPORTS_ROUTE);
+app.route(REPORTS_ROUTE, reportsRoutes);
+registerMountedOperations(REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes);
 console.log("  🧠 KITSUDEN Brain → /api/brain");
 app.route("/api/map", systemMapRoutes);
 console.log("  🗺️  System Map → /api/map");

@@ -159,6 +159,12 @@ const COLLABORATIVE = new Map<string, string>([
   // table is system-only (rls-system-only.sql): not even the user reads their own
   // row through SQL, only better-auth with the empty context does.
   ["auth_two_factors", "system-only under RLS (rls-system-only.sql); user_id is not a read grant"],
+  // Who opened which sealed secret of a kon (0078). `actor_user_id` is the account on whose behalf it
+  // was opened, written and read as the system; the log outlives the account, so it has no foreign key.
+  [
+    "secret_access_log",
+    "system-only under RLS (rls-system-only.sql); actor_user_id is who opened a secret, not a read grant",
+  ],
   // A team is PUBLIC: it appears in the bracket, in the rankings and in the
   // overlay. `created_by_user_id` says who can administer it, not who
   // can see it — that is decided by the kon's policy (only the captain invites).
