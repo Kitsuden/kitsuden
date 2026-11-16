@@ -18,7 +18,8 @@ tool and flags any change until a person approves it again.
 
 1. A human admin registers a server: name, URL (Streamable HTTP, `https://`),
    and optionally an auth header (`Authorization: Bearer …`), stored encrypted
-   with the secrets key and never returned.
+   with the secrets key and never returned. A server that only takes OAuth is
+   registered without a header and connected afterwards (see [OAuth](#oauth)).
 2. **Read tools** (`POST …/refresh`) connects, reads every page of
    `tools/list` and disconnects.
 3. Each tool gets a fingerprint: SHA-256 of the canonical JSON of its `name`,
@@ -51,6 +52,8 @@ given.
 | `POST /api/admin/mcp-servers/:id/refresh`       | Reads `tools/list`; answers which tools need review and why.      |
 | `GET /api/admin/mcp-servers/:id/tools`          | Each tool: description, schema, current and approved fingerprint. |
 | `POST /api/admin/mcp-servers/:id/tools/approve` | `{ name, fingerprint }`.                                          |
+| `POST /api/admin/mcp-servers/:id/oauth/start`   | `{ clientId?, clientSecret?, scopes? }` → `authorizationUrl`.     |
+| `DELETE /api/admin/mcp-servers/:id/oauth`       | Forgets the tokens and the client.                                |
 
 The panel page is **External MCP servers** (`/mcp-servers`, admin only). For
 each approved tool it shows the name agents see and the scope they need (the
@@ -121,6 +124,85 @@ What this does not cover:
 - **Customer data over MCP.** An outside agent's MCP calls carry no run guard:
   the customer-data check applies to engine runs only.
 
+## OAuth
+
+Optional, next to the static header: a server uses one or the other. It needs
+no extra service and no setting. The API runs the flow and Postgres keeps the
+tokens, encrypted with the secrets key (`KITSUDEN_SECRETS_KEY`) like the header.
+
+1. Register the server without a header.
+2. `POST /api/admin/mcp-servers/:id/oauth/start`. The API finds the server's
+   authorization server (protected-resource metadata, RFC 9728; then
+   authorization-server metadata, RFC 8414, or OpenID discovery) and registers
+   itself as a client there (dynamic client registration, RFC 7591). The
+   answer is `{ authorizationUrl, redirectUri }`.
+3. Open `authorizationUrl` in a browser and authorize. The authorization
+   server sends the browser to `GET /api/mcp-oauth/callback`, which exchanges
+   the code and redirects to the panel: `/mcp-servers?oauth=connected`, or
+   `oauth=error` with the reason.
+4. From then on every connection (reading tools, the scheduled refresh, an
+   agent's call) sends `Authorization: Bearer <access token>`. A token with
+   less than a minute left is refreshed first.
+
+When the authorization server has no dynamic registration, register a client
+by hand there with the redirect URI `<API URL>/api/mcp-oauth/callback` and
+pass `{ "clientId": "…", "clientSecret": "…" }` to `oauth/start` (the
+secret only for a confidential client). `scopes` is a space-separated list;
+without it the server's default applies.
+
+The server's entry shows `auth: "oauth"` and `oauth: { issuer, clientId,
+scopes, expiresAt, connectedAt, connectedBy }`. Tokens are never returned or
+logged.
+
+What is checked:
+
+- **Every URL the server announces** (metadata, authorization, token and
+  registration endpoints) passes the same check as the server's own URL:
+  `https://` and public addresses. A server cannot point the API at an
+  internal address by announcing it as its token endpoint.
+- **PKCE with S256 is required.** A server that does not announce it is
+  refused.
+- **The token is for this server**: the `resource` parameter (RFC 8707) is
+  the server's URL, and the code is exchanged at the endpoints the flow
+  started with.
+- **The callback is public**, as an OAuth redirect has to be. What authorizes
+  it is the `state`: 256 random bits given only to the admin who started,
+  stored as a hash, valid once and for ten minutes.
+- **Starting and disconnecting are for human admins**, like the rest of this
+  API.
+
+The tokens are forgotten when the server's URL changes (they were issued for
+the other URL), when a static header is set, and on
+`DELETE …/oauth`. If a refresh is refused (the grant was revoked on the other
+side, or there is no refresh token), reading the tools fails with that error
+and agents' calls fail too until someone connects again.
+
+Not included: the client-credentials grant, a button in the panel (the flow is
+the two API calls above; the panel shows the result), and revoking the token
+at the authorization server on disconnect.
+
+## Scheduled refresh
+
+A changed tool is never called: the call-time check refuses it. The scheduled
+refresh is about finding out early, so the first sign of a rewritten tool is a
+"needs review" in the panel and not an agent's failed run.
+
+- Every five minutes the API looks for enabled servers whose last refresh is
+  older than `KITSUDEN_EXTERNAL_MCP_REFRESH_MINUTES` and reads their
+  `tools/list`, exactly as **Read tools** does. It approves nothing and calls
+  no tool.
+- A tool that is new, changed or gone goes to `needs_review`. Each one flagged
+  for the first time is written to the agent audit log as
+  `external_mcp_tool_changed` with `origin: "sweep"` (a change found by an
+  agent's call carries `origin: "mcp"` or `"engine"`), and to the API log. A
+  tool already waiting for review is not reported again.
+- With several API processes, a server is claimed by one of them per interval,
+  so it is read once.
+- A server that cannot be reached keeps its tools as they were and shows the
+  error in the list (`lastError`); the others are still read.
+- A disabled server is not read. `0` switches the scheduled refresh off; the
+  button and the call-time check keep working.
+
 ## Where it connects
 
 - `https://` only, no credentials in the URL, and the host must resolve to
@@ -140,15 +222,23 @@ What this does not cover:
 - **What is fingerprinted.** Name, description and input schema. Output
   schema, annotations, prompts and resources are not, and a server can still
   answer differently at call time than its description says.
-- **Streamable HTTP only**; no SSE-only or stdio servers, and no OAuth flow
-  (a static header only).
-- **No scheduled refresh.** A person presses Read tools (or calls the route);
-  a change is noticed at the next refresh.
+- **Streamable HTTP only**; no SSE-only or stdio servers.
+- **Authentication**: a static header or OAuth with the authorization-code
+  grant ([OAuth](#oauth)); no client-credentials grant.
+- **Scheduled refresh.** Every enabled server is read again every
+  `KITSUDEN_EXTERNAL_MCP_REFRESH_MINUTES` (default 360; `0` switches it off;
+  the floor is 5). See [Scheduled refresh](#scheduled-refresh).
 - **DNS rebinding**: the address is checked before connecting and resolved
   again by the connection, as for other outbound calls (see the roadmap).
 
 ## Files and tests
 
+- `apps/api/src/lib/external-mcp-sweep.ts` (the scheduled refresh) and its
+  test `apps/api/src/tests/external-mcp-sweep.test.ts`.
+- `apps/api/src/lib/external-mcp-oauth.ts` (discovery, client registration,
+  PKCE, token exchange and refresh), migration `0083_external_mcp_oauth.sql`,
+  and its test `apps/api/src/tests/external-mcp-oauth.test.ts` (a fake
+  authorization server with refresh-token rotation).
 - `apps/api/src/lib/external-mcp.ts` (fingerprints, diff, connection, registry),
   `apps/api/src/lib/external-mcp-bridge.ts` (names, scopes, call-time check,
   wrapping), `apps/api/src/routes/mcp-servers.ts` (routes), migration

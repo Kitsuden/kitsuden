@@ -49,6 +49,10 @@
       "description": "External MCP servers and the human review of their tools (human administrators only)."
     },
     {
+      "name": "kon-external-mcp-oauth",
+      "description": "The OAuth redirect of external MCP servers."
+    },
+    {
       "name": "kon-media",
       "description": "Media file management with S3/MinIO storage"
     },
@@ -721,7 +725,7 @@
       "post": {
         "operationId": "external-mcp.create-mcp-server",
         "summary": "Register an external MCP server (admin)",
-        "description": "Registers a Streamable HTTP MCP server. The URL must be https and resolve to public addresses. The auth header is stored encrypted and never returned. Nothing is connected until a refresh.",
+        "description": "Registers a Streamable HTTP MCP server. The URL must be https and resolve to public addresses. The auth header is stored encrypted and never returned (for OAuth, register the server without a header and start the OAuth connection). Nothing is connected until a refresh.",
         "tags": [
           "kon-external-mcp",
           "mcp-servers"
@@ -1067,7 +1071,7 @@
       "patch": {
         "operationId": "external-mcp.update-mcp-server",
         "summary": "Change an external MCP server (admin)",
-        "description": "Changes name, URL, enabled flag or auth header (`authHeaderName: null` removes it). A new URL sends every tool back to review.",
+        "description": "Changes name, URL, enabled flag or auth header (`authHeaderName: null` removes it; setting one replaces OAuth). A new URL sends every tool back to review and forgets the OAuth connection.",
         "tags": [
           "kon-external-mcp",
           "mcp-servers"
@@ -1244,6 +1248,362 @@
           "scope": "kon:external-mcp:update-mcp-server",
           "grantedBy": [
             "kon:external-mcp:update-mcp-server",
+            "external-mcp:*",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": false,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "A human administrator registers external MCP servers and approves their tools; an agent must not approve the tools it would be given."
+          }
+        }
+      }
+    },
+    "/admin/mcp-servers/{id}/oauth": {
+      "delete": {
+        "operationId": "external-mcp.disconnect-mcp-server-oauth",
+        "summary": "Disconnect an external MCP server's OAuth (admin)",
+        "description": "Forgets the tokens and the client. The server is left with no authentication until it is connected again or given an auth header.",
+        "tags": [
+          "kon-external-mcp",
+          "mcp-servers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional. Repeating this operation already leaves the same state.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-external-mcp",
+          "id": "disconnect-mcp-server-oauth",
+          "access": "session",
+          "scope": "kon:external-mcp:disconnect-mcp-server-oauth",
+          "grantedBy": [
+            "kon:external-mcp:disconnect-mcp-server-oauth",
+            "external-mcp:*",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": true,
+          "readOnly": false,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "A human administrator registers external MCP servers and approves their tools; an agent must not approve the tools it would be given."
+          }
+        }
+      }
+    },
+    "/admin/mcp-servers/{id}/oauth/start": {
+      "post": {
+        "operationId": "external-mcp.start-mcp-server-oauth",
+        "summary": "Start an OAuth connection to an external MCP server (admin)",
+        "description": "Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. Once authorized, OAuth replaces the auth header.",
+        "tags": [
+          "kon-external-mcp",
+          "mcp-servers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clientId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "clientSecret": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "scopes": {
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authorizationUrl": {
+                      "type": "string"
+                    },
+                    "redirectUri": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "authorizationUrl",
+                    "redirectUri"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-external-mcp",
+          "id": "start-mcp-server-oauth",
+          "access": "session",
+          "scope": "kon:external-mcp:start-mcp-server-oauth",
+          "grantedBy": [
+            "kon:external-mcp:start-mcp-server-oauth",
             "external-mcp:*",
             "admin"
           ],
@@ -7183,7 +7543,7 @@
       "get": {
         "operationId": "automation.catalog",
         "summary": "Events and steps available to rules",
-        "description": "The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, and the ones kons contribute), each with its config fields.",
+        "description": "The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, `core:enqueue`, and the ones kons contribute), each with its config fields. `queues` are the job queues a kon opened to the `core:enqueue` step, each with the payload its handler expects.",
         "tags": [
           "kon-automation",
           "automation"
@@ -7270,11 +7630,43 @@
                           "config"
                         ]
                       }
+                    },
+                    "queues": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "queue": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "payload": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "queue",
+                          "label",
+                          "description"
+                        ]
+                      }
                     }
                   },
                   "required": [
                     "events",
-                    "handlers"
+                    "handlers",
+                    "queues"
                   ]
                 }
               }
@@ -18742,6 +19134,119 @@
           ],
           "mcp": {
             "excluded": "Panel read for administrators. A dataset entry's history is the datasets__entry-history tool."
+          }
+        }
+      }
+    },
+    "/mcp-oauth/callback": {
+      "get": {
+        "operationId": "external-mcp-oauth.mcp-server-oauth-callback",
+        "summary": "OAuth redirect of an external MCP server",
+        "description": "Where an external MCP server's authorization server sends the administrator's browser back. Exchanges the code and redirects to the panel. Not called by hand.",
+        "tags": [
+          "kon-external-mcp-oauth",
+          "mcp-servers"
+        ],
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 4000
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect",
+            "headers": {
+              "Location": {
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-kitsuden-operation": {
+          "kon": "kon-external-mcp-oauth",
+          "id": "mcp-server-oauth-callback",
+          "access": "public",
+          "scope": "kon:external-mcp-oauth:mcp-server-oauth-callback",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "A browser redirect of the OAuth flow, not something an agent calls."
           }
         }
       }

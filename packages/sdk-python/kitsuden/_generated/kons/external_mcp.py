@@ -43,12 +43,25 @@ class ListMcpServerToolsResponse(TypedDict):
     docs: List[Dict[str, Any]]
 
 
+class StartMcpServerOauthBody(TypedDict, total=False):
+    clientId: str
+    clientSecret: str
+    scopes: str
+
+
+class StartMcpServerOauthResponse(TypedDict):
+    authorizationUrl: str
+    redirectUri: str
+
+
 ApproveMcpServerToolResult = Dict[str, Any]
 CreateMcpServerResult = Dict[str, Any]
 DeleteMcpServerResult = DeleteMcpServerResponse
+DisconnectMcpServerOauthResult = DeleteMcpServerResponse
 ListMcpServerToolsResult = ListMcpServerToolsResponse
 ListMcpServersResult = ListMcpServerToolsResponse
 RefreshMcpServerResult = Dict[str, Any]
+StartMcpServerOauthResult = StartMcpServerOauthResponse
 UpdateMcpServerResult = Dict[str, Any]
 
 
@@ -104,6 +117,23 @@ OPERATIONS: Dict[str, OperationInfo] = {
         mcp_tool=None,
         errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
+    "disconnect-mcp-server-oauth": OperationInfo(
+        kon="kon-external-mcp",
+        id="disconnect-mcp-server-oauth",
+        operation_id="external-mcp.disconnect-mcp-server-oauth",
+        method="DELETE",
+        path="/admin/mcp-servers/{id}/oauth",
+        path_params=("id",),
+        query_params=(),
+        body=None,
+        responses={200: "json"},
+        idempotent=True,
+        read_only=False,
+        sensitive=True,
+        scope="kon:external-mcp:disconnect-mcp-server-oauth",
+        mcp_tool=None,
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+    ),
     "list-mcp-server-tools": OperationInfo(
         kon="kon-external-mcp",
         id="list-mcp-server-tools",
@@ -155,6 +185,23 @@ OPERATIONS: Dict[str, OperationInfo] = {
         mcp_tool=None,
         errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
+    "start-mcp-server-oauth": OperationInfo(
+        kon="kon-external-mcp",
+        id="start-mcp-server-oauth",
+        operation_id="external-mcp.start-mcp-server-oauth",
+        method="POST",
+        path="/admin/mcp-servers/{id}/oauth/start",
+        path_params=("id",),
+        query_params=(),
+        body="json",
+        responses={200: "json"},
+        idempotent=False,
+        read_only=False,
+        sensitive=False,
+        scope="kon:external-mcp:start-mcp-server-oauth",
+        mcp_tool=None,
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+    ),
     "update-mcp-server": OperationInfo(
         kon="kon-external-mcp",
         id="update-mcp-server",
@@ -197,7 +244,7 @@ class ExternalMcpApi(KonApi):
     def create_mcp_server(self, *, body: CreateMcpServerBody, request_options: Optional[RequestOptions] = None) -> Outcome[CreateMcpServerResult]:
         """Register an external MCP server (admin)
 
-        Registers a Streamable HTTP MCP server. The URL must be https and resolve to public addresses. The auth header is stored encrypted and never returned. Nothing is connected until a refresh.
+        Registers a Streamable HTTP MCP server. The URL must be https and resolve to public addresses. The auth header is stored encrypted and never returned (for OAuth, register the server without a header and start the OAuth connection). Nothing is connected until a refresh.
 
         REST: `POST /api/admin/mcp-servers` · scope `kon:external-mcp:create-mcp-server`
         not idempotent (an Idempotency-Key is sent automatically)
@@ -215,6 +262,17 @@ class ExternalMcpApi(KonApi):
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["delete-mcp-server"], {"id": id}, None, request_options)
+
+    def disconnect_mcp_server_oauth(self, *, id: Union[str, int], request_options: Optional[RequestOptions] = None) -> Outcome[DisconnectMcpServerOauthResult]:
+        """Disconnect an external MCP server's OAuth (admin)
+
+        Forgets the tokens and the client. The server is left with no authentication until it is connected again or given an auth header.
+
+        REST: `DELETE /api/admin/mcp-servers/{id}/oauth` · scope `kon:external-mcp:disconnect-mcp-server-oauth`
+        idempotent (safe to retry) · sensitive: may come back as a proposal pending human approval
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        """
+        return self._call(OPERATIONS["disconnect-mcp-server-oauth"], {"id": id}, None, request_options)
 
     def list_mcp_server_tools(self, *, id: Union[str, int], request_options: Optional[RequestOptions] = None) -> Outcome[ListMcpServerToolsResult]:
         """An external MCP server's tools (admin)
@@ -249,10 +307,21 @@ class ExternalMcpApi(KonApi):
         """
         return self._call(OPERATIONS["refresh-mcp-server"], {"id": id}, None, request_options)
 
+    def start_mcp_server_oauth(self, *, id: Union[str, int], body: Optional[StartMcpServerOauthBody] = None, request_options: Optional[RequestOptions] = None) -> Outcome[StartMcpServerOauthResult]:
+        """Start an OAuth connection to an external MCP server (admin)
+
+        Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. Once authorized, OAuth replaces the auth header.
+
+        REST: `POST /api/admin/mcp-servers/{id}/oauth/start` · scope `kon:external-mcp:start-mcp-server-oauth`
+        not idempotent (an Idempotency-Key is sent automatically)
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        """
+        return self._call(OPERATIONS["start-mcp-server-oauth"], {"id": id}, body, request_options)
+
     def update_mcp_server(self, *, id: Union[str, int], body: CreateMcpServerBody, request_options: Optional[RequestOptions] = None) -> Outcome[UpdateMcpServerResult]:
         """Change an external MCP server (admin)
 
-        Changes name, URL, enabled flag or auth header (`authHeaderName: null` removes it). A new URL sends every tool back to review.
+        Changes name, URL, enabled flag or auth header (`authHeaderName: null` removes it; setting one replaces OAuth). A new URL sends every tool back to review and forgets the OAuth connection.
 
         REST: `PATCH /api/admin/mcp-servers/{id}` · scope `kon:external-mcp:update-mcp-server`
         not idempotent (an Idempotency-Key is sent automatically)
@@ -283,7 +352,7 @@ class AsyncExternalMcpApi(AsyncKonApi):
     async def create_mcp_server(self, *, body: CreateMcpServerBody, request_options: Optional[RequestOptions] = None) -> Outcome[CreateMcpServerResult]:
         """Register an external MCP server (admin)
 
-        Registers a Streamable HTTP MCP server. The URL must be https and resolve to public addresses. The auth header is stored encrypted and never returned. Nothing is connected until a refresh.
+        Registers a Streamable HTTP MCP server. The URL must be https and resolve to public addresses. The auth header is stored encrypted and never returned (for OAuth, register the server without a header and start the OAuth connection). Nothing is connected until a refresh.
 
         REST: `POST /api/admin/mcp-servers` · scope `kon:external-mcp:create-mcp-server`
         not idempotent (an Idempotency-Key is sent automatically)
@@ -301,6 +370,17 @@ class AsyncExternalMcpApi(AsyncKonApi):
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["delete-mcp-server"], {"id": id}, None, request_options)
+
+    async def disconnect_mcp_server_oauth(self, *, id: Union[str, int], request_options: Optional[RequestOptions] = None) -> Outcome[DisconnectMcpServerOauthResult]:
+        """Disconnect an external MCP server's OAuth (admin)
+
+        Forgets the tokens and the client. The server is left with no authentication until it is connected again or given an auth header.
+
+        REST: `DELETE /api/admin/mcp-servers/{id}/oauth` · scope `kon:external-mcp:disconnect-mcp-server-oauth`
+        idempotent (safe to retry) · sensitive: may come back as a proposal pending human approval
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        """
+        return await self._call(OPERATIONS["disconnect-mcp-server-oauth"], {"id": id}, None, request_options)
 
     async def list_mcp_server_tools(self, *, id: Union[str, int], request_options: Optional[RequestOptions] = None) -> Outcome[ListMcpServerToolsResult]:
         """An external MCP server's tools (admin)
@@ -335,10 +415,21 @@ class AsyncExternalMcpApi(AsyncKonApi):
         """
         return await self._call(OPERATIONS["refresh-mcp-server"], {"id": id}, None, request_options)
 
+    async def start_mcp_server_oauth(self, *, id: Union[str, int], body: Optional[StartMcpServerOauthBody] = None, request_options: Optional[RequestOptions] = None) -> Outcome[StartMcpServerOauthResult]:
+        """Start an OAuth connection to an external MCP server (admin)
+
+        Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. Once authorized, OAuth replaces the auth header.
+
+        REST: `POST /api/admin/mcp-servers/{id}/oauth/start` · scope `kon:external-mcp:start-mcp-server-oauth`
+        not idempotent (an Idempotency-Key is sent automatically)
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        """
+        return await self._call(OPERATIONS["start-mcp-server-oauth"], {"id": id}, body, request_options)
+
     async def update_mcp_server(self, *, id: Union[str, int], body: CreateMcpServerBody, request_options: Optional[RequestOptions] = None) -> Outcome[UpdateMcpServerResult]:
         """Change an external MCP server (admin)
 
-        Changes name, URL, enabled flag or auth header (`authHeaderName: null` removes it). A new URL sends every tool back to review.
+        Changes name, URL, enabled flag or auth header (`authHeaderName: null` removes it; setting one replaces OAuth). A new URL sends every tool back to review and forgets the OAuth connection.
 
         REST: `PATCH /api/admin/mcp-servers/{id}` · scope `kon:external-mcp:update-mcp-server`
         not idempotent (an Idempotency-Key is sent automatically)

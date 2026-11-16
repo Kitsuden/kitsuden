@@ -20,6 +20,12 @@ export type CatalogResponse = {
     description: string;
     config: Record<string, string>;
   }[];
+  queues: {
+    queue: string;
+    label: string;
+    description: string;
+    payload?: Record<string, string>;
+  }[];
 };
 
 /** Body of `automation.dry-run-action`. */
@@ -75,7 +81,7 @@ export interface AutomationApi {
   /**
    * Events and steps available to rules
    *
-   * The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, and the ones kons contribute), each with its config fields.
+   * The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, `core:enqueue`, and the ones kons contribute), each with its config fields. `queues` are the job queues a kon opened to the `core:enqueue` step, each with the payload its handler expects.
    *
    * REST: `GET /api/automation/catalog` · scope `kon:automation:catalog`
    * idempotent (safe to retry)

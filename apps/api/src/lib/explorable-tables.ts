@@ -72,6 +72,8 @@ export const FORBIDDEN_TABLES = new Set([
   "oauth_grants",
   "oauth_codes",
   "oauth_tokens",
+  // OAuth for external MCP servers (0083): authorizations in progress, with their PKCE verifier
+  "external_mcp_oauth_states",
   "kitsuden_migrations",
   // Secrets for kons (0078): who opened which credential, and where kons keep them.
   // The log is read through its own operation (routes/automation.ts), by administrators.

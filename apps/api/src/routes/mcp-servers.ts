@@ -9,6 +9,9 @@
  *   POST   /api/admin/mcp-servers/:id/refresh           connects, reads tools/list, flags changes
  *   GET    /api/admin/mcp-servers/:id/tools             tools with fingerprint and review status
  *   POST   /api/admin/mcp-servers/:id/tools/approve     { name, fingerprint }: a person approves what they saw
+ *   POST   /api/admin/mcp-servers/:id/oauth/start       { clientId?, clientSecret?, scopes? } → the URL to open
+ *   DELETE /api/admin/mcp-servers/:id/oauth             forgets the tokens
+ *   GET    /api/mcp-oauth/callback                      where the authorization server sends the browser back
  *
  * Core SDK operations (`kon-external-mcp`), outside MCP. HUMAN administrators
  * only: `requireAdminRole` and `humansOnly` (an agent, even with `admin`, does
@@ -36,6 +39,13 @@ import {
   updateServer,
 } from "../lib/external-mcp";
 import { externalNaming, loadExternalCatalog } from "../lib/external-mcp-bridge";
+import {
+  completeOAuth,
+  disconnectOAuth,
+  OAUTH_CALLBACK_PATH,
+  OAuthProblem,
+  startOAuth,
+} from "../lib/external-mcp-oauth";
 import { logger } from "../lib/logger";
 import { optionalAuth, requireAuth } from "../middleware/auth";
 import { requireAdminRole } from "../middleware/auth-guard";
@@ -102,7 +112,7 @@ export const externalMcpOperations: AnyOperation[] = [
     route: "/",
     summary: "Register an external MCP server (admin)",
     description:
-      "Registers a Streamable HTTP MCP server. The URL must be https and resolve to public addresses. The auth header is stored encrypted and never returned. Nothing is connected until a refresh.",
+      "Registers a Streamable HTTP MCP server. The URL must be https and resolve to public addresses. The auth header is stored encrypted and never returned (for OAuth, register the server without a header and start the OAuth connection). Nothing is connected until a refresh.",
     input: { body: ServerBody },
     output: { schema: Obj, status: 201 },
     errors: ["KITSUDEN_E_BAD_REQUEST"],
@@ -126,7 +136,7 @@ export const externalMcpOperations: AnyOperation[] = [
     route: "/:id",
     summary: "Change an external MCP server (admin)",
     description:
-      "Changes name, URL, enabled flag or auth header (`authHeaderName: null` removes it). A new URL sends every tool back to review.",
+      "Changes name, URL, enabled flag or auth header (`authHeaderName: null` removes it; setting one replaces OAuth). A new URL sends every tool back to review and forgets the OAuth connection.",
     input: { params: ParamId, body: ServerBody },
     output: { schema: Obj },
     errors: ["KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_BAD_REQUEST"],
@@ -235,7 +245,113 @@ export const externalMcpOperations: AnyOperation[] = [
       }
     },
   }),
+  defineOperation({
+    ...fromHumanAdmin,
+    id: "start-mcp-server-oauth",
+    method: "POST",
+    route: "/:id/oauth/start",
+    summary: "Start an OAuth connection to an external MCP server (admin)",
+    description:
+      "Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. Once authorized, OAuth replaces the auth header.",
+    input: {
+      params: ParamId,
+      body: z
+        .object({
+          clientId: z.string().min(1).max(500).optional(),
+          clientSecret: z.string().min(1).max(2000).optional(),
+          scopes: z.string().max(1000).optional(),
+        })
+        .optional(),
+    },
+    output: { schema: z.object({ authorizationUrl: z.string(), redirectUri: z.string() }) },
+    errors: ["KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_BAD_REQUEST"],
+    handle: async ({ params, body }, { c }) => {
+      const server = await getServer((params as { id: string }).id);
+      if (!server) return notFound(c);
+      try {
+        return await startOAuth(server, (body ?? {}) as Record<string, string>, who(c));
+      } catch (err) {
+        if (err instanceof OAuthProblem) return badRequest(c, err.message);
+        throw err;
+      }
+    },
+  }),
+  defineOperation({
+    ...fromHumanAdmin,
+    id: "disconnect-mcp-server-oauth",
+    method: "DELETE",
+    route: "/:id/oauth",
+    summary: "Disconnect an external MCP server's OAuth (admin)",
+    description:
+      "Forgets the tokens and the client. The server is left with no authentication until it is connected again or given an auth header.",
+    input: { params: ParamId },
+    output: { schema: z.object({ success: z.boolean() }) },
+    errors: ["KITSUDEN_E_NOT_FOUND"],
+    handle: async ({ params }, { c }) => {
+      const id = (params as { id: string }).id;
+      if (!(await getServer(id))) return notFound(c);
+      return { success: await disconnectOAuth(id, who(c)) };
+    },
+  }),
 ];
+
+/**
+ * The OAuth redirect. PUBLIC, outside /api/admin: the browser arrives from the
+ * authorization server, and what authorizes the request is the single-use
+ * `state` only the admin who started holds (lib/external-mcp-oauth.ts). It
+ * always ends in the panel, with `oauth=connected` or `oauth=error`.
+ */
+export const EXTERNAL_MCP_OAUTH_ROUTE = OAUTH_CALLBACK_PATH.replace(/\/callback$/, "");
+
+function panelUrl(outcome: Record<string, string>): string {
+  const panel = (process.env.ADMIN_URL || "http://localhost:5173").replace(/\/+$/, "");
+  return `${panel}/mcp-servers?${new URLSearchParams(outcome).toString()}`;
+}
+
+export const externalMcpOAuthOperations: AnyOperation[] = [
+  defineOperation({
+    id: "mcp-server-oauth-callback",
+    access: "public" as const,
+    method: "GET",
+    route: "/callback",
+    summary: "OAuth redirect of an external MCP server",
+    description:
+      "Where an external MCP server's authorization server sends the administrator's browser back. Exchanges the code and redirects to the panel. Not called by hand.",
+    mcp: { exclude: "A browser redirect of the OAuth flow, not something an agent calls." },
+    tags: ["mcp-servers"],
+    input: {
+      query: z.object({
+        state: z.string().max(200).optional(),
+        code: z.string().max(4000).optional(),
+        error: z.string().max(200).optional(),
+      }),
+    },
+    output: { status: 302 },
+    handle: async ({ query }, { c }) => {
+      const q = (query ?? {}) as { state?: string; code?: string; error?: string };
+      if (!q.state || !q.code) {
+        // The server's own `error` code only: its description is free text from outside.
+        const reason = q.error ? q.error.replace(/[^\w.-]/g, "").slice(0, 60) : "missing_code";
+        return c.redirect(panelUrl({ oauth: "error", reason }), 302);
+      }
+      try {
+        const server = await completeOAuth(q.state, q.code);
+        return c.redirect(panelUrl({ oauth: "connected", server }), 302);
+      } catch (err) {
+        if (!(err instanceof OAuthProblem)) throw err;
+        logger.warn({ err: err.message }, "[external-mcp] OAuth callback refused");
+        return c.redirect(panelUrl({ oauth: "error", message: err.message.slice(0, 300) }), 302);
+      }
+    },
+  }),
+];
+
+registerCoreOperations({
+  konId: "kon-external-mcp-oauth",
+  mountPath: EXTERNAL_MCP_OAUTH_ROUTE,
+  description: "The OAuth redirect of external MCP servers.",
+  operations: externalMcpOAuthOperations,
+});
 
 registerCoreOperations({
   konId: "kon-external-mcp",
@@ -246,6 +362,11 @@ registerCoreOperations({
 });
 
 const context = { auth: { requireAuth, optionalAuth } } as never;
+export const externalMcpOAuthRoutes = operationsRouter(
+  "kon-external-mcp-oauth",
+  externalMcpOAuthOperations,
+  context
+);
 export const externalMcpRoutes = operationsRouter(
   "kon-external-mcp",
   externalMcpOperations,
