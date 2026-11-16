@@ -1,7 +1,7 @@
 # Agent benchmarks
 
 What Kitsuden's agent-facing features measurably do, with the method and the
-raw numbers. Three measurements so far, all free (no model calls):
+raw numbers. Four measurements so far, all free (no model calls):
 
 1. **Response formats**: token counts of compact JSON, TOON, TRON and the
    `auto` mode on real API responses, with round-trip checks and latency.
@@ -10,11 +10,14 @@ raw numbers. Three measurements so far, all free (no model calls):
 3. **Load and latency**: requests per second and p50/p95/p99 under 50–200
    concurrent connections, before and after a round of performance work
    ([section 3](#3-load-and-latency)).
+4. **Agent context**: the text a model reads per call (`tools/list`, tool
+   results, the agent guide) before and after the token-efficiency work
+   ([section 4](#4-agent-context-tokens-per-call)).
 
 The paid run with Claude is prepared but **not run**; see
 [the paid run](#the-paid-run-with-claude-prepared-not-run).
 
-Section 1 was measured on 2026-10-25, section 3 on 2026-10-27.
+Section 1 was measured on 2026-10-25, section 3 on 2026-10-27 and section 4 on 2026-11-15.
 
 ## 1. Response formats on real responses: JSON, TOON, TRON and auto
 
@@ -486,6 +489,94 @@ instead of 9.0 s when done one after another.
   including a hostile value (`tests/unit/rls-begin-in-one-statement.test.ts`),
   the department lookup (`apps/api/src/tests-unit/user-context.test.ts`) and
   `count=exact` under RLS (`apps/api/src/tests/datasets-http.test.ts`).
+
+## 4. Agent context: tokens per call
+
+What an agent's context pays for talking to this API, before and after the
+token-efficiency work: discovery mode for `tools/list`, a tiered `/llms.txt`,
+a smaller default `limit` with `fields`, and slimmer tool schemas
+([toolsets.md](toolsets.md)).
+
+### Method
+
+`apps/api/scripts/bench-agent-tokens.ts` calls the app in process against a
+**test** database, as an agent with the `admin` scope, and counts the text a
+model would read. It was run twice, on the same machine and database: on the
+base commit (`3a650a0`) and on the working tree with the change.
+
+```bash
+npm install --prefix scripts/bench/.tools js-tiktoken@1.0.21 --save-exact --no-fund --no-audit
+cd apps/api
+node ../../scripts/test-db.mjs exec -- bun run scripts/bench-agent-tokens.ts > after.json
+```
+
+- **Install measured:** the core plus the kons this checkout mounts: **90 tools**
+  for an admin agent. It is far smaller than the install behind the 661-tool
+  figure in [toolsets.md](toolsets.md), so every saving that grows with the
+  number of kons or routes is understated here.
+- **Dataset:** 100 rows of about 515 bytes each.
+- **Tokens:** `js-tiktoken@1.0.21`, `o200k_base` (the table) and `cl100k_base`
+  (within 3.4 % of it on every row). **They are not Claude's tokenizer**, which is not
+  available offline: expect Claude to count somewhat more, with the same
+  ratios. Run-to-run noise is about ±3 % (row ids are random UUIDs): a "+3 %"
+  on an unchanged request is noise.
+- No model was called. What an agent does with fewer tokens (does it finish the
+  same task?) is what [the paid run](#the-paid-run-with-claude-prepared-not-run)
+  would measure.
+
+### Results (`o200k_base` tokens)
+
+| What the agent reads                              |          Before |                        After |      Change |
+| ------------------------------------------------- | --------------: | ---------------------------: | ----------: |
+| `tools/list`, admin, no toolset chosen (90 tools) |          22,503 | **674** (4 tools, discovery) | **−97.0 %** |
+| `tools/list`, `?toolset=all`                      |          22,503 |                       21,324 |      −5.2 % |
+| `tools/list`, `?toolset=kons` (75 tools)          |          20,133 |                       19,090 |      −5.2 % |
+| `tools/list`, `?toolset=read` (38 tools)          |           6,991 |                        6,597 |      −5.6 % |
+| `tools/list`, `?toolset=core` (17 tools)          |           2,761 |                        2,625 |      −4.9 % |
+| `tools/list`, `?toolset=data` (10 tools)          |           1,952 |                        1,816 |      −7.0 % |
+| `kitsuden_query_collection`, no `limit`, JSON     | 9,023 (50 rows) |              3,730 (20 rows) |     −58.7 % |
+| the same, `auto` format                           |           6,843 |                        2,887 |     −57.8 % |
+| the same asking `fields: ["title","price"]`, JSON |           9,023 |                          730 |     −91.9 % |
+| `GET /llms.txt` on this install                   |           1,763 |                        1,445 |     −18.0 % |
+| `GET /llms.txt?kon=blog`                          |           1,763 |                           38 |     −97.8 % |
+
+Bytes are in the script's JSON output. Reading the table:
+
+- **Discovery mode is the big one, and its size is constant.** The default
+  `tools/list` of an agent nobody configured is now two search/call tools plus
+  the two approval tools, 2,941 bytes, whatever the number of kons. Against the
+  install in [toolsets.md](toolsets.md) (661 tools, 187,822 tokens) that is
+  about 99.6 % smaller; **that install was not re-measured**, only this one.
+  The saving is paid back per call: an agent searches (`kitsuden_find_tools`)
+  and then calls (`kitsuden_call_tool`), which adds a round trip the first
+  time it needs a tool.
+- **An explicit toolset or `all` is only about 5 % smaller.** Compacting the
+  schemas (default integer bounds, patterns next to a `format`) and shortening
+  the descriptions repeated on every read tool saves little: a tool definition
+  is mostly its own description and properties. The lever is sending fewer
+  tools, not shorter ones.
+- **Results:** the default of 20 rows and `fields` cut a query result by 58 %
+  and 92 %. They only help an agent that does not pass `limit`; one that asks
+  for `limit: 50` gets what it asked for (the table's unchanged row, within
+  noise).
+- **`/llms.txt` on this install** is only 18 % smaller because it mounts few
+  kons. The index has a fixed part (rules, the build path, the recipes), and
+  what shrinks is the per-kon part, which is why `?kon=` is the real saving.
+  `tests/unit/agent-guide-tiers.test.ts` prints the size on a fixture of 14
+  kons and 208 routes: the old document **25,513 bytes**, the new index
+  **6,156**, `?kon=esports` **4,941** and `?full=1` **28,634** (it carries
+  the new sections). `?full=1` is bigger than before on purpose; the skill
+  tells agents not to use it.
+
+### What was not measured
+
+- Whether an agent still completes its task through discovery mode, and how
+  many extra turns it takes: that needs the paid run with Claude (no API key was
+  available when this was measured).
+- `make kon --fields`: its saving is the hand edits an agent no longer makes,
+  which no byte count of a request shows.
+- Prompt caching: the list is now sorted by name and `/llms.txt` is
+  deterministic so a client _can_ cache them, but no cache hit was observed.
 
 ## The paid run with Claude (prepared, not run)
 

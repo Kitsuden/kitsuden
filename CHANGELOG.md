@@ -19,6 +19,22 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Page builder: `GET /pages/:id` sends `ETag` and `Last-Modified` and answers `If-None-Match` with 304.
 - Page builder: events `page:updated` and `page:deleted` (`{ id, slug }`), after commit, so an
   action or a webhook can purge a site cache.
+- MCP discovery mode: an agent that chose no toolset and whose `tools/list` would exceed
+  `MCP_TOOLS_LIST_MAX_BYTES` (64000, `0` = off) gets `kitsuden_find_tools` and
+  `kitsuden_call_tool` instead of every definition (4 tools, 2.9 KB, where the same install
+  listed 90 tools, 87 KB). The inner tool goes through the same scope, quota and approval checks.
+  `?toolset=` or a panel preset keeps the direct list. `tools/list` is sorted by name.
+- MCP: `MCP_RESULT_MAX_CHARS` (100000, `0` = off) cuts a longer tool result and says so in the text
+  and in `_meta["kitsuden/truncated"]`.
+- MCP: `kitsuden_query_collection` and `kitsuden_query_dataset` accept `fields`.
+- `GET /llms.txt` is an index; `?kon=<id>` returns one kon's routes and `?full=1` the whole
+  guide. It sends an `ETag` and answers 304, and has a "Building something new" section and
+  generic recipes. `kitsuden_guide` takes an optional `kon`.
+- CLI: `kitsuden make kon <name> --fields "title:string!,price:number"` generates the schema,
+  migration, routes, docs and tests with those fields.
+- `apps/api/scripts/bench-agent-tokens.ts` and
+  [benchmarks.md §4](docs/agents/benchmarks.md#4-agent-context-tokens-per-call): the tokens an
+  agent reads per call, before and after.
 
 ### Fixed
 
@@ -65,6 +81,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - Tailwind runs as a Vite plugin.
   - Two stale compiled `vite.config.js` and `vitest.config.js` files are gone. The first one had
     shadowed `vite.config.ts`, so production builds never dropped `console` calls.
+- MCP: `kitsuden_query_collection` and `kitsuden_query_dataset` return 20 rows by default (was 50).
+  Pass `limit` for more.
+- MCP: kon tool schemas leave out the default integer bounds and the `pattern` next to a `format`
+  (about 5 % smaller). The OpenAPI and the server's validation are unchanged.
 
 ## [0.9.0-beta]
 
