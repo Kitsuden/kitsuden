@@ -13,6 +13,8 @@
  *   · the table has no column that could identify who looks.
  */
 
+import { createHash } from "node:crypto";
+
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
 
@@ -21,11 +23,8 @@ import { app } from "../index";
 
 import { generateTestId, isDatabaseAvailable } from "./setup";
 
-const id = generateTestId()
-  .toLowerCase()
-  .replace(/[^a-z0-9]/g, "")
-  .slice(0, 12)
-  .padEnd(12, "0");
+/** A hex prefix unique to this run (the test id itself has letters a uuid does not take). */
+const id = createHash("sha256").update(generateTestId()).digest("hex").slice(0, 12);
 /** Uuids unique to this run, so a parallel run or a leftover row never collides. */
 const uuid = (n: number) =>
   `${id.slice(0, 8)}-${id.slice(8, 12)}-4000-8000-${String(n).padStart(12, "0")}`;
@@ -86,7 +85,7 @@ beforeAll(async () => {
     [DATASET_2, `an-${id}-2`],
   ]) {
     await db.execute(
-      sql`INSERT INTO data_sets (id, name, slug) VALUES (${subject}, ${`Analytics ${slug}`}, ${slug}) ON CONFLICT DO NOTHING`
+      sql`INSERT INTO data_sets (id, name, slug, schema) VALUES (${subject}, ${`Analytics ${slug}`}, ${slug}, ${"{}"}::jsonb) ON CONFLICT DO NOTHING`
     );
   }
 });
