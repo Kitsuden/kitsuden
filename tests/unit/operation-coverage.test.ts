@@ -54,6 +54,7 @@ import { analyticsKon } from "../../apps/api/src/routes/analytics";
 import { approvalsKon, proposalsKon } from "../../apps/api/src/routes/approvals";
 import { automationKon, secretAccessKon } from "../../apps/api/src/routes/automation";
 import { memoryKon } from "../../apps/api/src/routes/brain-memory";
+import { connectionsKon } from "../../apps/api/src/routes/connections";
 import { modelsKon } from "../../apps/api/src/routes/models";
 import { oauthKon } from "../../apps/api/src/routes/oauth-panel";
 import { adminPromotionKon, promotionKon } from "../../apps/api/src/routes/promotion";
@@ -96,6 +97,8 @@ const SDK_KONS: KonDefinition[] = [
   secretAccessKon as unknown as KonDefinition,
   // Views per subject and day (docs/analytics.md); it was kon-analytics.
   analyticsKon as unknown as KonDefinition,
+  // Accounts at other services that kons use without seeing a credential (docs/connections.md).
+  connectionsKon as unknown as KonDefinition,
 ];
 
 interface MountedOp {
