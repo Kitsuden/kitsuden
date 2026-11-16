@@ -35,7 +35,7 @@
   import type { Agent, CreateAgentInput } from "$lib/types/agents";
 
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   let agents = $state<Agent[]>([]);
   let pending = $state(new Map<string, number>());
@@ -63,11 +63,11 @@
   let createError = $state<string | null>(null);
 
   // The create dialog is `?new=1`: a link opens it, and Back closes it.
-  const creatingOpen = $derived($page.url.searchParams.get("new") === "1");
+  const creatingOpen = $derived(page.url.searchParams.get("new") === "1");
   function setCreating(open: boolean) {
     if (open === creatingOpen) return;
     createError = null;
-    void setQuery($page.url, { new: open ? "1" : null }, { replace: !open });
+    void setQuery(page.url, { new: open ? "1" : null }, { replace: !open });
   }
 
   async function load() {

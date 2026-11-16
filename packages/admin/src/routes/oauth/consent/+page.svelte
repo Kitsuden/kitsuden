@@ -14,9 +14,9 @@
   import { Alert, Button, Card, CardContent, Checkbox, Input, Skeleton } from "$lib/tallao";
   import { decide, readConsent, inputScopes, type ConsentView } from "$lib/services/oauth";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
-  const requestId = $page.url.searchParams.get("request") ?? "";
+  const requestId = page.url.searchParams.get("request") ?? "";
 
   let view = $state<ConsentView | null>(null);
   let loading = $state(true);

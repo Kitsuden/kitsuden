@@ -19,7 +19,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { HAS_INSTALLED_KONS } from "./helpers/known-kons";
+import { HAS_INSTALLED_KONS, MIN_KONS_TO_REVIEW } from "./helpers/known-kons";
 
 const ROOT = join(__dirname, "..", "..");
 const KONS = join(ROOT, "packages", "kons");
@@ -35,7 +35,7 @@ describe("typecheck coverage across kons", () => {
   it.skipIf(!HAS_INSTALLED_KONS)("there are kons to inspect", () => {
     // If discovery breaks, the two tests below would pass with the
     // list empty and this file would silently stop protecting anything.
-    expect(listKons().length).toBeGreaterThan(20);
+    expect(listKons().length).toBeGreaterThanOrEqual(MIN_KONS_TO_REVIEW);
   });
 
   it("all declare the typecheck script", () => {

@@ -29,10 +29,10 @@ describe("query state", () => {
     await setQuery(url, { tab: "inbox" });
     expect(goto).not.toHaveBeenCalled();
     await setQuery(url, { tab: "audit" });
+    // SvelteKit 3: `reset: false` keeps focus and scroll
     expect(goto).toHaveBeenCalledWith("/approvals?tab=audit&id=7", {
-      keepFocus: true,
-      noScroll: true,
-      replaceState: false,
+      reset: false,
+      replace: false,
     });
   });
 

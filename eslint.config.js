@@ -56,6 +56,10 @@ export default tseslint.config(
       "gamedata/**",
       // tallao, copied by scripts/sync-tallao.mjs: generated, never edited by hand.
       "packages/admin/src/lib/tallao/**",
+      // A kon's `admin/*.js` is the bundle compiled from its `admin-src/` (Svelte), the
+      // same kind of output as `build/`. With kons installed locally, linting those
+      // bundles gave ~9,800 `no-var` and `no-unused-expressions` errors.
+      "packages/kons/*/admin/**",
       // The built sites (`dist-*` of a starter that builds several). The
       // `**/dist/**` above does not cover them: ESLint went into the Astro
       // bundles and, if a build regenerated them at the same time, crashed with ENOENT.

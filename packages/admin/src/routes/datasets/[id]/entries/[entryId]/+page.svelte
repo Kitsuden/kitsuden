@@ -7,10 +7,10 @@
   import { datasetSource, type RecordSource } from "$lib/list/source";
   import { EmptyState, Skeleton } from "$lib/tallao";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
-  const datasetId = $derived($page.params.id ?? "");
-  const entryId = $derived($page.params.entryId ?? "new");
+  const datasetId = $derived(page.params.id ?? "");
+  const entryId = $derived(page.params.entryId ?? "new");
 
   let source = $state<RecordSource | null>(null);
   let error = $state<string | null>(null);

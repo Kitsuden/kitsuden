@@ -190,7 +190,7 @@
           formKey += 1;
         } else await goto(hrefFor("new"));
       } else if (intent === "stay" && savedId) {
-        if (isNew) await goto(hrefFor(savedId), { replaceState: true });
+        if (isNew) await goto(hrefFor(savedId), { replace: true });
         else {
           leaving = false;
           await load();

@@ -19,7 +19,7 @@
   import { queryChoice, setQuery } from "$lib/page";
   import { Badge, Tabs, type TabItem } from "$lib/tallao";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   type Tab = "inbox" | "reviews" | "discarded" | "settings" | "audit" | "promotion";
   // Editors see Discarded too: the API leaves out the agents they sponsor
@@ -30,16 +30,16 @@
    * navigates (a history entry), so back/forward walk them and a copied link opens the
    * same thing. They used to be read once and never written back.
    */
-  const active = $derived(queryChoice($page.url, "tab", TABS, "inbox"));
-  const selectedId = $derived($page.url.searchParams.get("id"));
-  const initialVersion = $page.url.searchParams.get("version");
+  const active = $derived(queryChoice(page.url, "tab", TABS, "inbox"));
+  const selectedId = $derived(page.url.searchParams.get("id"));
+  const initialVersion = page.url.searchParams.get("version");
 
   function selectTab(tab: string) {
     // Another tab is another subject: the open proposal does not follow.
-    void setQuery($page.url, { tab: tab === "inbox" ? null : tab, id: null, version: null });
+    void setQuery(page.url, { tab: tab === "inbox" ? null : tab, id: null, version: null });
   }
   function selectProposal(id: string | null) {
-    void setQuery($page.url, { id });
+    void setQuery(page.url, { id });
   }
 
   const ICONS = {

@@ -42,8 +42,10 @@ Documentation for agent setups: `docs/agents/coding-agents.md`.
 
 ## Talking to a Kitsuden API
 
-- Use the `kitsuden` skill (`skills/kitsuden/SKILL.md`) and read `GET <api>/llms.txt` before
-  the first call. Never invent routes, flags or scopes.
+- Use the `kitsuden` skill (`skills/kitsuden/SKILL.md`) and read `GET <api>/llms.txt` (an index)
+  before the first call, then `?kon=<id>` for the kon you need. Never invent routes, flags or scopes.
+- A new feature with its own tables or routes is a kon: `kitsuden make kon <name> [--fields …]`,
+  `kitsuden make model <name> --kon <kon>`, `kitsuden makemigrations` (`docs/kons/README.md`).
 - The API URL comes from `KITSUDEN_API_URL`; the token from `KITSUDEN_API_TOKEN`. Never write a
   token into a file in the repository.
 - A `202 KITSUDEN_E_APPROVAL_REQUIRED` means a human must approve: report the proposal, do not retry.

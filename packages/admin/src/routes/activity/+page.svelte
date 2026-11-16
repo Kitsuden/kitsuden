@@ -13,7 +13,7 @@
   import { queryChoice, setQuery } from "$lib/page";
   import { Tabs, type TabItem } from "$lib/tallao";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   const TABS = ["requests", "agents", "audit", "queue"] as const;
   const LABELS: Record<(typeof TABS)[number], () => string> = {
@@ -22,7 +22,7 @@
     audit: () => t("activity.tabAudit"),
     queue: () => t("activity.tabQueue"),
   };
-  const active = $derived(queryChoice($page.url, "tab", TABS, "requests"));
+  const active = $derived(queryChoice(page.url, "tab", TABS, "requests"));
   const items = $derived<TabItem[]>(
     TABS.map((id) => ({
       id,
@@ -31,8 +31,7 @@
       tabId: `activity-tab-${id}`,
     }))
   );
-  const select = (tab: string) =>
-    void setQuery($page.url, { tab: tab === "requests" ? null : tab });
+  const select = (tab: string) => void setQuery(page.url, { tab: tab === "requests" ? null : tab });
 </script>
 
 <Page title={t("shell.activity")} description={t("activity.description")}>

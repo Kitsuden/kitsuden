@@ -37,6 +37,9 @@
  * rewrite would delete their operations and clients. `--prune` is the explicit way
  * to do that, for example when a kon was really removed.
  *
+ * A kon installed from kitsuden-kons whose operations the snapshot does not have is left
+ * out of both writing and `--check` (`--with-local-kons` brings it in).
+ *
  * `--check` compares only the kons that are installed HERE: in a clean clone
  * (CI) the kons from kitsuden-kons are absent, so their part of the snapshot
  * is kept and reported as "not installed, not checked".
@@ -149,11 +152,39 @@ if (konDirs.length) {
     sources.set(source.konId, source);
   }
 } else {
+  /**
+   * A kon installed from kitsuden-kons (`kitsuden.kons.json` / `KITSUDEN_KONS`) whose
+   * operations are not in the snapshot is not part of it: the core's snapshot ships its
+   * own kons, and a developer with kons installed locally got `--check` failing on 40
+   * "new" operations and a plain write that pulled them into the core's SDK. Those kons
+   * are left out unless `--with-local-kons`; one already in the snapshot is still checked.
+   */
+  const withLocal = args.includes("--with-local-kons");
+  const snapshotKons = new Set<string>();
+  if (!withLocal && existsSync(target)) {
+    const prior = JSON.parse(readFileSync(target, "utf8")) as {
+      paths?: Record<string, Record<string, { "x-kitsuden-operation"?: { kon?: string } }>>;
+    };
+    for (const item of Object.values(prior.paths ?? {}))
+      for (const o of Object.values(item)) {
+        const kon = o["x-kitsuden-operation"]?.kon;
+        if (kon) snapshotKons.add(kon);
+      }
+  }
+  const leftOut: string[] = [];
   for (const k of listInstalledKons()) {
     if (!k.path || !k.manifest) continue;
+    if (!withLocal && k.source !== "core" && !snapshotKons.has(k.manifest.id)) {
+      leftOut.push(k.manifest.id);
+      continue;
+    }
     const source = await konSource(k.path, k.manifest);
     if (source) sources.set(source.konId, source);
   }
+  if (leftOut.length)
+    log(
+      `[sdk-openapi] installed here but not in the snapshot, left out (--with-local-kons adds them): ${leftOut.sort().join(", ")}`
+    );
 
   // ── 2. Core operations (route modules that register themselves) ───────────
   const dirRoutes = join(API_ROOT, "src/routes");

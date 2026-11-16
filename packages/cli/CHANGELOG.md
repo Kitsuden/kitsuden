@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `new <name>`: creates a frontend website from `kitsuden-starter-basic`. It copies the starter without build output or `.env` files, renames the package and writes `.env`. `--install` and `--quickstart` run `pnpm install`. `--api` explains how to install the API; there are no published API images.
 - `make kon <name>`: generates a kon that passes the repository's kon guards. It includes a manifest, policy, routes, migration and a route test in `tests/unit`.
+- `make kon <name> --fields "title:string!,price:number,…"`: the kon's own columns instead of the template's title and body, in the schema, the migration, the create/update input, the output, `kon.json`'s `searchableFields`, README.md, AGENTS.md and the generated test. Types: string, text, integer, number (`numeric(19, 4)`), boolean, date, datetime, json, uuid; `!` marks a required field. Reserved names and bad specs are refused before anything is written. Without `--fields` the output is unchanged.
 - Tests in `packages/cli/tests` (`pnpm --filter @kitsuden/cli test`).
 
 ### Changed

@@ -12,11 +12,11 @@
   import { queryChoice, setQuery } from "$lib/page";
   import { Tabs, type TabItem } from "$lib/tallao";
 
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   // The external servers are an administrator's: an editor only sees the OAuth clients.
   const TABS = $derived(isAdmin() ? (["oauth", "mcp"] as const) : (["oauth"] as const));
-  const active = $derived(queryChoice($page.url, "tab", TABS, "oauth"));
+  const active = $derived(queryChoice(page.url, "tab", TABS, "oauth"));
   const items = $derived<TabItem[]>(
     TABS.map((id) => ({
       id,
@@ -25,7 +25,7 @@
       tabId: `connections-tab-${id}`,
     }))
   );
-  const select = (tab: string) => void setQuery($page.url, { tab: tab === "oauth" ? null : tab });
+  const select = (tab: string) => void setQuery(page.url, { tab: tab === "oauth" ? null : tab });
 </script>
 
 <Page title={t("shell.connections")} description={t("connections.description")}>

@@ -70,13 +70,20 @@ function classesWithDisplay(source: string): Set<string> {
   return classes;
 }
 
+/**
+ * The `hidden` ATTRIBUTE: preceded by a space, followed by the end of the attribute. `\bhidden\b`
+ * also matched `aria-hidden="true"` (a hyphen is a word boundary), which hides nothing on
+ * screen: every Svelte view with an icon was reported, 22 artifacts, none of them wrong.
+ */
+const HIDDEN_ATTR = String.raw`\shidden(?=[\s>=/])`;
+
 /** Markup elements that carry `hidden` AND a class, in either order. */
 function hiddenWithClass(source: string): string[] {
   const classes: string[] = [];
 
   for (const re of [
-    /<[a-z0-9]+[^>]*\bclass="([^"]+)"[^>]*\bhidden\b/g,
-    /<[a-z0-9]+[^>]*\bhidden\b[^>]*\bclass="([^"]+)"/g,
+    new RegExp(String.raw`<[a-z0-9]+[^>]*\bclass="([^"]+)"[^>]*${HIDDEN_ATTR}`, "g"),
+    new RegExp(String.raw`<[a-z0-9]+[^>]*${HIDDEN_ATTR}[^>]*\bclass="([^"]+)"`, "g"),
   ]) {
     for (const m of source.matchAll(re)) classes.push(...m[1].split(/\s+/));
   }
@@ -96,7 +103,7 @@ describe("the `hidden` attribute really hides", () => {
   });
 
   for (const { kon, file: file, source } of all) {
-    const usesHidden = /\bhidden\b/.test(source);
+    const usesHidden = new RegExp(HIDDEN_ATTR).test(source) || /\.hidden\s*=/.test(source);
     if (!usesHidden) continue;
 
     it(`${kon}/${file}`, () => {

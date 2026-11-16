@@ -14,7 +14,14 @@ Public, no session, no deployment details:
 {
   "product": "kitsuden",
   "version": "0.9.0-beta",
-  "contracts": { "page-builder": 1, "games": 2, "games-editorial": 2, "admin-registry": 1 },
+  "contracts": {
+    "page-builder": 1,
+    "page-builder-publish": 1,
+    "page-builder-patch": 1,
+    "games": 2,
+    "games-editorial": 2,
+    "admin-registry": 1
+  },
   "sdk": { "kons": 1 }
 }
 ```
@@ -34,12 +41,14 @@ Public, no session, no deployment details:
 - `sdk`: the version of the code contracts, currently `{ "kons": 1 }`: the kon
   SDK, which a kon declares in its `sdk` field.
 
-| Contract          | Routes                                                                                                                                                                                                     | Client                     |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `page-builder`    | `GET /api/page-builder/pages`, `/pages/:id` (uuid or slug), `/block-types`; `POST /pages/:pageId/blocks`, `PATCH`/`DELETE /blocks/:id`, `POST /pages/:pageId/blocks/reorder`, `POST /blocks/:id/duplicate` | `@intijs/adapter-kitsuden` |
-| `games`           | `GET /api/games/slug/:slug`, `GET /api/games/:id` (especially `blocks[]`: `id`, `type`, `order`, `data`, `editorial`)                                                                                      | adapter, websites          |
-| `games-editorial` | `PATCH /api/games/:id/blocks/:blockId/editorial`, `PUT /api/games/:id/blocks/order` (body keys `title`, `description`, `hidden`)                                                                           | adapter                    |
-| `admin-registry`  | `GET /api/admin/registry` (header `X-Kitsuden-Contract`)                                                                                                                                                   | alternative admin panels   |
+| Contract               | Routes                                                                                                                                                                                                     | Client                     |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `page-builder`         | `GET /api/page-builder/pages`, `/pages/:id` (uuid or slug), `/block-types`; `POST /pages/:pageId/blocks`, `PATCH`/`DELETE /blocks/:id`, `POST /pages/:pageId/blocks/reorder`, `POST /blocks/:id/duplicate` | `@intijs/adapter-kitsuden` |
+| `page-builder-publish` | `POST /api/page-builder/pages/:id/publish-draft` `{ draftId }`: replaces the page's shown blocks with the draft's and deletes the draft, in one transaction                                                | `@intijs/adapter-kitsuden` |
+| `page-builder-patch`   | `PATCH /api/page-builder/blocks/:id` with `contentPatch: [{ path, value }]` and `If-Match: "<updatedAt>"` (or `expectedUpdatedAt`): 409 `{ current }` when the block changed                               | `@intijs/adapter-kitsuden` |
+| `games`                | `GET /api/games/slug/:slug`, `GET /api/games/:id` (especially `blocks[]`: `id`, `type`, `order`, `data`, `editorial`)                                                                                      | adapter, websites          |
+| `games-editorial`      | `PATCH /api/games/:id/blocks/:blockId/editorial`, `PUT /api/games/:id/blocks/order` (body keys `title`, `description`, `hidden`)                                                                           | adapter                    |
+| `admin-registry`       | `GET /api/admin/registry` (header `X-Kitsuden-Contract`)                                                                                                                                                   | alternative admin panels   |
 
 ## Policy
 

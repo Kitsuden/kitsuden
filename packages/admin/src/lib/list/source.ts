@@ -660,8 +660,8 @@ const NOT_PLURAL = new Set([
  * A dataset's name for one of its records: its name with the last word made singular
  * where that is safe in English and Spanish ("Products" → "Product", "Support Tickets" →
  * "Support Ticket", "Pedidos" → "Pedido", "Categories" → "Category"). A word ending in
- * "-es" ("Ciudades", "Sales") or "-ss" is left as it is: the dataset's own name reads
- * better than a wrong singular.
+ * "-es" ("Ciudades", "Sales"), "-ss", "-is" ("Analysis") or "-us" ("Campus") is left as
+ * it is: the dataset's own name reads better than a wrong singular.
  */
 export function singularOf(name: string): string {
   const match = /^(.*?)(\S+)$/u.exec(name.trim());
@@ -672,7 +672,7 @@ export function singularOf(name: string): string {
   let one = word;
   // "Categories" -> "Category" is English: a Spanish word never ends in a consonant + "ies".
   if (/[^aeiou]ies$/i.test(word)) one = word.slice(0, -3) + "y";
-  else if (/es$/i.test(word) || /ss$/i.test(word)) one = word;
+  else if (/(es|ss|is|us)$/i.test(word)) one = word;
   else if (/s$/i.test(word) && word.length > 3) one = word.slice(0, -1);
   return `${head}${one}`;
 }

@@ -54,7 +54,7 @@
   import ListCell from "./ListCell.svelte";
 
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   interface Props {
     source: RecordSource;
@@ -133,7 +133,7 @@
   );
 
   // ── State: the URL is the source of truth ────────────────────────────────────────
-  const urlState = $derived(readListState($page.url.searchParams, filterDefs, defaults));
+  const urlState = $derived(readListState(page.url.searchParams, filterDefs, defaults));
   const visibleColumns = $derived(urlState.columns ?? defaultColumns);
 
   /** What the FilterBar shows: follows the URL, runs ahead of it while typing. */
@@ -146,9 +146,9 @@
   });
 
   function navigate(next: ListState, replace = false) {
-    const target = withListState($page.url, next, defaults);
-    if (target === `${$page.url.pathname}${$page.url.search}${$page.url.hash}`) return;
-    void goto(target, { replaceState: replace, keepFocus: true, noScroll: true });
+    const target = withListState(page.url, next, defaults);
+    if (target === `${page.url.pathname}${page.url.search}${page.url.hash}`) return;
+    void goto(target, { replace, reset: false });
   }
 
   let searchTimer: ReturnType<typeof setTimeout> | undefined;

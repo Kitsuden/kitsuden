@@ -74,7 +74,7 @@ describe("panel", () => {
   it("no eval, connections to its own origin, and the inline script pinned by hash", () => {
     expect(csp(nginx)).not.toContain("'unsafe-eval'");
     expect(csp(nginx)).toMatch(/connect-src 'self';/);
-    const svelteConfig = read("packages/admin/svelte.config.js");
+    const svelteConfig = read("packages/admin/kit.config.js");
     expect(svelteConfig).toMatch(/csp:\s*\{\s*mode:\s*"hash"/);
     expect(svelteConfig).toMatch(/"script-src":\s*\["self"/);
     // style-src must stay out of kit.csp: its hashes would switch off 'unsafe-inline'

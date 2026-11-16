@@ -28,8 +28,13 @@
  * and a test of the REAL routes on PGlite, with a non-superuser role and the host's per-request
  * RLS transaction, so the generated policies and row security are exercised from the first run.
  *
- * `packages/cli/tests/make-kon.test.mjs` generates a standalone kon, links it to this checkout and
- * runs its test and `tsc` in it.
+ * `--fields "title:string!,price:number,…"` replaces the template's title and body with the kon's own
+ * columns, in every file that knows them (schema, migration, create/update input, output, docs, test).
+ * Syntax, types and their SQL/zod mapping: kon-fields.ts. Without `--fields` the output is the same as
+ * before the option existed.
+ *
+ * `packages/cli/tests/make-kon.test.mjs` generates a standalone kon (with and without `--fields`),
+ * links it to this checkout and runs its test, `tsc` and `kon-sync --check` in it.
  */
 
 import { cpSync, existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
@@ -41,12 +46,31 @@ import chalk from "chalk";
 
 import { readKonsFile, writeKonsFile } from "../kons/installation.js";
 
+import {
+  DOC_HEADER,
+  docRow,
+  drizzleColumn,
+  drizzleImports,
+  insertValue,
+  invalidSampleValue,
+  type KonField,
+  objectLiteral,
+  otherSampleValue,
+  parseFields,
+  sampleValue,
+  sqlColumn,
+  zodInput,
+  zodOutput,
+} from "./kon-fields.js";
+
 export interface MakeKonOptions {
   force?: boolean;
   root?: string;
   icon?: string;
   title?: string;
   description?: string;
+  /** `name:type[!],…` — the kon's own columns instead of title/body (kon-fields.ts). */
+  fields?: string;
   /** Create a new kons repository (`true` → `./kitsuden-kon-<slug>`, or this folder). */
   standalone?: boolean | string;
 }
@@ -258,6 +282,9 @@ export function planKon(name: string, options: MakeKonOptions = {}): KonPlan {
       `Invalid kon name "${name}". Use lowercase letters, digits and dashes, starting with a letter (e.g. "recipes", "event-log").`
     );
   }
+  // Before anything else: a wrong spec stops here, with nothing written.
+  const fields: KonField[] | null =
+    options.fields === undefined ? null : parseFields(options.fields);
   const { root, layout, standalone } = resolveTarget(slug, options);
   const id = `kon-${slug}`;
   const konDir = layout === "project" ? `packages/kons/${id}` : `kons/${id}`;
@@ -289,12 +316,79 @@ export function planKon(name: string, options: MakeKonOptions = {}): KonPlan {
   const visibleName = options.title ?? title(slug);
   const description =
     options.description ??
-    `${visibleName}: items with a title, a body and a draft/published status.`;
+    (fields
+      ? `${visibleName}: items with ${fields.map((f) => f.name).join(", ")} and a draft/published status.`
+      : `${visibleName}: items with a title, a body and a draft/published status.`);
   const resource = `${slug}-item`;
 
   const files: GeneratedFile[] = [];
   const add = (rel: string, content: string) => files.push({ path: join(root, rel), content });
   const k = konDir;
+
+  // ── The pieces that know the columns. Without --fields, exactly the template's title and body.
+  const hasJson = fields?.some((f) => f.type === "json") ?? false;
+  const datetimes = fields?.filter((f) => f.type === "datetime") ?? [];
+  const sqlColumns = fields
+    ? fields.map(sqlColumn).join("\n")
+    : `  title       varchar(200) NOT NULL,\n  body        text,`;
+  // Wrapped one per line past 100 columns, as prettier would.
+  const schemaImports = !fields
+    ? " pgTable, text, timestamp, uuid, varchar "
+    : drizzleImports(fields).join(", ").length > 60
+      ? `\n${drizzleImports(fields)
+          .map((n) => `  ${n},`)
+          .join("\n")}\n`
+      : ` ${drizzleImports(fields).join(", ")} `;
+  const jsonType = hasJson
+    ? `\n/** What a json field holds: an object or an array. */\nexport type JsonValue = Record<string, unknown> | unknown[];\n`
+    : "";
+  const drizzleColumns = fields
+    ? fields.map(drizzleColumn).join("\n")
+    : `  title: varchar("title", { length: 200 }).notNull(),\n  body: text("body"),`;
+  const jsonZod = hasJson
+    ? `/** A json field: an object or an array. */\nconst Json = z.union([z.record(z.string(), z.unknown()), z.array(z.unknown())]);\n\n`
+    : "";
+  const createLines = fields
+    ? fields.map(zodInput).join("\n")
+    : `  title: z.string().trim().min(1).max(200),\n  body: z.string().max(100_000).nullable().optional(),`;
+  const itemLines = fields
+    ? fields.map(zodOutput).join("\n")
+    : `  title: z.string(),\n  body: z.string().nullable(),`;
+  const insertValues = fields
+    ? `{\n${fields.map((f) => `            ${f.name}: ${insertValue(f)},`).join("\n")}\n            status: body.status ?? "draft",\n          }`
+    : `{ title: body.title, body: body.body ?? null, status: body.status ?? "draft" }`;
+  // A datetime arrives as an ISO string and the column takes a Date. The `<name>Input` bindings
+  // cannot shadow the handler's own names (row, updated, db, changes…).
+  const updateSetup =
+    datetimes.length > 0
+      ? `        const { ${datetimes.map((f) => `${f.name}: ${f.name}Input`).join(", ")}, ...changes } = body;\n`
+      : "";
+  const updateSet =
+    datetimes.length > 0
+      ? `{\n            ...changes,\n${datetimes
+          .map((f) => {
+            const v = `${f.name}Input`;
+            const date = f.required ? `new Date(${v})` : `${v} === null ? null : new Date(${v})`;
+            return `            ...(${v} === undefined ? {} : { ${f.name}: ${date} }),`;
+          })
+          .join("\n")}\n            updatedAt: new Date(),\n          }`
+      : `{ ...body, updatedAt: new Date() }`;
+  const fieldsTable = fields ? `${DOC_HEADER}\n${fields.map(docRow).join("\n")}\n` : "";
+  const readmeWhat = fields
+    ? `Table \`${table}\`, created by \`migrations/0000_initial.sql\` with its row security. Besides \`id\`,
+\`status\` (\`draft\` or \`published\`), \`createdAt\` and \`updatedAt\`, each item has:
+
+${fieldsTable}`
+    : `Table \`${table}\`: items with a title, a body and a status (\`draft\` or \`published\`), created by
+\`migrations/0000_initial.sql\` with its row security.
+`;
+  const agentsFields = fields
+    ? `
+Fields (the same in \`${slug}.schema.ts\`, \`migrations/0000_initial.sql\` and \`Create\` in
+\`${slug}.routes.ts\`; a change goes to all three, plus a new migration):
+
+${fieldsTable}`
+    : "";
 
   add(
     `${k}/kon.json`,
@@ -325,7 +419,9 @@ export function planKon(name: string, options: MakeKonOptions = {}): KonPlan {
             name: table,
             label: visibleName,
             icon,
-            searchableFields: ["title"],
+            searchableFields: fields
+              ? fields.filter((f) => f.type === "string" || f.type === "text").map((f) => f.name)
+              : ["title"],
             filterableFields: ["status"],
           },
         ],
@@ -420,8 +516,7 @@ export function planKon(name: string, options: MakeKonOptions = {}): KonPlan {
 
 CREATE TABLE IF NOT EXISTS ${table} (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title       varchar(200) NOT NULL,
-  body        text,
+${sqlColumns}
   status      varchar(20) NOT NULL DEFAULT 'draft'
               CHECK (status IN ('draft', 'published')),
   created_at  timestamptz NOT NULL DEFAULT now(),
@@ -451,15 +546,14 @@ SELECT kitsuden_rls_public_read('${table}', $$status = 'published'$$);
  * (kon.json: \`schema.strategy = "sql"\`), so this file and the migrations change together.
  */
 
-import { pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import {${schemaImports}} from "drizzle-orm/pg-core";
 
 export const STATUSES = ["draft", "published"] as const;
 export type Status = (typeof STATUSES)[number];
-
+${jsonType}
 export const ${c}Items = pgTable("${table}", {
   id: uuid("id").primaryKey().defaultRandom(),
-  title: varchar("title", { length: 200 }).notNull(),
-  body: text("body"),
+${drizzleColumns}
   status: varchar("status", { length: 20 }).$type<Status>().notNull().default("draft"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -565,10 +659,9 @@ const RESOURCE = "${resource}";
 
 // ── Schemas: those of the route, the OpenAPI and the MCP tool ─────────────────
 
-/** Strict: a field that is not here is a 422 with \`didYouMean\`. */
+${jsonZod}/** Strict: a field that is not here is a 422 with \`didYouMean\`. */
 const Create = z.object({
-  title: z.string().trim().min(1).max(200),
-  body: z.string().max(100_000).nullable().optional(),
+${createLines}
   status: z.enum(STATUSES).optional(),
 });
 const Edit = Create.partial();
@@ -577,8 +670,7 @@ const ListQuery = z.object({ limit: z.coerce.number().int().min(1).max(100).opti
 
 const Item = z.object({
   id: z.guid(),
-  title: z.string(),
-  body: z.string().nullable(),
+${itemLines}
   status: z.enum(STATUSES),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
@@ -650,7 +742,7 @@ export function ${c}Operations(ctx: KonContext): AnyOperation[] {
       handle: async ({ body }) => {
         const [row] = await db
           .insert(${c}Items)
-          .values({ title: body.title, body: body.body ?? null, status: body.status ?? "draft" })
+          .values(${insertValues})
           .returning();
         return row;
       },
@@ -671,9 +763,9 @@ export function ${c}Operations(ctx: KonContext): AnyOperation[] {
         const row = await load(params.id);
         if (!row) throw AppError.notFound("Not found");
         await authorize(row);
-        const [updated] = await db
+${updateSetup}        const [updated] = await db
           .update(${c}Items)
-          .set({ ...body, updatedAt: new Date() })
+          .set(${updateSet})
           .where(eq(${c}Items.id, row.id))
           .returning();
         return updated;
@@ -772,9 +864,7 @@ Inside a Kitsuden project: \`kitsuden kon add ${slug}\`, then restart the API.
 
 ## What it adds
 
-Table \`${table}\`: items with a title, a body and a status (\`draft\` or \`published\`), created by
-\`migrations/0000_initial.sql\` with its row security.
-
+${readmeWhat}
 ## HTTP API
 
 | Route | Who |
@@ -819,7 +909,7 @@ Keep it true when the kon changes.
 ## What it is
 
 ${description}
-
+${agentsFields}
 ## Calling it
 
 - Reading published items needs no key. Writes need a key with \`${slug}:*\`, \`kon:${slug}:*\` or
@@ -878,6 +968,66 @@ ${description}
           drop: "asAppRole(client)",
         };
 
+  // Bodies of the generated test. With --fields: `valid` (the required fields), `full` (every
+  // field) and `invalid` (a wrong value per field) are declared at the top of the test.
+  const b = (titleText: string, extra = "") =>
+    fields ? `{ ...valid${extra} }` : `{ title: "${titleText}"${extra} }`;
+  const outside = fields ? `{ ...valid, __notAField: true }` : `{ title: "x", isAdmin: true }`;
+  const otherEdit = fields ? `{ status: "draft" }` : `{ title: "x" }`;
+  const required = fields?.filter((f) => f.required) ?? [];
+  const testDecls = fields
+    ? [
+        "",
+        "/** The required fields with sample values: the smallest body that create accepts. */",
+        `const valid = ${objectLiteral(required, sampleValue)};`,
+        "/** Every declared field. */",
+        `const full = ${objectLiteral(fields, sampleValue)};`,
+        "/** A value of the wrong type for each field. */",
+        `const invalid = ${objectLiteral(fields, invalidSampleValue)};`,
+        "",
+      ].join("\n")
+    : "";
+  const first = fields?.[0];
+  const changed = first ? `{ ${first.name}: ${otherSampleValue(first)} }` : "";
+  const extraTests = fields
+    ? [
+        "",
+        '  it("stores and returns every declared field", async () => {',
+        '    const r = await request("staff", "POST", "/", { ...full, status: "published" });',
+        "    expect(r.status).toBe(201);",
+        "    const { id } = await r.json();",
+        '    const got = await (await request("anon", "GET", `/${id}`)).json();',
+        "    expect(got).toMatchObject(full);",
+        "  });",
+        "",
+        '  it("update changes one field and keeps the others", async () => {',
+        '    const r1 = await request("staff", "POST", "/", full);',
+        "    expect(r1.status).toBe(201);",
+        "    const { id } = await r1.json();",
+        `    const r = await request("staff", "PATCH", \`/\${id}\`, ${changed});`,
+        "    expect(r.status).toBe(200);",
+        `    expect(await r.json()).toMatchObject({ ...full, ...${changed} });`,
+        "  });",
+        "",
+        '  it("a value of the wrong type is rejected (422)", async () => {',
+        "    for (const [field, value] of Object.entries(invalid)) {",
+        '      const r = await request("staff", "POST", "/", { ...valid, [field]: value });',
+        "      expect(r.status, field).toBe(422);",
+        "    }",
+        "  });",
+        ...(required.length > 0
+          ? [
+              "",
+              '  it("a missing required field is rejected (422)", async () => {',
+              `    const body = ${objectLiteral(required.slice(1), sampleValue)};`,
+              '    expect((await request("staff", "POST", "/", body)).status).toBe(422);',
+              "  });",
+            ]
+          : []),
+        "",
+      ].join("\n")
+    : "";
+
   add(
     `tests/unit/kon-${slug}.test.ts`,
     `/**
@@ -903,7 +1053,7 @@ ${imports.bench}
 
 let client: PGlite;
 let request: ReturnType<typeof requestAs>;
-
+${testDecls}
 beforeAll(async () => {
   client = await ${imports.base};
   const db = await ${imports.drop};
@@ -933,25 +1083,25 @@ describe("${id}", () => {
   let draft: string;
 
   it("only the team creates", async () => {
-    expect((await request("anon", "POST", "/", { title: "x" })).status).toBe(401);
-    expect((await request("a", "POST", "/", { title: "x" })).status).toBe(403);
+    expect((await request("anon", "POST", "/", ${b("x")})).status).toBe(401);
+    expect((await request("a", "POST", "/", ${b("x")})).status).toBe(403);
 
-    const r1 = await request("staff", "POST", "/", { title: "Published", status: "published" });
+    const r1 = await request("staff", "POST", "/", ${b("Published", ', status: "published"')});
     expect(r1.status).toBe(201);
     published = (await r1.json()).id;
 
-    const r2 = await request("admin", "POST", "/", { title: "Draft" });
+    const r2 = await request("admin", "POST", "/", ${b("Draft")});
     expect(r2.status).toBe(201);
     draft = (await r2.json()).id;
   });
 
   it("an agent writes only with the kon's scope", async () => {
-    expect((await request({ agent: ["blog:*"] }, "POST", "/", { title: "x" })).status).toBe(403);
-    expect((await request({ agent: ["${slug}:*"] }, "POST", "/", { title: "By an agent" })).status).toBe(201);
+    expect((await request({ agent: ["blog:*"] }, "POST", "/", ${b("x")})).status).toBe(403);
+    expect((await request({ agent: ["${slug}:*"] }, "POST", "/", ${b("By an agent")})).status).toBe(201);
   });
 
   it("a field outside the allowlist is rejected (422)", async () => {
-    const r = await request("staff", "POST", "/", { title: "x", isAdmin: true });
+    const r = await request("staff", "POST", "/", ${outside});
     expect(r.status).toBe(422);
   });
 
@@ -978,7 +1128,7 @@ describe("${id}", () => {
     // A draft does not even exist for a customer: row security hides it, so 404, never 403.
     expect((await request("a", "PATCH", \`/\${draft}\`, { status: "published" })).status).toBe(404);
     // A published item is visible to them, and still not theirs to change.
-    expect((await request("a", "PATCH", \`/\${published}\`, { title: "x" })).status).toBe(403);
+    expect((await request("a", "PATCH", \`/\${published}\`, ${otherEdit})).status).toBe(403);
     expect((await request("a", "DELETE", \`/\${published}\`)).status).toBe(403);
 
     const r = await request("staff", "PATCH", \`/\${draft}\`, { status: "published" });
@@ -988,7 +1138,7 @@ describe("${id}", () => {
     expect((await request("admin", "DELETE", \`/\${draft}\`)).status).toBe(204);
     expect((await request("anon", "GET", \`/\${draft}\`)).status).toBe(404);
   });
-});
+${extraTests}});
 `
   );
 

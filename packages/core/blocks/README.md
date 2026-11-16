@@ -97,24 +97,25 @@ These URLs use kon-media's transform presets for optimized responsive images.
 
 ### Pages
 
-| Method | Endpoint                            | Description          |
-| ------ | ----------------------------------- | -------------------- |
-| GET    | `/api/page-builder/pages`           | List pages           |
-| GET    | `/api/page-builder/pages/:id`       | Get page with blocks |
-| POST   | `/api/page-builder/pages`           | Create page          |
-| PATCH  | `/api/page-builder/pages/:id`       | Update page          |
-| DELETE | `/api/page-builder/pages/:id`       | Delete page          |
-| POST   | `/api/page-builder/pages/:id/clone` | Clone page           |
+| Method | Endpoint                                    | Description                                      |
+| ------ | ------------------------------------------- | ------------------------------------------------ |
+| GET    | `/api/page-builder/pages`                   | List pages                                       |
+| GET    | `/api/page-builder/pages/:id`               | Get page with blocks                             |
+| POST   | `/api/page-builder/pages`                   | Create page                                      |
+| PATCH  | `/api/page-builder/pages/:id`               | Update page                                      |
+| DELETE | `/api/page-builder/pages/:id`               | Delete page                                      |
+| POST   | `/api/page-builder/pages/:id/clone`         | Clone page                                       |
+| POST   | `/api/page-builder/pages/:id/publish-draft` | Publish a draft onto its page in one transaction |
 
 ### Blocks
 
-| Method | Endpoint                                         | Description     |
-| ------ | ------------------------------------------------ | --------------- |
-| POST   | `/api/page-builder/pages/:pageId/blocks`         | Add block       |
-| PATCH  | `/api/page-builder/blocks/:id`                   | Update block    |
-| DELETE | `/api/page-builder/blocks/:id`                   | Delete block    |
-| POST   | `/api/page-builder/pages/:pageId/blocks/reorder` | Reorder blocks  |
-| POST   | `/api/page-builder/blocks/:id/duplicate`         | Duplicate block |
+| Method | Endpoint                                         | Description                                                                           |
+| ------ | ------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| POST   | `/api/page-builder/pages/:pageId/blocks`         | Add block                                                                             |
+| PATCH  | `/api/page-builder/blocks/:id`                   | Update block (`content`, or `contentPatch` per field; `If-Match` → 409 if it changed) |
+| DELETE | `/api/page-builder/blocks/:id`                   | Delete block                                                                          |
+| POST   | `/api/page-builder/pages/:pageId/blocks/reorder` | Reorder blocks                                                                        |
+| POST   | `/api/page-builder/blocks/:id/duplicate`         | Duplicate block                                                                       |
 
 ### Templates
 

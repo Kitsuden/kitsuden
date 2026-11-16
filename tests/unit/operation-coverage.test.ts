@@ -42,6 +42,7 @@ import { LEGACY_ROUTES, LEGACY_ROUTES_CAP } from "../../apps/api/src/lib/legacy-
 import { OAUTH_PROTOCOL_ROUTES } from "../../apps/api/src/lib/oauth/config";
 import {
   commonComponents,
+  compactSchema,
   mcpTool,
   openApiOperation,
   requestFromArguments,
@@ -202,6 +203,29 @@ describe("SDK operations", () => {
       expect(names.has(tool!.name), `repeated name: ${tool!.name}`).toBe(false);
       names.add(tool!.name);
     }
+  });
+
+  it("MCP definitions drop schema noise but keep every argument", () => {
+    // `compactSchema` is idempotent, and it never removes a property or a
+    // `required`: only bounds that are the default and patterns a `format` says.
+    let compact = 0;
+    for (const m of mounted) {
+      const tool = mcpTool(m.konId, m.mountPath, m.op);
+      if (!tool) continue;
+      const text = JSON.stringify(tool);
+      compact += text.length;
+      expect(JSON.stringify(compactSchema(tool.inputSchema))).toBe(
+        JSON.stringify(tool.inputSchema)
+      );
+      expect(text, m.key).not.toContain("9007199254740991");
+    }
+    expect(compact).toBeGreaterThan(0);
+    const s = { type: "string", format: "uuid", pattern: "^x$", minLength: 1 };
+    const n = { type: "integer", minimum: -9007199254740991, maximum: 9007199254740991 };
+    expect(compactSchema({ properties: { s, n }, required: ["s"] })).toEqual({
+      properties: { s: { type: "string", format: "uuid", minLength: 1 }, n: { type: "integer" } },
+      required: ["s"],
+    });
   });
 
   it("the tool's arguments build the REST request of its operation", () => {
