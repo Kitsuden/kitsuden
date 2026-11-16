@@ -108,27 +108,7 @@ import {
 } from "./lib/store";
 import { toonMiddleware } from "./lib/toon";
 import { toonProtocolMiddleware } from "./lib/toon-protocol";
-import {
-  AUTOMATION_ROUTE,
-  automationRoutes,
-  SECRET_ACCESS_ROUTE,
-  secretAccessRoutes,
-} from "./routes/automation";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
-import {
-  CONNECTIONS_KON,
-  CONNECTIONS_ROUTE,
-  connectionsKon,
-  connectionsRoutes,
-} from "./routes/connections";
 import { startTraces, stopTraces, requestTraces } from "./lib/traces";
-import {
-  AUTOMATION_ROUTE,
-  automationRoutes,
-  SECRET_ACCESS_ROUTE,
-  secretAccessRoutes,
-} from "./routes/automation";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { closeValkey, valkeyConfigured } from "./lib/valkey";
 import { registerSystemMails } from "./mail/system-mails";
 import {
@@ -145,6 +125,19 @@ import { httpProblems } from "./middleware/problems-http";
 import { requestContextMiddleware, accessLogAndMetrics } from "./middleware/telemetry";
 import { withTransactionalRLS } from "./middleware/transactional-rls";
 import { enrichUserContext } from "./middleware/user-context";
+import {
+  AUTOMATION_ROUTE,
+  automationRoutes,
+  SECRET_ACCESS_ROUTE,
+  secretAccessRoutes,
+} from "./routes/automation";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
+import {
+  CONNECTIONS_KON,
+  CONNECTIONS_ROUTE,
+  connectionsKon,
+  connectionsRoutes,
+} from "./routes/connections";
 import { requireOriginOnWrites } from "./middleware/write-origin";
 import { actionsRoutes } from "./routes/actions";
 import { adminRegistryRoutes } from "./routes/admin-registry";
