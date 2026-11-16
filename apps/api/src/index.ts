@@ -66,7 +66,7 @@ import { bodyLimit } from "./lib/body-limit";
 import { clientIp } from "./lib/client-ip";
 import { config, features, corsConfig } from "./lib/config";
 import { startConnectionsWorker } from "./lib/connections";
-import { incompleteCorsWarning, allowedOrigin } from "./lib/cors-origins";
+import { incompleteCorsWarning, allowedOrigin, sameOrigin } from "./lib/cors-origins";
 import { registerCriticalFeatures } from "./lib/critical-features";
 import { initCronScheduler } from "./lib/cron-scheduler";
 import { availableKon } from "./lib/deferred-kons";
@@ -141,21 +141,14 @@ import {
   analyticsOperations,
   analyticsRoutes,
 } from "./routes/analytics";
+import { apiKeysRoutes } from "./routes/api-keys";
+import { approvalsRoutes, proposalsRoutes } from "./routes/approvals";
 import {
   AUTOMATION_ROUTE,
   automationRoutes,
   SECRET_ACCESS_ROUTE,
   secretAccessRoutes,
 } from "./routes/automation";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
-import {
-  CONNECTIONS_KON,
-  CONNECTIONS_ROUTE,
-  connectionsKon,
-  connectionsRoutes,
-} from "./routes/connections";
-import { apiKeysRoutes } from "./routes/api-keys";
-import { approvalsRoutes, proposalsRoutes } from "./routes/approvals";
 import { brainRoutes } from "./routes/brain";
 import {
   brainMemoryRoutes,
@@ -165,9 +158,16 @@ import {
 } from "./routes/brain-memory";
 import { codeGraphRoutes } from "./routes/code-graph";
 import { codegenRoutes } from "./routes/codegen";
+import {
+  CONNECTIONS_KON,
+  CONNECTIONS_ROUTE,
+  connectionsKon,
+  connectionsRoutes,
+} from "./routes/connections";
 import { settingsRoutes, syncRoutes, dataSetsRoutes as dataSetsLiteRoutes } from "./routes/crud";
 import { explorerRoutes } from "./routes/data-explorer";
 import dataSourcesRoutes from "./routes/data-sources";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { docsRoutes } from "./routes/docs";
 import { dynamicDocsRouter } from "./routes/docs-dynamic";
 import { functionsRoutes } from "./routes/functions";
@@ -389,8 +389,16 @@ app.use("*", timing());
  */
 const safeHeaders = secureHeaders();
 const mediaHeaders = secureHeaders({ crossOriginResourcePolicy: "cross-origin" });
+/**
+ * A kon's public embed scripts (`/api/<kon>/public/…/*.js`: kon-chat's and kon-koe's chat widgets) are
+ * loaded with a plain `<script src>` from the sites that embed them. Under `same-origin` the browser
+ * fetched the script and refused to run it. They carry no data, only code anyone may read.
+ */
+const PUBLIC_KON_SCRIPT = /^\/api\/[a-z0-9-]+\/public\/[A-Za-z0-9_/.-]*\.js$/;
 app.use("*", (c, next) =>
-  (c.req.path.startsWith(`${BASE_URL_LOCAL}/`) ? mediaHeaders : safeHeaders)(c, next)
+  (c.req.path.startsWith(`${BASE_URL_LOCAL}/`) || PUBLIC_KON_SCRIPT.test(c.req.path)
+    ? mediaHeaders
+    : safeHeaders)(c, next)
 );
 app.use("/api/*", toonMiddleware());
 app.use("/api/*", toonProtocolMiddleware());
@@ -1639,7 +1647,13 @@ export default {
       // any page could open the channel with the visitor's session.
       // Non-browser clients do not send `Origin` and carry on as before.
       const origin = req.headers.get("origin");
-      if (origin && !corsConfig.origins.includes(origin)) {
+      // The API's own pages (kon-koe's inbox at /api/koe/inbox) are same-origin: allowed without being
+      // listed. Another site's page has another Origin and still needs ALLOWED_ORIGINS.
+      if (
+        origin &&
+        !corsConfig.origins.includes(origin) &&
+        !sameOrigin(origin, req.headers.get("host"))
+      ) {
         return new Response("Origin not allowed", { status: 403 });
       }
       const session = await getSessionFromRequest(req);

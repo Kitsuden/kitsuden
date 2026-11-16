@@ -7,7 +7,8 @@
  *   bindKonContext   the context the kon receives. It is the shared context
  *                    with `secrets`, `entities` and `automation` tied to THIS
  *                    kon: they take the kon's own id as their first argument
- *                    and refuse any other.
+ *                    and refuse any other. `realtime.channels` registers the
+ *                    authorizer of the kon's own channel namespace only.
  *   announceKon      registers what the kon declared in `defineKon`: its
  *                    events, automation steps, reports, entities and secret
  *                    columns.
@@ -40,6 +41,7 @@ import { messageOf } from "../../../../packages/engine/src/errors";
 import { registerKonContributions } from "./kon-contributions";
 import { syncKonEntities } from "./kon-entities";
 import { registerKonSecretColumns } from "./kon-secrets";
+import { registerKonChannels } from "./realtime-kon-channels";
 
 function own(owner: string, given: unknown, what: string): void {
   if (given !== owner) {
@@ -120,6 +122,15 @@ export function bindKonContext(base: KonContext, konId: string): KonContext {
     ...(base.secrets ? { secrets: bindSecrets(konId, base.secrets) } : {}),
     ...(base.entities ? { entities: bindEntities(konId, base.entities) } : {}),
     ...(base.automation ? { automation: bindAutomation(konId, base.automation) } : {}),
+    // Its own realtime namespace, `kon:<short id>:` (lib/realtime-kon-channels.ts).
+    ...(base.realtime
+      ? {
+          realtime: {
+            ...base.realtime,
+            channels: (authorize) => registerKonChannels(konId, authorize),
+          },
+        }
+      : {}),
     ...(base.connections ? { connections: bindConnections(konId, base.connections) } : {}),
   };
 }

@@ -86,6 +86,7 @@ import Map from "lucide-svelte/icons/map";
 import MapPin from "lucide-svelte/icons/map-pin";
 import MessageCircle from "lucide-svelte/icons/message-circle";
 import MessageSquare from "lucide-svelte/icons/message-square";
+import MessagesSquare from "lucide-svelte/icons/messages-square";
 import Monitor from "lucide-svelte/icons/monitor";
 import Network from "lucide-svelte/icons/network";
 import Package from "lucide-svelte/icons/package";
@@ -182,6 +183,7 @@ export const ICONS: Record<string, typeof Package> = {
   MapPin,
   MessageCircle,
   MessageSquare,
+  MessagesSquare,
   Monitor,
   Network,
   Package,
