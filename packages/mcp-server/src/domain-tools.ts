@@ -117,8 +117,16 @@ export const DOMAIN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "kitsuden_guide",
     description:
-      "Guide for agents of this Kitsuden: rules that are often broken, recipes (character tier list, Swiss tournament with check-in) and all the kon routes. Read it before building.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      "Guide for agents of this Kitsuden. Without `kon` it returns the index: the rules agents often break, how to build something new (dataset or kon), generic recipes, and one line per mounted kon. With `kon` it returns only that kon's routes. Read the index before building.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        kon: string(
+          "Optional. Kon id from the index (`blog` or `kon-blog`; several: `blog,esports`): returns only its routes."
+        ),
+      },
+      additionalProperties: false,
+    },
   },
   {
     name: "kitsuden_describe_api",
@@ -184,8 +192,9 @@ const str = (v: unknown) => (typeof v === "string" ? v : undefined);
 const enc = (v: unknown) => encodeURIComponent(String(v));
 
 const HANDLERS: Record<string, Handler> = {
-  async kitsuden_guide(_args, api) {
-    return api("/llms.txt");
+  async kitsuden_guide(args, api) {
+    const kon = str(args.kon)?.trim();
+    return api(kon ? `/llms.txt?kon=${enc(kon)}` : "/llms.txt");
   },
 
   async kitsuden_describe_api(args, api) {

@@ -180,8 +180,9 @@ default rather than a checklist.
 ## For AI agents
 
 - **Using Kitsuden:** point an MCP client at `/api/mcp` with an agent key, or call REST
-  under `/api/*`. `GET /llms.txt` is the agent guide generated from the routes the running
-  API mounts. The [`kitsuden` skill](skills/kitsuden/SKILL.md) wraps it, and
+  under `/api/*`. `GET /llms.txt` is the agent guide: an index (rules, how to build something
+  new, recipes, one line per kon), with each kon's routes at `?kon=<id>` and everything at
+  `?full=1`, generated from the routes the running API mounts. The [`kitsuden` skill](skills/kitsuden/SKILL.md) wraps it, and
   [docs/agents/coding-agents.md](docs/agents/coding-agents.md) sets up Claude Code, Codex
   and Antigravity; system prompts and the tool reference are in [docs/ai/](docs/ai/).
 - **Working on this repository:** read [AGENTS.md](AGENTS.md) first (what is off limits,
