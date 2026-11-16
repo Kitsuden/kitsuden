@@ -520,3 +520,4 @@ export * from "./link-relations";
 export * from "./automation";
 export * from "./reports";
 export * from "./kon-entities";
+export * from "./connections";

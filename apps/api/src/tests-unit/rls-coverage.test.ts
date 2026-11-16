@@ -165,6 +165,16 @@ const COLLABORATIVE = new Map<string, string>([
     "secret_access_log",
     "system-only under RLS (rls-system-only.sql); actor_user_id is who opened a secret, not a read grant",
   ],
+  // Connections (0082): their own policies, stricter than owner isolation. A person reads their own
+  // `user` connections, an admin only the organization's (never a person's), the system all.
+  [
+    "conn_connections",
+    "own RLS in migration 0082: owner_id reads its user connections; admins only organization ones",
+  ],
+  [
+    "conn_oauth_states",
+    "own RLS in migration 0082: user_id is who started the round trip; system for the callback",
+  ],
   // A team is PUBLIC: it appears in the bracket, in the rankings and in the
   // overlay. `created_by_user_id` says who can administer it, not who
   // can see it — that is decided by the kon's policy (only the captain invites).
