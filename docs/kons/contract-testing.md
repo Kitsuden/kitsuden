@@ -57,6 +57,14 @@ Left out on purpose:
 - operations that only work by calling an outside service
   (the external-service list in the script), which is cut off here.
 
+One thing is changed in the spec Schemathesis reads (never in the published
+OpenAPI): every `pattern` that ends in `$` ends in `$(?!\n)` instead. Both mean
+the same to the API. Schemathesis's generator reads `$` the Python way, where it
+also matches before a final newline, so about a third of the values it made for a
+`^…$` pattern ended in `"\n"` and were thrown away; an operation with several
+patterned fields could then fail the `filter_too_much` health check. A kon does
+not need to write its patterns in any special way.
+
 Do **not** run it at the same time as the API integration suite: its
 `clearTestData()` deletes every dataset of the test database halfway through
 the run.
