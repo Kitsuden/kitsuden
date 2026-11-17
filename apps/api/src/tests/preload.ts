@@ -17,6 +17,11 @@
 import { afterAll, beforeEach } from "bun:test";
 import { createClient } from "redis";
 
+// The secrets key is cached the first time something is sealed, and some suites set it in their own
+// beforeAll: whichever file sealed first decided the key, and the rotation test in kon-foundations
+// then sealed with one key and read another. One value for the whole run.
+process.env.KITSUDEN_SECRETS_KEY ??= "test-suite-secrets-key-0123456789abcdef-0123456789";
+
 const url = process.env.VALKEY_URL || process.env.REDIS_URL;
 let client: ReturnType<typeof createClient> | null = null;
 let unavailable = false;

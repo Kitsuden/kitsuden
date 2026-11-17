@@ -42,6 +42,7 @@ import {
   siteSettings,
   modules,
 } from "../db/schema";
+import { analyticsViews } from "../db/schema-core";
 import { TABLES_ONLY_VIA_THEIR_ROUTE } from "../lib/actions-code";
 import {
   writeRequiresAdmin,
@@ -549,6 +550,22 @@ const tableRegistry: Record<string, TableMeta> = {
     icon: "🧩",
     readonlyFields: ["created_at"],
     pk: "key",
+  },
+  // Views per subject and day (0083). Counters written by /api/analytics/hit: read-only here.
+  analytics_views: {
+    table: analyticsViews,
+    label: "Views",
+    icon: "📈",
+    readonlyFields: [
+      "id",
+      "subject_type",
+      "subject_id",
+      "day",
+      "views",
+      "created_at",
+      "updated_at",
+    ],
+    pk: "id",
   },
 };
 

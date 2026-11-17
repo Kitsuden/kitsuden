@@ -25,6 +25,10 @@
       "description": "Agent permissions, keys and quotas (admin only)."
     },
     {
+      "name": "kon-analytics",
+      "description": "Views per subject and day, without cookies or personal data."
+    },
+    {
       "name": "kon-approvals",
       "description": "Human approval of agent proposals (team members only; never an agent)."
     },
@@ -2787,6 +2791,458 @@
           ],
           "mcp": {
             "excluded": "An audit trail for administrators."
+          }
+        }
+      }
+    },
+    "/analytics/hit": {
+      "post": {
+        "operationId": "analytics.add-view",
+        "summary": "Count one page view",
+        "description": "Adds ONE view of a subject (game, blog post, wiki page, dataset, tournament, streamer) for today. Public and anonymous: no IP, cookie or user agent is stored. Known bots are dropped, and a subject that does not exist is not counted; both answer 204 like a counted view. 400 when type or id are not valid.",
+        "tags": [
+          "kon-analytics"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "game",
+                      "blog_post",
+                      "wiki_page",
+                      "wiki",
+                      "dataset",
+                      "tournament",
+                      "streamer"
+                    ],
+                    "description": "What was viewed"
+                  },
+                  "id": {
+                    "type": "string",
+                    "description": "Uuid of the viewed subject"
+                  }
+                },
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-kitsuden-operation": {
+          "kon": "kon-analytics",
+          "id": "add-view",
+          "access": "public",
+          "scope": "kon:analytics:add-view",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": false,
+          "bodyValidatedBy": "handler (400 Validation failed)",
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "counts a browser page view; an agent reading a page is not a view"
+          }
+        }
+      }
+    },
+    "/analytics/subject/{type}/{id}": {
+      "get": {
+        "operationId": "analytics.get-subject-series",
+        "summary": "Daily views of one subject",
+        "description": "The views per day of one subject over the last `days` days, oldest first, with the total. Public. 400 when type or id are not valid; a subject with no views returns an empty series.",
+        "tags": [
+          "kon-analytics"
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Subject type: game, blog_post, wiki_page, wiki, dataset, tournament, streamer"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Subject uuid"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Window in days, 1-365 (default 30)",
+              "type": "string"
+            },
+            "description": "Window in days, 1-365 (default 30)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "days": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "docs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string"
+                          },
+                          "views": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "day",
+                          "views"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "days",
+                    "total",
+                    "docs"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-kitsuden-operation": {
+          "kon": "kon-analytics",
+          "id": "get-subject-series",
+          "access": "public",
+          "scope": "kon:analytics:get-subject-series",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "analytics__get-subject-series"
+          }
+        }
+      }
+    },
+    "/analytics/top": {
+      "get": {
+        "operationId": "analytics.get-most-viewed",
+        "summary": "Most viewed subjects",
+        "description": "The most viewed subjects of one type over the last `days` days (views, never unique visitors), most viewed first. `ids` ranks only inside a given set of uuids. Public. Returns subject ids and view counts; 400 when the type is unknown.",
+        "tags": [
+          "kon-analytics"
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Subject type (default game): game, blog_post, wiki_page, wiki, dataset, tournament, streamer",
+              "type": "string"
+            },
+            "description": "Subject type (default game): game, blog_post, wiki_page, wiki, dataset, tournament, streamer"
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Window in days, 1-365 (default 30)",
+              "type": "string"
+            },
+            "description": "Window in days, 1-365 (default 30)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "How many, 1-50 (default 5)",
+              "type": "string"
+            },
+            "description": "How many, 1-50 (default 5)"
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated uuids: rank only inside this set (max 100)",
+              "type": "string"
+            },
+            "description": "Comma-separated uuids: rank only inside this set (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "days": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "docs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "subjectId": {
+                            "type": "string"
+                          },
+                          "views": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "subjectId",
+                          "views"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "days",
+                    "docs"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-kitsuden-operation": {
+          "kon": "kon-analytics",
+          "id": "get-most-viewed",
+          "access": "public",
+          "scope": "kon:analytics:get-most-viewed",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "tool": "analytics__get-most-viewed"
           }
         }
       }

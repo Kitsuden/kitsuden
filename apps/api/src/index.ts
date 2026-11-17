@@ -125,19 +125,6 @@ import { httpProblems } from "./middleware/problems-http";
 import { requestContextMiddleware, accessLogAndMetrics } from "./middleware/telemetry";
 import { withTransactionalRLS } from "./middleware/transactional-rls";
 import { enrichUserContext } from "./middleware/user-context";
-import {
-  AUTOMATION_ROUTE,
-  automationRoutes,
-  SECRET_ACCESS_ROUTE,
-  secretAccessRoutes,
-} from "./routes/automation";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
-import {
-  CONNECTIONS_KON,
-  CONNECTIONS_ROUTE,
-  connectionsKon,
-  connectionsRoutes,
-} from "./routes/connections";
 import { requireOriginOnWrites } from "./middleware/write-origin";
 import { actionsRoutes } from "./routes/actions";
 import { adminRegistryRoutes } from "./routes/admin-registry";
@@ -148,8 +135,20 @@ import { agentNotificationsRoutes } from "./routes/agent-notifications";
 import { agentPermissionsRoutes } from "./routes/agent-permissions";
 import agentPlaygroundRoutes from "./routes/agent-playground";
 import agentRoutes from "./routes/agents";
+import {
+  ANALYTICS_KON,
+  ANALYTICS_ROUTE,
+  analyticsOperations,
+  analyticsRoutes,
+} from "./routes/analytics";
 import { apiKeysRoutes } from "./routes/api-keys";
 import { approvalsRoutes, proposalsRoutes } from "./routes/approvals";
+import {
+  AUTOMATION_ROUTE,
+  automationRoutes,
+  SECRET_ACCESS_ROUTE,
+  secretAccessRoutes,
+} from "./routes/automation";
 import { brainRoutes } from "./routes/brain";
 import {
   brainMemoryRoutes,
@@ -159,9 +158,16 @@ import {
 } from "./routes/brain-memory";
 import { codeGraphRoutes } from "./routes/code-graph";
 import { codegenRoutes } from "./routes/codegen";
+import {
+  CONNECTIONS_KON,
+  CONNECTIONS_ROUTE,
+  connectionsKon,
+  connectionsRoutes,
+} from "./routes/connections";
 import { settingsRoutes, syncRoutes, dataSetsRoutes as dataSetsLiteRoutes } from "./routes/crud";
 import { explorerRoutes } from "./routes/data-explorer";
 import dataSourcesRoutes from "./routes/data-sources";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { docsRoutes } from "./routes/docs";
 import { dynamicDocsRouter } from "./routes/docs-dynamic";
 import { functionsRoutes } from "./routes/functions";
@@ -1200,6 +1206,12 @@ app.route(SECRET_ACCESS_ROUTE, secretAccessRoutes);
 mountKonRls(app, REPORTS_ROUTE);
 app.route(REPORTS_ROUTE, reportsRoutes);
 registerMountedOperations(REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes);
+// Analytics (docs/analytics.md): views per subject and day, with no personal data. It was kon-analytics;
+// same id, routes, scopes and MCP tools. In the request's transaction: `hit` checks the subject in a
+// savepoint so a table with another shape cannot abort the count.
+mountKonRls(app, ANALYTICS_ROUTE);
+app.route(ANALYTICS_ROUTE, analyticsRoutes);
+registerMountedOperations(ANALYTICS_KON, ANALYTICS_ROUTE, analyticsOperations, analyticsRoutes);
 // Connections (docs/connections.md): accounts at other services that kons use through ctx.connections.
 // In the request's transaction: row security decides whose connections a person sees. The OAuth
 // callback runs as the system inside the handler.

@@ -4,6 +4,7 @@ import type { OperationInfo } from "../api/types";
 
 import { operations as agentNotificationsOps, type AgentNotificationsApi } from "./kons/agent-notifications";
 import { operations as agentsOps, type AgentsApi } from "./kons/agents";
+import { operations as analyticsOps, type AnalyticsApi } from "./kons/analytics";
 import { operations as approvalsOps, type ApprovalsApi } from "./kons/approvals";
 import { operations as automationOps, type AutomationApi } from "./kons/automation";
 import { operations as blocksOps, type BlocksApi } from "./kons/blocks";
@@ -25,6 +26,7 @@ import { operations as tracesOps, type TracesApi } from "./kons/traces";
 
 export * as AgentNotifications from "./kons/agent-notifications";
 export * as Agents from "./kons/agents";
+export * as Analytics from "./kons/analytics";
 export * as Approvals from "./kons/approvals";
 export * as Automation from "./kons/automation";
 export * as Blocks from "./kons/blocks";
@@ -58,6 +60,8 @@ export interface KitsudenKons {
   readonly agentNotifications: AgentNotificationsApi;
   /** kon-agents: Agent permissions, keys and quotas (admin only). */
   readonly agents: AgentsApi;
+  /** kon-analytics: Views per subject and day, without cookies or personal data. */
+  readonly analytics: AnalyticsApi;
   /** kon-approvals: Human approval of agent proposals (team members only; never an agent). */
   readonly approvals: ApprovalsApi;
   /** kon-automation: The catalog of events and steps for automation rules, and the dry run of an action. */
@@ -100,6 +104,7 @@ export interface KitsudenKons {
 export const KONS = {
   agentNotifications: agentNotificationsOps,
   agents: agentsOps,
+  analytics: analyticsOps,
   approvals: approvalsOps,
   automation: automationOps,
   blocks: blocksOps,
