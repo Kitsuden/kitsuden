@@ -4,10 +4,10 @@
 
 ## Public and private keys
 
-| Key | Who can read it |
-| --- | --- |
-| anything else (`uploads/…`, `media/…`) | anyone with the address: `ctx.storage.publicUrl(key)` |
-| `private/…` | only through `ctx.storage.getSignedDownloadUrl(key, seconds)`: a short-lived signed address |
+| Key                                    | Who can read it                                                                             |
+| -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| anything else (`uploads/…`, `media/…`) | anyone with the address: `ctx.storage.publicUrl(key)`                                       |
+| `private/…`                            | only through `ctx.storage.getSignedDownloadUrl(key, seconds)`: a short-lived signed address |
 
 Store under `private/` anything that belongs to a person: a customer's voice note, a contract, an invoice.
 
