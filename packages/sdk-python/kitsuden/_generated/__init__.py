@@ -16,6 +16,7 @@ if TYPE_CHECKING:  # the kon modules are imported lazily, on first use of the at
     from .kons.connections import AsyncConnectionsApi, ConnectionsApi
     from .kons.datasets import AsyncDatasetsApi, DatasetsApi
     from .kons.external_mcp import AsyncExternalMcpApi, ExternalMcpApi
+    from .kons.external_mcp_oauth import AsyncExternalMcpOauthApi, ExternalMcpOauthApi
     from .kons.media import AsyncMediaApi, MediaApi
     from .kons.models import AsyncModelsApi, ModelsApi
     from .kons.oauth import AsyncOauthApi, OauthApi
@@ -100,6 +101,7 @@ KONS: Tuple[Tuple[str, str, str, str], ...] = (
     ("connections", "kon-connections", "kitsuden._generated.kons.connections", "ConnectionsApi"),
     ("datasets", "kon-datasets", "kitsuden._generated.kons.datasets", "DatasetsApi"),
     ("external_mcp", "kon-external-mcp", "kitsuden._generated.kons.external_mcp", "ExternalMcpApi"),
+    ("external_mcp_oauth", "kon-external-mcp-oauth", "kitsuden._generated.kons.external_mcp_oauth", "ExternalMcpOauthApi"),
     ("media", "kon-media", "kitsuden._generated.kons.media", "MediaApi"),
     ("models", "kon-models", "kitsuden._generated.kons.models", "ModelsApi"),
     ("oauth", "kon-oauth", "kitsuden._generated.kons.oauth", "OauthApi"),
@@ -128,6 +130,7 @@ class GeneratedKons:
     connections: ConnectionsApi
     datasets: DatasetsApi
     external_mcp: ExternalMcpApi
+    external_mcp_oauth: ExternalMcpOauthApi
     media: MediaApi
     models: ModelsApi
     oauth: OauthApi
@@ -154,6 +157,7 @@ class AsyncGeneratedKons:
     connections: AsyncConnectionsApi
     datasets: AsyncDatasetsApi
     external_mcp: AsyncExternalMcpApi
+    external_mcp_oauth: AsyncExternalMcpOauthApi
     media: AsyncMediaApi
     models: AsyncModelsApi
     oauth: AsyncOauthApi

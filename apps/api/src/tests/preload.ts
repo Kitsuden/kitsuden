@@ -1,5 +1,5 @@
 /**
- * Every API test starts with empty rate-limit counters
+ * Every API test starts with empty rate-limit counters, and one secrets key
  * ============================================================================
  *
  * The integration suite runs in ONE process against one test Valkey, and requests
@@ -17,10 +17,14 @@
 import { afterAll, beforeEach } from "bun:test";
 import { createClient } from "redis";
 
-// The secrets key is cached the first time something is sealed, and some suites set it in their own
-// beforeAll: whichever file sealed first decided the key, and the rotation test in kon-foundations
-// then sealed with one key and read another. One value for the whole run.
-process.env.KITSUDEN_SECRETS_KEY ??= "test-suite-secrets-key-0123456789abcdef-0123456789";
+// One secrets key for the whole run, set before anything seals. The key is cached the first time
+// something is encrypted; when a file sealed before another file set the variable, the cache held
+// the BETTER_AUTH_SECRET-derived key while the environment named another one, and the rotation
+// test (kon-foundations) read with a key nothing had been sealed with. Which file sealed first
+// depended on the order of the run, so it failed on the CI and passed on a developer machine.
+if (process.env.NODE_ENV === "test") {
+  process.env.KITSUDEN_SECRETS_KEY ??= "test-suite-secrets-key-0123456789abcdef-0123456789";
+}
 
 const url = process.env.VALKEY_URL || process.env.REDIS_URL;
 let client: ReturnType<typeof createClient> | null = null;

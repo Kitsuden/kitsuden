@@ -64,6 +64,7 @@ import {
   queue,
   type JobActor,
   type DispatchOptions,
+  type DispatchResult,
   type QueueJob,
 } from "../../../../packages/engine/src/queue";
 import { resolveExecutor, useRequest } from "../../../../packages/engine/src/request-scope";
@@ -132,7 +133,7 @@ async function dispatch(
   name: string,
   payload: unknown,
   options: DispatchOptions
-): Promise<{ id: string }> {
+): Promise<DispatchResult> {
   const id = randomUUID();
   const actor = requestActor();
   const delay = Math.max(0, Math.floor(options.delayMs ?? 0));
@@ -154,7 +155,20 @@ async function dispatch(
     options.onBudgetExhausted === "fail" || options.onBudgetExhausted === "postpone"
       ? options.onBudgetExhausted
       : null;
-  if (cost !== null || policy !== null) {
+  let queued: DispatchResult = { id };
+  if (options.dedupeKey !== undefined && !isPgMem) {
+    // Insert unless a job with this key is waiting, and learn which one it is: a function, because
+    // the application role cannot read the queue (migration 0085).
+    const [r] = rowsValue(
+      await executor.execute(sql`
+        SELECT job_id, created FROM kitsuden_queue_dispatch_unique(
+          ${id}::uuid, ${queue}, ${name}, ${json}::jsonb, ${options.reason ?? null}, ${actor.userId},
+          ${actor.userRole}, ${actor.agentId}, ${reference}, ${options.attempts ?? 3}, ${delay},
+          ${cost}, ${policy}, ${options.dedupeKey})`)
+    );
+    if (r && r.created !== true) return { id: String(r.job_id), deduplicated: true };
+    queued = { id, deduplicated: false };
+  } else if (cost !== null || policy !== null) {
     await executor.execute(sql`
       INSERT INTO kitsuden_outbox
         (id, queue, name, payload, reason, user_id, user_role, agent_id, request_id, max_attempts, run_at, cost, budget_policy)
@@ -178,7 +192,7 @@ async function dispatch(
   // Outside a request it is already committed: wake the local worker
   // without waiting for the poll (in a request, NOTIFY will do it on commit).
   if (!useRequest()?.tx) setImmediate(() => worker?.wakeUp());
-  return { id };
+  return queued;
 }
 
 configureQueue({

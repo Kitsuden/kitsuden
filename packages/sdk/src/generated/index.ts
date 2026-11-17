@@ -12,6 +12,7 @@ import { operations as brainOps, type BrainApi } from "./kons/brain";
 import { operations as connectionsOps, type ConnectionsApi } from "./kons/connections";
 import { operations as datasetsOps, type DatasetsApi } from "./kons/datasets";
 import { operations as externalMcpOps, type ExternalMcpApi } from "./kons/external-mcp";
+import { operations as externalMcpOauthOps, type ExternalMcpOauthApi } from "./kons/external-mcp-oauth";
 import { operations as mediaOps, type MediaApi } from "./kons/media";
 import { operations as modelsOps, type ModelsApi } from "./kons/models";
 import { operations as oauthOps, type OauthApi } from "./kons/oauth";
@@ -34,6 +35,7 @@ export * as Brain from "./kons/brain";
 export * as Connections from "./kons/connections";
 export * as Datasets from "./kons/datasets";
 export * as ExternalMcp from "./kons/external-mcp";
+export * as ExternalMcpOauth from "./kons/external-mcp-oauth";
 export * as Media from "./kons/media";
 export * as Models from "./kons/models";
 export * as Oauth from "./kons/oauth";
@@ -76,6 +78,8 @@ export interface KitsudenKons {
   readonly datasets: DatasetsApi;
   /** kon-external-mcp: External MCP servers and the human review of their tools (human administrators only). */
   readonly externalMcp: ExternalMcpApi;
+  /** kon-external-mcp-oauth: The OAuth redirect of external MCP servers. */
+  readonly externalMcpOauth: ExternalMcpOauthApi;
   /** kon-media: Media file management with S3/MinIO storage */
   readonly media: MediaApi;
   /** kon-models: The models declared with defineModel in the mounted kons (for the admin panel). */
@@ -112,6 +116,7 @@ export const KONS = {
   connections: connectionsOps,
   datasets: datasetsOps,
   externalMcp: externalMcpOps,
+  externalMcpOauth: externalMcpOauthOps,
   media: mediaOps,
   models: modelsOps,
   oauth: oauthOps,

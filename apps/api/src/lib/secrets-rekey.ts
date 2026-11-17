@@ -191,6 +191,8 @@ export async function rekeySecrets(
       // The auth header of an external MCP server (0070). It was missing from this list: after a
       // rekey those headers no longer decrypted.
       { table: "external_mcp_servers", column: "auth_header_value", id: "id" },
+      // OAuth for external MCP servers (0084): the tokens and the client secret
+      { table: "external_mcp_servers", column: "oauth_secret", id: "id" },
       ...(await konSecretStores(tx)),
     ];
     for (const s of jsonStores) {

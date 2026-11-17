@@ -72,6 +72,7 @@ import { initCronScheduler } from "./lib/cron-scheduler";
 import { availableKon } from "./lib/deferred-kons";
 import { inProduction } from "./lib/environment";
 import { toErrorEnvelope } from "./lib/errors";
+import { startExternalMcpSweep } from "./lib/external-mcp-sweep";
 import { fileBody, file } from "./lib/file";
 import {
   adminExists,
@@ -167,7 +168,6 @@ import {
 import { settingsRoutes, syncRoutes, dataSetsRoutes as dataSetsLiteRoutes } from "./routes/crud";
 import { explorerRoutes } from "./routes/data-explorer";
 import dataSourcesRoutes from "./routes/data-sources";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { docsRoutes } from "./routes/docs";
 import { dynamicDocsRouter } from "./routes/docs-dynamic";
 import { functionsRoutes } from "./routes/functions";
@@ -176,8 +176,14 @@ import { inlineRelationsRoutes } from "./routes/inline-relations";
 import konAssetsRoutes from "./routes/kon-assets";
 import { mailRoutes } from "./routes/mail";
 import { mcpRoutes } from "./routes/mcp";
-import { EXTERNAL_MCP_ROUTE, externalMcpRoutes } from "./routes/mcp-servers";
+import {
+  EXTERNAL_MCP_OAUTH_ROUTE,
+  EXTERNAL_MCP_ROUTE,
+  externalMcpOAuthRoutes,
+  externalMcpRoutes,
+} from "./routes/mcp-servers";
 import { modelsRoutes, MODELS_ROUTE } from "./routes/models";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { modulesRoutes } from "./routes/modules";
 import { oauthCors, mcpChallenge, oauthRoutes } from "./routes/oauth";
 import { oauthPanelRoutes } from "./routes/oauth-panel";
@@ -1112,6 +1118,8 @@ app.route("/api/admin/queue", queueRoutes);
 // changes (lib/external-mcp.ts). Human admins only; agents call approved tools
 // through /api/mcp and the engine (lib/external-mcp-bridge.ts).
 app.route(EXTERNAL_MCP_ROUTE, externalMcpRoutes);
+// The OAuth redirect of those servers: public, authorized by its single-use state.
+app.route(EXTERNAL_MCP_OAUTH_ROUTE, externalMcpOAuthRoutes);
 // Logged requests: actor, kon, operation, database time, blocks.
 app.route("/api/admin/requests", tracesRoutes);
 // Agent identities, keys, scopes, quotas and sponsors are changed by humans
@@ -1179,6 +1187,9 @@ app.route(PROMOTION_ROUTE, promotionRoutes);
 registerMountedOperations(PROMOTION_KON, PROMOTION_ROUTE, promotionOperations, promotionRoutes);
 app.route(ADMIN_PROMOTION_ROUTE, promotionAdminRoutes);
 startWatchesSweep();
+// External MCP servers are read again every KITSUDEN_EXTERNAL_MCP_REFRESH_MINUTES (360; 0 = never), so a
+// tool rewritten after its review is found before an agent's call trips over it.
+startExternalMcpSweep();
 // /api/v1 (agents/traces/identities) is now mounted via rpcSurface (src/rpc.ts)
 app.route("/api/admin/agents", agentPlaygroundRoutes);
 app.route("/api/agent/memory", agentMemoryRoutes);
