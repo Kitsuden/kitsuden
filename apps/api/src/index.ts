@@ -65,6 +65,7 @@ import { auth } from "./lib/auth";
 import { bodyLimit } from "./lib/body-limit";
 import { clientIp } from "./lib/client-ip";
 import { config, features, corsConfig } from "./lib/config";
+import { startConnectionsWorker } from "./lib/connections";
 import { incompleteCorsWarning, allowedOrigin, sameOrigin } from "./lib/cors-origins";
 import { registerCriticalFeatures } from "./lib/critical-features";
 import { initCronScheduler } from "./lib/cron-scheduler";
@@ -111,13 +112,6 @@ import {
 import { toonMiddleware } from "./lib/toon";
 import { toonProtocolMiddleware } from "./lib/toon-protocol";
 import { startTraces, stopTraces, requestTraces } from "./lib/traces";
-import {
-  AUTOMATION_ROUTE,
-  automationRoutes,
-  SECRET_ACCESS_ROUTE,
-  secretAccessRoutes,
-} from "./routes/automation";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { closeValkey, valkeyConfigured } from "./lib/valkey";
 import { registerSystemMails } from "./mail/system-mails";
 import {
@@ -191,7 +185,6 @@ import {
   externalMcpRoutes,
 } from "./routes/mcp-servers";
 import { modelsRoutes, MODELS_ROUTE } from "./routes/models";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { modulesRoutes } from "./routes/modules";
 import { oauthCors, mcpChallenge, oauthRoutes } from "./routes/oauth";
 import { oauthPanelRoutes } from "./routes/oauth-panel";
@@ -209,6 +202,7 @@ import {
   RECORD_HISTORY_ROUTE,
   startRecordHistorySweep,
 } from "./routes/record-history";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { runsRoutes } from "./routes/runs";
 import { schemaIntrospectionRoutes } from "./routes/schema-introspection";
 import { systemRoutes } from "./routes/system";
