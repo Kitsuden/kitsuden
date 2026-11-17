@@ -104,6 +104,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   was blocked. They are now `cross-origin`, like `/media`.
 - The admin icon map gains `MessagesSquare` (kon-koe). `/api/koe/media` sets its own body limit for
   WhatsApp video and documents.
+- Lite mode now logs a statement that has waited 10 s for PGlite's only connection, with the stack that
+  started it, instead of the API hanging in silence (`watchLiteConnection`).
 - Lite mode (PGlite, one connection) wedged the whole database when a kon route or queue job opened a
   sealed secret, or when a site admin or editor called a kon route: the secret access log and the
   fresh session read used another connection while the request transaction held the only one. In lite
