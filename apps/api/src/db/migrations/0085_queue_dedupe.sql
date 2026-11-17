@@ -1,4 +1,4 @@
--- 0084 — Job queue: do not queue the same work twice (docs/install/queue.md)
+-- 0085 — Job queue: do not queue the same work twice (docs/install/queue.md)
 -- ============================================================================
 -- `queue.dispatch(queue, name, payload, { dedupeKey })`: while a job with that
 -- key is pending or running on that queue, a second dispatch queues nothing and

@@ -236,7 +236,7 @@ refresh is about finding out early, so the first sign of a rewritten tool is a
 - `apps/api/src/lib/external-mcp-sweep.ts` (the scheduled refresh) and its
   test `apps/api/src/tests/external-mcp-sweep.test.ts`.
 - `apps/api/src/lib/external-mcp-oauth.ts` (discovery, client registration,
-  PKCE, token exchange and refresh), migration `0083_external_mcp_oauth.sql`,
+  PKCE, token exchange and refresh), migration `0084_external_mcp_oauth.sql`,
   and its test `apps/api/src/tests/external-mcp-oauth.test.ts` (a fake
   authorization server with refresh-token rotation).
 - `apps/api/src/lib/external-mcp.ts` (fingerprints, diff, connection, registry),

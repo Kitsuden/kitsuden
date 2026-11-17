@@ -50,6 +50,7 @@ import {
 import { MATRIX } from "../../apps/api/src/middleware/authorization-matrix";
 import { notificationsKon } from "../../apps/api/src/routes/agent-notifications";
 import { agentsKon } from "../../apps/api/src/routes/agent-permissions";
+import { analyticsKon } from "../../apps/api/src/routes/analytics";
 import { approvalsKon, proposalsKon } from "../../apps/api/src/routes/approvals";
 import { automationKon, secretAccessKon } from "../../apps/api/src/routes/automation";
 import { memoryKon } from "../../apps/api/src/routes/brain-memory";
@@ -94,6 +95,8 @@ const SDK_KONS: KonDefinition[] = [
   // The catalog and dry run of automation rules, and the access log of sealed secrets.
   automationKon as unknown as KonDefinition,
   secretAccessKon as unknown as KonDefinition,
+  // Views per subject and day (docs/analytics.md); it was kon-analytics.
+  analyticsKon as unknown as KonDefinition,
   // Accounts at other services that kons use without seeing a credential (docs/connections.md).
   connectionsKon as unknown as KonDefinition,
 ];

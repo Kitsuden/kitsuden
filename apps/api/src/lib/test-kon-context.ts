@@ -129,6 +129,12 @@ export function createTestKonContext(overrides: KonContextOverrides = {}): KonCo
     // The agent engine and embeddings: absent unless the test gives them, as on a host without an engine.
     agents: overrides.agents as KonContext["agents"],
     ai: overrides.ai as KonContext["ai"],
+
+    // Sealed secrets, rules and entities: absent unless the test gives them, as on a host without them.
+    // Dropping them silently made a kon under test take the "no secrets key" branch.
+    secrets: overrides.secrets as KonContext["secrets"],
+    automation: overrides.automation as KonContext["automation"],
+    entities: overrides.entities as KonContext["entities"],
   };
 
   return base;

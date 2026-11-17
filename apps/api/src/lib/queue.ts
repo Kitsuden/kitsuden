@@ -158,7 +158,7 @@ async function dispatch(
   let queued: DispatchResult = { id };
   if (options.dedupeKey !== undefined && !isPgMem) {
     // Insert unless a job with this key is waiting, and learn which one it is: a function, because
-    // the application role cannot read the queue (migration 0084).
+    // the application role cannot read the queue (migration 0085).
     const [r] = rowsValue(
       await executor.execute(sql`
         SELECT job_id, created FROM kitsuden_queue_dispatch_unique(

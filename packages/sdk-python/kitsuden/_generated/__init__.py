@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Literal, Tuple
 if TYPE_CHECKING:  # the kon modules are imported lazily, on first use of the attribute
     from .kons.agent_notifications import AsyncAgentNotificationsApi, AgentNotificationsApi
     from .kons.agents import AsyncAgentsApi, AgentsApi
+    from .kons.analytics import AsyncAnalyticsApi, AnalyticsApi
     from .kons.approvals import AsyncApprovalsApi, ApprovalsApi
     from .kons.automation import AsyncAutomationApi, AutomationApi
     from .kons.blocks import AsyncBlocksApi, BlocksApi
@@ -92,6 +93,7 @@ ERROR_CODES: Tuple[str, ...] = (
 KONS: Tuple[Tuple[str, str, str, str], ...] = (
     ("agent_notifications", "kon-agent-notifications", "kitsuden._generated.kons.agent_notifications", "AgentNotificationsApi"),
     ("agents", "kon-agents", "kitsuden._generated.kons.agents", "AgentsApi"),
+    ("analytics", "kon-analytics", "kitsuden._generated.kons.analytics", "AnalyticsApi"),
     ("approvals", "kon-approvals", "kitsuden._generated.kons.approvals", "ApprovalsApi"),
     ("automation", "kon-automation", "kitsuden._generated.kons.automation", "AutomationApi"),
     ("blocks", "kon-blocks", "kitsuden._generated.kons.blocks", "BlocksApi"),
@@ -120,6 +122,7 @@ class GeneratedKons:
 
     agent_notifications: AgentNotificationsApi
     agents: AgentsApi
+    analytics: AnalyticsApi
     approvals: ApprovalsApi
     automation: AutomationApi
     blocks: BlocksApi
@@ -146,6 +149,7 @@ class AsyncGeneratedKons:
 
     agent_notifications: AsyncAgentNotificationsApi
     agents: AsyncAgentsApi
+    analytics: AsyncAnalyticsApi
     approvals: AsyncApprovalsApi
     automation: AsyncAutomationApi
     blocks: AsyncBlocksApi

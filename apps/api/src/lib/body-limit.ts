@@ -57,6 +57,8 @@ export function routeLimits(): RouteLimit[] {
 export const PREFIXES_WITH_OWN_LIMIT = [
   "/api/academy/media",
   "/api/dms",
+  // kon-koe: WhatsApp videos (16 MB) and documents (100 MB); `upload-media` sets its own bodyLimit.
+  "/api/koe/media",
   "/api/ocr",
   "/api/ocr-training",
 ];

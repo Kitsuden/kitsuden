@@ -30,6 +30,7 @@ import {
   type ChangeEvent,
   type ResourcePolicy,
 } from "./realtime-changes";
+import { authorizeKonChannel, isKonChannel } from "./realtime-kon-channels";
 import type { PolicyJson, RLSUser } from "./rls-builder";
 
 /**
@@ -138,6 +139,9 @@ export function policyUser(user: RealtimeUser): RLSUser | null {
  */
 export function wireRealtimeAuthorization(): void {
   setSubscriptionAuthorizer(async (channel: string, user: RealtimeUser) => {
+    // A kon's channel: only the kon decides, admins included (lib/realtime-kon-channels.ts).
+    if (isKonChannel(channel))
+      return authorizeKonChannel(channel, { id: user.id ?? null, role: user.role ?? null });
     const resource = resourceOf(channel);
     // Channels that are not table ones (entry:, content:) keep the
     // conservative behavior: admin only until they have their own policy.
@@ -147,6 +151,9 @@ export function wireRealtimeAuthorization(): void {
   });
 
   setRowFilter(async (channel: string, data: unknown, user: RealtimeUser) => {
+    // The kon authorized this socket on subscribe and re-authorizes it every
+    // sweep; what it broadcasts on its own channel is for whoever it let in.
+    if (isKonChannel(channel)) return data;
     const resource = resourceOf(channel);
     if (!resource) return user.role === "admin" && user.id ? data : null;
 

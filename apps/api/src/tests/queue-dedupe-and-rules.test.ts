@@ -2,7 +2,7 @@
  * The queue: not twice, and jobs from automation rules
  * ============================================================================
  *
- * On the real Postgres queue (migration 0084). What has to hold:
+ * On the real Postgres queue (migration 0085). What has to hold:
  *
  *   · with `dedupeKey`, a second dispatch while the first job waits or runs
  *     queues nothing and answers the first job's id; the key is per queue, and

@@ -73,6 +73,7 @@ import { requireAuth, requireRole, optionalAuth } from "../middleware/auth";
 import { withTransactionalRLS } from "../middleware/transactional-rls";
 import { KON_REGISTRY } from "../services/module-registry";
 
+import { absorbedReason } from "./absorbed-kons";
 import { auth } from "./auth";
 import { invalidateCache } from "./cache";
 import { konConnections } from "./connections";
@@ -1167,6 +1168,13 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
   for (const kon of sortedKons) {
     const cleanName = kon.id.replace(/^kon-/, "");
     const isGrimoireKon = grimoireKonKeys.has(kon.id) || grimoireKonKeys.has(cleanName);
+
+    // A kon the core absorbed (lib/absorbed-kons.ts): the core already serves its routes.
+    const absorbed = absorbedReason(kon.id);
+    if (absorbed) {
+      console.warn(`  ⚠️  ${absorbed}`);
+      continue;
+    }
 
     // Kon ↔ core compatibility (independent kon versioning):
     // warning if the manifest declares "kitsuden"/"minKitsudenVersion" and it is not satisfied.

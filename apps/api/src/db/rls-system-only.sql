@@ -59,7 +59,7 @@ BEGIN
       -- External MCP servers (0070): an auth header and the approved fingerprints
       ('external_mcp_servers'),
       ('external_mcp_tools'),
-      -- OAuth for those servers (0083): authorizations in progress
+      -- OAuth for those servers (0084): authorizations in progress
       ('external_mcp_oauth_states'),
       -- Secrets for kons (0078): who opened which credential, and where kons keep them
       ('secret_access_log'),

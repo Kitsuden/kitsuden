@@ -51,6 +51,7 @@ vi.mock("../../apps/api/src/db", () => ({
       },
     }
   ),
+  isLiteMode: false,
 }));
 
 const authentications = vi.hoisted(() => [] as Array<Record<string, unknown>>);

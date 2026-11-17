@@ -68,3 +68,16 @@ describe("the startup warning", () => {
     expect(incompleteCorsWarning([], "not a url")).toBeNull();
   });
 });
+
+describe("sameOrigin (the API's own pages on the WebSocket)", () => {
+  it("is the request's host, never another site", async () => {
+    const { sameOrigin } = await import("../../apps/api/src/lib/cors-origins");
+    expect(sameOrigin("https://api.example.com", "api.example.com")).toBe(true);
+    expect(sameOrigin("http://localhost:3000", "localhost:3000")).toBe(true);
+    expect(sameOrigin("https://evil.example", "api.example.com")).toBe(false);
+    expect(sameOrigin("https://api.example.com.evil.test", "api.example.com")).toBe(false);
+    expect(sameOrigin("https://api.example.com", null)).toBe(false);
+    expect(sameOrigin("null", "api.example.com")).toBe(false);
+    expect(sameOrigin("javascript://api.example.com", "api.example.com")).toBe(false);
+  });
+});

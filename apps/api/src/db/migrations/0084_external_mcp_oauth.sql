@@ -1,4 +1,4 @@
--- 0083 — OAuth for external MCP servers (docs/agents/external-mcp.md, "OAuth")
+-- 0084 — OAuth for external MCP servers (docs/agents/external-mcp.md, "OAuth")
 -- ============================================================================
 -- Until now an external MCP server took a static auth header or nothing. Many
 -- hosted servers only accept OAuth 2.1 (the MCP authorization specification:
