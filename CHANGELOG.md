@@ -92,6 +92,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Contract testing: the Schemathesis runner ends every `$` of the spec it tests in `$(?!\n)`.
+  The generator read `$` the Python way (also before a final newline), threw away about a third
+  of the values of each `^…$` pattern, and an operation with several patterned fields failed
+  the `filter_too_much` health check (seen on Python 3.14). The published OpenAPI is unchanged.
 - `ctx.realtime.broadcast` delivered every message twice to the sockets of the replica that sent
   it once the bus was listening (once locally, once looping back through Valkey). It now goes
   through the bus only. `ctx.realtime.sendToUser` reached only the sockets of the same process;
