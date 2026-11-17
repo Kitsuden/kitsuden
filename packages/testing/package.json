@@ -45,7 +45,7 @@
   "dependencies": {
     "@kitsuden/shared": "workspace:*",
     "hono": "^4.13.18",
-    "postgres": "^3.4.5"
+    "postgres": "^4.1.1"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
