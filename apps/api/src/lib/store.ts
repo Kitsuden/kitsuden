@@ -35,6 +35,7 @@
  * a file uploaded to one would not be visible from another.
  */
 
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, normalize, relative, resolve, sep } from "node:path";
 
@@ -297,3 +298,60 @@ export async function checkStorage(): Promise<StoreStatus> {
  */
 export const MEDIA_CSP =
   "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox";
+
+// ── Private objects ─────────────────────────────────────────────────────────
+
+/**
+ * Keys under `private/` are never served to whoever has the address: a customer's voice note, a contract,
+ * an invoice. `ctx.storage.getSignedDownloadUrl` used to return the PUBLIC address for every key (with local
+ * disk AND with S3), so anything a kon stored was readable by anyone holding the link, for ever.
+ *
+ *   · local disk: `/media/private/…` answers 404 unless the URL carries `exp` and `sig`, an HMAC of the key
+ *     and the expiry with a key derived from KITSUDEN_SECRETS_KEY (or BETTER_AUTH_SECRET);
+ *   · S3: a presigned GET. The bucket's own policy must not make `private/` public-read (a bucket-wide
+ *     public policy would still expose it: docs/kons/storage.md).
+ *
+ * Public keys behave exactly as before.
+ */
+export const PRIVATE_PREFIX = "private/";
+
+export function isPrivateKey(key: string): boolean {
+  return key.replace(/^\/+/, "").startsWith(PRIVATE_PREFIX);
+}
+
+function urlSigningKey(): Buffer {
+  const raw = process.env.KITSUDEN_SECRETS_KEY || process.env.BETTER_AUTH_SECRET || "";
+  if (raw.length < 16)
+    throw new Error(
+      "Signing a private file address needs KITSUDEN_SECRETS_KEY (or BETTER_AUTH_SECRET)"
+    );
+  return createHmac("sha256", raw).update("kitsuden:media-url:v1").digest();
+}
+
+function signatureOf(key: string, exp: number): string {
+  return createHmac("sha256", urlSigningKey()).update(`${key}\n${exp}`).digest("base64url");
+}
+
+/** A short-lived address for a private key; a public key gets its public address. */
+export async function signedUrlOf(key: string, expiresIn = 3600): Promise<string> {
+  const clean = key.replace(/^\/+/, "");
+  if (!isPrivateKey(clean)) return publicUrlOf(clean);
+  const seconds = Math.max(30, Math.min(7 * 86_400, Math.floor(expiresIn)));
+  if (usesS3) return (await s3()).generateSignedDownloadUrl(clean, seconds);
+  const exp = Math.floor(Date.now() / 1000) + seconds;
+  return `${URL_LOCAL}/${clean}?exp=${exp}&sig=${signatureOf(clean, exp)}`;
+}
+
+/** Whether `/media/<key>?exp=…&sig=…` may be served now. */
+export function verifySignedUrl(
+  key: string,
+  exp: string | undefined,
+  sig: string | undefined,
+  now = Date.now()
+): boolean {
+  const expiry = Number(exp);
+  if (!sig || !Number.isInteger(expiry) || expiry * 1000 < now) return false;
+  const expected = Buffer.from(signatureOf(key.replace(/^\/+/, ""), expiry));
+  const given = Buffer.from(sig);
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}

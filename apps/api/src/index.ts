@@ -106,6 +106,8 @@ import {
   checkStorage,
   localPathOf,
   usesS3,
+  isPrivateKey,
+  verifySignedUrl,
 } from "./lib/store";
 import { toonMiddleware } from "./lib/toon";
 import { toonProtocolMiddleware } from "./lib/toon-protocol";
@@ -183,7 +185,6 @@ import {
   externalMcpRoutes,
 } from "./routes/mcp-servers";
 import { modelsRoutes, MODELS_ROUTE } from "./routes/models";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { modulesRoutes } from "./routes/modules";
 import { oauthCors, mcpChallenge, oauthRoutes } from "./routes/oauth";
 import { oauthPanelRoutes } from "./routes/oauth-panel";
@@ -201,6 +202,7 @@ import {
   RECORD_HISTORY_ROUTE,
   startRecordHistorySweep,
 } from "./routes/record-history";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { runsRoutes } from "./routes/runs";
 import { schemaIntrospectionRoutes } from "./routes/schema-introspection";
 import { systemRoutes } from "./routes/system";
@@ -713,6 +715,17 @@ if (!usesS3) {
   // used to build the URLs stored in the database.
   app.get(`${BASE_URL_LOCAL}/*`, async (c) => {
     const key = c.req.path.slice(BASE_URL_LOCAL.length + 1);
+    // A private key (lib/store.ts) is served only with a valid, unexpired signature. 404, not 403: the
+    // address of a private file says nothing to whoever does not hold the signature.
+    let decoded = key;
+    try {
+      decoded = decodeURIComponent(key);
+    } catch {
+      return c.notFound();
+    }
+    const priv = isPrivateKey(decoded) || isPrivateKey(key);
+    if (priv && !verifySignedUrl(decoded, c.req.query("exp"), c.req.query("sig")))
+      return c.notFound();
     try {
       // `localPathOf` rejects any key that escapes the directory: without
       // that, `/uploads/../../etc/passwd` would be a valid path for `join`.
@@ -724,7 +737,7 @@ if (!usesS3) {
       return new Response(body, {
         headers: {
           ...(type ? { "Content-Type": type } : {}),
-          "Cache-Control": mediaCache(key),
+          "Cache-Control": priv ? "private, no-store" : mediaCache(key),
           "Last-Modified": new Date(medium.lastModified).toUTCString(),
           /**
            * So that they can be READ, not just painted.
