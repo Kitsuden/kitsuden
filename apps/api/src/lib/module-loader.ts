@@ -75,7 +75,6 @@ import { KON_REGISTRY } from "../services/module-registry";
 
 import { auth } from "./auth";
 import { invalidateCache } from "./cache";
-import { konConnections } from "./connections";
 import type { DeferredKon } from "./deferred-kons";
 import { rawNodeEnv } from "./environment";
 import { events } from "./events";
@@ -92,7 +91,14 @@ import { registerKonToolsets } from "./mcp-settings";
 import { limiterEnabled, rateLimit } from "./rate-limiter";
 import { realtimeManager } from "./realtime";
 import { sitePublicUrl } from "./site-settings";
-import { deleteObject, saveObject, readObject, listObjects, publicUrlOf } from "./store";
+import {
+  deleteObject,
+  saveObject,
+  readObject,
+  listObjects,
+  publicUrlOf,
+  signedUrlOf,
+} from "./store";
 
 /** An npm package name, scoped or not: no `..`, no absolute paths. */
 const NPM_NAME = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
@@ -512,7 +518,8 @@ export function createKonContext(): KonContext {
             "With local storage, use ctx.storage.put()."
         );
       },
-      getSignedDownloadUrl: async (key: string, _expiresIn = 3600) => publicUrlOf(key),
+      // A `private/` key gets a short-lived signed address (lib/store.ts); a public key, its public one.
+      getSignedDownloadUrl: async (key: string, expiresIn = 3600) => signedUrlOf(key, expiresIn),
     },
 
     // Logger
@@ -547,9 +554,6 @@ export function createKonContext(): KonContext {
 
     // Sealed secrets with an access log (lib/kon-secrets.ts)
     secrets: konSecrets,
-
-    // Accounts at other services, used through a client that never shows the credential (lib/connections)
-    connections: konConnections,
 
     // Records of the entities kons declare (lib/kon-entities.ts)
     entities: konEntities,

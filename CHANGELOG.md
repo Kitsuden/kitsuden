@@ -13,13 +13,6 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   authorizes its own channels, `kon:<id>:<rest>`, with `ctx.realtime.channels(authorize)`. The
   authorizer runs on subscribe and on every session sweep, so revoked access stops within a
   minute; a kon channel without an authorizer is denied, admins included.
-- **Connections** ([docs/connections.md](docs/connections.md)): accounts at other services, connected
-  once and used by every kon through `ctx.connections`. Google and Microsoft 365 by OAuth (PKCE), and
-  API key providers a kon registers; per person or for the organization. Credentials are sealed with
-  the installation's secrets key, refreshed before they expire, revocable, and every opening is in
-  `secret_access_log` with the kon that asked. A kon gets a client that sends the credential only to
-  the provider's hosts and never shows it. Row security (migration 0082) and the routes keep each
-  person's connections theirs, admins included. Events `connections:connection.created|expired|revoked`.
 
 - **Automation rules** ([docs/automation.md](docs/automation.md)): a stored action of type `rule`
   runs a list of steps (`core:webhook`, `core:send-mail`, `core:run-agent`, or a step a kon
@@ -118,6 +111,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   kons were installed locally.
 
 ### Security
+
+- Files a kon stores were readable by anyone holding their address: `ctx.storage.getSignedDownloadUrl`
+  returned the public URL for every key, on local disk and on S3. Keys under `private/` are now served only
+  through a short-lived signed address (an HMAC on local disk, a presigned GET on S3); `/media/private/…`
+  without a valid signature answers 404. See [docs/kons/storage.md](docs/kons/storage.md).
 
 - Rate limiter: the site key is compared in constant time over buffers padded to one length,
   with no hash in between. A bare SHA-256 and then an HMAC of it were both flagged by CodeQL

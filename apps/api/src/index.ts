@@ -65,7 +65,6 @@ import { auth } from "./lib/auth";
 import { bodyLimit } from "./lib/body-limit";
 import { clientIp } from "./lib/client-ip";
 import { config, features, corsConfig } from "./lib/config";
-import { startConnectionsWorker } from "./lib/connections";
 import { incompleteCorsWarning, allowedOrigin, sameOrigin } from "./lib/cors-origins";
 import { registerCriticalFeatures } from "./lib/critical-features";
 import { initCronScheduler } from "./lib/cron-scheduler";
@@ -105,10 +104,19 @@ import {
   checkStorage,
   localPathOf,
   usesS3,
+  isPrivateKey,
+  verifySignedUrl,
 } from "./lib/store";
 import { toonMiddleware } from "./lib/toon";
 import { toonProtocolMiddleware } from "./lib/toon-protocol";
 import { startTraces, stopTraces, requestTraces } from "./lib/traces";
+import {
+  AUTOMATION_ROUTE,
+  automationRoutes,
+  SECRET_ACCESS_ROUTE,
+  secretAccessRoutes,
+} from "./routes/automation";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { closeValkey, valkeyConfigured } from "./lib/valkey";
 import { registerSystemMails } from "./mail/system-mails";
 import {
@@ -125,19 +133,6 @@ import { httpProblems } from "./middleware/problems-http";
 import { requestContextMiddleware, accessLogAndMetrics } from "./middleware/telemetry";
 import { withTransactionalRLS } from "./middleware/transactional-rls";
 import { enrichUserContext } from "./middleware/user-context";
-import {
-  AUTOMATION_ROUTE,
-  automationRoutes,
-  SECRET_ACCESS_ROUTE,
-  secretAccessRoutes,
-} from "./routes/automation";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
-import {
-  CONNECTIONS_KON,
-  CONNECTIONS_ROUTE,
-  connectionsKon,
-  connectionsRoutes,
-} from "./routes/connections";
 import { requireOriginOnWrites } from "./middleware/write-origin";
 import { actionsRoutes } from "./routes/actions";
 import { adminRegistryRoutes } from "./routes/admin-registry";
@@ -701,6 +696,17 @@ if (!usesS3) {
   // used to build the URLs stored in the database.
   app.get(`${BASE_URL_LOCAL}/*`, async (c) => {
     const key = c.req.path.slice(BASE_URL_LOCAL.length + 1);
+    // A private key (lib/store.ts) is served only with a valid, unexpired signature. 404, not 403: the
+    // address of a private file says nothing to whoever does not hold the signature.
+    let decoded = key;
+    try {
+      decoded = decodeURIComponent(key);
+    } catch {
+      return c.notFound();
+    }
+    const priv = isPrivateKey(decoded) || isPrivateKey(key);
+    if (priv && !verifySignedUrl(decoded, c.req.query("exp"), c.req.query("sig")))
+      return c.notFound();
     try {
       // `localPathOf` rejects any key that escapes the directory: without
       // that, `/uploads/../../etc/passwd` would be a valid path for `join`.
@@ -712,7 +718,7 @@ if (!usesS3) {
       return new Response(body, {
         headers: {
           ...(type ? { "Content-Type": type } : {}),
-          "Cache-Control": mediaCache(key),
+          "Cache-Control": priv ? "private, no-store" : mediaCache(key),
           "Last-Modified": new Date(medium.lastModified).toUTCString(),
           /**
            * So that they can be READ, not just painted.
@@ -1200,18 +1206,6 @@ app.route(SECRET_ACCESS_ROUTE, secretAccessRoutes);
 mountKonRls(app, REPORTS_ROUTE);
 app.route(REPORTS_ROUTE, reportsRoutes);
 registerMountedOperations(REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes);
-// Connections (docs/connections.md): accounts at other services that kons use through ctx.connections.
-// In the request's transaction: row security decides whose connections a person sees. The OAuth
-// callback runs as the system inside the handler.
-mountKonRls(app, CONNECTIONS_ROUTE);
-app.route(CONNECTIONS_ROUTE, connectionsRoutes);
-registerMountedOperations(
-  CONNECTIONS_KON,
-  CONNECTIONS_ROUTE,
-  connectionsKon.operations,
-  connectionsRoutes
-);
-startConnectionsWorker();
 console.log("  🧠 KITSUDEN Brain → /api/brain");
 app.route("/api/map", systemMapRoutes);
 console.log("  🗺️  System Map → /api/map");
