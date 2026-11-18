@@ -57,6 +57,7 @@ AgentDecisionsResult = Dict[str, Any]
 AgentFrictionResult = Dict[str, Any]
 AgentVersionResult = Dict[str, Any]
 AgentVersionsResult = Dict[str, Any]
+BindKeyDpopResult = Dict[str, Any]
 CreateKeyResult = Dict[str, Any]
 ListKeysResult = Dict[str, Any]
 PermissionCatalogResult = Dict[str, Any]
@@ -68,6 +69,7 @@ RevokeKeyResult = Dict[str, Any]
 RotateKeyResult = Dict[str, Any]
 SaveMcpSettingsResult = Dict[str, Any]
 SaveQuotasResult = Dict[str, Any]
+SaveRequireDpopResult = Dict[str, Any]
 SaveScopesResult = Dict[str, Any]
 SaveSignerResult = Dict[str, Any]
 
@@ -158,6 +160,23 @@ OPERATIONS: Dict[str, OperationInfo] = {
         scope="kon:agents:agent-versions",
         mcp_tool=None,
         errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+    ),
+    "bind-key-dpop": OperationInfo(
+        kon="kon-agents",
+        id="bind-key-dpop",
+        operation_id="agents.bind-key-dpop",
+        method="PUT",
+        path="/v1/agents/{id}/keys/{keyId}/dpop",
+        path_params=("id", "keyId"),
+        query_params=(),
+        body="json",
+        responses={200: "json"},
+        idempotent=True,
+        read_only=False,
+        sensitive=False,
+        scope="kon:agents:bind-key-dpop",
+        mcp_tool=None,
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_CONFLICT", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "create-key": OperationInfo(
         kon="kon-agents",
@@ -346,6 +365,23 @@ OPERATIONS: Dict[str, OperationInfo] = {
         mcp_tool=None,
         errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
+    "save-require-dpop": OperationInfo(
+        kon="kon-agents",
+        id="save-require-dpop",
+        operation_id="agents.save-require-dpop",
+        method="PUT",
+        path="/v1/agents/{id}/dpop",
+        path_params=("id",),
+        query_params=(),
+        body="json",
+        responses={200: "json"},
+        idempotent=True,
+        read_only=False,
+        sensitive=False,
+        scope="kon:agents:save-require-dpop",
+        mcp_tool=None,
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+    ),
     "save-scopes": OperationInfo(
         kon="kon-agents",
         id="save-scopes",
@@ -452,6 +488,17 @@ class AgentsApi(KonApi):
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["agent-versions"], {"id": id, "limit": limit}, None, request_options)
+
+    def bind_key_dpop(self, *, id: Union[str, int], key_id: Union[str, int], body: Dict[str, Any], request_options: Optional[RequestOptions] = None) -> Outcome[BindKeyDpopResult]:
+        """Bind an API key to a public key (DPoP)
+
+        Body { jwk } with a public EC P-256 or Ed25519 JWK (null unbinds). A bound key only works with a DPoP proof signed by the matching private key (RFC 9449). See docs/agents/dpop-and-short-tokens.md.
+
+        REST: `PUT /api/v1/agents/{id}/keys/{keyId}/dpop` · scope `kon:agents:bind-key-dpop`
+        idempotent (safe to retry)
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        """
+        return self._call(OPERATIONS["bind-key-dpop"], {"id": id, "keyId": key_id}, body, request_options)
 
     def create_key(self, *, id: Union[str, int], body: CreateKeyBody, request_options: Optional[RequestOptions] = None) -> Outcome[CreateKeyResult]:
         """Create an API key
@@ -574,6 +621,17 @@ class AgentsApi(KonApi):
         """
         return self._call(OPERATIONS["save-quotas"], {"id": id}, body, request_options)
 
+    def save_require_dpop(self, *, id: Union[str, int], body: Dict[str, Any], request_options: Optional[RequestOptions] = None) -> Outcome[SaveRequireDpopResult]:
+        """Require DPoP for every credential of an agent
+
+        Body { required: boolean }. When true, the agent's keys and tokens are refused without a valid DPoP proof, and an unbound key is refused outright.
+
+        REST: `PUT /api/v1/agents/{id}/dpop` · scope `kon:agents:save-require-dpop`
+        idempotent (safe to retry)
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        """
+        return self._call(OPERATIONS["save-require-dpop"], {"id": id}, body, request_options)
+
     def save_scopes(self, *, id: Union[str, int], body: SaveScopesBody, request_options: Optional[RequestOptions] = None) -> Outcome[SaveScopesResult]:
         """Replace an agent's scopes
 
@@ -666,6 +724,17 @@ class AsyncAgentsApi(AsyncKonApi):
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["agent-versions"], {"id": id, "limit": limit}, None, request_options)
+
+    async def bind_key_dpop(self, *, id: Union[str, int], key_id: Union[str, int], body: Dict[str, Any], request_options: Optional[RequestOptions] = None) -> Outcome[BindKeyDpopResult]:
+        """Bind an API key to a public key (DPoP)
+
+        Body { jwk } with a public EC P-256 or Ed25519 JWK (null unbinds). A bound key only works with a DPoP proof signed by the matching private key (RFC 9449). See docs/agents/dpop-and-short-tokens.md.
+
+        REST: `PUT /api/v1/agents/{id}/keys/{keyId}/dpop` · scope `kon:agents:bind-key-dpop`
+        idempotent (safe to retry)
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        """
+        return await self._call(OPERATIONS["bind-key-dpop"], {"id": id, "keyId": key_id}, body, request_options)
 
     async def create_key(self, *, id: Union[str, int], body: CreateKeyBody, request_options: Optional[RequestOptions] = None) -> Outcome[CreateKeyResult]:
         """Create an API key
@@ -787,6 +856,17 @@ class AsyncAgentsApi(AsyncKonApi):
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["save-quotas"], {"id": id}, body, request_options)
+
+    async def save_require_dpop(self, *, id: Union[str, int], body: Dict[str, Any], request_options: Optional[RequestOptions] = None) -> Outcome[SaveRequireDpopResult]:
+        """Require DPoP for every credential of an agent
+
+        Body { required: boolean }. When true, the agent's keys and tokens are refused without a valid DPoP proof, and an unbound key is refused outright.
+
+        REST: `PUT /api/v1/agents/{id}/dpop` · scope `kon:agents:save-require-dpop`
+        idempotent (safe to retry)
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        """
+        return await self._call(OPERATIONS["save-require-dpop"], {"id": id}, body, request_options)
 
     async def save_scopes(self, *, id: Union[str, int], body: SaveScopesBody, request_options: Optional[RequestOptions] = None) -> Outcome[SaveScopesResult]:
         """Replace an agent's scopes

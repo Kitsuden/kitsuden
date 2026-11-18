@@ -31,7 +31,7 @@ import {
   repo,
   runInRequestScope,
 } from "@kitsuden/engine";
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it, setSystemTime } from "bun:test";
 import { eq, inArray, like, sql } from "drizzle-orm";
 
 import { BatchProcessor as BatchApiProcessor } from "../../../../packages/engine/src/batch-api";
@@ -46,7 +46,11 @@ import {
 } from "../db/schema";
 import { app } from "../index";
 import { clearQuotaMemory } from "../lib/agent-quotas";
-import { agentAuditRetentionDays, sweepAgentAuditLogs } from "../services/agent-audit";
+import {
+  agentAuditRetentionDays,
+  registerAgentAction,
+  sweepAgentAuditLogs,
+} from "../services/agent-audit";
 import { createAgent } from "../services/agent-auth";
 import { executeHardcodedTool } from "../services/mcp-tools";
 
@@ -562,11 +566,21 @@ describe("record history: retention and more write paths", () => {
 
     const old = `${RUN}-audit-old`;
     const recent = `${RUN}-audit-recent`;
-    await db.execute(sql`
-      INSERT INTO agent_audit_logs (agent_id, action, resource_id, created_at) VALUES
-        (${agentId}, 'retention_probe', ${old}, now() - interval '200 days'),
-        (${agentId}, 'retention_probe', ${recent}, now() - interval '10 days')
-    `);
+    // Through the writer (the chain refuses rows it did not link, 0088), at
+    // a pretended date: a prune removes a PREFIX of the chain, oldest first.
+    const probe = (resourceId: string) =>
+      registerAgentAction({
+        agentId,
+        action: "tool_call",
+        resource: "retention_probe",
+        resourceId,
+        success: true,
+      });
+    setSystemTime(new Date(Date.now() - 200 * 86_400_000));
+    await probe(old);
+    setSystemTime(new Date(Date.now() + 190 * 86_400_000));
+    await probe(recent);
+    setSystemTime();
     const count = async (resourceId: string) =>
       (
         await db
@@ -579,6 +593,5 @@ describe("record history: retention and more write paths", () => {
     expect(await sweepAgentAuditLogs({})).toBeGreaterThanOrEqual(1);
     expect(await count(old)).toBe(0);
     expect(await count(recent)).toBe(1);
-    await db.delete(agentAuditLogs).where(eq(agentAuditLogs.resourceId, recent));
   });
 });

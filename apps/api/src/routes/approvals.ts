@@ -70,6 +70,7 @@ import { db } from "../db";
 import { agentAuditLogs, agentIdentities } from "../db/schema";
 import {
   approveProposal,
+  bindingOf,
   expireProposals,
   countPending,
   proposalFile,
@@ -179,6 +180,9 @@ async function teamView(p: Proposal & { agentName?: string | null }, human?: Hum
     agentName: p.agentName ?? null,
     keyId: p.keyId,
     body: seeContent || p.body === null ? p.body : REDACTED_CONTENT,
+    // Binding (lib/operation-hash.ts): send it back with the approval.
+    operationHash: p.operationHash ?? null,
+    binding: bindingOf(p),
     bodyRedacted: !seeContent && p.body !== null,
     contentType: p.contentType,
     idempotencyKey: p.idempotencyKey,
@@ -259,6 +263,9 @@ async function inbox(c: Context, filter: z.infer<typeof InboxFilter>) {
       agentName: p.agentName,
       decidedBy: p.decidedBy,
       decidedByName: p.decidedBy ? (names[p.decidedBy] ?? p.decidedBy) : null,
+      // What a bulk approval from the list sends back (lib/operation-hash.ts).
+      operationHash: p.operationHash ?? null,
+      binding: bindingOf(p),
     });
   }
   return c.json({ total, proposals: views });
@@ -287,6 +294,13 @@ const FieldDecisionInput = z
 const Decision = z
   .object({
     comment: z.string().max(2000).optional(),
+    operationHash: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .optional()
+      .describe(
+        "The operationHash of the proposal as you were shown it (GET /proposals/:id). Required to approve a proposal that has one: a different value gets 409 KITSUDEN_E_APPROVAL_STALE and nothing runs."
+      ),
     fields: z
       .array(FieldDecisionInput)
       .max(500)
@@ -358,13 +372,17 @@ async function decide(c: Context, id: string, body: DecisionBody | undefined, ap
     }
   }
   const r = approve
-    ? await approveProposal(id, human, comment, { fields: body?.fields })
+    ? await approveProposal(id, human, comment, {
+        fields: body?.fields,
+        operationHash: body?.operationHash ?? null,
+      })
     : await rejectProposal(id, human, comment);
   if (!r.ok) {
     return c.json(
       {
         error: errorName(r.status),
         message: r.reason,
+        ...(r.code ? { code: r.code } : {}),
         ...(r.proposal ? { proposal: await teamView(r.proposal, human) } : {}),
       },
       r.status
@@ -635,6 +653,7 @@ const AUDIT_ACTIONS = [
   "proposal_executed",
   "proposal_failed",
   "proposal_expired",
+  "proposal_integrity_failed",
   "proposal_review_scheduled",
   "proposal_review_due",
   "proposal_review_done",
@@ -841,10 +860,15 @@ export const approvalOperations: AnyOperation[] = [
     route: "/proposals/:id/approve",
     summary: "Approve and execute a proposal",
     description:
-      "Executes the stored request once, with the agent's CURRENT identity and permissions, and records the approver. A second approval gets 409. If the agent was deactivated, its key revoked or expired, or its permission removed, the proposal ends as failed without executing. With `fields` (a proposal that writes a record), only the fields it accepts are executed, with any edited value; a field the list leaves out is rejected, and every field rejected is a rejection. `reviewAt` schedules a later review.",
+      "Executes the stored request once, with the agent's CURRENT identity and permissions, and records the approver. A second approval gets 409. If the agent was deactivated, its key revoked or expired, or its permission removed, the proposal ends as failed without executing. With `fields` (a proposal that writes a record), only the fields it accepts are executed, with any edited value; a field the list leaves out is rejected, and every field rejected is a rejection. `reviewAt` schedules a later review. Send the `operationHash` you were shown: when the proposal has one it is required and must match (409 KITSUDEN_E_APPROVAL_STALE otherwise); before running, the stored row is re-hashed and the approval signature checked, and a mismatch fails the proposal without executing it.",
     input: { params: ParamId, body: Decision },
     output: { schema: Obj },
-    errors: ["KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_CONFLICT", "KITSUDEN_E_VALIDATION"],
+    errors: [
+      "KITSUDEN_E_NOT_FOUND",
+      "KITSUDEN_E_CONFLICT",
+      "KITSUDEN_E_APPROVAL_STALE",
+      "KITSUDEN_E_VALIDATION",
+    ],
     handle: (e, { c }) =>
       decide(c, (e.params as { id: string }).id, e.body as DecisionBody | undefined, true),
   }),

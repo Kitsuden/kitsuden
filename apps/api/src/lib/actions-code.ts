@@ -27,12 +27,45 @@ export const CODE_KEYS = [
   "code",
   "scopes",
   "fetchAllow",
+  "egress",
+  "runtime",
   "timeoutMs",
   "memoryLimitMb",
   "maxCalls",
   "tests",
   "promotion",
 ] as const;
+
+/**
+ * Vault credentials (lib/credential-vault.ts). Only a PERSON binds a secret to a
+ * host: an agent that could would point the secret at a host it reads.
+ */
+export const CREDENTIAL_KEYS = ["credentials"] as const;
+
+/** Does `after` change the action's vault credentials, relative to `before`? */
+export function changesCredentials(before: unknown, after: unknown): boolean {
+  if (after === undefined) return false;
+  const a = (before && typeof before === "object" ? before : {}) as Record<string, unknown>;
+  const d = (after && typeof after === "object" ? after : {}) as Record<string, unknown>;
+  return CREDENTIAL_KEYS.some((k) => canon(a[k]) !== canon(d[k]));
+}
+
+export const CREDENTIALS_MESSAGE =
+  "Agents cannot bind vault credentials to an action (credentials): a person does that in the panel or through /api/actions. See docs/agents/sandbox.md.";
+
+/** The problem+json 403 for an agent touching `credentials`. */
+export function credentialsPolicyProblem(
+  instance: string,
+  requestId?: string | null
+): ProblemDetails {
+  return buildProblem({
+    code: "KITSUDEN_E_FORBIDDEN",
+    detail: CREDENTIALS_MESSAGE,
+    instance,
+    requestId,
+    extensions: { reason: "credentials_by_humans" },
+  });
+}
 
 /**
  * Where an action may send customer data (docs/agents/egress.md). Only a PERSON
@@ -84,6 +117,7 @@ export const TABLES_ONLY_VIA_THEIR_ROUTE: ReadonlySet<string> = new Set([
   "agent_proposals",
   "agent_proposal_files",
   "agent_audit_logs",
+  "agent_audit_checkpoints",
   // External MCP servers and the fingerprints a person approved (lib/external-mcp.ts):
   // a generic write could approve a changed tool or point a server elsewhere.
   "external_mcp_servers",

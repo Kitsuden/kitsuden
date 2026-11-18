@@ -16,6 +16,8 @@ export type ActivateApprovedResponse = Record<string, unknown>;
 /** Body of `promotion-admin.approve-version`. */
 export type ApproveVersionBody = {
   comment?: string;
+  /** Optional: the proposal's operationHash as shown; if sent it must match */
+  operationHash?: string;
 };
 
 /** Arguments of `promotion-admin.approve-version`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
@@ -51,6 +53,8 @@ export type PromotionModeResponse = Record<string, unknown>;
 /** Body of `promotion-admin.reject-version`. */
 export type RejectVersionBody = {
   comment?: string;
+  /** Optional: the proposal's operationHash as shown; if sent it must match */
+  operationHash?: string;
 };
 
 /** Arguments of `promotion-admin.reject-version`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */

@@ -167,6 +167,23 @@ const Draft = z.object({
   code: z.string().min(1).max(MAX_CODE_BYTES),
   scopes: z.array(z.string().min(1).max(200)).max(50).optional(),
   fetchAllow: z.array(Host).max(50).optional(),
+  egress: z
+    .object({
+      rules: z
+        .array(
+          z
+            .object({
+              action: z.enum(["allow", "deny"]),
+              target: z.string().min(1).max(253).optional(),
+              ports: z.array(z.number().int().min(1).max(65535)).max(256).optional(),
+            })
+            .strict()
+        )
+        .max(200),
+    })
+    .strict()
+    .optional(),
+  runtime: z.enum(["quickjs", "opensandbox:python", "opensandbox:shell"]).optional(),
   timeoutMs: z.number().int().min(50).max(60_000).optional(),
   memoryLimitMb: z.number().int().min(8).max(256).optional(),
   maxCalls: z.number().int().min(0).max(500).optional(),
@@ -501,6 +518,7 @@ async function detailForThePanel(id: string) {
           expiresAt: proposal.expiresAt,
           resultStatus: proposal.resultStatus,
           resultError: proposal.resultError,
+          operationHash: proposal.operationHash ?? null,
         }
       : null,
     events: events.map((e) => ({
@@ -515,7 +533,13 @@ async function detailForThePanel(id: string) {
   };
 }
 
-async function decide(c: Context, id: string, comment: string | undefined, approve: boolean) {
+async function decide(
+  c: Context,
+  id: string,
+  comment: string | undefined,
+  approve: boolean,
+  operationHash?: string
+) {
   const human = await humanOf(c);
   if (!human) throw AppError.unauthenticated();
   const v = await versionById(id);
@@ -527,12 +551,20 @@ async function decide(c: Context, id: string, comment: string | undefined, appro
     });
   }
   const r = approve
-    ? await approveProposal(v.proposalId, human, comment)
+    ? // Binding: the panel shows the VERSION (code and content hash, which the
+      // proposal body carries and the activation checks); `operationHash`, if
+      // sent, must still match the proposal (lib/operation-hash.ts).
+      await approveProposal(v.proposalId, human, comment, {
+        operationHash: operationHash ?? null,
+        boundBy: "promotion_version",
+      })
     : await rejectProposal(v.proposalId, human, comment);
   if (!r.ok) {
     if (r.status === 403) throw AppError.forbidden(r.reason);
     if (r.status === 404) throw AppError.notFound(r.reason);
-    throw AppError.conflict(r.reason, { reason: "proposal_state" });
+    throw AppError.conflict(r.reason, {
+      reason: r.code === "KITSUDEN_E_APPROVAL_STALE" ? "approval_stale" : "proposal_state",
+    });
   }
   return detailForThePanel(id);
 }
@@ -545,7 +577,16 @@ const ConfigChange = z
     maxErrorRate: z.number().optional(),
   })
   .strict();
-const Decision = z.object({ comment: z.string().max(2000).optional() }).strict();
+const Decision = z
+  .object({
+    comment: z.string().max(2000).optional(),
+    operationHash: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .optional()
+      .describe("Optional: the proposal's operationHash as shown; if sent it must match"),
+  })
+  .strict();
 
 export const adminPromotionOperations: AnyOperation[] = [
   defineOperation({
@@ -658,7 +699,8 @@ export const adminPromotionOperations: AnyOperation[] = [
         c,
         (e.params as { id: string }).id,
         (e.body as { comment?: string } | undefined)?.comment,
-        true
+        true,
+        (e.body as { operationHash?: string } | undefined)?.operationHash
       ),
   }),
   defineOperation({

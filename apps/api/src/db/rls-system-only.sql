@@ -45,6 +45,8 @@ BEGIN
       ('data_sources'),
       ('api_keys'),
       ('agent_api_keys'),
+      -- Short-lived agent tokens and run credentials (0086): token hashes
+      ('agent_short_tokens'),
       -- OAuth for MCP (0055): hashes of codes, tokens and client secrets
       ('oauth_clients'),
       ('oauth_authorization_requests'),
@@ -53,6 +55,8 @@ BEGIN
       ('oauth_tokens'),
       ('audit_logs'),
       ('agent_audit_logs'),
+      -- Where the audit hash chain starts after a retention prune (0088)
+      ('agent_audit_checkpoints'),
       ('actions'),
       ('action_executions'),
       ('kitsuden_functions'),

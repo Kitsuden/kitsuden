@@ -534,6 +534,8 @@ export function requestUsage(method: string, path: string): RequestedUsage {
   // Recording what it chose NOT to do (lib/agent-decisions.ts): the minute only,
   // so an agent out of writes can still leave the note it is told to leave.
   if (path === "/api/agent/decisions") return { request: true, write: false, units: 0 };
+  // Exchanging the key for a short-lived token writes nothing the agent owns.
+  if (path === "/api/agent/token/exchange") return { request: true, write: false, units: 0 };
   const ofRoute = routeOperation(m, path);
   return {
     request: true,

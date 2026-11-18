@@ -31,7 +31,7 @@
 # ===================================================================
 
 # ── 1. Base: node + pnpm (the starter needs Node 22.12+, not bun) ───
-FROM node:22-alpine AS base
+FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS base
 WORKDIR /app
 RUN npm install -g pnpm@9.15.4
 
@@ -69,7 +69,7 @@ RUN pnpm --filter @kitsuden/starter-basic deploy --prod /out \
  && rm -rf /out/node_modules/.pnpm/@esbuild+* /out/node_modules/.pnpm/esbuild@*/node_modules/esbuild/bin/esbuild
 
 # ── 4. Runtime: node, not root ──────────────────────────────────────
-FROM node:22-alpine AS web
+FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS web
 # Alpine security fixes the base image may lag behind (Trivy in CI). The site runs
 # with `node` alone: npm, npx, corepack and yarn come with the base image, carry
 # their own vulnerable dependencies and are never used at runtime.

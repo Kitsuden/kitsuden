@@ -66,7 +66,7 @@ import {
   type ApprovalMode,
   type ProposalReason,
 } from "@kitsuden/shared";
-import { and, asc, desc, eq, gt, inArray, lte, ne, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lte, ne, sql, type SQL } from "drizzle-orm";
 import type { Context, Next } from "hono";
 
 import { detectRealType } from "../../../../packages/core/media/real-type";
@@ -98,7 +98,9 @@ import {
 import { enqueueClassification } from "./injection-classifier";
 import {
   LedgerInputError,
+  appliedValue,
   applyDecisions,
+  proposedFields,
   checkEvidenceFields,
   EVIDENCE_KEY,
   computeFieldDiff,
@@ -117,7 +119,15 @@ import {
   type FieldDecisionInput,
 } from "./ledger";
 import { logger } from "./logger";
+import {
+  approvalMac,
+  decisionsHash,
+  operationHash,
+  sameJson,
+  verifyApprovalMac,
+} from "./operation-hash";
 import { notifyResolution } from "./proposal-notifications";
+import { deriveSubkey } from "./secrets-key";
 
 export type Proposal = typeof agentProposals.$inferSelect;
 
@@ -1098,6 +1108,18 @@ export async function createProposal(
         : null;
   // The diff only informs: if it (or the current state it read) carries a secret, it is not stored.
   const diff = computedDiff && containsSecret(computedDiff) ? { omitted: "secret" } : computedDiff;
+  // Binding (lib/operation-hash.ts): the hash of exactly what is stored, which is
+  // what the inbox shows and what an approval executes.
+  const hash = operationHash({
+    channel: d.channel,
+    method: d.method,
+    path: d.path,
+    contentType: d.type,
+    body: d.body ?? null,
+    tool: d.tool ?? null,
+    operationKey: d.key ?? null,
+    files: (d.images ?? []).map((i) => i.sha256),
+  });
   // The proposal and its images, together: either both or neither.
   const inserted = await db.transaction(async (tx) => {
     const rows = await tx
@@ -1125,6 +1147,7 @@ export async function createProposal(
         expiresAt: new Date(Date.now() + config.ttlHours * 3_600_000),
         fieldDiff: (ledger.fieldDiff ?? null) as never,
         evidence: (ledger.evidence.length ? ledger.evidence : null) as never,
+        operationHash: hash,
       })
       .onConflictDoNothing()
       .returning();
@@ -1263,6 +1286,9 @@ export const EXCLUDED_FROM_APPROVAL = [
   // What an agent chose NOT to do (lib/agent-decisions.ts): it changes nothing,
   // and it is what an unattended run is told to do instead of a held write.
   "/api/agent/decisions",
+  // Exchanging its key for a short-lived token (routes/agent-token.ts): it
+  // creates no data, and the token can only do what the key already could.
+  "/api/agent/token",
 ];
 
 function excluded(path: string): boolean {
@@ -1706,7 +1732,14 @@ export async function reasonNotToApprove(
 
 export type DecisionResult =
   | { ok: true; proposal: Proposal }
-  | { ok: false; status: 403 | 404 | 409 | 422; reason: string; proposal?: Proposal };
+  | {
+      ok: false;
+      status: 403 | 404 | 409 | 422;
+      reason: string;
+      proposal?: Proposal;
+      /** A catalog code when the generic one for the status says too little. */
+      code?: "KITSUDEN_E_APPROVAL_STALE";
+    };
 
 export interface ApproveOptions {
   /**
@@ -1715,6 +1748,141 @@ export interface ApproveOptions {
    * that write a record (they carry a per-field diff). See lib/ledger.ts.
    */
   fields?: FieldDecisionInput[];
+  /**
+   * Binding: the `operationHash` the approver was shown. Required (and must be
+   * equal) when the proposal has one; ignored for a legacy proposal.
+   */
+  operationHash?: string | null;
+  /**
+   * Who vouches for what the approver saw when `operationHash` is not sent.
+   * Only the code-promotion route, whose panel shows the VERSION (its code and
+   * content hash, which the proposal body carries) rather than the proposal.
+   */
+  boundBy?: "promotion_version";
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Binding: the approval is tied to the exact operation (lib/operation-hash.ts)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** The subkey that signs approvals (never the encryption key itself). */
+function approvalKey(): Buffer {
+  const key = deriveSubkey("approval-mac");
+  if (!key) throw new Error("No KITSUDEN_SECRETS_KEY or BETTER_AUTH_SECRET: cannot sign approvals");
+  return key;
+}
+
+/** The sha256 of each held file, in order (what the hash was computed with). */
+async function heldFileHashes(proposalId: string): Promise<string[]> {
+  const rows = await db
+    .select({ sha256: agentProposalFiles.sha256 })
+    .from(agentProposalFiles)
+    .where(eq(agentProposalFiles.proposalId, proposalId))
+    .orderBy(asc(agentProposalFiles.position));
+  return rows.map((r) => r.sha256);
+}
+
+/** The operation hash recomputed from the row as it is NOW. */
+export async function recomputeOperationHash(p: Proposal): Promise<string> {
+  return operationHash({
+    channel: p.channel,
+    method: p.method,
+    path: p.path,
+    contentType: p.contentType,
+    body: p.body,
+    tool: p.tool,
+    operationKey: p.operationKey,
+    files: await heldFileHashes(p.id),
+  });
+}
+
+/** `bound`: it has a hash the approval must match. `legacy`: stored before 0087. */
+export function bindingOf(p: Pick<Proposal, "operationHash">): "bound" | "legacy" {
+  return p.operationHash ? "bound" : "legacy";
+}
+
+type IntegrityFailure =
+  "operation_tampered" | "approval_unbound" | "approval_mac_invalid" | "executed_body_mismatch";
+
+/**
+ * Before executing a reserved proposal: (a) the row still hashes to the
+ * `operation_hash` it was stored with, and it is the one the approver sent;
+ * (b) the approval MAC verifies. A legacy row (no hash) only checks (b).
+ */
+async function integrityOf(p: Proposal): Promise<IntegrityFailure | null> {
+  if (p.operationHash) {
+    if ((await recomputeOperationHash(p)) !== p.operationHash) return "operation_tampered";
+    if (p.approvedOperationHash !== p.operationHash) return "approval_unbound";
+  }
+  if (!p.decidedBy || !p.decidedAt) return "approval_unbound";
+  const ok = verifyApprovalMac(
+    approvalKey(),
+    {
+      proposalId: p.id,
+      operationHash: p.operationHash ?? null,
+      decidedBy: p.decidedBy,
+      decidedAt: p.decidedAt,
+      decisionsHash: decisionsHash(p.fieldDecisions, p.fieldDiff),
+    },
+    p.approvalMac
+  );
+  return ok ? null : "approval_mac_invalid";
+}
+
+/**
+ * (c) What is about to be sent is the approved body after EXACTLY the recorded
+ * per-field decisions: without decisions, the stored body itself; with them,
+ * every accepted field carries the approved (or edited) value, every rejected
+ * one is absent, and nothing else differs from re-applying the decisions.
+ */
+export function executedMatchesApproval(
+  p: Pick<Proposal, "body" | "fieldDecisions" | "fieldDiff">,
+  executed: unknown,
+  current: Record<string, unknown> | null
+): boolean {
+  const decisions = readDecisions(p);
+  const fieldDiff = readFieldDiff(p);
+  if (!decisions || !fieldDiff) return sameJson(executed, p.body);
+  let expected: unknown;
+  try {
+    expected = applyDecisions(fieldDiff, p.body, decisions, current);
+  } catch {
+    return false;
+  }
+  if (!sameJson(executed, expected)) return false;
+  const t = fieldDiff.target;
+  const sent = proposedFields(t, executed);
+  for (const d of decisions) {
+    const change = fieldDiff.fields.find((f) => f.field === d.field)?.change;
+    if (d.decision === "accept") {
+      if (change === "remove" && !d.edited) {
+        if (sent.has(d.field)) return false;
+      } else if (!sameJson(sent.get(d.field), appliedValue(t, p.body, d.field, decisions))) {
+        return false;
+      }
+    } else if (!(t.replacesData && d.field.startsWith("data."))) {
+      // A rejected field is not sent (an entry PATCH keeps its CURRENT `data.*` value).
+      if (sent.has(d.field)) return false;
+    }
+  }
+  return true;
+}
+
+let beforeExecutionHook: ((proposalId: string) => Promise<void>) | null = null;
+/**
+ * Tests only: runs between the reservation and the integrity check (to change
+ * the row in that window, as a database user or a bug could).
+ */
+export function setBeforeExecutionHookForTests(
+  fn: ((proposalId: string) => Promise<void>) | null
+): void {
+  beforeExecutionHook = fn;
+}
+
+function staleProblemReason(sent: string | null | undefined): string {
+  return sent
+    ? "The proposal is not the one you were shown (operationHash does not match). Reload it and decide again."
+    : "operationHash is required: send the operationHash of the proposal you were shown.";
 }
 
 /** For the audit: which fields went in, which stayed out, which were edited. */
@@ -1795,6 +1963,29 @@ export async function approveProposal(
   const reason = await reasonNotToApprove(human, actual);
   if (reason) return { ok: false, status: 403, reason: REASONS_NOT_TO_APPROVE[reason] };
 
+  // Binding: the approver says which operation they saw. A legacy proposal (no
+  // hash) is approved as before; the promotion route vouches with the version.
+  const shownHash = options.operationHash ?? null;
+  if (actual.operationHash && options.boundBy !== "promotion_version") {
+    if (shownHash !== actual.operationHash) {
+      return {
+        ok: false,
+        status: 409,
+        reason: staleProblemReason(shownHash),
+        proposal: actual,
+        code: "KITSUDEN_E_APPROVAL_STALE",
+      };
+    }
+  } else if (actual.operationHash && shownHash && shownHash !== actual.operationHash) {
+    return {
+      ok: false,
+      status: 409,
+      reason: staleProblemReason(shownHash),
+      proposal: actual,
+      code: "KITSUDEN_E_APPROVAL_STALE",
+    };
+  }
+
   // Field by field (lib/ledger.ts): validated BEFORE reserving, so a bad decision
   // leaves the proposal pending.
   let decisions: FieldDecision[] | null = null;
@@ -1819,25 +2010,49 @@ export async function approveProposal(
     }
   }
 
+  // The approver's signature: over the hash they saw, who, when, and the decisions.
+  const decidedAt = new Date();
+  const mac = approvalMac(approvalKey(), {
+    proposalId: actual.id,
+    operationHash: actual.operationHash ?? null,
+    decidedBy: human.id,
+    decidedAt,
+    decisionsHash: decisionsHash(decisions ?? actual.fieldDecisions, actual.fieldDiff),
+  });
   const [reserved] = await db
     .update(agentProposals)
     .set({
       status: "executing",
       decidedBy: human.id,
-      decidedAt: new Date(),
+      decidedAt,
       decisionComment: comment?.trim() ? comment.trim().slice(0, 2000) : null,
       ...(decisions ? { fieldDecisions: decisions as never } : {}),
+      approvedOperationHash: actual.operationHash ?? null,
+      approvalMac: mac,
     })
     .where(
       and(
         eq(agentProposals.id, id),
         eq(agentProposals.status, "pending"),
-        gt(agentProposals.expiresAt, new Date())
+        gt(agentProposals.expiresAt, new Date()),
+        // Nobody changed the hash between the check above and this reservation.
+        actual.operationHash
+          ? eq(agentProposals.operationHash, actual.operationHash)
+          : isNull(agentProposals.operationHash)
       )
     )
     .returning();
   if (!reserved) {
     const other = (await proposalById(id))!;
+    if (other.status === "pending" && other.operationHash !== actual.operationHash) {
+      return {
+        ok: false,
+        status: 409,
+        reason: staleProblemReason(shownHash || "changed"),
+        proposal: other,
+        code: "KITSUDEN_E_APPROVAL_STALE",
+      };
+    }
     return { ok: false, status: 409, reason: `Proposal is ${other.status}`, proposal: other };
   }
   await audit({
@@ -1850,6 +2065,8 @@ export async function approveProposal(
       sponsor: reserved.sponsorUserId ?? null,
       comment: reserved.decisionComment,
       ...(decisions ? { fields: decisionSummary(decisions) } : {}),
+      binding: bindingOf(reserved),
+      operationHash: reserved.operationHash ?? null,
     },
   });
 
@@ -1863,10 +2080,13 @@ export async function approveProposal(
  * its accepted fields are applied over the row as the agent reads it NOW. Throws
  * `current_unavailable` when that row cannot be read.
  */
-async function executedBody(p: Proposal, agent: AgentAuthContext): Promise<unknown> {
+async function executedBody(
+  p: Proposal,
+  agent: AgentAuthContext
+): Promise<{ body: unknown; current: Record<string, unknown> | null }> {
   const decisions = readDecisions(p);
   const fieldDiff = readFieldDiff(p);
-  if (!decisions || !fieldDiff) return p.body;
+  if (!decisions || !fieldDiff) return { body: p.body, current: null };
   let current: Record<string, unknown> | null = null;
   const t = fieldDiff.target;
   if (
@@ -1876,10 +2096,40 @@ async function executedBody(p: Proposal, agent: AgentAuthContext): Promise<unkno
   ) {
     current = (await readAsAgent(agent, t.readPath)).current;
   }
-  return applyDecisions(fieldDiff, p.body, decisions, current);
+  return { body: applyDecisions(fieldDiff, p.body, decisions, current), current };
+}
+
+/** A proposal that was not executed because its binding did not hold. */
+async function auditIntegrity(p: Proposal, human: Human, check: IntegrityFailure): Promise<void> {
+  logger.warn(
+    { proposalId: p.id, check },
+    "[approvals] integrity check failed: the approved proposal was NOT executed"
+  );
+  await audit({
+    agentId: p.agentId,
+    action: "proposal_integrity_failed",
+    resource: `${p.method} ${p.path}`,
+    resourceId: p.id,
+    details: {
+      by: human.id,
+      check,
+      binding: bindingOf(p),
+      operationHash: p.operationHash ?? null,
+      approvedOperationHash: p.approvedOperationHash ?? null,
+    },
+    success: false,
+    errorMessage: `integrity_check_failed: ${check}`,
+  }).catch(() => undefined);
 }
 
 const UNAVAILABLE = Symbol("current_unavailable");
+/** The executed body once `current_unavailable` was ruled out. */
+function sendable(
+  e: { body: unknown; current: Record<string, unknown> | null } | typeof UNAVAILABLE
+) {
+  if (e === UNAVAILABLE) throw new Error("current_unavailable");
+  return e;
+}
 /** `current_unavailable` from `executedBody` becomes a marker; anything else is rethrown. */
 function unavailable(err: unknown): typeof UNAVAILABLE {
   if (err instanceof Error && err.message === "current_unavailable") return UNAVAILABLE;
@@ -1908,14 +2158,25 @@ async function keepEvidence(p: Proposal, human: Human): Promise<void> {
   }
 }
 
-async function runReserved(p: Proposal, human: Human): Promise<Proposal> {
-  const approval = { proposalId: p.id, approvedBy: human.id };
+async function runReserved(reservedRow: Proposal, human: Human): Promise<Proposal> {
+  const approval = { proposalId: reservedRow.id, approvedBy: human.id };
+  let p = reservedRow;
   let final: Proposal;
-  let executed: unknown;
+  let executed: { body: unknown; current: Record<string, unknown> | null } | typeof UNAVAILABLE;
   try {
+    if (beforeExecutionHook) await beforeExecutionHook(p.id);
+    // 0. Binding: the row as it is NOW must be the operation that was approved.
+    p = (await proposalById(p.id)) ?? p;
+    const broken = p.status === "executing" ? await integrityOf(p) : "approval_unbound";
     // 1. The agent, re-read from the database (scopes as of NOW).
-    const ctx = await agentContextForApproval(p.agentId, p.keyId);
-    if (!ctx.ok) {
+    const ctx = broken ? null : await agentContextForApproval(p.agentId, p.keyId);
+    if (broken || !ctx) {
+      final = await saveResult(p.id, "failed", {
+        status: null,
+        error: `not_executed: integrity_check_failed (${broken})`,
+      });
+      await auditIntegrity(p, human, broken ?? "approval_unbound");
+    } else if (!ctx.ok) {
       final = await saveResult(p.id, "failed", {
         status: null,
         error: `not_executed: ${ctx.reason}`,
@@ -1937,12 +2198,19 @@ async function runReserved(p: Proposal, human: Human): Promise<Proposal> {
           status: null,
           error: "not_executed: current_unavailable",
         });
+      } else if (
+        !executedMatchesApproval(p, (executed = sendable(executed)).body, executed.current)
+      ) {
+        // (c) What would be sent is not the approved body with exactly its decisions.
+        final = await saveResult(p.id, "failed", {
+          status: null,
+          error: "not_executed: integrity_check_failed (executed_body_mismatch)",
+        });
+        await auditIntegrity(p, human, "executed_body_mismatch");
       } else if (p.channel === "mcp" && p.tool) {
         if (!mcpExecutor) throw new Error("MCP did not register its executor");
-        const args = (executed && typeof executed === "object" ? executed : {}) as Record<
-          string,
-          unknown
-        >;
+        const sent = sendable(executed).body;
+        const args = (sent && typeof sent === "object" ? sent : {}) as Record<string, unknown>;
         const r = await mcpExecutor(p.tool, args, ctx.context, approval);
         const sc = r.structuredContent as { status?: unknown } | undefined;
         const status = typeof sc?.status === "number" ? sc.status : r.isError ? 400 : 200;
@@ -1955,7 +2223,7 @@ async function runReserved(p: Proposal, human: Human): Promise<Proposal> {
         });
       } else {
         // A held upload becomes again the form the agent sent.
-        const body = isMultipart(p.contentType) ? await proposalForm(p) : executed;
+        const body = isMultipart(p.contentType) ? await proposalForm(p) : sendable(executed).body;
         const res = await internalRequest(
           { agent: ctx.context, approval },
           p.method,

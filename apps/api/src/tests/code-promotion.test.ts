@@ -37,6 +37,7 @@ import { app } from "../index";
 import { _forgetNegatives } from "../lib/promotion";
 import { createAgent } from "../services/agent-auth";
 
+import { withShownHash } from "./approval-shown-hash";
 import { ensureAppRole, enterAs, generateTestId, testIp, isDatabaseAvailable } from "./setup";
 
 let dbAvailable = false;
@@ -93,6 +94,7 @@ async function request(
   body?: unknown,
   headersValue: Record<string, string> = {}
 ): Promise<Response> {
+  body = await withShownHash(method, path, body);
   const headers: Record<string, string> = { origin: ORIGIN, ...headersValue };
   if (auth.cookie) headers.Cookie = auth.cookie;
   if (auth.token) headers.Authorization = `Bearer ${auth.token}`;

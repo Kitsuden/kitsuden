@@ -86,6 +86,13 @@ export interface PinnedFetchInit {
   timeoutMs?: number;
   /** Opt-in for internal targets (each caller has its own variable). */
   allowInternal?: boolean;
+  /**
+   * Called with the checked addresses and the TCP port, after resolution and
+   * before connecting. The connection goes only to these addresses, so a
+   * decision taken here cannot be bypassed by a name that resolves differently
+   * later. Throw to refuse (lib/egress-policy.ts uses it for IP/CIDR rules).
+   */
+  beforeConnect?: (addresses: LookupAddress[], port: number) => void;
 }
 
 /** `lookup` for node:net that only ever answers the verified addresses. */
@@ -135,6 +142,7 @@ export async function pinnedFetch(
   const addresses = await resolveTarget(url.hostname, { allowInternal: init.allowInternal });
   const host = url.hostname.replace(/^\[|\]$/g, "");
   const secure = url.protocol === "https:";
+  init.beforeConnect?.(addresses, url.port ? Number(url.port) : secure ? 443 : 80);
   const method = (init.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = { ...(init.headers ?? {}) };
   const body =

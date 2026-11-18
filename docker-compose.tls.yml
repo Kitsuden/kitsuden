@@ -42,7 +42,7 @@ x-logging: &logging
 services:
   kitsuden_proxy:
     # Pinned version, like Postgres and Valkey (`2-alpine` changes on its own)
-    image: caddy:2.11-alpine
+    image: caddy:2.11-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_proxy_prod
     restart: unless-stopped
     depends_on:

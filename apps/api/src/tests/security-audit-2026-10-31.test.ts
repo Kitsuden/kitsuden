@@ -639,7 +639,7 @@ describe("agent tables through the generic routes", () => {
       .where(eq(agentProposals.id, proposal!.id));
     expect(same!.path).toBe("/api/x");
     await db.delete(agentProposals).where(eq(agentProposals.id, proposal!.id));
-    await db.delete(agentAuditLogs).where(eq(agentAuditLogs.agentId, id));
+    // agent_audit_logs is append-only (0088): the agent's audit rows stay.
   });
 
   it("GraphQL offers no mutation for them", async () => {

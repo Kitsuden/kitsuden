@@ -57,6 +57,8 @@ export type ApprovalsConfigurationResponse = Record<string, unknown>;
 /** Body of `approvals.approve-proposal`. */
 export type ApproveProposalBody = {
   comment?: string;
+  /** The operationHash of the proposal as you were shown it (GET /proposals/:id). Required to approve a proposal that has one: a different value gets 409 KITSUDEN_E_APPROVAL_STALE and nothing runs. */
+  operationHash?: string;
   /** Per-field decision for a proposal that writes a record (see fieldDiff): accept or reject each field, optionally with an edited value. Fields not listed are accepted. Approve only. */
   fields?: {
     field: string;
@@ -153,6 +155,8 @@ export type ProposalImageResponse = ArrayBuffer;
 /** Body of `approvals.reject-proposal`. */
 export type RejectProposalBody = {
   comment?: string;
+  /** The operationHash of the proposal as you were shown it (GET /proposals/:id). Required to approve a proposal that has one: a different value gets 409 KITSUDEN_E_APPROVAL_STALE and nothing runs. */
+  operationHash?: string;
   /** Per-field decision for a proposal that writes a record (see fieldDiff): accept or reject each field, optionally with an edited value. Fields not listed are accepted. Approve only. */
   fields?: {
     field: string;
@@ -233,7 +237,7 @@ export const operations = {
   "agentUnattended": {"kon":"kon-approvals","id":"agent-unattended","operationId":"approvals.agent-unattended","method":"PUT","path":"/approvals/agents/{id}/unattended","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:approvals:agent-unattended","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "approvalsAudit": {"kon":"kon-approvals","id":"approvals-audit","operationId":"approvals.approvals-audit","method":"GET","path":"/approvals/audit","pathParams":[],"queryParams":["agentId","proposalId","limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:approvals:approvals-audit","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":null,"limit":"limit"}},
   "approvalsConfiguration": {"kon":"kon-approvals","id":"approvals-configuration","operationId":"approvals.approvals-configuration","method":"GET","path":"/approvals/settings","pathParams":[],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:approvals:approvals-configuration","mcpTool":null,"errors":["KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "approveProposal": {"kon":"kon-approvals","id":"approve-proposal","operationId":"approvals.approve-proposal","method":"POST","path":"/approvals/proposals/{id}/approve","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:approvals:approve-proposal","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "approveProposal": {"kon":"kon-approvals","id":"approve-proposal","operationId":"approvals.approve-proposal","method":"POST","path":"/approvals/proposals/{id}/approve","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:approvals:approve-proposal","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_APPROVAL_STALE","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "closeReview": {"kon":"kon-approvals","id":"close-review","operationId":"approvals.close-review","method":"POST","path":"/approvals/reviews/{id}/done","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:approvals:close-review","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "countPending": {"kon":"kon-approvals","id":"count-pending","operationId":"approvals.count-pending","method":"GET","path":"/approvals/proposals/count","pathParams":[],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:approvals:count-pending","mcpTool":null,"errors":["KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "listProposals": {"kon":"kon-approvals","id":"list-proposals","operationId":"approvals.list-proposals","method":"GET","path":"/approvals/proposals","pathParams":[],"queryParams":["status","agentId","limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:approvals:list-proposals","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":null,"limit":"limit"}},
@@ -295,11 +299,11 @@ export interface ApprovalsApi {
   /**
    * Approve and execute a proposal
    *
-   * Executes the stored request once, with the agent's CURRENT identity and permissions, and records the approver. A second approval gets 409. If the agent was deactivated, its key revoked or expired, or its permission removed, the proposal ends as failed without executing. With `fields` (a proposal that writes a record), only the fields it accepts are executed, with any edited value; a field the list leaves out is rejected, and every field rejected is a rejection. `reviewAt` schedules a later review.
+   * Executes the stored request once, with the agent's CURRENT identity and permissions, and records the approver. A second approval gets 409. If the agent was deactivated, its key revoked or expired, or its permission removed, the proposal ends as failed without executing. With `fields` (a proposal that writes a record), only the fields it accepts are executed, with any edited value; a field the list leaves out is rejected, and every field rejected is a rejection. `reviewAt` schedules a later review. Send the `operationHash` you were shown: when the proposal has one it is required and must match (409 KITSUDEN_E_APPROVAL_STALE otherwise); before running, the stored row is re-hashed and the approval signature checked, and a mismatch fails the proposal without executing it.
    *
    * REST: `POST /api/approvals/proposals/{id}/approve` · scope `kon:approvals:approve-proposal`
    * not idempotent (an Idempotency-Key is sent automatically)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_APPROVAL_STALE`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly approveProposal: Operation<ApproveProposalParams, ApproveProposalResponse>;
   /**

@@ -92,6 +92,8 @@ export type AccessToken =
       scopes: string[];
       agent: typeof agentIdentities.$inferSelect;
       key: typeof agentApiKeys.$inferSelect;
+      /** DPoP (0086): the key thumbprint the token is bound to, or `null` (bearer). */
+      dpopJkt: string | null;
     }
   | { ok: false; code: string; error: string; agentId?: string | null };
 
@@ -158,6 +160,7 @@ export async function searchAccessToken(
     scopes: effectiveScopes(a.scopes as string[] | null, t.scopes),
     agent: a,
     key: k,
+    dpopJkt: t.dpopJkt ?? null,
   };
 }
 

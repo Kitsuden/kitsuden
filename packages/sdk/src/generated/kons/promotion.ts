@@ -48,6 +48,14 @@ export type ProposeDraftBody = {
   code: string;
   scopes?: string[];
   fetchAllow?: string[];
+  egress?: {
+    rules: {
+      action: "allow" | "deny";
+      target?: string;
+      ports?: number[];
+    }[];
+  };
+  runtime?: "quickjs" | "opensandbox:python" | "opensandbox:shell";
   timeoutMs?: number;
   memoryLimitMb?: number;
   maxCalls?: number;

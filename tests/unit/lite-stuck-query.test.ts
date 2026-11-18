@@ -19,8 +19,8 @@ describe("watchLiteConnection", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     let release!: () => void;
     const client = {
-      query: vi.fn(() => new Promise((r) => (release = () => r({ rows: [] })))),
-      exec: vi.fn(async () => []),
+      query: vi.fn((_sql: string) => new Promise((r) => (release = () => r({ rows: [] })))),
+      exec: vi.fn(async (_sql: string) => []),
       transaction: vi.fn(async () => undefined),
     };
     watchLiteConnection(client as never);

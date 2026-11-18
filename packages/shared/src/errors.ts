@@ -131,6 +131,12 @@ export const KITSUDEN_ERRORS = {
     retryable: false,
     hint: "This agent needs human approval for this request, but it cannot be stored as a proposal (it carries a secret, a file that is not an image, or a body that is too large). Ask a human to do it, or ask an admin to change the agent's approval mode.",
   },
+  KITSUDEN_E_APPROVAL_STALE: {
+    status: 409,
+    title: "Approval does not match the proposal shown",
+    retryable: false,
+    hint: "The approval must carry the `operationHash` of the proposal as it was shown, and the proposal is no longer (or never was) that operation. Nothing was executed: reload the proposal, check it again and approve with its current `operationHash`.",
+  },
   KITSUDEN_E_DENIED_UNATTENDED: {
     status: 403,
     title: "Refused in an unattended run",

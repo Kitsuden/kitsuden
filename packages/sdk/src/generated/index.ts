@@ -3,9 +3,11 @@
 import type { OperationInfo } from "../api/types";
 
 import { operations as agentNotificationsOps, type AgentNotificationsApi } from "./kons/agent-notifications";
+import { operations as agentTokenOps, type AgentTokenApi } from "./kons/agent-token";
 import { operations as agentsOps, type AgentsApi } from "./kons/agents";
 import { operations as analyticsOps, type AnalyticsApi } from "./kons/analytics";
 import { operations as approvalsOps, type ApprovalsApi } from "./kons/approvals";
+import { operations as auditOps, type AuditApi } from "./kons/audit";
 import { operations as automationOps, type AutomationApi } from "./kons/automation";
 import { operations as blocksOps, type BlocksApi } from "./kons/blocks";
 import { operations as brainOps, type BrainApi } from "./kons/brain";
@@ -26,9 +28,11 @@ import { operations as secretAccessOps, type SecretAccessApi } from "./kons/secr
 import { operations as tracesOps, type TracesApi } from "./kons/traces";
 
 export * as AgentNotifications from "./kons/agent-notifications";
+export * as AgentToken from "./kons/agent-token";
 export * as Agents from "./kons/agents";
 export * as Analytics from "./kons/analytics";
 export * as Approvals from "./kons/approvals";
+export * as Audit from "./kons/audit";
 export * as Automation from "./kons/automation";
 export * as Blocks from "./kons/blocks";
 export * as Brain from "./kons/brain";
@@ -52,7 +56,7 @@ export * as Traces from "./kons/traces";
 export const API_VERSION = "0.9.0-beta";
 
 /** Every `KITSUDEN_E_*` code the API can send (problem+json `code`). Branch on it. */
-export const ERROR_CODES = ["KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_VALIDATION","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_LEGACY_KEY_RETIRED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_METHOD_NOT_ALLOWED","KITSUDEN_E_CONFLICT","KITSUDEN_E_PAYLOAD_TOO_LARGE","KITSUDEN_E_UNSUPPORTED_MEDIA_TYPE","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_QUOTA_EXCEEDED","KITSUDEN_E_APPROVAL_REQUIRED","KITSUDEN_E_APPROVAL_UNSUPPORTED","KITSUDEN_E_DENIED_UNATTENDED","KITSUDEN_E_AGENT_SPONSOR_INVALID","KITSUDEN_E_IDEMPOTENCY_KEY_INVALID","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_IDEMPOTENCY_IN_PROGRESS","KITSUDEN_E_IDEMPOTENCY_NOT_REPLAYABLE","KITSUDEN_E_IDEMPOTENCY_UNAVAILABLE","KITSUDEN_E_INTERNAL","KITSUDEN_E_BAD_GATEWAY","KITSUDEN_E_UNAVAILABLE","KITSUDEN_E_DB_POOL_EXHAUSTED","KITSUDEN_E_TIMEOUT"] as const;
+export const ERROR_CODES = ["KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_VALIDATION","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_LEGACY_KEY_RETIRED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_METHOD_NOT_ALLOWED","KITSUDEN_E_CONFLICT","KITSUDEN_E_PAYLOAD_TOO_LARGE","KITSUDEN_E_UNSUPPORTED_MEDIA_TYPE","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_QUOTA_EXCEEDED","KITSUDEN_E_APPROVAL_REQUIRED","KITSUDEN_E_APPROVAL_UNSUPPORTED","KITSUDEN_E_APPROVAL_STALE","KITSUDEN_E_DENIED_UNATTENDED","KITSUDEN_E_AGENT_SPONSOR_INVALID","KITSUDEN_E_IDEMPOTENCY_KEY_INVALID","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_IDEMPOTENCY_IN_PROGRESS","KITSUDEN_E_IDEMPOTENCY_NOT_REPLAYABLE","KITSUDEN_E_IDEMPOTENCY_UNAVAILABLE","KITSUDEN_E_INTERNAL","KITSUDEN_E_BAD_GATEWAY","KITSUDEN_E_UNAVAILABLE","KITSUDEN_E_DB_POOL_EXHAUSTED","KITSUDEN_E_TIMEOUT"] as const;
 
 export type KitsudenErrorCode = (typeof ERROR_CODES)[number];
 
@@ -60,12 +64,16 @@ export type KitsudenErrorCode = (typeof ERROR_CODES)[number];
 export interface KitsudenKons {
   /** kon-agent-notifications: Where an agent is told that its proposals were resolved (administrators only). */
   readonly agentNotifications: AgentNotificationsApi;
+  /** kon-agent-token: An agent exchanges its key for a short-lived token. */
+  readonly agentToken: AgentTokenApi;
   /** kon-agents: Agent permissions, keys and quotas (admin only). */
   readonly agents: AgentsApi;
   /** kon-analytics: Views per subject and day, without cookies or personal data. */
   readonly analytics: AnalyticsApi;
   /** kon-approvals: Human approval of agent proposals (team members only; never an agent). */
   readonly approvals: ApprovalsApi;
+  /** kon-audit: The agent audit hash chain: verify it and read its head (administrators only). */
+  readonly audit: AuditApi;
   /** kon-automation: The catalog of events and steps for automation rules, and the dry run of an action. */
   readonly automation: AutomationApi;
   /** kon-blocks: Lego-style block system for dynamic page layouts with drag & drop. Includes Hero, Text, Image, Video, Grid, Cards, Quote, CTA, Embed, Divider, and Spacer blocks. */
@@ -107,9 +115,11 @@ export interface KitsudenKons {
 /** Runtime description of every operation, by kon (camelCase) and operation (camelCase). */
 export const KONS = {
   agentNotifications: agentNotificationsOps,
+  agentToken: agentTokenOps,
   agents: agentsOps,
   analytics: analyticsOps,
   approvals: approvalsOps,
+  audit: auditOps,
   automation: automationOps,
   blocks: blocksOps,
   brain: brainOps,

@@ -46,6 +46,7 @@ import { invalidateApprovalsConfig } from "../lib/approvals";
 import { installedKon } from "../lib/installed-kons";
 import { createAgent } from "../services/agent-auth";
 
+import { withShownHash } from "./approval-shown-hash";
 import { isDatabaseAvailable, generateTestId, enterAs } from "./setup";
 
 // kon-blog is an INSTALLABLE kon (kitsuden-kons repo): without it there are no routes to
@@ -83,6 +84,7 @@ interface Options {
 }
 
 async function request(method: string, path: string, o: Options = {}): Promise<Response> {
+  o = { ...o, body: await withShownHash(method, path, o.body) };
   const headers: Record<string, string> = { origin: ORIGIN, ...(o.headers ?? {}) };
   if (o.token) headers.Authorization = `Bearer ${o.token}`;
   if (o.cookie) headers.Cookie = o.cookie;

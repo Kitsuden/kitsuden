@@ -52,4 +52,15 @@ describe("KonContext environment", () => {
     expect(typeof ctx.contentPublishing.register).toBe("function");
     expect(ctx.contentPublishing.getAvailableTargets()).toEqual([]);
   });
+
+  it("the context brings every core battery a kon detects at runtime", () => {
+    // A merge once dropped `connections`: nothing failed to build, because a kon
+    // reads it as optional and answers 503 "no connections battery" instead.
+    const ctx = createKonContext();
+    expect(typeof ctx.connections?.client).toBe("function");
+    expect(typeof ctx.connections?.visible).toBe("function");
+    expect(typeof ctx.secrets?.seal).toBe("function");
+    expect(typeof ctx.entities).toBe("object");
+    expect(typeof ctx.automation?.upsertRule).toBe("function");
+  });
 });

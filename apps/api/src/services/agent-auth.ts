@@ -18,7 +18,9 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../db";
 import { agentIdentities, agentApiKeys, authUsers } from "../db/schema";
+import { checkDpopProof, DPOP_CHALLENGE, parseAuthorization } from "../lib/dpop";
 import { readMcpSettings, type McpSettings } from "../lib/mcp-settings";
+import { issuer } from "../lib/oauth/config";
 import {
   searchAccessToken,
   keyGrant,
@@ -66,6 +68,125 @@ export interface AgentAuthContext {
    * `agent_api_keys` row (algorithm 'oauth') of that connection. See lib/oauth/.
    */
   oauth?: { clientId: string; grantId: string };
+  /**
+   * DPoP (migration 0086, lib/dpop.ts): thumbprint of the key whose proof
+   * came with this request (bound credential, or a DPoP request with an
+   * unbound one). The token exchange binds the new token to it.
+   */
+  dpopJkt?: string;
+  /**
+   * The credential is a short-lived token (`kitsuden_ast_*`, 0086): `keyId` is
+   * then its `agent_short_tokens` row. It cannot be exchanged again.
+   */
+  shortToken?: { parentKeyId: string | null; expiresAt: Date };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DPoP (RFC 9449) — see lib/dpop.ts and docs/agents/dpop-and-short-tokens.md
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** What `authenticateAgent` needs to check a DPoP proof for this request. */
+export interface DpopRequest {
+  /** The `Authorization` scheme the credential came with. */
+  scheme: "Bearer" | "DPoP";
+  /** The `DPoP` header. */
+  proof?: string | null;
+  method: string;
+  /** The request's PUBLIC URL (htu): `publicRequestUrl`. */
+  url: string;
+}
+
+/**
+ * The URL a client signs in `htu`: the configured public origin of the API
+ * (`OAUTH_ISSUER_URL`, else `BETTER_AUTH_URL`; lib/oauth/config.ts `issuer`)
+ * plus the request's path. Behind a proxy the internal URL differs from what
+ * the client called, so it is never taken from the `Host` header.
+ */
+export function publicRequestUrl(rawUrl: string | undefined): string {
+  let path = "/";
+  try {
+    path = new URL(rawUrl ?? "", "http://internal").pathname;
+  } catch {
+    path = "/";
+  }
+  return `${issuer()}${path}`;
+}
+
+/** The DPoP part of a Hono request (scheme already parsed from `Authorization`). */
+export function dpopRequestOf(
+  req: { method: string; url: string; header(name: string): string | undefined },
+  scheme: "Bearer" | "DPoP"
+): DpopRequest {
+  return {
+    scheme,
+    proof: req.header("DPoP") ?? null,
+    method: req.method ?? "GET",
+    url: publicRequestUrl(req.url),
+  };
+}
+
+/** An agent credential in `Authorization` (`Bearer` or `DPoP`), or `null`. */
+export function agentCredentialFromHeader(
+  header: string | null | undefined
+): { scheme: "Bearer" | "DPoP"; token: string } | null {
+  const parsed = parseAuthorization(header);
+  return parsed && isAgentCredential(parsed.token) ? parsed : null;
+}
+
+/** The code of a failed proof; callers answer it with `WWW-Authenticate: DPoP …`. */
+export const DPOP_FAILURE_CODE = "INVALID_DPOP_PROOF";
+export { DPOP_CHALLENGE };
+
+/**
+ * Does this credential need (or come with) a proof, and is it valid?
+ *
+ *   · bound (`jkt`) or the agent has `require_dpop`: `Authorization: DPoP` and a
+ *     valid proof with THAT key are required; an agent that requires DPoP
+ *     refuses unbound credentials outright (a proof with any key would prove
+ *     nothing about who holds the token);
+ *   · unbound, sent as `DPoP`: the proof is checked and its key reported;
+ *   · unbound, sent as `Bearer` (or no request info: in-process): as before.
+ */
+async function proofOfPossession(o: {
+  boundJkt: string | null | undefined;
+  requireDpop: boolean | null | undefined;
+  token: string;
+  dpop?: DpopRequest;
+}): Promise<{ ok: true; jkt?: string } | { ok: false; error: string }> {
+  const needed = !!o.boundJkt || !!o.requireDpop;
+  const d = o.dpop;
+  if (!needed && (!d || d.scheme === "Bearer")) return { ok: true };
+  if (!d) return { ok: false, error: "This credential requires a DPoP proof" };
+  if (needed && d.scheme !== "DPoP") {
+    return {
+      ok: false,
+      error: "This credential is DPoP-bound: send Authorization: DPoP <token> and a DPoP proof",
+    };
+  }
+  if (o.requireDpop && !o.boundJkt) {
+    return {
+      ok: false,
+      error: "This agent requires DPoP-bound credentials: bind this credential to a key first",
+    };
+  }
+  const r = await checkDpopProof({
+    proof: d.proof,
+    method: d.method,
+    url: d.url,
+    accessToken: o.token,
+    expectedJkt: o.boundJkt ?? null,
+  });
+  return r.ok ? { ok: true, jkt: r.jkt } : { ok: false, error: r.reason };
+}
+
+function dpopFailure(
+  agentId: string,
+  error: string,
+  metadata: { ipAddress?: string; userAgent?: string } | undefined,
+  details: Record<string, unknown>
+): AgentAuthResult {
+  logAuthFailure(agentId, `DPoP: ${error}`, metadata?.ipAddress, metadata?.userAgent, details);
+  return { success: false, error, code: DPOP_FAILURE_CODE };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -259,7 +380,12 @@ export function isAgentApiKey(token: string): boolean {
  * to the SAME agent context.
  */
 export function isAgentCredential(token: string): boolean {
-  return isAgentApiKey(token) || isOAuthAccessToken(token);
+  return isAgentApiKey(token) || isOAuthAccessToken(token) || isShortToken(token);
+}
+
+/** Short-lived agent token (`kitsuden_ast_*`, services/agent-short-tokens.ts). */
+export function isShortToken(token: string): boolean {
+  return token.startsWith("kitsuden_ast_");
 }
 
 // Re-export types and constants for convenience
@@ -374,9 +500,15 @@ export async function authenticateAgent(
      * was issued for (`/api/mcp`, RFC 8707); with no path, it is rejected.
      */
     route?: string;
+    /**
+     * The HTTP request, for DPoP (lib/dpop.ts). Without it a bound credential,
+     * or one of an agent that requires DPoP, is refused.
+     */
+    dpop?: DpopRequest;
   }
 ): Promise<AgentAuthResult> {
   if (isOAuthAccessToken(apiKey)) return authenticateOAuthToken(apiKey, metadata);
+  if (isShortToken(apiKey)) return authenticateShortToken(apiKey, metadata);
   try {
     // 1. Validate and parse the key's format
     const parsed = parseAgentApiKey(apiKey);
@@ -517,6 +649,16 @@ export async function authenticateAgent(
       };
     }
 
+    // 4b. Proof of possession (DPoP, migration 0086): a bound key needs a fresh
+    // proof signed with ITS key; an unbound one keeps working as a bearer key.
+    const pop = await proofOfPossession({
+      boundJkt: key.dpopJkt,
+      requireDpop: agent.requireDpop,
+      token: apiKey,
+      dpop: metadata?.dpop,
+    });
+    if (!pop.ok) return dpopFailure(agent.id, pop.error, metadata, { ...attempt });
+
     // 5. Quotas (minute, writes and the day's budget) are NOT counted
     // here: this function is called by the global authentication and the MCP one for
     // the SAME request, and it counted twice (and answered 401 instead of 429).
@@ -543,6 +685,7 @@ export async function authenticateAgent(
           : [],
         sponsor: await agentSigner(agent.sponsorUserId),
         mcpSettings: readMcpSettings(agent.mcpSettings),
+        ...(pop.jkt ? { dpopJkt: pop.jkt } : {}),
       },
     };
   } catch (error) {
@@ -564,7 +707,7 @@ export async function authenticateAgent(
  */
 async function authenticateOAuthToken(
   token: string,
-  metadata?: { ipAddress?: string; userAgent?: string; route?: string }
+  metadata?: { ipAddress?: string; userAgent?: string; route?: string; dpop?: DpopRequest }
 ): Promise<AgentAuthResult> {
   try {
     const r = await searchAccessToken(token, metadata?.route);
@@ -581,6 +724,14 @@ async function authenticateOAuthToken(
       });
       return { success: false, error: "Agent is deactivated", code: "AGENT_DEACTIVATED" };
     }
+    // DPoP: a token issued to a proved key needs a proof with that key.
+    const pop = await proofOfPossession({
+      boundJkt: r.dpopJkt,
+      requireDpop: agent.requireDpop,
+      token,
+      dpop: metadata?.dpop,
+    });
+    if (!pop.ok) return dpopFailure(agent.id, pop.error, metadata, { via: "oauth" });
     markUsage(r.key.id);
     logAuthSuccess(agent.id, r.key.id, metadata?.ipAddress, metadata?.userAgent);
     return {
@@ -599,10 +750,71 @@ async function authenticateOAuthToken(
         sponsor: await agentSigner(agent.sponsorUserId),
         mcpSettings: readMcpSettings(agent.mcpSettings),
         oauth: { clientId: r.clientId, grantId: r.grantId },
+        ...(pop.jkt ? { dpopJkt: pop.jkt } : {}),
       },
     };
   } catch (error) {
     console.error("[AgentAuth] OAuth authentication error:", error);
+    return { success: false, error: "Authentication failed", code: "AUTH_ERROR" };
+  }
+}
+
+/**
+ * A short-lived token (`kitsuden_ast_*`, services/agent-short-tokens.ts): the
+ * SAME context the parent credential would give, with its narrowed scopes.
+ * Everything that invalidates it (revoked, expired, parent key or grant gone,
+ * audience) is read from the database on every request.
+ */
+async function authenticateShortToken(
+  token: string,
+  metadata?: { ipAddress?: string; userAgent?: string; route?: string; dpop?: DpopRequest }
+): Promise<AgentAuthResult> {
+  try {
+    // Deferred: unit tests that replace `../db/schema` do not load this table.
+    const { lookupShortToken } = await import("./agent-short-tokens");
+    const r = await lookupShortToken(token, metadata?.route);
+    if (!r.ok) {
+      logAuthFailure(r.agentId, r.error, metadata?.ipAddress, metadata?.userAgent, {
+        via: "short_token",
+      });
+      return { success: false, error: r.error, code: r.code };
+    }
+    const agent = r.agent;
+    if (!agent.isActive) {
+      logAuthFailure(agent.id, "Agent is deactivated", metadata?.ipAddress, metadata?.userAgent, {
+        via: "short_token",
+      });
+      return { success: false, error: "Agent is deactivated", code: "AGENT_DEACTIVATED" };
+    }
+    const pop = await proofOfPossession({
+      boundJkt: r.row.dpopJkt,
+      requireDpop: agent.requireDpop,
+      token,
+      dpop: metadata?.dpop,
+    });
+    if (!pop.ok) return dpopFailure(agent.id, pop.error, metadata, { via: "short_token" });
+    logAuthSuccess(agent.id, r.row.id, metadata?.ipAddress, metadata?.userAgent);
+    return {
+      success: true,
+      context: {
+        agentId: agent.id,
+        agentName: agent.name,
+        scopes: r.scopes,
+        rateLimit: agent.rateLimit ?? 60,
+        writesPerDay: agent.writesPerDay ?? null,
+        budgetUnitsPerDay: agent.budgetUnitsPerDay ?? null,
+        keyId: r.row.id,
+        allowedTools: Array.isArray(agent.allowedTools)
+          ? (agent.allowedTools as unknown[]).filter((t): t is string => typeof t === "string")
+          : [],
+        sponsor: await agentSigner(agent.sponsorUserId),
+        mcpSettings: readMcpSettings(agent.mcpSettings),
+        shortToken: { parentKeyId: r.row.parentKeyId, expiresAt: r.row.expiresAt },
+        ...(pop.jkt ? { dpopJkt: pop.jkt } : {}),
+      },
+    };
+  } catch (error) {
+    console.error("[AgentAuth] Short token authentication error:", error);
     return { success: false, error: "Authentication failed", code: "AUTH_ERROR" };
   }
 }
@@ -613,6 +825,11 @@ async function authenticateOAuthToken(
  * database at that moment: if the agent was deactivated, or the key it
  * proposed with was revoked or expired, there is no context and the proposal is not run.
  * The scopes are those of NOW, not those of when it was proposed.
+ *
+ * `keyId` may be a short-lived credential (an exchanged `kitsuden_ast_*` token
+ * or an in-process run's credential, migration 0086): a proposal made under a
+ * run credential that has since expired or been revoked still runs, because
+ * the human approval is the authority then. See agent-short-tokens.ts.
  */
 export async function agentContextForApproval(
   agentId: string,
@@ -628,15 +845,27 @@ export async function agentContextForApproval(
   let scopes = (agent.scopes as string[] | null) ?? [];
   if (keyId) {
     const [key] = await db.select().from(agentApiKeys).where(eq(agentApiKeys.id, keyId)).limit(1);
-    if (!key || key.agentId !== agentId) return { ok: false, reason: "key_not_found" };
-    if (key.revokedAt) return { ok: false, reason: "key_revoked" };
-    if (key.expiresAt && key.expiresAt < new Date()) return { ok: false, reason: "key_expired" };
-    // Proposal made by an OAuth connection: it runs with what that
-    // connection allows TODAY (narrowed by the grant), not with the whole agent.
-    if (key.algorithm === "oauth") {
-      const grant = await keyGrant(key.id);
-      if (!grant || grant.revoked) return { ok: false, reason: "oauth_grant_revoked" };
-      scopes = effectiveScopes(scopes, grant.scopes);
+    if (!key) {
+      // A short-lived credential (exchanged token or an in-process run's, 0086).
+      // Its own expiry or revocation does not stop an approved proposal: the
+      // human approval is the authority now. Its parent key's does, and the
+      // scopes are narrowed by the credential's. See agent-short-tokens.ts.
+      const { shortCredentialForApproval } = await import("./agent-short-tokens");
+      const short = await shortCredentialForApproval(keyId, agent);
+      if (!short) return { ok: false, reason: "key_not_found" };
+      if (!short.ok) return { ok: false, reason: short.reason };
+      scopes = short.scopes;
+    } else {
+      if (key.agentId !== agentId) return { ok: false, reason: "key_not_found" };
+      if (key.revokedAt) return { ok: false, reason: "key_revoked" };
+      if (key.expiresAt && key.expiresAt < new Date()) return { ok: false, reason: "key_expired" };
+      // Proposal made by an OAuth connection: it runs with what that
+      // connection allows TODAY (narrowed by the grant), not with the whole agent.
+      if (key.algorithm === "oauth") {
+        const grant = await keyGrant(key.id);
+        if (!grant || grant.revoked) return { ok: false, reason: "oauth_grant_revoked" };
+        scopes = effectiveScopes(scopes, grant.scopes);
+      }
     }
   }
   return {
@@ -896,10 +1125,10 @@ export function requireAgentAuth(options?: {
       );
     }
 
-    // Format: "Bearer kitsuden_agent_xxxxx"
-    const [scheme, apiKey] = authHeader.split(" ");
+    // Format: "Bearer kitsuden_agent_xxxxx" (or "DPoP <token>" with a DPoP proof)
+    const credential = parseAuthorization(authHeader);
 
-    if (scheme !== "Bearer" || !apiKey) {
+    if (!credential) {
       return c.json(
         {
           error: "Invalid authorization format. Use: Bearer <api-key>",
@@ -910,9 +1139,12 @@ export function requireAgentAuth(options?: {
     }
 
     // 2. Authenticate
-    const result = await authenticateAgent(apiKey);
+    const result = await authenticateAgent(credential.token, {
+      dpop: dpopRequestOf(c.req, credential.scheme),
+    });
 
     if (!result.success || !result.context) {
+      if (result.code === DPOP_FAILURE_CODE) c.header("WWW-Authenticate", DPOP_CHALLENGE);
       return c.json(
         {
           error: result.error,
@@ -961,10 +1193,12 @@ export function optionalAgentAuth(): MiddlewareHandler {
     const authHeader = c.req.header("Authorization");
 
     if (authHeader) {
-      const [scheme, apiKey] = authHeader.split(" ");
+      const credential = parseAuthorization(authHeader);
 
-      if (scheme === "Bearer" && apiKey) {
-        const result = await authenticateAgent(apiKey);
+      if (credential) {
+        const result = await authenticateAgent(credential.token, {
+          dpop: dpopRequestOf(c.req, credential.scheme),
+        });
 
         if (result.success && result.context) {
           c.set("agent", result.context);

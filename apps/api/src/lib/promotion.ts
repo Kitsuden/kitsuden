@@ -82,6 +82,8 @@ import {
   proposalById,
   operationSensitivity,
 } from "./approvals";
+import { hasCredentials, placeholderCredentials, type VaultCredential } from "./credential-vault";
+import { actionEgressProblem } from "./egress-policy";
 import { logger } from "./logger";
 import {
   enabledCodeActions,
@@ -316,7 +318,8 @@ function deepEqual(a: unknown, b: unknown): boolean {
 async function runCase(
   code: string,
   caps: CodeCapabilities,
-  scenario: TestCase
+  scenario: TestCase,
+  credentials: VaultCredential[] = []
 ): Promise<CaseResult> {
   const withoutSimulating: string[] = [];
   const simulated = scenario.api ?? {};
@@ -351,6 +354,9 @@ async function runCase(
     timeoutMs: Math.min(scenario.timeoutMs ?? caps.timeoutMs, MAX_TIME_PER_TEST_MS),
     memoryLimitMb: caps.memoryLimitMb,
     fetchAllow: caps.fetchAllow,
+    egress: caps.egress ?? [],
+    // The target's vault bindings, as placeholders: the test sees `[vault:KEY]`.
+    credentials,
     maxCalls: caps.maxCalls,
     api,
     probe: { fetch: mockFetch },
@@ -424,7 +430,8 @@ export async function runTests(
   code: string,
   caps: CodeCapabilities,
   cases: TestCase[],
-  ofTheAction = 0
+  ofTheAction = 0,
+  credentials: VaultCredential[] = []
 ): Promise<TestReport> {
   const start = Date.now();
   const results: CaseResult[] = new Array(cases.length);
@@ -447,8 +454,23 @@ export async function runTests(
         };
         continue;
       }
+      if (caps.runtime) {
+        // An external runtime has no mocked `fetch`/`api`: its tests are not run
+        // here, so the draft always waits for a human (tests_errored + runtime_changed).
+        results[i] = {
+          name: scenario.name,
+          status: "errored",
+          durationMs: 0,
+          exitReason: "skipped",
+          error: `Not run: tests do not run on the ${caps.runtime} runtime; a person reviews this draft`,
+          mismatches: [],
+          unmockedCalls: [],
+          logs: "",
+        };
+        continue;
+      }
       try {
-        results[i] = await runCase(code, caps, scenario);
+        results[i] = await runCase(code, caps, scenario, credentials);
       } catch (err) {
         results[i] = {
           name: scenario.name,
@@ -495,7 +517,11 @@ export async function parseDraft(p: {
   activeCode: string | null;
   authorScopes: string[] | null;
 }): Promise<Analysis> {
-  const scan = scanCode(p.code, { fetchAllow: p.caps.fetchAllow });
+  // Hosts named by an egress allow rule are declared hosts too (no `undeclared_host`).
+  const egressHosts = (p.caps.egress ?? [])
+    .filter((r) => r.action === "allow" && r.target && !r.target.includes("/") && r.target !== "*")
+    .map((r) => r.target!);
+  const scan = scanCode(p.code, { fetchAllow: [...p.caps.fetchAllow, ...egressHosts] });
   const findings: ScanFinding[] = [...scan.findings];
 
   // An agent does not declare for its code what it does not itself have.
@@ -595,6 +621,10 @@ export interface DraftInput {
   code: string;
   scopes?: string[];
   fetchAllow?: string[];
+  /** Egress rules for `fetch` (lib/egress-policy.ts); `defaultAction` is the operator's. */
+  egress?: { rules: unknown[] };
+  /** `quickjs` (default) or an OpenSandbox runtime (lib/sandbox/opensandbox.ts). */
+  runtime?: string;
   timeoutMs?: number;
   memoryLimitMb?: number;
   maxCalls?: number;
@@ -695,9 +725,13 @@ export async function proposeDraft(
   const name = action?.name ?? input.target.name!.trim().slice(0, 200);
 
   // 2. What is declared and the tests; the content fingerprint.
+  const egressProblem = actionEgressProblem(input.egress);
+  if (egressProblem) throw new PromotionError(422, `egress: ${egressProblem}`, "invalid_egress");
   const caps = capabilitiesOf({
     scopes: input.scopes,
     fetchAllow: input.fetchAllow,
+    egress: input.egress,
+    runtime: input.runtime,
     timeoutMs: input.timeoutMs,
     memoryLimitMb: input.memoryLimitMb,
     maxCalls: input.maxCalls,
@@ -732,7 +766,13 @@ export async function proposeDraft(
 
   // 5. Tests, scan, decision.
   const { cases: cases, ofTheAction } = testsToRun(tests, actionConfig.tests);
-  const testReport = await runTests(input.code, caps, cases, ofTheAction);
+  const testReport = await runTests(
+    input.code,
+    caps,
+    cases,
+    ofTheAction,
+    placeholderCredentials(actionConfig.credentials)
+  );
   const analysis = await parseDraft({
     code: input.code,
     caps,
@@ -755,6 +795,7 @@ export async function proposeDraft(
     sensitiveOperation: analysis.sensitive.length > 0,
     unclassifiedCall: analysis.unclassifiedCall,
     targetWithVariables: hasEnvVars(action?.config),
+    targetWithCredentials: hasCredentials(action?.config),
   });
   const savedDecision = {
     ...decision,
@@ -970,6 +1011,9 @@ function configWithVersion(base: Record<string, unknown>, v: Version): Record<st
     code: v.code,
     scopes: caps.scopes,
     fetchAllow: caps.fetchAllow,
+    // The version's rules replace the action's; a version without rules clears them.
+    egress: caps.egress?.length ? { rules: caps.egress } : undefined,
+    runtime: caps.runtime,
     timeoutMs: caps.timeoutMs,
     memoryLimitMb: caps.memoryLimitMb,
     maxCalls: caps.maxCalls,
