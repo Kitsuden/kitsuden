@@ -38,9 +38,20 @@ class CatalogResponseHandlersItem(TypedDict):
     config: Dict[str, str]
 
 
+class _CatalogResponseQueuesItemRequired(TypedDict):
+    queue: str
+    label: str
+    description: str
+
+
+class CatalogResponseQueuesItem(_CatalogResponseQueuesItemRequired, total=False):
+    payload: Dict[str, str]
+
+
 class CatalogResponse(TypedDict):
     events: List[CatalogResponseEventsItem]
     handlers: List[CatalogResponseHandlersItem]
+    queues: List[CatalogResponseQueuesItem]
 
 
 class DryRunActionBody(TypedDict, total=False):
@@ -144,7 +155,7 @@ class AutomationApi(KonApi):
     def catalog(self, *, request_options: Optional[RequestOptions] = None) -> Outcome[CatalogResult]:
         """Events and steps available to rules
 
-        The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, and the ones kons contribute), each with its config fields.
+        The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, `core:enqueue`, and the ones kons contribute), each with its config fields. `queues` are the job queues a kon opened to the `core:enqueue` step, each with the payload its handler expects.
 
         REST: `GET /api/automation/catalog` · scope `kon:automation:catalog`
         idempotent (safe to retry)
@@ -175,7 +186,7 @@ class AsyncAutomationApi(AsyncKonApi):
     async def catalog(self, *, request_options: Optional[RequestOptions] = None) -> Outcome[CatalogResult]:
         """Events and steps available to rules
 
-        The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, and the ones kons contribute), each with its config fields.
+        The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, `core:enqueue`, and the ones kons contribute), each with its config fields. `queues` are the job queues a kon opened to the `core:enqueue` step, each with the payload its handler expects.
 
         REST: `GET /api/automation/catalog` · scope `kon:automation:catalog`
         idempotent (safe to retry)

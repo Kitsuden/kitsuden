@@ -736,6 +736,11 @@ const CORE_MATRIX: Record<string, Level> = {
   "POST /api/admin/mcp-servers/:id/refresh": "admin",
   "GET /api/admin/mcp-servers/:id/tools": "admin",
   "POST /api/admin/mcp-servers/:id/tools/approve": "admin",
+  "POST /api/admin/mcp-servers/:id/oauth/start": "admin",
+  "DELETE /api/admin/mcp-servers/:id/oauth": "admin",
+  // The OAuth redirect: the browser returns from the authorization server; the
+  // single-use state authorizes it (lib/external-mcp-oauth.ts).
+  "GET /api/mcp-oauth/callback": "public",
   "GET /api/admin/rate-limits": "admin",
   "GET /api/admin/requests": "admin",
   "GET /api/admin/requests/summary": "admin",
@@ -762,6 +767,19 @@ const CORE_MATRIX: Record<string, Level> = {
   "GET /api/automation/catalog": "admin",
   "POST /api/automation/actions/:id/dry-run": "admin",
   "GET /api/admin/secret-access": "admin",
+  // Analytics (0083): public counters with no personal data; `hit` has its own per-IP limit.
+  "POST /api/analytics/hit": "public",
+  "GET /api/analytics/top": "public",
+  "GET /api/analytics/subject/:type/:id": "public",
+  // Connections (0082): each person their own, admins the organization's (row security decides).
+  "GET /api/connections/providers": "user",
+  "GET /api/connections/connections": "user",
+  "GET /api/connections/connections/:id": "user",
+  "POST /api/connections/oauth/start": "user",
+  "GET /api/connections/oauth/callback": "public",
+  "POST /api/connections/api-keys": "user",
+  "POST /api/connections/connections/:id/refresh": "user",
+  "POST /api/connections/connections/:id/revoke": "user",
   "POST /api/reports/aggregate": "admin",
   "GET /api/reports": "admin",
   "POST /api/reports/run": "admin",

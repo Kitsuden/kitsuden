@@ -196,6 +196,7 @@ async function initDb(): Promise<NodePgDatabase<any>> {
     // those 100 errors at once.
     const { pg_trgm } = await import("@electric-sql/pglite/contrib/pg_trgm");
     const client = await PGlite.create({ dataDir, extensions: { pg_trgm } });
+    watchLiteConnection(client as unknown as LiteClient);
 
     const { buildMergedSchema } = await import("../lib/schema-merger");
     _mergedSchema = await buildMergedSchema();
@@ -253,3 +254,41 @@ export type DatabaseTransaction = NodePgTransaction<
   Record<string, unknown>,
   ExtractTablesWithRelations<Record<string, unknown>>
 >;
+
+// ── Lite mode: a query stuck behind the single connection says where it came from ──
+
+type LiteClient = Record<
+  "query" | "exec" | "transaction",
+  (...args: unknown[]) => Promise<unknown>
+>;
+
+/** How long a statement may wait for PGlite's one connection before it is reported. */
+export const LITE_STUCK_MS = 10_000;
+
+/**
+ * PGlite has ONE connection and a transaction holds it. Code that, inside a transaction (a request's RLS
+ * transaction, a queue job), queries through the global `db` waits for itself for ever: the whole API stops
+ * answering and nothing is logged. On Postgres it is just another pool connection, so it never shows up there.
+ *
+ * Every statement and transaction on the global client is timed; one still waiting after LITE_STUCK_MS is
+ * logged once with the stack that started it, which names the culprit. It changes nothing else.
+ */
+export function watchLiteConnection(client: LiteClient): void {
+  for (const method of ["query", "exec", "transaction"] as const) {
+    const original = client[method].bind(client);
+    client[method] = (...args: unknown[]) => {
+      const origin = new Error(
+        `lite-mode ${method} waited ${LITE_STUCK_MS / 1000}s for the single connection`
+      );
+      const timer = setTimeout(() => {
+        const what =
+          typeof args[0] === "string" ? args[0].replace(/\s+/g, " ").slice(0, 160) : method;
+        console.error(
+          `⚠️  [lite] a ${method} has waited ${LITE_STUCK_MS / 1000}s for PGlite's only connection: something inside a transaction is probably using the global db (${what}).\n${origin.stack}`
+        );
+      }, LITE_STUCK_MS);
+      (timer as { unref?: () => void }).unref?.();
+      return original(...args).finally(() => clearTimeout(timer));
+    };
+  }
+}

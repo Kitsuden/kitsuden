@@ -16,6 +16,8 @@
 import { withRouteMeta } from "@kitsuden/engine/src/route-meta";
 import { createMiddleware } from "hono/factory";
 
+import { useRequest } from "../../../../packages/engine/src/request-scope";
+import { isLiteMode } from "../db";
 import { auth } from "../lib/auth";
 
 import { agentCanActAsUser, AGENT_WITHOUT_ACCOUNT_MESSAGE } from "./agent-as-user";
@@ -31,6 +33,10 @@ import { agentCanActAsUser, AGENT_WITHOUT_ACCOUNT_MESSAGE } from "./agent-as-use
 async function currentSession(headers: Headers) {
   const session = await auth.api.getSession({ headers });
   const role = (session?.user as { role?: string } | undefined)?.role;
+  // Lite mode (PGlite, one connection): inside a request's transaction, a fresh read through better-auth's
+  // own connection waits on that transaction forever. Lite mode is one machine's development install; the
+  // cached session (5 minutes) is the trade-off there, never on Postgres.
+  if (isLiteMode && useRequest()?.tx) return session;
   if (role === "admin" || role === "editor") {
     return auth.api.getSession({ headers, query: { disableCookieCache: true } });
   }

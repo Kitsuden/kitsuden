@@ -1534,3 +1534,104 @@ export const kitsudenSecrets = pgTable(
   },
   (table) => [uniqueIndex("kitsuden_secrets_key_unique").on(table.key)]
 );
+
+// ── Analytics (0083, routes/analytics.ts): views per subject and day ──
+
+/**
+ * What can be counted. Every type lives in a table with a uuid `id`; the kons that own
+ * `games`, `blog_posts`, `wiki_pages`… may not be installed, and then the type just has no rows.
+ */
+export const MEASURABLE_SUBJECTS = [
+  "game",
+  "blog_post",
+  "wiki_page",
+  "wiki",
+  "dataset",
+  "tournament",
+  "streamer",
+] as const;
+
+export type MeasurableSubject = (typeof MEASURABLE_SUBJECTS)[number];
+
+/**
+ * ONE row per (subject, day) with a counter. No IP, no cookie, no user agent: nobody's path can be
+ * rebuilt from this and no consent banner is needed. It counts VIEWS, never unique visitors.
+ */
+export const analyticsViews = pgTable(
+  "analytics_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    subjectType: varchar("subject_type", { length: 40 }).notNull(),
+    /** Id of the viewed row. No foreign key: each subject lives in its own table. */
+    subjectId: uuid("subject_id").notNull(),
+    day: date("day").notNull(),
+    views: integer("views").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    /** The natural key: it is what makes the counter's UPSERT atomic. */
+    uniqueIndex("analytics_views_subject_day_idx").on(t.subjectType, t.subjectId, t.day),
+    index("analytics_views_type_day_idx").on(t.subjectType, t.day),
+  ]
+);
+// ── Connections (0082, lib/connections): accounts at other services, used by kons ──
+
+/** A sealed credential (`KonSecrets.seal`): never readable in the row. */
+interface SealedCredential {
+  v: 1;
+  kon: string;
+  valueEncrypted: string;
+  iv: string;
+  authTag: string;
+}
+
+/**
+ * One connected account (a Google mailbox, a Microsoft 365 tenant, an API key). `credentials` is sealed;
+ * row security in 0082: a person reads their own `user` connections, an admin the `organization` ones
+ * and nobody else's, the system all.
+ */
+export const connConnections = pgTable(
+  "conn_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provider: text("provider").notNull(),
+    scope: text("scope").$type<"user" | "organization">().notNull(),
+    ownerId: text("owner_id"),
+    authType: text("auth_type").$type<"oauth" | "api_key">().notNull(),
+    label: text("label").notNull().default(""),
+    accountId: text("account_id"),
+    accountEmail: text("account_email"),
+    grantedScopes: jsonb("granted_scopes").$type<string[]>().notNull().default([]),
+    status: text("status")
+      .$type<"active" | "expired" | "revoked" | "error">()
+      .notNull()
+      .default("active"),
+    credentials: jsonb("credentials").$type<SealedCredential | null>(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    lastRefreshedAt: timestamp("last_refreshed_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    expiryNotifiedAt: timestamp("expiry_notified_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("conn_connections_owner_idx").on(t.ownerId, t.provider)]
+);
+
+/** One OAuth round trip in flight (ten minutes): the state hashed, the PKCE verifier sealed. */
+export const connOauthStates = pgTable("conn_oauth_states", {
+  stateHash: text("state_hash").primaryKey(),
+  provider: text("provider").notNull(),
+  scope: text("scope").$type<"user" | "organization">().notNull(),
+  ownerId: text("owner_id"),
+  userId: text("user_id").notNull(),
+  requestedScopes: jsonb("requested_scopes").$type<string[]>().notNull().default([]),
+  verifier: jsonb("verifier").$type<SealedCredential>().notNull(),
+  returnTo: text("return_to"),
+  label: text("label").notNull().default(""),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});

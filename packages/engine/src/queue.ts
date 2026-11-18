@@ -29,6 +29,17 @@
  *     exponential backoff up to `attempts` (3 by default). Once exhausted, or
  *     with a `PermanentError`, the job is left `dead` with its error, visible
  *     in the panel (`/api/admin/queue`) to retry or discard.
+ *   · NOT TWICE, IF ASKED. With `dedupeKey`, a dispatch while a job with the
+ *     same key is pending or running on that queue queues nothing and answers
+ *     the id of that job (`deduplicated: true`).
+ *
+ * ── LANES ──────────────────────────────────────────────────────────────────
+ *
+ * A lane is a queue: each has its own handler and its own `concurrency`, and
+ * a slow one does not hold the others back. A kon that needs "work that calls
+ * a model" apart from "work that does not" registers two queues. A queue may
+ * also accept jobs from automation rules (`rules` in `handle`): the step
+ * `core:enqueue` only reaches queues that said so.
  *
  * Registrations (`handle`) are kept here even if the host has not started its
  * worker yet: a kon can register when it loads.
@@ -79,11 +90,39 @@ export interface DispatchOptions {
    * `QUEUE_BUDGET_EXHAUSTED`, `postpone`.
    */
   onBudgetExhausted?: "postpone" | "fail";
+  /**
+   * Do not queue this twice: while a job with this key is pending or running on
+   * the same queue, the dispatch queues nothing and answers that job's id with
+   * `deduplicated: true`. Free again once that job is done or dead. Up to 200
+   * characters; the kon chooses it (`identify:contact:42`).
+   */
+  dedupeKey?: string;
+}
+
+/** What a dispatch answers. */
+export interface DispatchResult {
+  id: string;
+  /** `true` when a job with the same `dedupeKey` was already waiting: `id` is that one. */
+  deduplicated?: boolean;
+}
+
+/** How a queue presents itself to whoever writes an automation rule. */
+export interface QueueRuleEntry {
+  label: string;
+  description: string;
+  /** The fields the handler expects in the payload, each with what it is. */
+  payload?: Record<string, string>;
 }
 
 export interface HandlerOptions {
   /** Jobs from this queue at a time in this process. Defaults to 3. */
   concurrency?: number;
+  /**
+   * Accept jobs from automation rules (the step `core:enqueue`). Without it a
+   * rule cannot reach this queue: a queue's payload is its handler's private
+   * contract unless the handler opens it.
+   */
+  rules?: QueueRuleEntry;
 }
 
 /** What the host puts behind `queue.dispatch()`. */
@@ -93,7 +132,7 @@ export interface QueueEngine {
     name: string,
     payload: unknown,
     options: DispatchOptions
-  ): Promise<{ id: string }>;
+  ): Promise<DispatchResult>;
   /** Called when a handler is registered (so the worker picks it up). */
   onRegister?(queue: string): void;
 }
@@ -112,7 +151,12 @@ export class PermanentError extends Error {
 const VALID_NAME = /^[A-Za-z0-9_.:\-]{1,120}$/;
 
 let engine: QueueEngine | null = null;
-const handlers = new Map<string, { fn: QueueHandler; concurrency: number }>();
+interface RegisteredQueue {
+  fn: QueueHandler;
+  concurrency: number;
+  rules?: QueueRuleEntry;
+}
+const handlers = new Map<string, RegisteredQueue>();
 
 /** The host plugs in its implementation (once, at startup). */
 export function configureQueue(next: QueueEngine | null): void {
@@ -121,8 +165,15 @@ export function configureQueue(next: QueueEngine | null): void {
 }
 
 /** The registered handlers (for the host's worker). */
-export function queueHandlers(): ReadonlyMap<string, { fn: QueueHandler; concurrency: number }> {
+export function queueHandlers(): ReadonlyMap<string, RegisteredQueue> {
   return handlers;
+}
+
+/** The queues that accept jobs from automation rules, with how they present themselves. */
+export function ruleQueues(): Array<{ queue: string } & QueueRuleEntry> {
+  return [...handlers.entries()]
+    .filter(([, h]) => h.rules)
+    .map(([name, h]) => ({ queue: name, ...h.rules! }));
 }
 
 function validateName(type: string, value: string): void {
@@ -143,7 +194,7 @@ export const queue = {
     name: string,
     payload: T,
     options: DispatchOptions = {}
-  ): Promise<{ id: string }> {
+  ): Promise<DispatchResult> {
     validateName("Name", queue);
     validateName("Job", name);
     if (!engine) {
@@ -155,6 +206,12 @@ export const queue = {
     if (!Number.isInteger(attempts) || attempts < 1 || attempts > 25) {
       throw new RangeError("`attempts` must be an integer between 1 and 25");
     }
+    if (options.dedupeKey !== undefined) {
+      const key = options.dedupeKey;
+      if (typeof key !== "string" || key.length < 1 || key.length > 200) {
+        throw new RangeError("`dedupeKey` must be a string of 1 to 200 characters");
+      }
+    }
     return engine.dispatch(queue, name, payload, { ...options, attempts });
   },
 
@@ -162,7 +219,7 @@ export const queue = {
   handle<T>(queue: string, fn: QueueHandler<T>, options: HandlerOptions = {}): void {
     validateName("Name", queue);
     const concurrency = Math.max(1, Math.min(50, Math.floor(options.concurrency ?? 3)));
-    handlers.set(queue, { fn: fn as QueueHandler, concurrency });
+    handlers.set(queue, { fn: fn as QueueHandler, concurrency, rules: options.rules });
     engine?.onRegister?.(queue);
   },
 

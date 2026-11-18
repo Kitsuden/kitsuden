@@ -24,6 +24,62 @@ queue.handle(
 `defineAction({ trigger: "event:reports", run })` registers the same kind of
 handler, and `ctx.queue.add("reports", "monthly", payload)` dispatches to it.
 
+### Not twice: `dedupeKey`
+
+```ts
+const { id, deduplicated } = await queue.dispatch(
+  "kon-agents:research",
+  "identify",
+  { contactId },
+  { dedupeKey: `identify:${contactId}` }
+);
+```
+
+While a job with that key is `pending` or `running` on that queue, another
+dispatch queues nothing and answers the id of the job already there, with
+`deduplicated: true`. The key is free again when that job is `done` or
+`dead`, and it is per queue. Two events about the same record (created, then
+edited a second later) become one job. Up to 200 characters.
+
+Retrying a dead job from the panel puts its key back in use; if another job
+took the key since, the retry is refused, because that work is already queued.
+
+### Lanes
+
+A lane is a queue. Each queue has its own handler and its own `concurrency`,
+and they are claimed independently, so slow work does not hold quick work back:
+
+```ts
+// Calls a model: slow, costs money. One at a time.
+queue.handle("kon-agents:research", research, { concurrency: 1 });
+// Only reads and writes rows. Five at a time.
+queue.handle("kon-agents:tidy", tidy, { concurrency: 5 });
+```
+
+What the core does not decide is what goes in each lane, or how much a lane may
+spend in a day: that is the kon's rule. The pieces it can build on are the
+per-job `cost` charged to the agent that queued it (below), `delayMs` to park
+work, and `dedupeKey`.
+
+### Jobs from automation rules
+
+A queue's payload is its handler's private contract, so a rule cannot reach a
+queue unless the handler opens it:
+
+```ts
+queue.handle("kon-agents:research", research, {
+  concurrency: 1,
+  rules: {
+    label: "Identify a contact",
+    description: "Looks the contact up and fills its name and company.",
+    payload: { contactId: "id of the contact" },
+  },
+});
+```
+
+The queue then appears under `queues` in `GET /api/automation/catalog`, and a
+rule can use the step [`core:enqueue`](../automation.md#queue-a-job) with it.
+
 ### Effects that must happen once
 
 A retry runs the whole handler again. When it sends something out (an email, a
@@ -68,6 +124,7 @@ instead, on the same table, with keys scoped to the action (`action:<id>`); see
 | **At least once.**                                                                                                          | A worker that dies mid-job leaves an expired lease; the sweep puts the job back. **Handlers must be idempotent**: wrap external effects in `ctx.effect` (above).                                                                                                                                                                                               |
 | **The actor is re-read.** A job queued yesterday does not run with permissions revoked today.                               | The job stores who queued it. Before running: a person → their current role (deleted = not run); an agent → still active, key not revoked, current scopes (as approvals do). The handler runs inside an RLS transaction **as that actor**.                                                                                                                     |
 | **The agent pays.**                                                                                                         | A job queued by an agent is charged its `cost` (dispatch option, else `QUEUE_AGENT_JOB_COST`, 1) to the agent's daily budget when it runs. Spent budget: postponed to the next UTC day, or dead with `onBudgetExhausted: "fail"`. `kitsuden-*` queues are never charged ([agent data ledger](../agents/ledger.md#the-agents-budget-pays-for-its-queued-work)). |
+| **Not twice, if asked.**                                                                                                    | `dedupeKey`: one job per key and queue while it is pending or running (a partial unique index; migration `0084`).                                                                                                                                                                                                                                              |
 | **A reason per job.**                                                                                                       | `queue.dispatch(queue, name, payload, { reason })` stores why it was queued; the dead letter shows it.                                                                                                                                                                                                                                                         |
 | **Retries and a dead letter.**                                                                                              | A handler that throws is retried with exponential backoff (2 s, 4 s, 8 s … up to 10 min) until `attempts` (default 3, set per `dispatch`). Then, or on `PermanentError`, the job is `dead`.                                                                                                                                                                    |
 

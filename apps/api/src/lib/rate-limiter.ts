@@ -254,6 +254,10 @@ export const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     failClosed: true,
   },
 
+  // A public route that WRITES (one view per call): a reader does not pass a few per minute, and
+  // the general 300/min, meant for reading, would let a loop inflate the counters.
+  "/api/analytics/hit": { limit: 30, window: 60, message: "Too many views in a row." },
+
   // MCP - moderate because of heavy AI use
   "/api/mcp": { limit: 200, window: 60, message: "MCP rate limit exceeded." },
 

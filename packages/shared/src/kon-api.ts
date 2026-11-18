@@ -44,6 +44,7 @@ import { Hono } from "hono";
 import type { ZodTypeAny } from "zod";
 
 import type { AutomationHandlerDefinition, KonAutomation } from "./automation";
+import type { KonConnections } from "./connections";
 import type { KonEntities, KonEntityDefinition, KonSecretColumn, KonSecrets } from "./kon-entities";
 import type { KonEventsDeclaration } from "./kon-events";
 import type { KonOperation } from "./operations";
@@ -81,8 +82,21 @@ export interface KonEvents {
 export interface KonRealtime {
   /** Broadcast a message to all connected clients */
   broadcast(channel: string, message: unknown): void;
-  /** Send to a specific user */
+  /** Send to a specific user, on every replica */
   sendToUser(userId: string, message: unknown): void;
+  /**
+   * Declares who may subscribe to this kon's channels, `kon:<id without "kon-">:<rest>`
+   * (`kon-koe` → `kon:koe:inbox:team-1`). `authorize` receives `<rest>` and the socket's
+   * user (`id: null` when anonymous); it runs on subscribe and again every minute, and a
+   * `false` or a throw denies. Without it every channel of the kon is denied, admins
+   * included. Optional: a host without realtime, or a test, leaves it undefined.
+   */
+  channels?(
+    authorize: (
+      rest: string,
+      user: { id: string | null; role: string | null }
+    ) => boolean | Promise<boolean>
+  ): void;
 }
 
 /**
@@ -428,6 +442,13 @@ export interface KonContext<TDb = any> {
    * credential instead of storing it readable.
    */
   secrets?: KonSecrets;
+
+  /**
+   * Accounts at other services, connected once in the core (docs/connections.md): a client that carries
+   * the credential to the provider without the kon ever seeing it. Optional: absent on a host without a
+   * secrets key or without the connections battery.
+   */
+  connections?: KonConnections;
 
   /**
    * Automation rules the kon keeps for its own configuration, run by the

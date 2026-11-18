@@ -8,12 +8,15 @@ from typing import TYPE_CHECKING, Literal, Tuple
 if TYPE_CHECKING:  # the kon modules are imported lazily, on first use of the attribute
     from .kons.agent_notifications import AsyncAgentNotificationsApi, AgentNotificationsApi
     from .kons.agents import AsyncAgentsApi, AgentsApi
+    from .kons.analytics import AsyncAnalyticsApi, AnalyticsApi
     from .kons.approvals import AsyncApprovalsApi, ApprovalsApi
     from .kons.automation import AsyncAutomationApi, AutomationApi
     from .kons.blocks import AsyncBlocksApi, BlocksApi
     from .kons.brain import AsyncBrainApi, BrainApi
+    from .kons.connections import AsyncConnectionsApi, ConnectionsApi
     from .kons.datasets import AsyncDatasetsApi, DatasetsApi
     from .kons.external_mcp import AsyncExternalMcpApi, ExternalMcpApi
+    from .kons.external_mcp_oauth import AsyncExternalMcpOauthApi, ExternalMcpOauthApi
     from .kons.media import AsyncMediaApi, MediaApi
     from .kons.models import AsyncModelsApi, ModelsApi
     from .kons.oauth import AsyncOauthApi, OauthApi
@@ -90,12 +93,15 @@ ERROR_CODES: Tuple[str, ...] = (
 KONS: Tuple[Tuple[str, str, str, str], ...] = (
     ("agent_notifications", "kon-agent-notifications", "kitsuden._generated.kons.agent_notifications", "AgentNotificationsApi"),
     ("agents", "kon-agents", "kitsuden._generated.kons.agents", "AgentsApi"),
+    ("analytics", "kon-analytics", "kitsuden._generated.kons.analytics", "AnalyticsApi"),
     ("approvals", "kon-approvals", "kitsuden._generated.kons.approvals", "ApprovalsApi"),
     ("automation", "kon-automation", "kitsuden._generated.kons.automation", "AutomationApi"),
     ("blocks", "kon-blocks", "kitsuden._generated.kons.blocks", "BlocksApi"),
     ("brain", "kon-brain", "kitsuden._generated.kons.brain", "BrainApi"),
+    ("connections", "kon-connections", "kitsuden._generated.kons.connections", "ConnectionsApi"),
     ("datasets", "kon-datasets", "kitsuden._generated.kons.datasets", "DatasetsApi"),
     ("external_mcp", "kon-external-mcp", "kitsuden._generated.kons.external_mcp", "ExternalMcpApi"),
+    ("external_mcp_oauth", "kon-external-mcp-oauth", "kitsuden._generated.kons.external_mcp_oauth", "ExternalMcpOauthApi"),
     ("media", "kon-media", "kitsuden._generated.kons.media", "MediaApi"),
     ("models", "kon-models", "kitsuden._generated.kons.models", "ModelsApi"),
     ("oauth", "kon-oauth", "kitsuden._generated.kons.oauth", "OauthApi"),
@@ -116,12 +122,15 @@ class GeneratedKons:
 
     agent_notifications: AgentNotificationsApi
     agents: AgentsApi
+    analytics: AnalyticsApi
     approvals: ApprovalsApi
     automation: AutomationApi
     blocks: BlocksApi
     brain: BrainApi
+    connections: ConnectionsApi
     datasets: DatasetsApi
     external_mcp: ExternalMcpApi
+    external_mcp_oauth: ExternalMcpOauthApi
     media: MediaApi
     models: ModelsApi
     oauth: OauthApi
@@ -140,12 +149,15 @@ class AsyncGeneratedKons:
 
     agent_notifications: AsyncAgentNotificationsApi
     agents: AsyncAgentsApi
+    analytics: AsyncAnalyticsApi
     approvals: AsyncApprovalsApi
     automation: AsyncAutomationApi
     blocks: AsyncBlocksApi
     brain: AsyncBrainApi
+    connections: AsyncConnectionsApi
     datasets: AsyncDatasetsApi
     external_mcp: AsyncExternalMcpApi
+    external_mcp_oauth: AsyncExternalMcpOauthApi
     media: AsyncMediaApi
     models: AsyncModelsApi
     oauth: AsyncOauthApi

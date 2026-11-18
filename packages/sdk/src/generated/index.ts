@@ -4,12 +4,15 @@ import type { OperationInfo } from "../api/types";
 
 import { operations as agentNotificationsOps, type AgentNotificationsApi } from "./kons/agent-notifications";
 import { operations as agentsOps, type AgentsApi } from "./kons/agents";
+import { operations as analyticsOps, type AnalyticsApi } from "./kons/analytics";
 import { operations as approvalsOps, type ApprovalsApi } from "./kons/approvals";
 import { operations as automationOps, type AutomationApi } from "./kons/automation";
 import { operations as blocksOps, type BlocksApi } from "./kons/blocks";
 import { operations as brainOps, type BrainApi } from "./kons/brain";
+import { operations as connectionsOps, type ConnectionsApi } from "./kons/connections";
 import { operations as datasetsOps, type DatasetsApi } from "./kons/datasets";
 import { operations as externalMcpOps, type ExternalMcpApi } from "./kons/external-mcp";
+import { operations as externalMcpOauthOps, type ExternalMcpOauthApi } from "./kons/external-mcp-oauth";
 import { operations as mediaOps, type MediaApi } from "./kons/media";
 import { operations as modelsOps, type ModelsApi } from "./kons/models";
 import { operations as oauthOps, type OauthApi } from "./kons/oauth";
@@ -24,12 +27,15 @@ import { operations as tracesOps, type TracesApi } from "./kons/traces";
 
 export * as AgentNotifications from "./kons/agent-notifications";
 export * as Agents from "./kons/agents";
+export * as Analytics from "./kons/analytics";
 export * as Approvals from "./kons/approvals";
 export * as Automation from "./kons/automation";
 export * as Blocks from "./kons/blocks";
 export * as Brain from "./kons/brain";
+export * as Connections from "./kons/connections";
 export * as Datasets from "./kons/datasets";
 export * as ExternalMcp from "./kons/external-mcp";
+export * as ExternalMcpOauth from "./kons/external-mcp-oauth";
 export * as Media from "./kons/media";
 export * as Models from "./kons/models";
 export * as Oauth from "./kons/oauth";
@@ -56,6 +62,8 @@ export interface KitsudenKons {
   readonly agentNotifications: AgentNotificationsApi;
   /** kon-agents: Agent permissions, keys and quotas (admin only). */
   readonly agents: AgentsApi;
+  /** kon-analytics: Views per subject and day, without cookies or personal data. */
+  readonly analytics: AnalyticsApi;
   /** kon-approvals: Human approval of agent proposals (team members only; never an agent). */
   readonly approvals: ApprovalsApi;
   /** kon-automation: The catalog of events and steps for automation rules, and the dry run of an action. */
@@ -64,10 +72,14 @@ export interface KitsudenKons {
   readonly blocks: BlocksApi;
   /** kon-brain: Agent memory: notes with an owner (private by default, optionally shared), connections with provenance, claims with evidence, OKF export and graphify import. */
   readonly brain: BrainApi;
+  /** kon-connections: Accounts at other services (Google, Microsoft, API keys) that kons use without seeing a credential. */
+  readonly connections: ConnectionsApi;
   /** kon-datasets: Dynamic data collections with automatic REST API */
   readonly datasets: DatasetsApi;
   /** kon-external-mcp: External MCP servers and the human review of their tools (human administrators only). */
   readonly externalMcp: ExternalMcpApi;
+  /** kon-external-mcp-oauth: The OAuth redirect of external MCP servers. */
+  readonly externalMcpOauth: ExternalMcpOauthApi;
   /** kon-media: Media file management with S3/MinIO storage */
   readonly media: MediaApi;
   /** kon-models: The models declared with defineModel in the mounted kons (for the admin panel). */
@@ -96,12 +108,15 @@ export interface KitsudenKons {
 export const KONS = {
   agentNotifications: agentNotificationsOps,
   agents: agentsOps,
+  analytics: analyticsOps,
   approvals: approvalsOps,
   automation: automationOps,
   blocks: blocksOps,
   brain: brainOps,
+  connections: connectionsOps,
   datasets: datasetsOps,
   externalMcp: externalMcpOps,
+  externalMcpOauth: externalMcpOauthOps,
   media: mediaOps,
   models: modelsOps,
   oauth: oauthOps,

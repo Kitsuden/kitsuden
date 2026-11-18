@@ -60,6 +60,9 @@ import { TABLES_ONLY_VIA_THEIR_ROUTE } from "./actions-code";
  */
 export const FORBIDDEN_TABLES = new Set([
   "kitsuden_secrets",
+  // Connections (0082): sealed credentials of accounts at other services, and OAuth round trips
+  "conn_connections",
+  "conn_oauth_states",
   "auth_accounts",
   "auth_sessions",
   "auth_verifications",
@@ -72,6 +75,8 @@ export const FORBIDDEN_TABLES = new Set([
   "oauth_grants",
   "oauth_codes",
   "oauth_tokens",
+  // OAuth for external MCP servers (0084): authorizations in progress, with their PKCE verifier
+  "external_mcp_oauth_states",
   "kitsuden_migrations",
   // Secrets for kons (0078): who opened which credential, and where kons keep them.
   // The log is read through its own operation (routes/automation.ts), by administrators.

@@ -95,6 +95,13 @@ const Handler = z.object({
   config: z.record(z.string(), z.string()),
 });
 
+const RuleQueue = z.object({
+  queue: z.string(),
+  label: z.string(),
+  description: z.string(),
+  payload: z.record(z.string(), z.string()).optional(),
+});
+
 const Outcome = z.object({
   condition: z.object({ field: z.string(), op: z.string(), value: z.unknown().optional() }),
   actual: z.unknown().optional(),
@@ -110,12 +117,19 @@ export const automationOperations: AnyOperation[] = [
     tags: ["automation"],
     summary: "Events and steps available to rules",
     description:
-      "The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, and the ones kons contribute), each with its config fields.",
-    output: { schema: z.object({ events: z.array(Event), handlers: z.array(Handler) }) },
+      "The events a rule can listen to (the core's, and the ones loaded kons declare with `events.emits`, each with its payload fields and who listens) and the steps it can use (`core:webhook`, `core:send-mail`, `core:run-agent`, `core:enqueue`, and the ones kons contribute), each with its config fields. `queues` are the job queues a kon opened to the `core:enqueue` step, each with the payload its handler expects.",
+    output: {
+      schema: z.object({
+        events: z.array(Event),
+        handlers: z.array(Handler),
+        queues: z.array(RuleQueue),
+      }),
+    },
     mcp: { exclude: "Writing a rule is a person's task in the panel." },
     handle: async () => ({
       events: eventCatalog(),
       handlers: (await rules()).listRuleHandlers(),
+      queues: (await rules()).listRuleQueues(),
     }),
   }),
   defineOperation({

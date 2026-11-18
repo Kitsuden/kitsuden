@@ -7,7 +7,8 @@
  *   bindKonContext   the context the kon receives. It is the shared context
  *                    with `secrets`, `entities` and `automation` tied to THIS
  *                    kon: they take the kon's own id as their first argument
- *                    and refuse any other.
+ *                    and refuse any other. `realtime.channels` registers the
+ *                    authorizer of the kon's own channel namespace only.
  *   announceKon      registers what the kon declared in `defineKon`: its
  *                    events, automation steps, reports, entities and secret
  *                    columns.
@@ -28,6 +29,7 @@
 
 import type {
   KonAutomation,
+  KonConnections,
   KonContext,
   KonDefinition,
   KonEntities,
@@ -39,6 +41,7 @@ import { messageOf } from "../../../../packages/engine/src/errors";
 import { registerKonContributions } from "./kon-contributions";
 import { syncKonEntities } from "./kon-entities";
 import { registerKonSecretColumns } from "./kon-secrets";
+import { registerKonChannels } from "./realtime-kon-channels";
 
 function own(owner: string, given: unknown, what: string): void {
   if (given !== owner) {
@@ -77,6 +80,24 @@ function bindEntities(owner: string, base: KonEntities): KonEntities {
   };
 }
 
+function bindConnections(owner: string, base: KonConnections): KonConnections {
+  return {
+    client: async (konId, request) => {
+      own(owner, konId, "connections.client");
+      return base.client(konId, request);
+    },
+    registerProvider: (konId, provider) => {
+      own(owner, konId, "connections.registerProvider");
+      base.registerProvider(konId, provider);
+    },
+    visible: async (konId, connectionId) => {
+      own(owner, konId, "connections.visible");
+      return base.visible(konId, connectionId);
+    },
+    covers: (provider, granted, scopeSets) => base.covers(provider, granted, scopeSets),
+  };
+}
+
 function bindAutomation(owner: string, base: KonAutomation): KonAutomation {
   return {
     upsertRule: async (konId, rule) => {
@@ -101,6 +122,16 @@ export function bindKonContext(base: KonContext, konId: string): KonContext {
     ...(base.secrets ? { secrets: bindSecrets(konId, base.secrets) } : {}),
     ...(base.entities ? { entities: bindEntities(konId, base.entities) } : {}),
     ...(base.automation ? { automation: bindAutomation(konId, base.automation) } : {}),
+    // Its own realtime namespace, `kon:<short id>:` (lib/realtime-kon-channels.ts).
+    ...(base.realtime
+      ? {
+          realtime: {
+            ...base.realtime,
+            channels: (authorize) => registerKonChannels(konId, authorize),
+          },
+        }
+      : {}),
+    ...(base.connections ? { connections: bindConnections(konId, base.connections) } : {}),
   };
 }
 

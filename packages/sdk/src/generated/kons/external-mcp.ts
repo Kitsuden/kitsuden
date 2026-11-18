@@ -50,6 +50,17 @@ export type DeleteMcpServerResponse = {
   success: boolean;
 };
 
+/** Arguments of `external-mcp.disconnect-mcp-server-oauth`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
+export type DisconnectMcpServerOauthParams = {
+  /** Path parameter. */
+  id: string | number;
+};
+
+/** Success response of `external-mcp.disconnect-mcp-server-oauth`. */
+export type DisconnectMcpServerOauthResponse = {
+  success: boolean;
+};
+
 /** Arguments of `external-mcp.list-mcp-server-tools`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
 export type ListMcpServerToolsParams = {
   /** Path parameter. */
@@ -74,6 +85,27 @@ export type RefreshMcpServerParams = {
 
 /** Success response of `external-mcp.refresh-mcp-server`. */
 export type RefreshMcpServerResponse = Record<string, unknown>;
+
+/** Body of `external-mcp.start-mcp-server-oauth`. */
+export type StartMcpServerOauthBody = {
+  clientId?: string;
+  clientSecret?: string;
+  scopes?: string;
+};
+
+/** Arguments of `external-mcp.start-mcp-server-oauth`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
+export type StartMcpServerOauthParams = {
+  /** Path parameter. */
+  id: string | number;
+  /** JSON body. */
+  body?: StartMcpServerOauthBody;
+};
+
+/** Success response of `external-mcp.start-mcp-server-oauth`. */
+export type StartMcpServerOauthResponse = {
+  authorizationUrl: string;
+  redirectUri: string;
+};
 
 /** Body of `external-mcp.update-mcp-server`. */
 export type UpdateMcpServerBody = {
@@ -100,9 +132,11 @@ export const operations = {
   "approveMcpServerTool": {"kon":"kon-external-mcp","id":"approve-mcp-server-tool","operationId":"external-mcp.approve-mcp-server-tool","method":"POST","path":"/admin/mcp-servers/{id}/tools/approve","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:approve-mcp-server-tool","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "createMcpServer": {"kon":"kon-external-mcp","id":"create-mcp-server","operationId":"external-mcp.create-mcp-server","method":"POST","path":"/admin/mcp-servers","pathParams":[],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:create-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "deleteMcpServer": {"kon":"kon-external-mcp","id":"delete-mcp-server","operationId":"external-mcp.delete-mcp-server","method":"DELETE","path":"/admin/mcp-servers/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:external-mcp:delete-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "disconnectMcpServerOauth": {"kon":"kon-external-mcp","id":"disconnect-mcp-server-oauth","operationId":"external-mcp.disconnect-mcp-server-oauth","method":"DELETE","path":"/admin/mcp-servers/{id}/oauth","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:external-mcp:disconnect-mcp-server-oauth","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "listMcpServerTools": {"kon":"kon-external-mcp","id":"list-mcp-server-tools","operationId":"external-mcp.list-mcp-server-tools","method":"GET","path":"/admin/mcp-servers/{id}/tools","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:external-mcp:list-mcp-server-tools","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "listMcpServers": {"kon":"kon-external-mcp","id":"list-mcp-servers","operationId":"external-mcp.list-mcp-servers","method":"GET","path":"/admin/mcp-servers","pathParams":[],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:external-mcp:list-mcp-servers","mcpTool":null,"errors":["KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "refreshMcpServer": {"kon":"kon-external-mcp","id":"refresh-mcp-server","operationId":"external-mcp.refresh-mcp-server","method":"POST","path":"/admin/mcp-servers/{id}/refresh","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:refresh-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "startMcpServerOauth": {"kon":"kon-external-mcp","id":"start-mcp-server-oauth","operationId":"external-mcp.start-mcp-server-oauth","method":"POST","path":"/admin/mcp-servers/{id}/oauth/start","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:start-mcp-server-oauth","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "updateMcpServer": {"kon":"kon-external-mcp","id":"update-mcp-server","operationId":"external-mcp.update-mcp-server","method":"PATCH","path":"/admin/mcp-servers/{id}","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:external-mcp:update-mcp-server","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
 } as const satisfies Record<string, OperationInfo>;
 
@@ -125,7 +159,7 @@ export interface ExternalMcpApi {
   /**
    * Register an external MCP server (admin)
    *
-   * Registers a Streamable HTTP MCP server. The URL must be https and resolve to public addresses. The auth header is stored encrypted and never returned. Nothing is connected until a refresh.
+   * Registers a Streamable HTTP MCP server. The URL must be https and resolve to public addresses. The auth header is stored encrypted and never returned (for OAuth, register the server without a header and start the OAuth connection). Nothing is connected until a refresh.
    *
    * REST: `POST /api/admin/mcp-servers` · scope `kon:external-mcp:create-mcp-server`
    * not idempotent (an Idempotency-Key is sent automatically)
@@ -142,6 +176,16 @@ export interface ExternalMcpApi {
    * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly deleteMcpServer: Operation<DeleteMcpServerParams, DeleteMcpServerResponse>;
+  /**
+   * Disconnect an external MCP server's OAuth (admin)
+   *
+   * Forgets the tokens and the client. The server is left with no authentication until it is connected again or given an auth header.
+   *
+   * REST: `DELETE /api/admin/mcp-servers/{id}/oauth` · scope `kon:external-mcp:disconnect-mcp-server-oauth`
+   * idempotent (safe to retry) · sensitive: may come back as a proposal pending human approval
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   */
+  readonly disconnectMcpServerOauth: Operation<DisconnectMcpServerOauthParams, DisconnectMcpServerOauthResponse>;
   /**
    * An external MCP server's tools (admin)
    *
@@ -173,9 +217,19 @@ export interface ExternalMcpApi {
    */
   readonly refreshMcpServer: Operation<RefreshMcpServerParams, RefreshMcpServerResponse>;
   /**
+   * Start an OAuth connection to an external MCP server (admin)
+   *
+   * Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. Once authorized, OAuth replaces the auth header.
+   *
+   * REST: `POST /api/admin/mcp-servers/{id}/oauth/start` · scope `kon:external-mcp:start-mcp-server-oauth`
+   * not idempotent (an Idempotency-Key is sent automatically)
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   */
+  readonly startMcpServerOauth: Operation<StartMcpServerOauthParams, StartMcpServerOauthResponse>;
+  /**
    * Change an external MCP server (admin)
    *
-   * Changes name, URL, enabled flag or auth header (`authHeaderName: null` removes it). A new URL sends every tool back to review.
+   * Changes name, URL, enabled flag or auth header (`authHeaderName: null` removes it; setting one replaces OAuth). A new URL sends every tool back to review and forgets the OAuth connection.
    *
    * REST: `PATCH /api/admin/mcp-servers/{id}` · scope `kon:external-mcp:update-mcp-server`
    * not idempotent (an Idempotency-Key is sent automatically)

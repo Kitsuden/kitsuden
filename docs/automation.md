@@ -63,12 +63,13 @@ Each step names a handler and gives it a `config`. A failing step stops the rule
 and the rest are marked `skipped`, unless the step says `"continueOnError": true`.
 At most 20 steps.
 
-| Handler          | Does                                        | `config`                                                        |
-| ---------------- | ------------------------------------------- | --------------------------------------------------------------- |
-| `core:webhook`   | Sends the event as a signed POST            | `url`, `headers`, `secret`, `customerDataHosts`, `customerData` |
-| `core:send-mail` | Sends a registered mail template            | `mailable`, `data`, `locale`                                    |
-| `core:run-agent` | Hands the event to one of the core's agents | `agentId`, `promptTemplate`, `customerDataHosts`                |
-| `<kon id>:<id>`  | Whatever a kon contributed                  | see the catalog                                                 |
+| Handler          | Does                                          | `config`                                                           |
+| ---------------- | --------------------------------------------- | ------------------------------------------------------------------ |
+| `core:webhook`   | Sends the event as a signed POST              | `url`, `headers`, `secret`, `customerDataHosts`, `customerData`    |
+| `core:send-mail` | Sends a registered mail template              | `mailable`, `data`, `locale`                                       |
+| `core:run-agent` | Hands the event to one of the core's agents   | `agentId`, `promptTemplate`, `customerDataHosts`                   |
+| `core:enqueue`   | Queues a job on a queue a kon opened to rules | `queue`, `job`, `payload`, `dedupeKey`, `delaySeconds`, `attempts` |
+| `<kon id>:<id>`  | Whatever a kon contributed                    | see the catalog                                                    |
 
 The three core steps reuse the handlers of single-purpose actions: a webhook sent
 from a rule passes the same target check, the same [customer-data
@@ -111,6 +112,48 @@ For the other types of action a dry run checks the conditions only.
 A rule's executions are in `GET /api/actions/:id/executions` and in the panel's
 Runs view, like any action. `result.steps` has one entry per step with its
 status, its result or error, and how long it took.
+
+## Queue a job
+
+A step that does its work at once (a webhook, an email) is fine for most rules.
+Work that is slow, that must be retried, or that must not pile up (a model
+looking a contact up) belongs in the [job queue](install/queue.md), and
+`core:enqueue` is how a rule puts it there:
+
+```json
+{
+  "handler": "core:enqueue",
+  "config": {
+    "queue": "kon-agents:research",
+    "job": "identify",
+    "payload": { "contactId": "{{event.contactId}}" },
+    "dedupeKey": "identify:{{event.contactId}}"
+  }
+}
+```
+
+With the trigger `crm.contact.created` and the condition
+`{ "field": "name", "op": "exists", "value": false }`, that is "a new contact
+without a name is identified, once".
+
+- **Only queues that opened themselves.** `queue` must be one of the `queues`
+  in the catalog (a kon registers it with `rules`; see
+  [Jobs from automation rules](install/queue.md#jobs-from-automation-rules)). The
+  core's own queues and a kon's private ones are refused when the rule is
+  saved and again when it runs.
+- **The event does not choose where.** `queue` and `job` take no placeholders.
+  `payload` and `dedupeKey` do.
+- **`payload`** is what the queue's handler receives; without it, the event's
+  data.
+- **`dedupeKey`**: while a job with that key waits or runs on that queue, the
+  step queues nothing and reports `deduplicated: true`.
+- **`delaySeconds`** (up to a week) and **`attempts`** (1 to 25, default 3).
+- **Whose job it is.** The rule's author, not whoever caused the event: the
+  handler runs with that person's permissions as they are when it runs.
+- The step succeeds when the job is queued. Whether the job then succeeds is
+  the queue's business: retries, and the dead letter in the panel.
+- A dry run shows the queue, the job and the filled payload and key, and queues
+  nothing.
 
 ## Who may write a rule
 

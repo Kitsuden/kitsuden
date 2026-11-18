@@ -9,6 +9,35 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Job queue**: `queue.dispatch(…, { dedupeKey })` does not queue the same work twice. While a
+  job with that key is pending or running on the queue, the dispatch answers that job's id with
+  `deduplicated: true` (migration `0085`). A queue can open itself to automation rules
+  (`queue.handle(name, fn, { rules: { label, description, payload } })`), and the new rule step
+  `core:enqueue` queues a job there from an event, as the rule's author, with the payload and the
+  key filled from the event. `GET /api/automation/catalog` lists those queues. See
+  [docs/install/queue.md](docs/install/queue.md) and
+  [docs/automation.md](docs/automation.md#queue-a-job).
+- External MCP servers can be connected with **OAuth** as an alternative to the static auth
+  header: `POST /api/admin/mcp-servers/:id/oauth/start` discovers the server's authorization
+  server, registers a client (or takes a `clientId`) and answers the URL to open; the tokens are
+  stored encrypted and refreshed when they are about to end. PKCE (S256) is required and every
+  announced endpoint must be a public https address. No new service or setting. Migration `0084`.
+  See [docs/agents/external-mcp.md](docs/agents/external-mcp.md#oauth).
+- External MCP servers are read again on a schedule (`KITSUDEN_EXTERNAL_MCP_REFRESH_MINUTES`,
+  default 360; `0` = off). A tool rewritten or removed after its review goes back to "needs
+  review" and is written to the audit log (`external_mcp_tool_changed`, origin `sweep`) before an
+  agent's call finds it. Before, a change was noticed only on a manual refresh or when a call
+  failed. See [docs/agents/external-mcp.md](docs/agents/external-mcp.md).
+- **Analytics in the core** ([docs/analytics.md](docs/analytics.md)): views per subject and day with no
+  personal data, at `/api/analytics` as before. It was the kon `kon-analytics`; ids, routes, scopes and MCP
+  tools are the same, and migration 0083 keeps the data of an installation that had the kon. An installed
+  `kon-analytics` is no longer mounted (the loader says how to remove it). `hit` gets its per-IP limit
+  (30 a minute) from the core limiter.
+- **Realtime channels for kons** ([docs/kons/realtime.md](docs/kons/realtime.md)): a kon
+  authorizes its own channels, `kon:<id>:<rest>`, with `ctx.realtime.channels(authorize)`. The
+  authorizer runs on subscribe and on every session sweep, so revoked access stops within a
+  minute; a kon channel without an authorizer is denied, admins included.
+
 - **Automation rules** ([docs/automation.md](docs/automation.md)): a stored action of type `rule`
   runs a list of steps (`core:webhook`, `core:send-mail`, `core:run-agent`, or a step a kon
   contributes with `defineKon({ actionHandlers })`) when the trigger's conditions over the event
@@ -63,6 +92,30 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Contract testing: the Schemathesis runner ends every `$` of the spec it tests in `$(?!\n)`.
+  The generator read `$` the Python way (also before a final newline), threw away about a third
+  of the values of each `^…$` pattern, and an operation with several patterned fields failed
+  the `filter_too_much` health check (seen on Python 3.14). The published OpenAPI is unchanged.
+- `ctx.realtime.broadcast` delivered every message twice to the sockets of the replica that sent
+  it once the bus was listening (once locally, once looping back through Valkey). It now goes
+  through the bus only. `ctx.realtime.sendToUser` reached only the sockets of the same process;
+  it now travels on the bus and reaches every replica.
+- The realtime WebSocket refused pages the API serves itself (an `Origin` equal to the request's host)
+  unless that origin was listed in `ALLOWED_ORIGINS`. Same-origin is now allowed; other sites still
+  need the list.
+- A kon's public embed scripts (`/api/<kon>/public/…/*.js`, the kon-chat and kon-koe widgets) were
+  served with `Cross-Origin-Resource-Policy: same-origin`, so a plain `<script src>` on another site
+  was blocked. They are now `cross-origin`, like `/media`.
+- The admin icon map gains `MessagesSquare` (kon-koe). `/api/koe/media` sets its own body limit for
+  WhatsApp video and documents.
+- Lite mode now logs a statement that has waited 10 s for PGlite's only connection, with the stack that
+  started it, instead of the API hanging in silence (`watchLiteConnection`).
+- Lite mode (PGlite, one connection) wedged the whole database when a kon route or queue job opened a
+  sealed secret, or when a site admin or editor called a kon route: the secret access log and the
+  fresh session read used another connection while the request transaction held the only one. In lite
+  mode both now go through the request (Postgres is unchanged).
+- `createTestKonContext` silently dropped `secrets`, `automation` and `entities` overrides, so a kon
+  under test took the "host without it" branch.
 - A stored action listening to `entry.created`, `entry.updated`, `entry.deleted` or
   `post.published` ran twice for each event: the legacy function dispatcher subscribed to the
   same events as the actions engine.
@@ -88,6 +141,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   kons were installed locally.
 
 ### Security
+
+- Files a kon stores were readable by anyone holding their address: `ctx.storage.getSignedDownloadUrl`
+  returned the public URL for every key, on local disk and on S3. Keys under `private/` are now served only
+  through a short-lived signed address (an HMAC on local disk, a presigned GET on S3); `/media/private/…`
+  without a valid signature answers 404. See [docs/kons/storage.md](docs/kons/storage.md).
 
 - Rate limiter: the site key is compared in constant time over buffers padded to one length,
   with no hash in between. A bare SHA-256 and then an HMAC of it were both flagged by CodeQL

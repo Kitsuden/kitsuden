@@ -196,9 +196,11 @@ describe("brain over MCP: tools, scopes and owners", () => {
     expect(read.isError).toBe(true);
     expect(JSON.stringify(read)).toContain("KITSUDEN_E_NOT_FOUND");
     const list = await call(b, "brain_list", { limit: 200 });
-    const ids = (list.structuredContent.data.notes as { id: string }[]).map((n) => n.id);
-    expect(ids).not.toContain(privateNote.id);
-    expect(ids).toContain(shared.id);
+    // By the text of the answer: a long list comes back in the compact format, with no
+    // `structuredContent`, and a shared test database makes this list long.
+    const listed = JSON.stringify(list);
+    expect(listed).not.toContain(privateNote.id);
+    expect(listed).toContain(shared.id);
     const searches = await call(b, "brain_search", { q: mark, threshold: 0 });
     const foundOnes = (searches.structuredContent.data.hits as { note: { id: string } }[]).map(
       (h) => h.note.id

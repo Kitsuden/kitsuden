@@ -33,8 +33,6 @@
  */
 
 import { createHash } from "node:crypto";
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
 
 import { sql } from "drizzle-orm";
 
@@ -42,8 +40,9 @@ import { db } from "../db";
 import { logAgentAction } from "../services/agent-audit";
 import { decryptSecret, encryptSecret, type EncryptedValue } from "../services/secrets";
 
+import { oauthBearer } from "./external-mcp-oauth";
+import { serverTargetProblem, serverUrlProblem } from "./external-mcp-target";
 import { logger } from "./logger";
-import { nonPublicAddress } from "./oauth/cimd";
 
 // ═══════════════════════════════════════════════════════════════
 // Fingerprints
@@ -137,47 +136,8 @@ export function diffTools(stored: StoredTool[], announced: AnnouncedTool[]): Too
 // Where it may connect
 // ═══════════════════════════════════════════════════════════════
 
-function internalAllowed(): boolean {
-  return process.env.KITSUDEN_EXTERNAL_MCP_ALLOW_INTERNAL === "true";
-}
-
-/** Shape of the URL (when saving it). */
-export function serverUrlProblem(raw: string): string | null {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return "Invalid MCP server URL";
-  }
-  if (url.username || url.password)
-    return "Credentials in the URL are not allowed (use the auth header)";
-  if (url.protocol !== "https:" && !(internalAllowed() && url.protocol === "http:")) {
-    return "The MCP server URL must be https://";
-  }
-  if (raw.length > 2000) return "URL too long";
-  return null;
-}
-
-/** The host must resolve to public addresses only (unless the internal opt-in is on). */
-export async function serverTargetProblem(raw: string): Promise<string | null> {
-  const shape = serverUrlProblem(raw);
-  if (shape) return shape;
-  if (internalAllowed()) return null;
-  const url = new URL(raw);
-  const host = url.hostname.replace(/^\[|\]$/g, "");
-  let addresses: { address: string }[];
-  try {
-    addresses = isIP(host)
-      ? [{ address: host }]
-      : await lookup(host, { all: true, verbatim: true });
-  } catch {
-    return `MCP server host could not be resolved: ${url.hostname}`;
-  }
-  if (!addresses.length || addresses.some((a) => nonPublicAddress(a.address))) {
-    return `MCP server host resolves to a non-public address: ${url.hostname}`;
-  }
-  return null;
-}
+// In their own module so the OAuth flow (external-mcp-oauth.ts) can use the same check.
+export { serverTargetProblem, serverUrlProblem };
 
 const HEADER_NAME = /^[A-Za-z0-9-]{1,64}$/;
 const RESERVED_HEADERS = new Set([
@@ -352,7 +312,18 @@ export interface ServerView {
   url: string;
   enabled: boolean;
   hasAuth: boolean;
+  /** How the server is authenticated: a static header, OAuth, or nothing. */
+  auth: "none" | "header" | "oauth";
   authHeaderName: string | null;
+  /** The OAuth connection, without its tokens. `null` when the server does not use OAuth. */
+  oauth: {
+    issuer: string;
+    clientId: string;
+    scopes: string | null;
+    expiresAt: string | null;
+    connectedAt: string | null;
+    connectedBy: string | null;
+  } | null;
   lastRefreshedAt: string | null;
   lastError: string | null;
   needsReview: number;
@@ -362,13 +333,26 @@ export interface ServerView {
 }
 
 function serverView(r: Record<string, unknown>): ServerView {
+  const o = (r.oauth_config as Record<string, unknown> | null) ?? null;
+  const text = (v: unknown) => (typeof v === "string" && v ? v : null);
   return {
     id: String(r.id),
     name: String(r.name),
     url: String(r.url),
     enabled: r.enabled === true,
-    hasAuth: r.has_auth === true,
+    hasAuth: r.has_auth === true || o !== null,
+    auth: o ? "oauth" : r.has_auth === true ? "header" : "none",
     authHeaderName: (r.auth_header_name as string | null) ?? null,
+    oauth: o
+      ? {
+          issuer: String(o.issuer ?? ""),
+          clientId: String(o.clientId ?? ""),
+          scopes: text(o.scopes),
+          expiresAt: text(o.expiresAt),
+          connectedAt: text(o.connectedAt),
+          connectedBy: text(o.connectedBy),
+        }
+      : null,
     lastRefreshedAt: iso(r.last_refreshed_at),
     lastError: (r.last_error as string | null) ?? null,
     needsReview: Number(r.needs_review ?? 0),
@@ -380,6 +364,7 @@ function serverView(r: Record<string, unknown>): ServerView {
 
 const SERVER_COLUMNS = sql`
   s.id, s.name, s.url, s.enabled, s.auth_header_name, s.auth_header_value IS NOT NULL AS has_auth,
+  s.oauth_config,
   s.last_refreshed_at, s.last_error, s.created_at, s.updated_at,
   (SELECT count(*) FROM external_mcp_tools t WHERE t.server_id = s.id AND t.status = 'needs_review') AS needs_review,
   (SELECT count(*) FROM external_mcp_tools t WHERE t.server_id = s.id AND t.change IS DISTINCT FROM 'removed') AS tools`;
@@ -439,6 +424,8 @@ export async function updateServer(
   if (input.url !== undefined && input.url !== current.url) {
     // Another URL is another server: every tool is reviewed again.
     sets.push(sql`url = ${input.url}`);
+    // An OAuth token was issued for the old URL: it is not sent to the new one.
+    sets.push(sql`oauth_config = NULL`, sql`oauth_secret = NULL`);
     await db.execute(sql`
       UPDATE external_mcp_tools SET approved_fingerprint = NULL, status = 'needs_review',
              change = COALESCE(change, 'changed')
@@ -447,9 +434,12 @@ export async function updateServer(
   if (input.authHeaderName === null || input.authHeaderValue === null) {
     sets.push(sql`auth_header_name = NULL`, sql`auth_header_value = NULL`);
   } else if (input.authHeaderName && input.authHeaderValue) {
+    // A header replaces OAuth: a server uses one or the other.
     sets.push(
       sql`auth_header_name = ${input.authHeaderName}`,
-      sql`auth_header_value = ${JSON.stringify(encryptSecret(input.authHeaderValue))}::jsonb`
+      sql`auth_header_value = ${JSON.stringify(encryptSecret(input.authHeaderValue))}::jsonb`,
+      sql`oauth_config = NULL`,
+      sql`oauth_secret = NULL`
     );
   }
   await db.execute(
@@ -553,16 +543,19 @@ export interface ServerConnection {
   name: string;
   url: string;
   enabled: boolean;
-  /** Raw (encrypted) header; `authOf` decrypts it at the moment of connecting. */
+  /** Raw (encrypted) header; `authFor` decrypts it at the moment of connecting. */
   authHeaderName: string | null;
   authHeaderValue: EncryptedValue | null;
+  /** The server is connected with OAuth (lib/external-mcp-oauth.ts). */
+  oauth: boolean;
 }
 
 /** What it takes to connect to a server (the header still encrypted). */
 export async function serverConnection(id: string): Promise<ServerConnection | null> {
   const [s] = rows(
     await db.execute(sql`
-      SELECT id, name, url, enabled, auth_header_name, auth_header_value
+      SELECT id, name, url, enabled, auth_header_name, auth_header_value,
+             oauth_config IS NOT NULL AS oauth
         FROM external_mcp_servers WHERE id = ${id}::uuid`)
   );
   if (!s) return null;
@@ -573,11 +566,21 @@ export async function serverConnection(id: string): Promise<ServerConnection | n
     enabled: s.enabled === true,
     authHeaderName: (s.auth_header_name as string | null) ?? null,
     authHeaderValue: (s.auth_header_value as EncryptedValue | null) ?? null,
+    oauth: s.oauth === true,
   };
 }
 
-/** The decrypted auth header, or `null`. */
-export function authOf(s: ServerConnection): { name: string; value: string } | null {
+/**
+ * The header to connect with, or `null`: the OAuth access token (refreshed
+ * first when it is about to end) or the decrypted static header.
+ */
+export async function authFor(
+  s: ServerConnection
+): Promise<{ name: string; value: string } | null> {
+  if (s.oauth) {
+    const token = await oauthBearer(s.id);
+    if (token) return { name: "Authorization", value: `Bearer ${token}` };
+  }
   return s.authHeaderName && s.authHeaderValue
     ? { name: s.authHeaderName, value: decryptSecret(s.authHeaderValue) }
     : null;
@@ -599,7 +602,7 @@ export async function refreshServer(id: string): Promise<RefreshResult | null> {
   }
   let announced: AnnouncedTool[];
   try {
-    announced = await fetchAnnouncedTools(s.url, authOf(s));
+    announced = await fetchAnnouncedTools(s.url, await authFor(s));
   } catch (err) {
     const message = (err instanceof Error ? err.message : String(err)).slice(0, 1000);
     await db.execute(sql`

@@ -7,6 +7,7 @@
  *   core:webhook      POST the event to a URL          (the webhook_out handler)
  *   core:send-mail    send a registered mail template  (the engine's mailer)
  *   core:run-agent    hand the event to an agent       (the agent handler)
+ *   core:enqueue      queue a job on a kon's queue     (the job queue)
  *   <kon id>:<id>     whatever a kon contributed       (defineKon({ actionHandlers }))
  *
  * The three core steps REUSE the handlers single-purpose actions already have,
@@ -36,6 +37,7 @@ import {
 
 import { messageOf } from "../../../../../packages/engine/src/errors";
 import { mail } from "../../../../../packages/engine/src/mail";
+import { queue, queueHandlers, ruleQueues } from "../../../../../packages/engine/src/queue";
 import { runInRequestScope } from "../../../../../packages/engine/src/request-scope";
 import { konRuleHandler, listKonRuleHandlers } from "../kon-contributions";
 
@@ -181,7 +183,121 @@ const coreHandlers: RuleHandler[] = [
       return result.result ?? null;
     },
   },
+  {
+    id: "core:enqueue",
+    source: "core",
+    label: "Queue a job",
+    description:
+      "Queues a job on a queue that a kon opened to rules (see `queues` in the catalog). The work then runs in that queue's worker, with its retries and its concurrency. With `dedupeKey`, an event about a record that already has a job waiting queues nothing.",
+    config: {
+      queue: "name of a queue that accepts jobs from rules",
+      job: 'optional name of the job within the queue (default "rule")',
+      payload: "optional object for the handler; without it, the event's data",
+      dedupeKey:
+        "optional key, usually with a placeholder ({{event.contactId}}): not queued again while a job with it waits",
+      delaySeconds: "optional: do not run before this many seconds",
+      attempts: "optional maximum attempts (1-25, default 3)",
+    },
+    validate(config) {
+      const problem = enqueueProblem(config);
+      if (problem) return problem;
+      const name = String(config.queue);
+      if (!queueHandlers().get(name)?.rules) {
+        const open = ruleQueues().map((q) => q.queue);
+        return `the queue "${name}" does not accept jobs from rules; queues that do: ${open.join(", ") || "none"}`;
+      }
+      return null;
+    },
+    async run({ input }) {
+      const problem = enqueueProblem(input.config);
+      if (problem) throw new StepFailed(problem);
+      const name = String(input.config.queue);
+      // Checked again when it runs: the kon may have been removed since the rule was saved.
+      if (!queueHandlers().get(name)?.rules) {
+        throw new StepFailed(`the queue "${name}" does not accept jobs from rules`);
+      }
+      const dedupeKey = text(input.config.dedupeKey)?.slice(0, 200);
+      // As the rule's owner, outside the emitting request: the job must not belong to whoever
+      // caused the event (a visitor), and it must exist even if that request rolls back.
+      const queued = await runInRequestScope(
+        {
+          user: input.actorUserId ? { id: input.actorUserId } : null,
+          requestId: `rule:${input.rule.id}`,
+        },
+        () =>
+          queue.dispatch(name, text(input.config.job) ?? "rule", enqueuePayload(input), {
+            reason: `rule ${input.rule.name}`.slice(0, 200),
+            dedupeKey,
+            attempts:
+              input.config.attempts === undefined ? undefined : Number(input.config.attempts),
+            delayMs:
+              input.config.delaySeconds === undefined
+                ? undefined
+                : Number(input.config.delaySeconds) * 1000,
+          })
+      );
+      return { jobId: queued.id, deduplicated: queued.deduplicated === true };
+    },
+    preview({ input }) {
+      const name = String(input.config.queue);
+      return {
+        queue: name,
+        accepted: Boolean(queueHandlers().get(name)?.rules),
+        job: text(input.config.job) ?? "rule",
+        payload: enqueuePayload(input),
+        dedupeKey: text(input.config.dedupeKey) ?? null,
+      };
+    },
+  },
 ];
+
+const JOB_NAME = /^[A-Za-z0-9_.:\-]{1,120}$/;
+/** A week: a rule that parks work for longer is a schedule, and there are crons for that. */
+const MAX_DELAY_SECONDS = 7 * 24 * 3600;
+
+/** What is wrong with the shape of a `core:enqueue` config, or `null`. */
+function enqueueProblem(config: Record<string, unknown>): string | null {
+  const name = text(config.queue);
+  if (!name) return "queue is required";
+  if (!JOB_NAME.test(name)) return "queue is not a valid queue name";
+  if (config.job !== undefined && !(typeof config.job === "string" && JOB_NAME.test(config.job))) {
+    return "job must be a name of letters, digits and _.:- (a placeholder is not allowed here)";
+  }
+  if (
+    config.payload !== undefined &&
+    (config.payload === null || typeof config.payload !== "object" || Array.isArray(config.payload))
+  ) {
+    return "payload must be an object";
+  }
+  if (config.dedupeKey !== undefined && !text(config.dedupeKey)) {
+    return "dedupeKey must be a non-empty string";
+  }
+  if (config.attempts !== undefined) {
+    const n = Number(config.attempts);
+    if (!Number.isInteger(n) || n < 1 || n > 25) return "attempts must be an integer from 1 to 25";
+  }
+  if (config.delaySeconds !== undefined) {
+    const n = Number(config.delaySeconds);
+    if (!Number.isFinite(n) || n < 0 || n > MAX_DELAY_SECONDS) {
+      return `delaySeconds must be between 0 and ${MAX_DELAY_SECONDS}`;
+    }
+  }
+  return null;
+}
+
+function enqueuePayload(input: AutomationHandlerInput): Record<string, unknown> {
+  const given = input.config.payload;
+  if (given && typeof given === "object") return given as Record<string, unknown>;
+  const data = input.event?.data;
+  return data && typeof data === "object" && !Array.isArray(data)
+    ? (data as Record<string, unknown>)
+    : { value: data ?? null };
+}
+
+/** The queues a rule can reach with `core:enqueue`, for the catalog. */
+export function listRuleQueues(): ReturnType<typeof ruleQueues> {
+  return ruleQueues();
+}
 
 function handlerById(id: string): RuleHandler | undefined {
   const core = coreHandlers.find((h) => h.id === id);

@@ -49,7 +49,8 @@ import { desc, eq, sql } from "drizzle-orm";
 
 import { messageOf } from "../../../../packages/engine/src/errors";
 import { useRequest } from "../../../../packages/engine/src/request-scope";
-import { db } from "../db";
+import { asSystem, theRequestDb } from "../../../../packages/engine/src/rls-request";
+import { db, isLiteMode } from "../db";
 import { secretAccessLog } from "../db/schema";
 import { decryptSecret, encryptSecret } from "../services/secrets";
 
@@ -86,14 +87,23 @@ async function record(
   outcome: "opened" | "refused",
   access: SecretAccess
 ): Promise<void> {
-  await db.insert(secretAccessLog).values({
+  const row = {
     konId,
     outcome,
     purpose: clip(access.purpose, 200) ?? "unspecified",
     subject: clip(access.subject, 300),
     actorUserId: access.actorUserId ?? useRequest()?.user?.id ?? null,
     requestId: useRequest()?.requestId ?? null,
-  });
+  };
+  // Lite mode (PGlite) has ONE connection, and a request's RLS transaction holds it: writing through the
+  // global `db` from inside a request waited on itself forever and wedged the database. There, the record
+  // goes into the request's own transaction, as the system. On Postgres it keeps its own connection, so a
+  // request that rolls back still leaves the trace of the opening.
+  if (isLiteMode && useRequest()?.tx) {
+    await asSystem(() => theRequestDb(db).insert(secretAccessLog).values(row));
+    return;
+  }
+  await db.insert(secretAccessLog).values(row);
 }
 
 export const konSecrets: KonSecrets = {

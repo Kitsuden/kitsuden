@@ -65,12 +65,14 @@ import { auth } from "./lib/auth";
 import { bodyLimit } from "./lib/body-limit";
 import { clientIp } from "./lib/client-ip";
 import { config, features, corsConfig } from "./lib/config";
-import { incompleteCorsWarning, allowedOrigin } from "./lib/cors-origins";
+import { startConnectionsWorker } from "./lib/connections";
+import { incompleteCorsWarning, allowedOrigin, sameOrigin } from "./lib/cors-origins";
 import { registerCriticalFeatures } from "./lib/critical-features";
 import { initCronScheduler } from "./lib/cron-scheduler";
 import { availableKon } from "./lib/deferred-kons";
 import { inProduction } from "./lib/environment";
 import { toErrorEnvelope } from "./lib/errors";
+import { startExternalMcpSweep } from "./lib/external-mcp-sweep";
 import { fileBody, file } from "./lib/file";
 import {
   adminExists,
@@ -104,17 +106,12 @@ import {
   checkStorage,
   localPathOf,
   usesS3,
+  isPrivateKey,
+  verifySignedUrl,
 } from "./lib/store";
 import { toonMiddleware } from "./lib/toon";
 import { toonProtocolMiddleware } from "./lib/toon-protocol";
 import { startTraces, stopTraces, requestTraces } from "./lib/traces";
-import {
-  AUTOMATION_ROUTE,
-  automationRoutes,
-  SECRET_ACCESS_ROUTE,
-  secretAccessRoutes,
-} from "./routes/automation";
-import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { closeValkey, valkeyConfigured } from "./lib/valkey";
 import { registerSystemMails } from "./mail/system-mails";
 import {
@@ -141,8 +138,20 @@ import { agentNotificationsRoutes } from "./routes/agent-notifications";
 import { agentPermissionsRoutes } from "./routes/agent-permissions";
 import agentPlaygroundRoutes from "./routes/agent-playground";
 import agentRoutes from "./routes/agents";
+import {
+  ANALYTICS_KON,
+  ANALYTICS_ROUTE,
+  analyticsOperations,
+  analyticsRoutes,
+} from "./routes/analytics";
 import { apiKeysRoutes } from "./routes/api-keys";
 import { approvalsRoutes, proposalsRoutes } from "./routes/approvals";
+import {
+  AUTOMATION_ROUTE,
+  automationRoutes,
+  SECRET_ACCESS_ROUTE,
+  secretAccessRoutes,
+} from "./routes/automation";
 import { brainRoutes } from "./routes/brain";
 import {
   brainMemoryRoutes,
@@ -152,6 +161,12 @@ import {
 } from "./routes/brain-memory";
 import { codeGraphRoutes } from "./routes/code-graph";
 import { codegenRoutes } from "./routes/codegen";
+import {
+  CONNECTIONS_KON,
+  CONNECTIONS_ROUTE,
+  connectionsKon,
+  connectionsRoutes,
+} from "./routes/connections";
 import { settingsRoutes, syncRoutes, dataSetsRoutes as dataSetsLiteRoutes } from "./routes/crud";
 import { explorerRoutes } from "./routes/data-explorer";
 import dataSourcesRoutes from "./routes/data-sources";
@@ -163,7 +178,12 @@ import { inlineRelationsRoutes } from "./routes/inline-relations";
 import konAssetsRoutes from "./routes/kon-assets";
 import { mailRoutes } from "./routes/mail";
 import { mcpRoutes } from "./routes/mcp";
-import { EXTERNAL_MCP_ROUTE, externalMcpRoutes } from "./routes/mcp-servers";
+import {
+  EXTERNAL_MCP_OAUTH_ROUTE,
+  EXTERNAL_MCP_ROUTE,
+  externalMcpOAuthRoutes,
+  externalMcpRoutes,
+} from "./routes/mcp-servers";
 import { modelsRoutes, MODELS_ROUTE } from "./routes/models";
 import { modulesRoutes } from "./routes/modules";
 import { oauthCors, mcpChallenge, oauthRoutes } from "./routes/oauth";
@@ -182,6 +202,7 @@ import {
   RECORD_HISTORY_ROUTE,
   startRecordHistorySweep,
 } from "./routes/record-history";
+import { REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes } from "./routes/reports";
 import { runsRoutes } from "./routes/runs";
 import { schemaIntrospectionRoutes } from "./routes/schema-introspection";
 import { systemRoutes } from "./routes/system";
@@ -376,8 +397,16 @@ app.use("*", timing());
  */
 const safeHeaders = secureHeaders();
 const mediaHeaders = secureHeaders({ crossOriginResourcePolicy: "cross-origin" });
+/**
+ * A kon's public embed scripts (`/api/<kon>/public/…/*.js`: kon-chat's and kon-koe's chat widgets) are
+ * loaded with a plain `<script src>` from the sites that embed them. Under `same-origin` the browser
+ * fetched the script and refused to run it. They carry no data, only code anyone may read.
+ */
+const PUBLIC_KON_SCRIPT = /^\/api\/[a-z0-9-]+\/public\/[A-Za-z0-9_/.-]*\.js$/;
 app.use("*", (c, next) =>
-  (c.req.path.startsWith(`${BASE_URL_LOCAL}/`) ? mediaHeaders : safeHeaders)(c, next)
+  (c.req.path.startsWith(`${BASE_URL_LOCAL}/`) || PUBLIC_KON_SCRIPT.test(c.req.path)
+    ? mediaHeaders
+    : safeHeaders)(c, next)
 );
 app.use("/api/*", toonMiddleware());
 app.use("/api/*", toonProtocolMiddleware());
@@ -686,6 +715,17 @@ if (!usesS3) {
   // used to build the URLs stored in the database.
   app.get(`${BASE_URL_LOCAL}/*`, async (c) => {
     const key = c.req.path.slice(BASE_URL_LOCAL.length + 1);
+    // A private key (lib/store.ts) is served only with a valid, unexpired signature. 404, not 403: the
+    // address of a private file says nothing to whoever does not hold the signature.
+    let decoded = key;
+    try {
+      decoded = decodeURIComponent(key);
+    } catch {
+      return c.notFound();
+    }
+    const priv = isPrivateKey(decoded) || isPrivateKey(key);
+    if (priv && !verifySignedUrl(decoded, c.req.query("exp"), c.req.query("sig")))
+      return c.notFound();
     try {
       // `localPathOf` rejects any key that escapes the directory: without
       // that, `/uploads/../../etc/passwd` would be a valid path for `join`.
@@ -697,7 +737,7 @@ if (!usesS3) {
       return new Response(body, {
         headers: {
           ...(type ? { "Content-Type": type } : {}),
-          "Cache-Control": mediaCache(key),
+          "Cache-Control": priv ? "private, no-store" : mediaCache(key),
           "Last-Modified": new Date(medium.lastModified).toUTCString(),
           /**
            * So that they can be READ, not just painted.
@@ -1091,6 +1131,8 @@ app.route("/api/admin/queue", queueRoutes);
 // changes (lib/external-mcp.ts). Human admins only; agents call approved tools
 // through /api/mcp and the engine (lib/external-mcp-bridge.ts).
 app.route(EXTERNAL_MCP_ROUTE, externalMcpRoutes);
+// The OAuth redirect of those servers: public, authorized by its single-use state.
+app.route(EXTERNAL_MCP_OAUTH_ROUTE, externalMcpOAuthRoutes);
 // Logged requests: actor, kon, operation, database time, blocks.
 app.route("/api/admin/requests", tracesRoutes);
 // Agent identities, keys, scopes, quotas and sponsors are changed by humans
@@ -1158,6 +1200,9 @@ app.route(PROMOTION_ROUTE, promotionRoutes);
 registerMountedOperations(PROMOTION_KON, PROMOTION_ROUTE, promotionOperations, promotionRoutes);
 app.route(ADMIN_PROMOTION_ROUTE, promotionAdminRoutes);
 startWatchesSweep();
+// External MCP servers are read again every KITSUDEN_EXTERNAL_MCP_REFRESH_MINUTES (360; 0 = never), so a
+// tool rewritten after its review is found before an agent's call trips over it.
+startExternalMcpSweep();
 // /api/v1 (agents/traces/identities) is now mounted via rpcSurface (src/rpc.ts)
 app.route("/api/admin/agents", agentPlaygroundRoutes);
 app.route("/api/agent/memory", agentMemoryRoutes);
@@ -1185,6 +1230,24 @@ app.route(SECRET_ACCESS_ROUTE, secretAccessRoutes);
 mountKonRls(app, REPORTS_ROUTE);
 app.route(REPORTS_ROUTE, reportsRoutes);
 registerMountedOperations(REPORTS_KON, REPORTS_ROUTE, reportOperations, reportsRoutes);
+// Analytics (docs/analytics.md): views per subject and day, with no personal data. It was kon-analytics;
+// same id, routes, scopes and MCP tools. In the request's transaction: `hit` checks the subject in a
+// savepoint so a table with another shape cannot abort the count.
+mountKonRls(app, ANALYTICS_ROUTE);
+app.route(ANALYTICS_ROUTE, analyticsRoutes);
+registerMountedOperations(ANALYTICS_KON, ANALYTICS_ROUTE, analyticsOperations, analyticsRoutes);
+// Connections (docs/connections.md): accounts at other services that kons use through ctx.connections.
+// In the request's transaction: row security decides whose connections a person sees. The OAuth
+// callback runs as the system inside the handler.
+mountKonRls(app, CONNECTIONS_ROUTE);
+app.route(CONNECTIONS_ROUTE, connectionsRoutes);
+registerMountedOperations(
+  CONNECTIONS_KON,
+  CONNECTIONS_ROUTE,
+  connectionsKon.operations,
+  connectionsRoutes
+);
+startConnectionsWorker();
 console.log("  🧠 KITSUDEN Brain → /api/brain");
 app.route("/api/map", systemMapRoutes);
 console.log("  🗺️  System Map → /api/map");
@@ -1608,7 +1671,13 @@ export default {
       // any page could open the channel with the visitor's session.
       // Non-browser clients do not send `Origin` and carry on as before.
       const origin = req.headers.get("origin");
-      if (origin && !corsConfig.origins.includes(origin)) {
+      // The API's own pages (kon-koe's inbox at /api/koe/inbox) are same-origin: allowed without being
+      // listed. Another site's page has another Origin and still needs ALLOWED_ORIGINS.
+      if (
+        origin &&
+        !corsConfig.origins.includes(origin) &&
+        !sameOrigin(origin, req.headers.get("host"))
+      ) {
         return new Response("Origin not allowed", { status: 403 });
       }
       const session = await getSessionFromRequest(req);

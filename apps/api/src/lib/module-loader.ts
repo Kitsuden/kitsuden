@@ -73,6 +73,7 @@ import { requireAuth, requireRole, optionalAuth } from "../middleware/auth";
 import { withTransactionalRLS } from "../middleware/transactional-rls";
 import { KON_REGISTRY } from "../services/module-registry";
 
+import { absorbedReason } from "./absorbed-kons";
 import { auth } from "./auth";
 import { invalidateCache } from "./cache";
 import type { DeferredKon } from "./deferred-kons";
@@ -91,7 +92,14 @@ import { registerKonToolsets } from "./mcp-settings";
 import { limiterEnabled, rateLimit } from "./rate-limiter";
 import { realtimeManager } from "./realtime";
 import { sitePublicUrl } from "./site-settings";
-import { deleteObject, saveObject, readObject, listObjects, publicUrlOf } from "./store";
+import {
+  deleteObject,
+  saveObject,
+  readObject,
+  listObjects,
+  publicUrlOf,
+  signedUrlOf,
+} from "./store";
 
 /** An npm package name, scoped or not: no `..`, no absolute paths. */
 const NPM_NAME = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
@@ -511,7 +519,8 @@ export function createKonContext(): KonContext {
             "With local storage, use ctx.storage.put()."
         );
       },
-      getSignedDownloadUrl: async (key: string, _expiresIn = 3600) => publicUrlOf(key),
+      // A `private/` key gets a short-lived signed address (lib/store.ts); a public key, its public one.
+      getSignedDownloadUrl: async (key: string, expiresIn = 3600) => signedUrlOf(key, expiresIn),
     },
 
     // Logger
@@ -1163,6 +1172,13 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
   for (const kon of sortedKons) {
     const cleanName = kon.id.replace(/^kon-/, "");
     const isGrimoireKon = grimoireKonKeys.has(kon.id) || grimoireKonKeys.has(cleanName);
+
+    // A kon the core absorbed (lib/absorbed-kons.ts): the core already serves its routes.
+    const absorbed = absorbedReason(kon.id);
+    if (absorbed) {
+      console.warn(`  ⚠️  ${absorbed}`);
+      continue;
+    }
 
     // Kon ↔ core compatibility (independent kon versioning):
     // warning if the manifest declares "kitsuden"/"minKitsudenVersion" and it is not satisfied.

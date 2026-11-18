@@ -47,6 +47,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { newlineSafeSpec } from "./lib/newline-safe-patterns";
+
 /** PINNED version (two weeks old when it was pinned). */
 export const VERSION_SCHEMATHESIS = "4.30.1";
 
@@ -182,10 +184,13 @@ for (const { konId, mountPath, operations: operations } of mountedOperations()) 
 }
 mkdirSync(OUTPUT, { recursive: true });
 const specPath = join(OUTPUT, "openapi.json");
-writeFileSync(specPath, JSON.stringify(doc, null, 2));
+// `$` → `$(?!\n)` in every pattern: the same for the API, and Hypothesis no longer makes values
+// ending in "\n" only to throw them away (lib/newline-safe-patterns.ts says why).
+const safePatterns = { count: 0 };
+writeFileSync(specPath, JSON.stringify(newlineSafeSpec(doc, safePatterns), null, 2));
 const total = Object.values(doc.paths).reduce((n, p) => n + Object.keys(p).length, 0);
 console.log(
-  `[schemathesis] ${total} operations in ${specPath}; excluded: ${excludedOnes.join(", ") || "none"}`
+  `[schemathesis] ${total} operations in ${specPath}; ${safePatterns.count} patterns made newline-safe; excluded: ${excludedOnes.join(", ") || "none"}`
 );
 if (specOnly) process.exit(0);
 

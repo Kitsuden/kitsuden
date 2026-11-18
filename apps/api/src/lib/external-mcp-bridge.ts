@@ -56,7 +56,7 @@ import { logAgentAction } from "../services/agent-audit";
 import { egressProblem, type CustomerDataGuard } from "./customer-data";
 import {
   approvedTools,
-  authOf,
+  authFor,
   EXTERNAL_MCP_TIMEOUT_MS,
   flagToolForReview,
   listAnnouncedTools,
@@ -512,7 +512,9 @@ export async function callExternalTool(
 
   let outcome: Outcome;
   try {
-    outcome = await withExternalMcpClient(server.url, authOf(server), "bridge", async (client) => {
+    // Inside the try: an OAuth token that cannot be refreshed is an upstream failure too.
+    const auth = await authFor(server);
+    outcome = await withExternalMcpClient(server.url, auth, "bridge", async (client) => {
       const now = (await listAnnouncedTools(client)).find((t) => t.name === entry.toolName);
       if (!now) return { kind: "removed" } as const;
       const fingerprint = toolFingerprint(now);
