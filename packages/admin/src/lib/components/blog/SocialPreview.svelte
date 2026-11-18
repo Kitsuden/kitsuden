@@ -35,11 +35,11 @@
     type ToggleOption,
   } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
+  import FacebookIcon from "$lib/components/icons/FacebookIcon.svelte";
+  import LinkedinIcon from "$lib/components/icons/LinkedinIcon.svelte";
+  import XIcon from "$lib/components/icons/XIcon.svelte";
   import {
     MessageCircle,
-    Users,
-    AtSign,
-    Briefcase,
     Send,
     AlertCircle,
     CheckCircle,
@@ -135,10 +135,10 @@
   const tabIcons = {
     whatsapp: MessageCircle,
     telegram: Send,
-    // lucide 1.0 dropped its brand icons: neutral ones stand in for the three networks
-    facebook: Users,
-    twitter: AtSign,
-    linkedin: Briefcase,
+    // lucide 1.0 dropped its brand icons: the networks' logos are drawn here (components/icons).
+    facebook: FacebookIcon,
+    twitter: XIcon,
+    linkedin: LinkedinIcon,
   } as const;
   let isRefreshing = $state(false);
   let showDebug = $state(false);
@@ -593,7 +593,7 @@
         <div class="twitter-card">
           <div class="twitter-header">
             <div class="twitter-avatar">
-              <AtSign size={20} />
+              <XIcon size={20} />
             </div>
             <div class="twitter-user">
               <div class="twitter-name">{t("socialPreview.yourAccount")}</div>
