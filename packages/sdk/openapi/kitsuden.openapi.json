@@ -21,6 +21,10 @@
       "description": "Where an agent is told that its proposals were resolved (administrators only)."
     },
     {
+      "name": "kon-agent-token",
+      "description": "An agent exchanges its key for a short-lived token."
+    },
+    {
       "name": "kon-agents",
       "description": "Agent permissions, keys and quotas (admin only)."
     },
@@ -31,6 +35,10 @@
     {
       "name": "kon-approvals",
       "description": "Human approval of agent proposals (team members only; never an agent)."
+    },
+    {
+      "name": "kon-audit",
+      "description": "The agent audit hash chain: verify it and read its head (administrators only)."
     },
     {
       "name": "kon-automation",
@@ -615,6 +623,267 @@
           ],
           "mcp": {
             "excluded": "Only a human administrator sets where an agent's notifications go (an agent could point them at an internal address)."
+          }
+        }
+      }
+    },
+    "/admin/audit/head": {
+      "get": {
+        "operationId": "audit.audit-chain-head",
+        "summary": "Head of the agent audit chain (admin)",
+        "description": "The newest link of the agent audit chain (seq, row_hash, mac, key version, time), or null if nothing was chained yet. Store it outside the database (a ticket, a log service, a signed commit) to detect later the removal of the newest rows.",
+        "tags": [
+          "kon-audit",
+          "audit"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "head": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "head"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-audit",
+          "id": "audit-chain-head",
+          "access": "session",
+          "scope": "kon:audit:audit-chain-head",
+          "grantedBy": [
+            "kon:audit:audit-chain-head",
+            "audit:*",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Operations panel for administrators: a human checks the agents' audit log."
+          }
+        }
+      }
+    },
+    "/admin/audit/verify": {
+      "get": {
+        "operationId": "audit.verify-audit-chain",
+        "summary": "Verify the agent audit chain (admin)",
+        "description": "Recomputes every chained row of the agent audit log: seq without gaps, prev_hash, row_hash and MAC, and the checkpoint the chain starts from after a retention prune. Answers ok, rows checked, the first bad seq and the reason (hash_mismatch, mac_mismatch, seq_gap, prev_hash_mismatch, checkpoint_mismatch), the number of legacy (unchained) rows and the head.",
+        "tags": [
+          "kon-audit",
+          "audit"
+        ],
+        "parameters": [
+          {
+            "name": "fromSeq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "toSeq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-audit",
+          "id": "verify-audit-chain",
+          "access": "session",
+          "scope": "kon:audit:verify-audit-chain",
+          "grantedBy": [
+            "kon:audit:verify-audit-chain",
+            "audit:*",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": true,
+          "idempotent": true,
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Operations panel for administrators: a human checks the agents' audit log."
           }
         }
       }
@@ -3155,6 +3424,170 @@
         }
       }
     },
+    "/agent/token/exchange": {
+      "post": {
+        "operationId": "agent-token.exchange-agent-token",
+        "summary": "Exchange an agent key for a short-lived token",
+        "description": "An agent trades its own long-lived key for a kitsuden_ast_ token of minutes: scopes a subset of its own (denials carry over), ttlSeconds (default 300, max AGENT_SHORT_TOKEN_MAX_TTL), and an optional audience path prefix. With a DPoP proof the new token is bound to that key. It cannot be exchanged again and dies with its parent key. Agents only. See docs/agents/dpop-and-short-tokens.md.",
+        "tags": [
+          "kon-agent-token",
+          "agents"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Recommended for retries: the same key and body replay the first response instead of running twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scopes": {
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "ttlSeconds": {
+                    "type": "integer",
+                    "minimum": 30,
+                    "maximum": 9007199254740991
+                  },
+                  "audience": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-agent-token",
+          "id": "exchange-agent-token",
+          "access": "session",
+          "scope": "kon:agent-token:exchange-agent-token",
+          "grantedBy": [],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": false,
+          "bodyValidatedBy": "handler (400 Validation failed)",
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "An agent exchanges its key over REST; an MCP session already has its own credential."
+          }
+        }
+      }
+    },
     "/analytics/hit": {
       "post": {
         "operationId": "analytics.add-view",
@@ -5296,6 +5729,11 @@
                   "comment": {
                     "type": "string",
                     "maxLength": 2000
+                  },
+                  "operationHash": {
+                    "description": "Optional: the proposal's operationHash as shown; if sent it must match",
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
                   }
                 },
                 "additionalProperties": false
@@ -5483,6 +5921,11 @@
                   "comment": {
                     "type": "string",
                     "maxLength": 2000
+                  },
+                  "operationHash": {
+                    "description": "Optional: the proposal's operationHash as shown; if sent it must match",
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
                   }
                 },
                 "additionalProperties": false
@@ -6247,7 +6690,7 @@
       "post": {
         "operationId": "approvals.approve-proposal",
         "summary": "Approve and execute a proposal",
-        "description": "Executes the stored request once, with the agent's CURRENT identity and permissions, and records the approver. A second approval gets 409. If the agent was deactivated, its key revoked or expired, or its permission removed, the proposal ends as failed without executing. With `fields` (a proposal that writes a record), only the fields it accepts are executed, with any edited value; a field the list leaves out is rejected, and every field rejected is a rejection. `reviewAt` schedules a later review.",
+        "description": "Executes the stored request once, with the agent's CURRENT identity and permissions, and records the approver. A second approval gets 409. If the agent was deactivated, its key revoked or expired, or its permission removed, the proposal ends as failed without executing. With `fields` (a proposal that writes a record), only the fields it accepts are executed, with any edited value; a field the list leaves out is rejected, and every field rejected is a rejection. `reviewAt` schedules a later review. Send the `operationHash` you were shown: when the proposal has one it is required and must match (409 KITSUDEN_E_APPROVAL_STALE otherwise); before running, the stored row is re-hashed and the approval signature checked, and a mismatch fails the proposal without executing it.",
         "tags": [
           "kon-approvals",
           "approvals"
@@ -6286,6 +6729,11 @@
                   "comment": {
                     "type": "string",
                     "maxLength": 2000
+                  },
+                  "operationHash": {
+                    "description": "The operationHash of the proposal as you were shown it (GET /proposals/:id). Required to approve a proposal that has one: a different value gets 409 KITSUDEN_E_APPROVAL_STALE and nothing runs.",
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
                   },
                   "fields": {
                     "description": "Per-field decision for a proposal that writes a record (see fieldDiff): accept or reject each field, optionally with an edited value. Fields not listed are accepted. Approve only.",
@@ -6386,7 +6834,7 @@
             }
           },
           "409": {
-            "description": "`KITSUDEN_E_CONFLICT`: Conflict",
+            "description": "`KITSUDEN_E_CONFLICT`: Conflict; `KITSUDEN_E_APPROVAL_STALE`: Approval does not match the proposal shown",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6459,6 +6907,7 @@
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
             "KITSUDEN_E_CONFLICT",
+            "KITSUDEN_E_APPROVAL_STALE",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -6665,6 +7114,11 @@
                   "comment": {
                     "type": "string",
                     "maxLength": 2000
+                  },
+                  "operationHash": {
+                    "description": "The operationHash of the proposal as you were shown it (GET /proposals/:id). Required to approve a proposal that has one: a different value gets 409 KITSUDEN_E_APPROVAL_STALE and nothing runs.",
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
                   },
                   "fields": {
                     "description": "Per-field decision for a proposal that writes a record (see fieldDiff): accept or reject each field, optionally with an edited value. Fields not listed are accepted. Approve only.",
@@ -29713,6 +30167,57 @@
                       "pattern": "^(\\*\\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$"
                     }
                   },
+                  "egress": {
+                    "type": "object",
+                    "properties": {
+                      "rules": {
+                        "maxItems": 200,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "action": {
+                              "type": "string",
+                              "enum": [
+                                "allow",
+                                "deny"
+                              ]
+                            },
+                            "target": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 253
+                            },
+                            "ports": {
+                              "maxItems": 256,
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 65535
+                              }
+                            }
+                          },
+                          "required": [
+                            "action"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "rules"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "runtime": {
+                    "type": "string",
+                    "enum": [
+                      "quickjs",
+                      "opensandbox:python",
+                      "opensandbox:shell"
+                    ]
+                  },
                   "timeoutMs": {
                     "type": "integer",
                     "minimum": 50,
@@ -34365,6 +34870,179 @@
         }
       }
     },
+    "/v1/agents/{id}/dpop": {
+      "put": {
+        "operationId": "agents.save-require-dpop",
+        "summary": "Require DPoP for every credential of an agent",
+        "description": "Body { required: boolean }. When true, the agent's keys and tokens are refused without a valid DPoP proof, and an unbound key is refused outright.",
+        "tags": [
+          "kon-agents",
+          "agents"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional. Repeating this operation already leaves the same state.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-agents",
+          "id": "save-require-dpop",
+          "access": "session",
+          "scope": "kon:agents:save-require-dpop",
+          "grantedBy": [
+            "kon:agents:save-require-dpop",
+            "agents:*",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": true,
+          "bodyValidatedBy": "handler (400 Validation failed)",
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Admin configuration of agents (permissions, keys, quotas): kept out of MCP so no agent can change agent permissions; use the admin panel or REST with an admin session."
+          }
+        }
+      }
+    },
     "/v1/agents/{id}/keys": {
       "get": {
         "operationId": "agents.list-keys",
@@ -34687,6 +35365,199 @@
             "KITSUDEN_E_UNAUTHENTICATED",
             "KITSUDEN_E_FORBIDDEN",
             "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_RATE_LIMITED",
+            "KITSUDEN_E_INTERNAL"
+          ],
+          "mcp": {
+            "excluded": "Admin configuration of agents (permissions, keys, quotas): kept out of MCP so no agent can change agent permissions; use the admin panel or REST with an admin session."
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}/keys/{keyId}/dpop": {
+      "put": {
+        "operationId": "agents.bind-key-dpop",
+        "summary": "Bind an API key to a public key (DPoP)",
+        "description": "Body { jwk } with a public EC P-256 or Ed25519 JWK (null unbinds). A bound key only works with a DPoP proof signed by the matching private key (RFC 9449). See docs/agents/dpop-and-short-tokens.md.",
+        "tags": [
+          "kon-agents",
+          "agents"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional. Repeating this operation already leaves the same state.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`KITSUDEN_E_BAD_REQUEST`: Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`KITSUDEN_E_UNAUTHENTICATED`: Authentication required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`KITSUDEN_E_FORBIDDEN`: Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`KITSUDEN_E_NOT_FOUND`: Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`KITSUDEN_E_CONFLICT`: Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`KITSUDEN_E_VALIDATION`: Validation failed; `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`: Idempotency-Key reused with a different request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`KITSUDEN_E_RATE_LIMITED`: Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`KITSUDEN_E_INTERNAL`: Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "x-kitsuden-operation": {
+          "kon": "kon-agents",
+          "id": "bind-key-dpop",
+          "access": "session",
+          "scope": "kon:agents:bind-key-dpop",
+          "grantedBy": [
+            "kon:agents:bind-key-dpop",
+            "agents:*",
+            "admin"
+          ],
+          "roles": [
+            "admin"
+          ],
+          "sensitive": false,
+          "readOnly": false,
+          "idempotent": true,
+          "bodyValidatedBy": "handler (400 Validation failed)",
+          "errors": [
+            "KITSUDEN_E_VALIDATION",
+            "KITSUDEN_E_BAD_REQUEST",
+            "KITSUDEN_E_NOT_FOUND",
+            "KITSUDEN_E_UNAUTHENTICATED",
+            "KITSUDEN_E_FORBIDDEN",
+            "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED",
+            "KITSUDEN_E_CONFLICT",
             "KITSUDEN_E_RATE_LIMITED",
             "KITSUDEN_E_INTERNAL"
           ],
@@ -36784,6 +37655,7 @@
               "KITSUDEN_E_QUOTA_EXCEEDED",
               "KITSUDEN_E_APPROVAL_REQUIRED",
               "KITSUDEN_E_APPROVAL_UNSUPPORTED",
+              "KITSUDEN_E_APPROVAL_STALE",
               "KITSUDEN_E_DENIED_UNATTENDED",
               "KITSUDEN_E_AGENT_SPONSOR_INVALID",
               "KITSUDEN_E_IDEMPOTENCY_KEY_INVALID",

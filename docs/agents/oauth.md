@@ -29,6 +29,8 @@ is another way to _become_ the same agent, not a parallel permission system.
 - [What a connection can do](#what-a-connection-can-do)
 - [Tokens](#tokens)
 - [Revoking](#revoking)
+- [Pushed authorization requests](#pushed-authorization-requests)
+- [Proof of possession (DPoP)](#proof-of-possession-dpop)
 - [Endpoints](#endpoints)
 - [Security notes](#security-notes)
 - [Configuration](#configuration)
@@ -168,6 +170,40 @@ clients nobody approved within 7 days are deleted; connections with no live
 refresh token and no use for 90 days are revoked as `stale`; clients whose
 connections are all revoked and unused for 90 days are deleted.
 
+## Pushed authorization requests
+
+With RFC 9126 (PAR) the client sends the authorization parameters to the server
+first, authenticated like at the token endpoint, and the browser redirect only
+carries an opaque reference. Nothing about the request (scopes, redirect,
+challenge) travels through the browser or can be altered there.
+
+```http
+POST /api/oauth/par
+Content-Type: application/x-www-form-urlencoded
+
+client_id=…&response_type=code&redirect_uri=…&code_challenge=…&code_challenge_method=S256&scope=…&resource=…
+```
+
+```json
+{ "request_uri": "urn:ietf:params:oauth:request_uri:…", "expires_in": 60 }
+```
+
+Then open `/api/oauth/authorize?client_id=…&request_uri=…`. Any other query
+parameter is ignored there (RFC 9126 §4). A `request_uri` is single use, belongs
+to its client, lives `OAUTH_PAR_TTL` seconds (60) and is stored only as a hash.
+
+- `OAUTH_REQUIRE_PAR=true` refuses every authorization that was not pushed.
+- A client can ask for that for itself at registration:
+  `require_pushed_authorization_requests: true`.
+- The metadata advertises `pushed_authorization_request_endpoint` and
+  `require_pushed_authorization_requests`.
+
+## Proof of possession (DPoP)
+
+A client that sends a `DPoP` proof to the token endpoint gets tokens bound to
+its key (`token_type: "DPoP"`): a stolen access or refresh token is useless
+without the private key. See [dpop-and-short-tokens.md](dpop-and-short-tokens.md).
+
 ## Endpoints
 
 | Method and path                                         | Who                   | What                                   |
@@ -175,6 +211,7 @@ connections are all revoked and unused for 90 days are deleted.
 | `GET /.well-known/oauth-protected-resource[/api/mcp]`   | anyone                | RFC 9728 metadata                      |
 | `GET /.well-known/oauth-authorization-server`           | anyone                | RFC 8414 metadata                      |
 | `POST /api/oauth/register`                              | anyone (rate-limited) | RFC 7591 registration                  |
+| `POST /api/oauth/par`                                   | client (rate-limited) | RFC 9126 pushed authorization request  |
 | `GET /api/oauth/authorize`                              | browser               | validates, then redirects to the panel |
 | `POST /api/oauth/token`                                 | client                | `authorization_code`, `refresh_token`  |
 | `POST /api/oauth/revoke`                                | client                | RFC 7009                               |

@@ -73,6 +73,8 @@ export const HUMANS_ONLY = [
   "/api/oauth/grants",
   // External MCP servers: an agent must not approve the tools it would be given
   "/api/admin/mcp-servers",
+  // The agent audit chain: an agent does not check the log that records it
+  "/api/admin/audit",
 ];
 
 /**
@@ -274,6 +276,15 @@ export const OWN_EXPECTATION: Record<string, Partial<Record<Identity, boolean>>>
     agent: true,
     contentAgent: true,
   },
+  // Each AGENT exchanges its own key for a short-lived token (routes/agent-token.ts).
+  "POST /api/agent/token/exchange": {
+    anonymous: false,
+    user: false,
+    editor: false,
+    admin: false,
+    agent: true,
+    contentAgent: true,
+  },
   // Each AGENT queries its proposals (others'
   // are 404 inside the route); the human team, all of them; an account
   // without a team role, none.
@@ -450,6 +461,7 @@ const CORE_MATRIX: Record<string, Level> = {
   // An agent's own decisions (routes/agent-decisions.ts): any agent, never a person.
   "GET /api/agent/decisions": "custom",
   "POST /api/agent/decisions": "custom",
+  "POST /api/agent/token/exchange": "custom",
   "GET /api/proposals/:id": "custom",
   "GET /api/proposals/:id/events": "custom",
   // ── OAuth 2.1 for MCP (routes/oauth.ts, docs/agents/oauth.md) ──
@@ -460,6 +472,8 @@ const CORE_MATRIX: Record<string, Level> = {
   "GET /.well-known/oauth-protected-resource/api/mcp": "public",
   "GET /.well-known/oauth-authorization-server": "public",
   "POST /api/oauth/register": "public",
+  // RFC 9126: authenticates the CLIENT like /token; limited like /token.
+  "POST /api/oauth/par": "public",
   "GET /api/oauth/authorize": "public",
   "POST /api/oauth/token": "public",
   "POST /api/oauth/revoke": "public",
@@ -744,6 +758,10 @@ const CORE_MATRIX: Record<string, Level> = {
   "GET /api/admin/rate-limits": "admin",
   "GET /api/admin/requests": "admin",
   "GET /api/admin/requests/summary": "admin",
+  // The agent audit hash chain (lib/audit-chain.ts): human admins only
+  // (requireAdminRole + humansOnly; adminAgent out by HUMANS_ONLY).
+  "GET /api/admin/audit/verify": "admin",
+  "GET /api/admin/audit/head": "admin",
   "GET /api/admin/registry": "admin",
   "GET /api/admin/registry/:konId": "admin",
   "GET /api/admin/registry/:konId/schema/:table": "admin",
@@ -964,6 +982,8 @@ const CORE_MATRIX: Record<string, Level> = {
   "POST /api/v1/agents/:id/token": "admin",
   "POST /api/v1/agents/:id/keys": "admin",
   "POST /api/v1/agents/:id/keys/:keyId/revoke": "admin",
+  "PUT /api/v1/agents/:id/keys/:keyId/dpop": "admin",
+  "PUT /api/v1/agents/:id/dpop": "admin",
   "POST /api/v1/agents/:id/keys/:keyId/rotate": "admin",
   "POST /api/v1/identities": "admin",
 

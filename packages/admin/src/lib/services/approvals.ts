@@ -19,6 +19,8 @@ import type {
 /** Field by field and a later review (docs/agents/ledger.md). */
 export interface DecisionExtra {
   fields?: { field: string; decision: "accept" | "reject"; value?: unknown }[];
+  /** The proposal's `operationHash` as it was shown (required when it has one). */
+  operationHash?: string | null;
   reviewAt?: string;
   reviewNote?: string;
 }

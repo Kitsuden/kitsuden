@@ -189,6 +189,7 @@ the reservation made in Valkey.
 | `KITSUDEN_E_QUOTA_EXCEEDED`             | 429    | yes       | until 00:00 UTC       |
 | `KITSUDEN_E_APPROVAL_REQUIRED`          | 202    | no        | —                     |
 | `KITSUDEN_E_APPROVAL_UNSUPPORTED`       | 403    | no        | —                     |
+| `KITSUDEN_E_APPROVAL_STALE`             | 409    | no        | —                     |
 | `KITSUDEN_E_DENIED_UNATTENDED`          | 403    | no        | —                     |
 | `KITSUDEN_E_AGENT_SPONSOR_INVALID`      | 403    | no        | —                     |
 | `KITSUDEN_E_IDEMPOTENCY_KEY_INVALID`    | 422    | no        | —                     |
@@ -291,6 +292,15 @@ not an image by its content (`not_image`; image uploads ARE held), the form cann
 or an image over `APPROVALS_MAX_UPLOAD_MB`). `reason` says which. Nothing was executed. A human has to
 do it, or an admin has to change the agent's approval mode. See
 [Human approval](../agents/approvals.md).
+
+### `KITSUDEN_E_APPROVAL_STALE`
+
+Returned to the HUMAN approving a proposal (`POST /api/approvals/proposals/{id}/approve`), never
+to an agent. The approval must carry the `operationHash` of the proposal as the approver was
+shown it (the detail and the inbox list return it). It was missing, or the proposal is no longer
+that operation. Nothing was executed and the proposal is still pending: reload it, check it
+again and approve with its current `operationHash`. See
+[Human approval → Binding](../agents/approvals.md#binding-the-approval-is-tied-to-the-exact-operation).
 
 ### `KITSUDEN_E_DENIED_UNATTENDED`
 

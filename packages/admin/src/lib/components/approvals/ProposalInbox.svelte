@@ -298,7 +298,11 @@
       const extra = decisionExtra(selection, action === "approve");
       const r =
         action === "approve"
-          ? await approveProposal(selection.id, comment.trim() || undefined, extra)
+          ? await approveProposal(selection.id, comment.trim() || undefined, {
+              ...extra,
+              // What the reviewer is looking at: the API runs only that (0087).
+              ...(selection.operationHash ? { operationHash: selection.operationHash } : {}),
+            })
           : await rejectProposal(selection.id, comment.trim() || undefined, {
               ...(extra.reviewAt ? { reviewAt: extra.reviewAt, reviewNote: extra.reviewNote } : {}),
             });
@@ -349,7 +353,11 @@
     const results: Array<"executed" | "failed" | "error"> = [];
     for (const p of targets) {
       try {
-        const r = await approveProposal(p.id, undefined, {});
+        const r = await approveProposal(
+          p.id,
+          undefined,
+          p.operationHash ? { operationHash: p.operationHash } : {}
+        );
         results.push(r.proposal.status === "executed" ? "executed" : "failed");
       } catch {
         results.push("error");

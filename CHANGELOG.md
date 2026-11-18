@@ -9,6 +9,52 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Sandbox egress policy**: code actions get `config.egress.rules` (allow/deny by host,
+  `*.domain`, IP or CIDR, and TCP ports) on top of `fetchAllow`, under a platform layer the
+  operator controls (`KITSUDEN_EGRESS_DENY_ALWAYS`, `_ALLOW_ALWAYS`, `_PORTS`, `_DEFAULT`, or a
+  JSON file in `KITSUDEN_EGRESS_POLICY_FILE` that is re-read on change and fails closed). IP and
+  CIDR rules are matched on the addresses the connection is pinned to. A draft that adds an allow
+  or drops a deny waits for a human. See
+  [docs/agents/sandbox.md](docs/agents/sandbox.md#egress-policy).
+- **Credential vault for code actions**: `config.credentials` binds a stored secret to a host;
+  the API adds it as a header to matching HTTPS requests after the egress and customer-data
+  checks, so the code never sees the value, and an echoed value comes back redacted. Only a
+  person sets it; a new version of such an action always waits for a human
+  (`target_has_credentials`). See
+  [docs/agents/sandbox.md](docs/agents/sandbox.md#credentials-the-code-never-sees-vault).
+- **Optional OpenSandbox runtime** for Python and shell code actions
+  (`config.runtime: "opensandbox:python" | "opensandbox:shell"`, `KITSUDEN_OPENSANDBOX_*`): one
+  sandbox per run, no environment, deny-by-default network limited to hosts allowed for
+  customer data, deleted afterwards. Changing the runtime needs a human (`runtime_changed`). See
+  [docs/agents/sandbox.md](docs/agents/sandbox.md#opensandbox-runtime).
+- **DPoP (RFC 9449) for agent credentials**: a person binds an agent key to a public key
+  (`PUT /api/v1/agents/:id/keys/:keyId/dpop`) or requires proofs for an agent
+  (`PUT /api/v1/agents/:id/dpop`); MCP OAuth tokens are bound when the token request carries a
+  proof. Without the private key a leaked key or token is useless. Migration `0086`.
+- **Short-lived agent tokens**: `POST /api/agent/token/exchange` trades a key for a
+  `kitsuden_ast_*` token of minutes with a subset of its scopes and an optional path prefix; it
+  cannot be exchanged again and dies with its parent key. Every in-process agent run gets its own
+  credential, checked before each tool call and revoked at the end. See
+  [docs/agents/dpop-and-short-tokens.md](docs/agents/dpop-and-short-tokens.md).
+- **Approvals bound to the exact operation**: each proposal stores an `operationHash`; approving
+  must send the hash the reviewer was shown (`409 KITSUDEN_E_APPROVAL_STALE` otherwise), the
+  approval is signed, and the row is re-hashed right before it runs: a proposal changed after it
+  was shown fails without running (`proposal_integrity_failed`). Migration `0087`. See
+  [docs/agents/approvals.md](docs/agents/approvals.md#binding-what-you-approve-is-what-runs).
+- **Pushed authorization requests (RFC 9126)** on the MCP OAuth server: `POST /api/oauth/par`,
+  `request_uri` at `/authorize`, `OAUTH_REQUIRE_PAR` and the per-client
+  `require_pushed_authorization_requests`. See
+  [docs/agents/oauth.md](docs/agents/oauth.md#pushed-authorization-requests).
+- **Tamper-evident agent audit log**: `agent_audit_logs` is a hash chain (gapless `seq`,
+  `prev_hash`, `row_hash`, an HMAC per row) and append-only; retention prunes a prefix and leaves
+  a checkpoint. Admins verify it with `GET /api/admin/audit/verify` or
+  `bun run scripts/verify-audit.ts`, and the API logs the chain head daily to anchor elsewhere.
+  Migration `0088`. See [docs/agents/audit-chain.md](docs/agents/audit-chain.md).
+- **Container images pinned by digest**: every third-party image in the compose files and
+  Dockerfiles is `name:tag@sha256:…` (guarded by `tests/unit/images-pinned-by-digest.test.ts`),
+  and released images get a keyless cosign signature. See
+  [docs/install/verify-images.md](docs/install/verify-images.md).
+
 - **Job queue**: `queue.dispatch(…, { dedupeKey })` does not queue the same work twice. While a
   job with that key is pending or running on the queue, the dispatch answers that job's id with
   `deduplicated: true` (migration `0085`). A queue can open itself to automation rules
@@ -166,6 +212,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `deepmerge` at it.
 
 ### Changed
+
+- `agent_audit_logs` is append-only (migration `0088`): `UPDATE`, `DELETE` and `TRUNCATE` are
+  refused except by the retention function, and deleting an agent no longer deletes its audit
+  rows (the foreign key is gone). Scripts or tests that deleted audit rows must stop doing so.
+- The promotion contract has two new fallback reasons, `target_has_credentials` and
+  `runtime_changed`, and `new_outbound_hosts` also covers `egress` rules.
 
 - `link()` refuses a relation that is not lower case letters, digits and `_`, and stores a
   relation with no direction (`related`, `same_person`) with its ends in a fixed order, so

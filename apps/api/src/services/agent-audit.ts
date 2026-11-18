@@ -10,10 +10,24 @@
  * - Security alerts
  */
 
+import { randomUUID } from "node:crypto";
+
 import { eq, and, desc, gte, lte, sql, count } from "drizzle-orm";
 
 import { db } from "../db";
 import { agentAuditLogs, agentIdentities } from "../db/schema";
+import {
+  AUDIT_CHAIN_LOCK,
+  GENESIS_HASH,
+  auditChainHead,
+  currentAuditKey,
+  macOf,
+  rowHash,
+  storedInteger,
+  storedText,
+  toStoredJson,
+  type AuditedFields,
+} from "../lib/audit-chain";
 import { logger } from "../lib/logger";
 
 import {
@@ -54,6 +68,8 @@ export type AuditAction =
   | "proposal_executed"
   | "proposal_failed"
   | "proposal_expired"
+  /** An approved proposal NOT executed: its row or approval no longer matched (lib/operation-hash.ts). */
+  | "proposal_integrity_failed"
   /** Agent data ledger (lib/ledger.ts): a later review of a decided proposal. */
   | "proposal_review_scheduled"
   | "proposal_review_due"
@@ -78,7 +94,11 @@ export type AuditAction =
   /** An agent called an approved external MCP tool (lib/external-mcp-bridge.ts). */
   | "external_mcp_tool_called"
   /** At call time the tool no longer matched its approved fingerprint: back to review. */
-  | "external_mcp_tool_changed";
+  | "external_mcp_tool_changed"
+  /** An agent exchanged its key for a short-lived token (routes/agent-token.ts). */
+  | "short_token_issued"
+  /** A run's credential was refused before a tool call (services/agent-short-tokens.ts). */
+  | "run_credential_refused";
 
 export interface AuditLogEntry {
   /**
@@ -117,31 +137,205 @@ export interface AuditQueryFilters {
 // LOGGING
 // ═══════════════════════════════════════════════════════════════════════════
 
+// The log is a hash chain (migration 0088, lib/audit-chain.ts,
+// docs/agents/audit-chain.md). Each row's seq, prev_hash, row_hash and MAC
+// depend on the row before it, so rows are appended by ONE writer at a time:
+// calls are queued here and written in batches, one transaction per batch
+// under the chain's advisory lock (which also orders several API processes).
+// `logAgentAction` still returns at once; the request never waits for the lock.
+
+interface PendingAudit {
+  entry: AuditLogEntry;
+  createdAt: Date;
+  resolve: () => void;
+  reject: (err: unknown) => void;
+}
+
+const pendingAudit: PendingAudit[] = [];
+let auditFlush: Promise<void> | null = null;
+/** Rows per INSERT. A burst larger than this is written in several transactions. */
+const AUDIT_BATCH = 200;
+
+function enqueueAudit(entry: AuditLogEntry, createdAt: Date = new Date()): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    pendingAudit.push({ entry, createdAt, resolve, reject });
+    auditFlush ??= drainAudit();
+  });
+}
+
+async function drainAudit(): Promise<void> {
+  try {
+    // One turn of the event loop: whatever is logged at the same time joins the batch.
+    await new Promise<void>((r) => setImmediate(r));
+    while (pendingAudit.length > 0) {
+      await writeAuditBatch(pendingAudit.splice(0, AUDIT_BATCH));
+    }
+  } finally {
+    auditFlush = null;
+    if (pendingAudit.length > 0) auditFlush = drainAudit();
+  }
+}
+
+/** Waits until every queued audit row is written (or failed). For tests and shutdown. */
+export async function flushAgentAudit(): Promise<void> {
+  while (auditFlush) await auditFlush;
+}
+
+/**
+ * Appends entries with an explicit `createdAt` (tests, imports). The time is
+ * part of the hashed row; normal callers use `logAgentAction`, which stamps now.
+ */
+export async function appendAuditEntries(
+  entries: Array<AuditLogEntry & { createdAt?: Date }>
+): Promise<void> {
+  await Promise.all(entries.map((e) => enqueueAudit(e, e.createdAt ?? new Date())));
+}
+
+type PreparedRow = Omit<AuditedFields, "seq" | "prevHash">;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function rowsOfResult(r: unknown): Record<string, unknown>[] {
+  return Array.isArray(r)
+    ? (r as Record<string, unknown>[])
+    : ((r as { rows?: Record<string, unknown>[] } | null)?.rows ?? []);
+}
+
+/**
+ * user → agent → approval → resource: a `proposal_*` row gets, under
+ * `details.approvalContext`, what the proposal row says about who asked and who
+ * decided: its id, the operation hash (if that column exists), the approver,
+ * the sponsor and the key it was proposed with. One read by primary key,
+ * outside the chain lock; if it fails the row is written without it.
+ */
+async function withApprovalContext(
+  details: Record<string, unknown>,
+  proposalId: string
+): Promise<Record<string, unknown>> {
+  if (!UUID.test(proposalId) || "approvalContext" in details) return details;
+  try {
+    const [p] = rowsOfResult(
+      await db.execute(
+        sql`SELECT p.id, p.key_id, p.decided_by, p.sponsor_user_id, p.operation_key, p.status,
+                   to_jsonb(p) ->> 'operation_hash' AS operation_hash
+              FROM agent_proposals p WHERE p.id = ${proposalId}::uuid LIMIT 1`
+      )
+    );
+    if (!p) return details;
+    const context: Record<string, unknown> = { proposalId: String(p.id) };
+    const add = (k: string, v: unknown) => {
+      if (v !== null && v !== undefined && v !== "") context[k] = String(v);
+    };
+    add("operationHash", p.operation_hash);
+    add("operationKey", p.operation_key);
+    add("decidedBy", p.decided_by);
+    add("sponsorUserId", p.sponsor_user_id);
+    add("proposalKeyId", p.key_id);
+    add("status", p.status);
+    return { ...details, approvalContext: context };
+  } catch {
+    return details;
+  }
+}
+
+async function prepareAudit(p: PendingAudit): Promise<PreparedRow> {
+  const e = p.entry;
+  let details = toStoredJson(e.details);
+  if (typeof e.action === "string" && e.action.startsWith("proposal_") && e.resourceId) {
+    details = toStoredJson(await withApprovalContext(details, e.resourceId));
+  }
+  return {
+    id: randomUUID(),
+    createdAt: p.createdAt,
+    agentId: storedText(e.agentId),
+    keyId: storedText(e.keyId),
+    action: storedText(e.action) ?? "",
+    resource: storedText(e.resource),
+    resourceId: storedText(e.resourceId),
+    details,
+    ipAddress: storedText(e.ipAddress),
+    userAgent: storedText(e.userAgent),
+    durationMs: storedInteger(e.durationMs),
+    success: e.success !== false,
+    errorMessage: storedText(e.errorMessage),
+  };
+}
+
+/** pg-mem (the in-memory test database) has no advisory locks nor the 0088 objects. */
+async function onPgMem(): Promise<boolean> {
+  try {
+    const mod = (await import("../db")) as { isPgMem?: boolean };
+    return mod.isPgMem === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Appends `rows` after the current head, in one transaction under the chain lock. */
+async function appendChained(rows: PreparedRow[]): Promise<void> {
+  const key = currentAuditKey();
+  const pgMem = await onPgMem();
+  await db.transaction(async (tx) => {
+    if (!pgMem) await tx.execute(sql.raw(`SELECT pg_advisory_xact_lock(${AUDIT_CHAIN_LOCK})`));
+    const [last] = rowsOfResult(
+      await tx.execute(
+        sql`SELECT seq, row_hash FROM agent_audit_logs WHERE seq IS NOT NULL ORDER BY seq DESC LIMIT 1`
+      )
+    );
+    let seq = last ? Number(last.seq) : 0;
+    let prev = last ? String(last.row_hash) : GENESIS_HASH;
+    if (!pgMem) {
+      const [cp] = rowsOfResult(
+        await tx.execute(
+          sql`SELECT seq, row_hash FROM agent_audit_checkpoints ORDER BY seq DESC LIMIT 1`
+        )
+      );
+      if (cp && Number(cp.seq) > seq) {
+        seq = Number(cp.seq);
+        prev = String(cp.row_hash);
+      }
+    }
+    const values = rows.map((r) => {
+      seq += 1;
+      const fields: AuditedFields = { ...r, seq, prevHash: prev };
+      const hash = rowHash(fields);
+      prev = hash;
+      return { ...fields, rowHash: hash, mac: macOf(key.key, hash), keyVersion: key.version };
+    });
+    await tx.insert(agentAuditLogs).values(values);
+  });
+}
+
+async function writeAuditBatch(batch: PendingAudit[]): Promise<void> {
+  const prepared = await Promise.all(batch.map(prepareAudit));
+  try {
+    await appendChained(prepared);
+    for (const p of batch) p.resolve();
+  } catch (err) {
+    if (batch.length === 1) {
+      batch[0]!.reject(err);
+      return;
+    }
+    // One bad entry must not sink the others: one by one.
+    for (let i = 0; i < batch.length; i++) {
+      try {
+        await appendChained([prepared[i]!]);
+        batch[i]!.resolve();
+      } catch (e) {
+        batch[i]!.reject(e);
+      }
+    }
+  }
+}
+
 /**
  * Records an agent action in the audit log
  * Runs asynchronously so as not to block the response
  */
 export function logAgentAction(entry: AuditLogEntry): void {
-  // Run in the background
-  Promise.resolve().then(async () => {
-    try {
-      await db.insert(agentAuditLogs).values({
-        agentId: entry.agentId,
-        keyId: entry.keyId,
-        action: entry.action,
-        resource: entry.resource,
-        resourceId: entry.resourceId,
-        details: entry.details || {},
-        ipAddress: entry.ipAddress,
-        userAgent: entry.userAgent,
-        durationMs: entry.durationMs,
-        success: entry.success,
-        errorMessage: entry.errorMessage,
-      });
-    } catch (error) {
-      // Log the error but do not fail the main operation
-      logger.error({ error, entry }, "Failed to write agent audit log");
-    }
+  enqueueAudit(entry).catch((error) => {
+    // Log the error but do not fail the main operation
+    logger.error({ error, entry }, "Failed to write agent audit log");
   });
 }
 
@@ -151,19 +345,7 @@ export function logAgentAction(entry: AuditLogEntry): void {
  * approved or rejected): if the INSERT fails, it throws.
  */
 export async function registerAgentAction(entry: AuditLogEntry): Promise<void> {
-  await db.insert(agentAuditLogs).values({
-    agentId: entry.agentId,
-    keyId: entry.keyId,
-    action: entry.action,
-    resource: entry.resource,
-    resourceId: entry.resourceId,
-    details: entry.details || {},
-    ipAddress: entry.ipAddress,
-    userAgent: entry.userAgent,
-    durationMs: entry.durationMs,
-    success: entry.success,
-    errorMessage: entry.errorMessage,
-  });
+  await enqueueAudit(entry);
 }
 
 /**
@@ -514,26 +696,72 @@ export async function sweepAgentAuditLogs(
 
 let auditSweep: ReturnType<typeof setInterval> | null = null;
 
-/** Prunes once at start and then every hour (the OAuth and proposal sweeps' pattern). */
+let headLog: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Prunes once at start and then every hour (the OAuth and proposal sweeps'
+ * pattern), and prints the chain head at start and once a day.
+ */
 export function startAgentAuditSweep(): void {
   if (auditSweep) return;
-  auditSweep = setInterval(() => void sweepAgentAuditLogs(), 60 * 60_000);
+  const sweep = () => {
+    void sweepAgentAuditLogs();
+    // Expired short-lived and run credentials (services/agent-short-tokens.ts).
+    void import("./agent-short-tokens").then((m) => m.sweepShortTokens()).catch(() => {});
+  };
+  auditSweep = setInterval(sweep, 60 * 60_000);
   (auditSweep as { unref?: () => void }).unref?.();
-  void sweepAgentAuditLogs();
+  sweep();
+  headLog = setInterval(() => void logAuditChainHead(), 24 * 60 * 60_000);
+  (headLog as { unref?: () => void }).unref?.();
+  void logAuditChainHead();
 }
 
 /**
  * Deletes the audit rows older than `retentionDays` (run hourly by
- * `startAgentAuditSweep`).
+ * `startAgentAuditSweep`). The log is append-only (0088): the only way to
+ * remove rows is `kitsuden_audit_prune()`, which drops a PREFIX of the chain
+ * and records a checkpoint first, so what remains still verifies. The cutoff
+ * must be at least a day old.
  */
 export async function cleanupOldLogs(retentionDays = 90): Promise<number> {
   const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+  cutoffDate.setDate(cutoffDate.getDate() - Math.max(1, retentionDays));
 
-  const result = await db.delete(agentAuditLogs).where(lte(agentAuditLogs.createdAt, cutoffDate));
-
-  const deleted = result.rowCount || 0;
-  if (deleted > 0) logger.info({ deleted, retentionDays }, "Cleaned up old agent audit logs");
+  const result = await db.execute(
+    sql`SELECT rows_pruned, legacy_rows_pruned, checkpoint_seq
+          FROM kitsuden_audit_prune(${cutoffDate.toISOString()}::timestamptz)`
+  );
+  const [row] = rowsOfResult(result);
+  const deleted = Number(row?.rows_pruned ?? 0) + Number(row?.legacy_rows_pruned ?? 0);
+  if (deleted > 0) {
+    logger.info(
+      { deleted, retentionDays, checkpointSeq: row?.checkpoint_seq ?? null },
+      "Cleaned up old agent audit logs"
+    );
+  }
 
   return deleted;
+}
+
+/**
+ * Prints the chain head (seq, row_hash) in the log, at start and once a day:
+ * an operator who ships logs elsewhere gets an external anchor for free. See
+ * docs/agents/audit-chain.md ("Anchoring the head").
+ */
+export async function logAuditChainHead(): Promise<void> {
+  try {
+    const head = await auditChainHead();
+    if (head) {
+      logger.info(
+        { auditChainHead: { seq: head.seq, rowHash: head.rowHash, at: head.createdAt } },
+        "Agent audit chain head (anchor it outside the database)"
+      );
+    }
+  } catch (err) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      "Could not read the agent audit chain head"
+    );
+  }
 }

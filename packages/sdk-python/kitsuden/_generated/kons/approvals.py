@@ -42,6 +42,7 @@ class ApproveProposalBodyFieldsItem(_ApproveProposalBodyFieldsItemRequired, tota
 
 class ApproveProposalBody(TypedDict, total=False):
     comment: str
+    operationHash: str
     fields: List[ApproveProposalBodyFieldsItem]
     reviewAt: str
     reviewNote: str
@@ -187,7 +188,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:approvals:approve-proposal",
         mcp_tool=None,
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_CONFLICT", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_CONFLICT", "KITSUDEN_E_APPROVAL_STALE", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "close-review": OperationInfo(
         kon="kon-approvals",
@@ -426,11 +427,11 @@ class ApprovalsApi(KonApi):
     def approve_proposal(self, *, id: Union[str, int], body: ApproveProposalBody, request_options: Optional[RequestOptions] = None) -> Outcome[ApproveProposalResult]:
         """Approve and execute a proposal
 
-        Executes the stored request once, with the agent's CURRENT identity and permissions, and records the approver. A second approval gets 409. If the agent was deactivated, its key revoked or expired, or its permission removed, the proposal ends as failed without executing. With `fields` (a proposal that writes a record), only the fields it accepts are executed, with any edited value; a field the list leaves out is rejected, and every field rejected is a rejection. `reviewAt` schedules a later review.
+        Executes the stored request once, with the agent's CURRENT identity and permissions, and records the approver. A second approval gets 409. If the agent was deactivated, its key revoked or expired, or its permission removed, the proposal ends as failed without executing. With `fields` (a proposal that writes a record), only the fields it accepts are executed, with any edited value; a field the list leaves out is rejected, and every field rejected is a rejection. `reviewAt` schedules a later review. Send the `operationHash` you were shown: when the proposal has one it is required and must match (409 KITSUDEN_E_APPROVAL_STALE otherwise); before running, the stored row is re-hashed and the approval signature checked, and a mismatch fails the proposal without executing it.
 
         REST: `POST /api/approvals/proposals/{id}/approve` · scope `kon:approvals:approve-proposal`
         not idempotent (an Idempotency-Key is sent automatically)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_APPROVAL_STALE`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["approve-proposal"], {"id": id}, body, request_options)
 
@@ -621,11 +622,11 @@ class AsyncApprovalsApi(AsyncKonApi):
     async def approve_proposal(self, *, id: Union[str, int], body: ApproveProposalBody, request_options: Optional[RequestOptions] = None) -> Outcome[ApproveProposalResult]:
         """Approve and execute a proposal
 
-        Executes the stored request once, with the agent's CURRENT identity and permissions, and records the approver. A second approval gets 409. If the agent was deactivated, its key revoked or expired, or its permission removed, the proposal ends as failed without executing. With `fields` (a proposal that writes a record), only the fields it accepts are executed, with any edited value; a field the list leaves out is rejected, and every field rejected is a rejection. `reviewAt` schedules a later review.
+        Executes the stored request once, with the agent's CURRENT identity and permissions, and records the approver. A second approval gets 409. If the agent was deactivated, its key revoked or expired, or its permission removed, the proposal ends as failed without executing. With `fields` (a proposal that writes a record), only the fields it accepts are executed, with any edited value; a field the list leaves out is rejected, and every field rejected is a rejection. `reviewAt` schedules a later review. Send the `operationHash` you were shown: when the proposal has one it is required and must match (409 KITSUDEN_E_APPROVAL_STALE otherwise); before running, the stored row is re-hashed and the approval signature checked, and a mismatch fails the proposal without executing it.
 
         REST: `POST /api/approvals/proposals/{id}/approve` · scope `kon:approvals:approve-proposal`
         not idempotent (an Idempotency-Key is sent automatically)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_APPROVAL_STALE`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["approve-proposal"], {"id": id}, body, request_options)
 

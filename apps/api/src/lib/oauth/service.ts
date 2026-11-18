@@ -17,7 +17,7 @@ import { randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { isIPv4, isIPv6 } from "net";
 
 import { concedeScope, isDenial, normalizeScopes } from "@kitsuden/shared";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 
 import { db } from "../../db";
 import { agentApiKeys, agentIdentities, authUsers } from "../../db/schema-core";
@@ -37,9 +37,12 @@ import {
   BASIC_SCOPES,
   CODE_TTL_S,
   REQUEST_TTL_S,
+  REQUEST_URI_PREFIX,
   cimdOn,
   issuer,
   mcpResource,
+  parRequired,
+  parTtl,
   accessTtl,
   familyTtl,
   refreshTtl,
@@ -97,6 +100,7 @@ export interface RegisteredClient {
   logo_uri?: string;
   software_id?: string;
   software_version?: string;
+  require_pushed_authorization_requests?: boolean;
 }
 
 export async function registerClient(body: unknown, ip: string | null): Promise<RegisteredClient> {
@@ -143,6 +147,14 @@ export async function registerClient(body: unknown, ip: string | null): Promise<
   ) {
     throw new ErrorOAuth("invalid_client_metadata", 'response_types must be ["code"]');
   }
+  // RFC 9126 §6: the client may ask to be refused any authorization not pushed first.
+  const requirePar = m.require_pushed_authorization_requests;
+  if (requirePar !== undefined && typeof requirePar !== "boolean") {
+    throw new ErrorOAuth(
+      "invalid_client_metadata",
+      "require_pushed_authorization_requests must be a boolean"
+    );
+  }
   const id = `${CLIENT_PREFIX}${randomBytes(18).toString("base64url")}`;
   const secret =
     method === "none" ? null : `${CLIENT_SECRET_PREFIX}${randomBytes(32).toString("base64url")}`;
@@ -162,6 +174,7 @@ export async function registerClient(body: unknown, ip: string | null): Promise<
       tokenEndpointAuthMethod: method,
       secretHash: secret ? hashOf(secret) : null,
       registeredIp: ip,
+      requirePushedAuthorizationRequests: requirePar === true,
     })
     .returning();
   const c = row!;
@@ -178,6 +191,9 @@ export async function registerClient(body: unknown, ip: string | null): Promise<
     ...(c.logoUri ? { logo_uri: c.logoUri } : {}),
     ...(c.softwareId ? { software_id: c.softwareId } : {}),
     ...(c.softwareVersion ? { software_version: c.softwareVersion } : {}),
+    ...(c.requirePushedAuthorizationRequests
+      ? { require_pushed_authorization_requests: true }
+      : {}),
   };
 }
 
@@ -329,10 +345,81 @@ async function hasLiveGrant(clientId: string): Promise<boolean> {
   return Boolean(g);
 }
 
+/** The parameters of an authorization request, once checked (RFC 6749 §4.1.1 + PKCE). */
+interface CheckedAuthorization {
+  redirectUri: string;
+  state: string | null;
+  codeChallenge: string;
+  scopes: string[];
+  resource: string;
+}
+
+type CheckResult =
+  | { ok: true; value: CheckedAuthorization }
+  /**
+   * `redirectTrusted`: false when the redirect_uri itself is the problem (never
+   * redirect to it); true when only the other parameters are.
+   */
+  | { ok: false; error: string; description: string; redirectTrusted: boolean };
+
+/**
+ * The checks of an authorization request, shared by GET /authorize and by
+ * POST /par (RFC 9126 §2.1: "the same as the authorization endpoint").
+ */
+function checkAuthorization(client: Client, q: Record<string, string | undefined>): CheckResult {
+  const redirectUri = q.redirect_uri ?? "";
+  if (!redirectUri || !redirectMatches(client.redirectUris, redirectUri)) {
+    return {
+      ok: false,
+      error: "invalid_request",
+      description: "redirect_uri is missing or does not exactly match a registered redirect URI",
+      redirectTrusted: false,
+    };
+  }
+  const fail = (error: string, description: string): CheckResult => ({
+    ok: false,
+    error,
+    description,
+    redirectTrusted: true,
+  });
+  if (q.response_type !== "code") {
+    return fail("unsupported_response_type", "Only response_type=code is supported");
+  }
+  if (q.code_challenge_method !== "S256" || !validChallenge(q.code_challenge)) {
+    return fail(
+      "invalid_request",
+      "PKCE is required: code_challenge (43 base64url chars) with code_challenge_method=S256"
+    );
+  }
+  const scopes = readScopes(q.scope);
+  if (scopes === null) return fail("invalid_scope", "Malformed scope parameter");
+  const resource = requestedResource(q.resource);
+  if (resource && !resource.ok)
+    return fail("invalid_target", `The only resource served here is ${mcpResource()}`);
+  if (q.state && q.state.length > 2000) return fail("invalid_request", "state is too long");
+  return {
+    ok: true,
+    value: {
+      redirectUri,
+      state: q.state ?? null,
+      codeChallenge: q.code_challenge!,
+      scopes,
+      resource: resource?.ok ? resource.resource : mcpResource(),
+    },
+  };
+}
+
+/** Must this client go through PAR? (server-wide, or its own RFC 9126 §6 setting) */
+function pushRequired(client: Client): boolean {
+  return parRequired() || client.requirePushedAuthorizationRequests === true;
+}
+
 export async function startAuthorization(
   q: Record<string, string | undefined>
 ): Promise<AuthorizationResult> {
   const clientId = q.client_id ?? "";
+  // RFC 9126 §4: with a request_uri, only client_id and request_uri count.
+  if (q.request_uri !== undefined) return redeemPushedRequest(clientId, q.request_uri);
   let client: Client | null = null;
   try {
     client = await clientById(clientId);
@@ -342,59 +429,146 @@ export async function startAuthorization(
     throw e;
   }
   if (!client) return { type: "screen", error: "invalid_client", description: "Unknown client_id" };
-  const redirectUri = q.redirect_uri ?? "";
-  if (!redirectUri || !redirectMatches(client.redirectUris, redirectUri)) {
+  if (pushRequired(client)) {
     return {
       type: "screen",
       error: "invalid_request",
-      description: "redirect_uri is missing or does not exactly match a registered redirect URI",
+      description:
+        "Pushed authorization requests are required: POST the parameters to the pushed_authorization_request_endpoint and send only client_id and request_uri here",
     };
   }
-  const registeredClientId = client.id;
-  /**
-   * An error goes back to the client with a 302 only if its redirect is
-   * trustworthy (RFC 9700 §4.11): loopback, or a client a human already
-   * approved (a grant that is not revoked). A client registered anonymously
-   * and never approved sees the error screen: otherwise open registration plus
-   * this 302 with no login or consent make an open redirector (security review F68).
-   */
-  const error = async (code: string, description: string): Promise<AuthorizationResult> => {
-    if (!errorMayRedirect(redirectUri, await hasLiveGrant(registeredClientId))) {
-      return { type: "screen", error: code, description };
+  const checked = checkAuthorization(client, q);
+  if (!checked.ok) {
+    if (!checked.redirectTrusted)
+      return { type: "screen", error: checked.error, description: checked.description };
+    /**
+     * An error goes back to the client with a 302 only if its redirect is
+     * trustworthy (RFC 9700 §4.11): loopback, or a client a human already
+     * approved (a grant that is not revoked). A client registered anonymously
+     * and never approved sees the error screen: otherwise open registration plus
+     * this 302 with no login or consent make an open redirector (security review F68).
+     */
+    const redirectUri = q.redirect_uri!;
+    if (!errorMayRedirect(redirectUri, await hasLiveGrant(client.id))) {
+      return { type: "screen", error: checked.error, description: checked.description };
     }
     return {
       type: "redirect",
-      url: returnUrl(redirectUri, { error: code, error_description: description, state: q.state }),
+      url: returnUrl(redirectUri, {
+        error: checked.error,
+        error_description: checked.description,
+        state: q.state,
+      }),
     };
-  };
-  if (q.response_type !== "code") {
-    return error("unsupported_response_type", "Only response_type=code is supported");
   }
-  if (q.code_challenge_method !== "S256" || !validChallenge(q.code_challenge)) {
-    return error(
-      "invalid_request",
-      "PKCE is required: code_challenge (43 base64url chars) with code_challenge_method=S256"
-    );
-  }
-  const scopes = readScopes(q.scope);
-  if (scopes === null) return error("invalid_scope", "Malformed scope parameter");
-  const resource = requestedResource(q.resource);
-  if (resource && !resource.ok)
-    return error("invalid_target", `The only resource served here is ${mcpResource()}`);
-  if (q.state && q.state.length > 2000) return error("invalid_request", "state is too long");
-
+  const v = checked.value;
   const id = randomUUID();
   await db.insert(oauthAuthorizationRequests).values({
     id,
     clientId: client.id,
-    redirectUri,
-    state: q.state ?? null,
-    codeChallenge: q.code_challenge!,
-    requestedScopes: scopes,
-    resource: resource?.ok ? resource.resource : mcpResource(),
+    redirectUri: v.redirectUri,
+    state: v.state,
+    codeChallenge: v.codeChallenge,
+    requestedScopes: v.scopes,
+    resource: v.resource,
     expiresAt: inSeconds(REQUEST_TTL_S),
   });
   return { type: "redirect", url: consentUrl(id) };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PUSHED AUTHORIZATION REQUESTS (RFC 9126, POST /api/oauth/par)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface PushedRequest {
+  request_uri: string;
+  expires_in: number;
+}
+
+/**
+ * The client (already authenticated as at /token) pushes the parameters of its
+ * authorization request. They are checked exactly as at /authorize and stored
+ * as an `oauth_authorization_requests` row that cannot be consented to until
+ * /authorize redeems its `request_uri` (once, within `OAUTH_PAR_TTL` seconds).
+ * Only the sha256 of the random part of the `request_uri` is stored. Errors are
+ * returned to the client (JSON, RFC 9126 §2.3), never redirected.
+ */
+export async function pushAuthorization(
+  client: Client,
+  p: Record<string, string | undefined>
+): Promise<PushedRequest> {
+  if (p.request_uri !== undefined) {
+    throw new ErrorOAuth("invalid_request", "request_uri is not allowed in a pushed request");
+  }
+  const checked = checkAuthorization(client, p);
+  if (!checked.ok) throw new ErrorOAuth(checked.error, checked.description);
+  const v = checked.value;
+  const secret = randomBytes(32).toString("base64url");
+  const ttl = parTtl();
+  await db.insert(oauthAuthorizationRequests).values({
+    id: randomUUID(),
+    clientId: client.id,
+    redirectUri: v.redirectUri,
+    state: v.state,
+    codeChallenge: v.codeChallenge,
+    requestedScopes: v.scopes,
+    resource: v.resource,
+    expiresAt: inSeconds(ttl),
+    requestUriHash: hashOf(secret),
+  });
+  return { request_uri: `${REQUEST_URI_PREFIX}${secret}`, expires_in: ttl };
+}
+
+/**
+ * /authorize with a `request_uri`: the pushed request of THIS client, not
+ * expired and never used. Redeeming it (atomically) opens the usual consent
+ * window. Any problem is shown, not redirected.
+ */
+async function redeemPushedRequest(
+  clientId: string,
+  requestUri: string
+): Promise<AuthorizationResult> {
+  const invalid = (description: string): AuthorizationResult => ({
+    type: "screen",
+    error: "invalid_request_uri",
+    description,
+  });
+  if (!clientId) {
+    return { type: "screen", error: "invalid_request", description: "client_id is required" };
+  }
+  if (!requestUri.startsWith(REQUEST_URI_PREFIX) || requestUri.length > 200) {
+    return invalid("request_uri was not issued by this server");
+  }
+  const hash = hashOf(requestUri.slice(REQUEST_URI_PREFIX.length));
+  const [row] = await db
+    .select({ id: oauthAuthorizationRequests.id, clientId: oauthAuthorizationRequests.clientId })
+    .from(oauthAuthorizationRequests)
+    .where(eq(oauthAuthorizationRequests.requestUriHash, hash))
+    .limit(1);
+  if (!row || row.clientId !== clientId) {
+    return invalid("Unknown request_uri for this client_id");
+  }
+  try {
+    if (!(await clientById(clientId))) return invalid("Unknown client_id");
+  } catch (e) {
+    if (e instanceof ErrorOAuth)
+      return { type: "screen", error: e.error, description: e.description };
+    throw e;
+  }
+  const [redeemed] = await db
+    .update(oauthAuthorizationRequests)
+    .set({ pushedUsedAt: now(), expiresAt: inSeconds(REQUEST_TTL_S) })
+    .where(
+      and(
+        eq(oauthAuthorizationRequests.id, row.id),
+        eq(oauthAuthorizationRequests.clientId, clientId),
+        isNull(oauthAuthorizationRequests.pushedUsedAt),
+        gt(oauthAuthorizationRequests.expiresAt, now())
+      )
+    )
+    .returning({ id: oauthAuthorizationRequests.id });
+  if (!redeemed) return invalid("request_uri expired or already used");
+  return { type: "redirect", url: consentUrl(redeemed.id) };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -464,6 +638,8 @@ async function liveRequest(id: string) {
     .where(eq(oauthAuthorizationRequests.id, id))
     .limit(1);
   if (!p || p.p.decidedAt || p.p.expiresAt <= now()) return null;
+  // A pushed request (RFC 9126) only once /authorize redeemed its request_uri.
+  if (p.p.requestUriHash && !p.p.pushedUsedAt) return null;
   return p;
 }
 
@@ -708,7 +884,8 @@ export async function decideConsent(
 
 export interface TokenResponse {
   access_token: string;
-  token_type: "Bearer";
+  /** `DPoP` when the tokens are bound to the key the request proved (RFC 9449 §5). */
+  token_type: "Bearer" | "DPoP";
   expires_in: number;
   refresh_token: string;
   scope: string;
@@ -723,6 +900,8 @@ async function emit(
     scopes: string[];
     resource: string;
     familyEnd: Date;
+    /** DPoP (0086): thumbprint both tokens are bound to; `null` = bearer tokens. */
+    dpopJkt?: string | null;
   }
 ): Promise<TokenResponse> {
   const access = newToken("access");
@@ -736,6 +915,7 @@ async function emit(
     scopes: data.scopes,
     resource: data.resource,
     familyExpiresAt: data.familyEnd,
+    dpopJkt: data.dpopJkt ?? null,
   };
   await tx.insert(oauthTokens).values([
     {
@@ -755,7 +935,7 @@ async function emit(
   ]);
   return {
     access_token: access.token,
-    token_type: "Bearer",
+    token_type: data.dpopJkt ? "DPoP" : "Bearer",
     expires_in: accessLifetime,
     refresh_token: refreshing.token,
     scope: data.scopes.join(" "),
@@ -787,7 +967,9 @@ async function liveGrant(grantId: string) {
 
 export async function redeemCode(
   client: Client,
-  p: Record<string, string>
+  p: Record<string, string>,
+  /** DPoP (RFC 9449, 0086): the thumbprint of a valid proof sent with this request. */
+  dpopJkt: string | null = null
 ): Promise<TokenResponse> {
   const code = p.code;
   if (!code) throw new ErrorOAuth("invalid_request", "code is required");
@@ -833,10 +1015,16 @@ export async function redeemCode(
     scopes: row.scopes,
     resource: row.resource,
     familyEnd: inSeconds(familyTtl()),
+    dpopJkt,
   });
 }
 
-export async function refresh(client: Client, p: Record<string, string>): Promise<TokenResponse> {
+export async function refresh(
+  client: Client,
+  p: Record<string, string>,
+  /** DPoP (RFC 9449, 0086): the thumbprint of a valid proof sent with this request. */
+  dpopJkt: string | null = null
+): Promise<TokenResponse> {
   const token = p.refresh_token;
   if (!token) throw new ErrorOAuth("invalid_request", "refresh_token is required");
   const [row] = await db
@@ -860,6 +1048,16 @@ export async function refresh(client: Client, p: Record<string, string>): Promis
   }
   if (row.expiresAt <= now() || row.familyExpiresAt <= now())
     throw new ErrorOAuth("invalid_grant", "Refresh token expired");
+  // RFC 9449 §5: a bound family is refreshed only with a proof from THE SAME key
+  // (checked before the refresh is spent: a thief without the key burns nothing).
+  if (row.dpopJkt && row.dpopJkt !== dpopJkt) {
+    throw new ErrorOAuth(
+      "invalid_dpop_proof",
+      dpopJkt
+        ? "The DPoP proof key does not match the key these tokens are bound to"
+        : "These tokens are DPoP-bound: send a DPoP proof with the refresh request"
+    );
+  }
   const resource = requestedResource(p.resource);
   if (resource && (!resource.ok || resource.resource !== row.resource)) {
     throw new ErrorOAuth("invalid_target", "resource does not match the original authorization");
@@ -890,6 +1088,8 @@ export async function refresh(client: Client, p: Record<string, string>): Promis
       scopes,
       resource: row.resource,
       familyEnd: row.familyExpiresAt,
+      // A bound family stays bound; an unbound one is bound from the first proof on.
+      dpopJkt: row.dpopJkt ?? dpopJkt,
     });
   });
 }

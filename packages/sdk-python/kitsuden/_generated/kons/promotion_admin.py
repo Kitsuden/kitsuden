@@ -24,6 +24,7 @@ __all__ = ["PromotionAdminApi", "AsyncPromotionAdminApi", "OPERATIONS"]
 
 class ApproveVersionBody(TypedDict, total=False):
     comment: str
+    operationHash: str
 
 
 class PromotionModeBody(TypedDict):

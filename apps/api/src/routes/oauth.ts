@@ -7,6 +7,7 @@
  *   GET  /.well-known/oauth-protected-resource[/api/mcp]   RFC 9728 (public)
  *   GET  /.well-known/oauth-authorization-server            RFC 8414 (public)
  *   POST /api/oauth/register                                RFC 7591 (public, limited)
+ *   POST /api/oauth/par                                     RFC 9126 pushed request (client auth, limited)
  *   GET  /api/oauth/authorize                               code + PKCE S256 → panel
  *   POST /api/oauth/token                                   code / refresh (public, limited)
  *   POST /api/oauth/revoke                                  RFC 7009 (public)
@@ -22,6 +23,7 @@ import type { Context, MiddlewareHandler, Next } from "hono";
 import { Hono } from "hono";
 
 import { clientIp } from "../lib/client-ip";
+import { checkDpopProof, DPOP_ALGORITHMS, DPOP_CHALLENGE } from "../lib/dpop";
 import { logger } from "../lib/logger";
 import {
   BASIC_SCOPES,
@@ -32,11 +34,13 @@ import {
   tokenLimit,
   oauthEnabled,
   mcpResource,
+  parRequired,
   resourceMetadataUrl,
 } from "../lib/oauth/config";
 import {
   ErrorOAuth,
   authenticateClient,
+  pushAuthorization,
   redeemCode,
   recentPendingClients,
   startAuthorization,
@@ -52,6 +56,7 @@ const PUBLIC_ITEMS = [
   "/.well-known/oauth-protected-resource",
   "/.well-known/oauth-authorization-server",
   "/api/oauth/register",
+  "/api/oauth/par",
   "/api/oauth/token",
   "/api/oauth/revoke",
 ];
@@ -72,7 +77,7 @@ export function oauthCors(): MiddlewareHandler {
         headers: {
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Authorization, Content-Type, MCP-Protocol-Version",
+          "Access-Control-Allow-Headers": "Authorization, Content-Type, MCP-Protocol-Version, DPoP",
           "Access-Control-Max-Age": "86400",
         },
       });
@@ -99,7 +104,9 @@ export function mcpChallenge(): MiddlewareHandler {
     if (!oauthEnabled()) return;
     const status = c.res.status;
     if (status !== 401 && status !== 403) return;
-    const withToken = /^bearer\s+\S/i.test(c.req.header("authorization") ?? "");
+    // A refused DPoP proof already carries its own challenge (RFC 9449 §7.1).
+    if (/^dpop\s/i.test(c.res.headers.get("WWW-Authenticate") ?? "")) return;
+    const withToken = /^(bearer|dpop)\s+\S/i.test(c.req.header("authorization") ?? "");
     let value: string;
     if (status === 401) {
       value =
@@ -143,6 +150,8 @@ function resourceMetadata() {
     scopes_supported: [...BASIC_SCOPES],
     bearer_methods_supported: ["header"],
     resource_name: "Kitsuden MCP",
+    // RFC 9449 §5.1 / RFC 9728: tokens may be DPoP-bound (docs/agents/dpop-and-short-tokens.md).
+    dpop_signing_alg_values_supported: [...DPOP_ALGORITHMS],
     resource_documentation: `${issuer()}/llms.txt`,
   };
 }
@@ -164,6 +173,9 @@ oauthRoutes.get("/.well-known/oauth-authorization-server", (c) => {
   return c.json({
     issuer: base,
     authorization_endpoint: `${base}/api/oauth/authorize`,
+    // RFC 9126: pushed authorization requests (required for all clients with OAUTH_REQUIRE_PAR).
+    pushed_authorization_request_endpoint: `${base}/api/oauth/par`,
+    require_pushed_authorization_requests: parRequired(),
     token_endpoint: `${base}/api/oauth/token`,
     ...(dcrEnabled() ? { registration_endpoint: `${base}/api/oauth/register` } : {}),
     revocation_endpoint: `${base}/api/oauth/revoke`,
@@ -180,6 +192,8 @@ oauthRoutes.get("/.well-known/oauth-authorization-server", (c) => {
     scopes_supported: [...BASIC_SCOPES],
     client_id_metadata_document_supported: cimdOn(),
     authorization_response_iss_parameter_supported: true,
+    // RFC 9449 §5.1: a token request with a DPoP proof gets DPoP-bound tokens.
+    dpop_signing_alg_values_supported: [...DPOP_ALGORITHMS],
     service_documentation: `${base}/llms.txt`,
   });
 });
@@ -264,6 +278,21 @@ oauthRoutes.post("/api/oauth/register", limit("oauth-register", recordLimit, 360
   }
 });
 
+// ── Pushed Authorization Requests (RFC 9126) ─────────────────────────────────
+
+oauthRoutes.post("/api/oauth/par", limit("oauth-par", tokenLimit, 60), async (c) => {
+  c.header("Cache-Control", "no-store");
+  try {
+    const p = await parameters(c);
+    // The client authenticates exactly as at /token (`none` for a public client).
+    const client = await authenticateClient(c.req.header("authorization"), p);
+    const { client_secret: _secret, ...authorization } = p;
+    return c.json(await pushAuthorization(client, authorization), 201);
+  } catch (e) {
+    return errorOAuth(c, e);
+  }
+});
+
 // ── Authorization ────────────────────────────────────────────────────────────
 
 function errorScreen(c: Context, error: string, description: string): Response {
@@ -285,6 +314,27 @@ oauthRoutes.get("/api/oauth/authorize", limit("oauth-authorize", tokenLimit, 60)
 
 // ── Token ────────────────────────────────────────────────────────────────────
 
+/**
+ * DPoP at the token endpoint (RFC 9449 §5): with a `DPoP` header, the proof
+ * must be valid for `POST <issuer>/api/oauth/token` and the issued tokens are
+ * bound to its key. No header: bearer tokens, as before (a bound family still
+ * needs one to refresh: lib/oauth/service.ts `refresh`).
+ */
+async function tokenRequestProof(c: Context): Promise<string | null> {
+  const proof = c.req.header("DPoP");
+  if (proof === undefined) return null;
+  const r = await checkDpopProof({
+    proof,
+    method: "POST",
+    url: `${issuer()}/api/oauth/token`,
+  });
+  if (!r.ok) {
+    c.header("WWW-Authenticate", DPOP_CHALLENGE);
+    throw new ErrorOAuth("invalid_dpop_proof", r.reason);
+  }
+  return r.jkt;
+}
+
 oauthRoutes.post("/api/oauth/token", limit("oauth-token", tokenLimit, 60), async (c) => {
   c.header("Cache-Control", "no-store");
   c.header("Pragma", "no-cache");
@@ -299,8 +349,9 @@ oauthRoutes.post("/api/oauth/token", limit("oauth-token", tokenLimit, 60), async
       );
     }
     const client = await authenticateClient(c.req.header("authorization"), p);
-    if (p.grant_type === "authorization_code") return c.json(await redeemCode(client, p));
-    if (p.grant_type === "refresh_token") return c.json(await refresh(client, p));
+    const dpopJkt = await tokenRequestProof(c);
+    if (p.grant_type === "authorization_code") return c.json(await redeemCode(client, p, dpopJkt));
+    if (p.grant_type === "refresh_token") return c.json(await refresh(client, p, dpopJkt));
     throw new ErrorOAuth(
       "unsupported_grant_type",
       "Only authorization_code and refresh_token are supported (no implicit, password or client_credentials)"

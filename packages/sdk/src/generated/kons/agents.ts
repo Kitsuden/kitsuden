@@ -57,6 +57,22 @@ export type AgentVersionsParams = {
 /** Success response of `agents.agent-versions`. */
 export type AgentVersionsResponse = Record<string, unknown>;
 
+/** Body of `agents.bind-key-dpop`. */
+export type BindKeyDpopBody = Record<string, unknown>;
+
+/** Arguments of `agents.bind-key-dpop`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
+export type BindKeyDpopParams = {
+  /** Path parameter. */
+  id: string | number;
+  /** Path parameter. */
+  keyId: string | number;
+  /** JSON body. */
+  body: BindKeyDpopBody;
+};
+
+/** Success response of `agents.bind-key-dpop`. */
+export type BindKeyDpopResponse = Record<string, unknown>;
+
 /** Body of `agents.create-key`. */
 export type CreateKeyBody = {
   name?: string;
@@ -192,6 +208,20 @@ export type SaveQuotasParams = {
 /** Success response of `agents.save-quotas`. */
 export type SaveQuotasResponse = Record<string, unknown>;
 
+/** Body of `agents.save-require-dpop`. */
+export type SaveRequireDpopBody = Record<string, unknown>;
+
+/** Arguments of `agents.save-require-dpop`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
+export type SaveRequireDpopParams = {
+  /** Path parameter. */
+  id: string | number;
+  /** JSON body. */
+  body: SaveRequireDpopBody;
+};
+
+/** Success response of `agents.save-require-dpop`. */
+export type SaveRequireDpopResponse = Record<string, unknown>;
+
 /** Body of `agents.save-scopes`. */
 export type SaveScopesBody = {
   scopes: string[];
@@ -231,6 +261,7 @@ export const operations = {
   "agentFriction": {"kon":"kon-agents","id":"agent-friction","operationId":"agents.agent-friction","method":"GET","path":"/v1/agent-friction","pathParams":[],"queryParams":["days","agentId"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:agents:agent-friction","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "agentVersion": {"kon":"kon-agents","id":"agent-version","operationId":"agents.agent-version","method":"GET","path":"/v1/agents/{id}/versions/{version}","pathParams":["id","version"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:agents:agent-version","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "agentVersions": {"kon":"kon-agents","id":"agent-versions","operationId":"agents.agent-versions","method":"GET","path":"/v1/agents/{id}/versions","pathParams":["id"],"queryParams":["limit"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:agents:agent-versions","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "bindKeyDpop": {"kon":"kon-agents","id":"bind-key-dpop","operationId":"agents.bind-key-dpop","method":"PUT","path":"/v1/agents/{id}/keys/{keyId}/dpop","pathParams":["id","keyId"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:agents:bind-key-dpop","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "createKey": {"kon":"kon-agents","id":"create-key","operationId":"agents.create-key","method":"POST","path":"/v1/agents/{id}/keys","pathParams":["id"],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:agents:create-key","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "listKeys": {"kon":"kon-agents","id":"list-keys","operationId":"agents.list-keys","method":"GET","path":"/v1/agents/{id}/keys","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:agents:list-keys","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "permissionCatalog": {"kon":"kon-agents","id":"permission-catalog","operationId":"agents.permission-catalog","method":"GET","path":"/v1/agent-access/catalog","pathParams":[],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:agents:permission-catalog","mcpTool":null,"errors":["KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
@@ -242,6 +273,7 @@ export const operations = {
   "rotateKey": {"kon":"kon-agents","id":"rotate-key","operationId":"agents.rotate-key","method":"POST","path":"/v1/agents/{id}/keys/{keyId}/rotate","pathParams":["id","keyId"],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:agents:rotate-key","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "saveMcpSettings": {"kon":"kon-agents","id":"save-mcp-settings","operationId":"agents.save-mcp-settings","method":"PUT","path":"/v1/agents/{id}/mcp-settings","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:agents:save-mcp-settings","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "saveQuotas": {"kon":"kon-agents","id":"save-quotas","operationId":"agents.save-quotas","method":"PUT","path":"/v1/agents/{id}/quotas","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:agents:save-quotas","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "saveRequireDpop": {"kon":"kon-agents","id":"save-require-dpop","operationId":"agents.save-require-dpop","method":"PUT","path":"/v1/agents/{id}/dpop","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:agents:save-require-dpop","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "saveScopes": {"kon":"kon-agents","id":"save-scopes","operationId":"agents.save-scopes","method":"PUT","path":"/v1/agents/{id}/scopes","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:agents:save-scopes","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "saveSigner": {"kon":"kon-agents","id":"save-signer","operationId":"agents.save-signer","method":"PUT","path":"/v1/agents/{id}/sponsor","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:agents:save-signer","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
 } as const satisfies Record<string, OperationInfo>;
@@ -302,6 +334,16 @@ export interface AgentsApi {
    * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly agentVersions: Operation<AgentVersionsParams, AgentVersionsResponse>;
+  /**
+   * Bind an API key to a public key (DPoP)
+   *
+   * Body { jwk } with a public EC P-256 or Ed25519 JWK (null unbinds). A bound key only works with a DPoP proof signed by the matching private key (RFC 9449). See docs/agents/dpop-and-short-tokens.md.
+   *
+   * REST: `PUT /api/v1/agents/{id}/keys/{keyId}/dpop` · scope `kon:agents:bind-key-dpop`
+   * idempotent (safe to retry)
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_CONFLICT`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   */
+  readonly bindKeyDpop: Operation<BindKeyDpopParams, BindKeyDpopResponse>;
   /**
    * Create an API key
    *
@@ -412,6 +454,16 @@ export interface AgentsApi {
    * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly saveQuotas: Operation<SaveQuotasParams, SaveQuotasResponse>;
+  /**
+   * Require DPoP for every credential of an agent
+   *
+   * Body { required: boolean }. When true, the agent's keys and tokens are refused without a valid DPoP proof, and an unbound key is refused outright.
+   *
+   * REST: `PUT /api/v1/agents/{id}/dpop` · scope `kon:agents:save-require-dpop`
+   * idempotent (safe to retry)
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   */
+  readonly saveRequireDpop: Operation<SaveRequireDpopParams, SaveRequireDpopResponse>;
   /**
    * Replace an agent's scopes
    *

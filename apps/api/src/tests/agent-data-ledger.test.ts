@@ -40,6 +40,7 @@ import { invalidateApprovalsConfig } from "../lib/approvals";
 import { REVIEW_QUEUE, markReviewDue } from "../lib/ledger";
 import { createAgent } from "../services/agent-auth";
 
+import { withShownHash } from "./approval-shown-hash";
 import { isDatabaseAvailable, generateTestId, enterAs } from "./setup";
 
 let dbAvailable = false;
@@ -56,6 +57,7 @@ async function request(
   path: string,
   o: { token?: string; cookie?: string; body?: unknown; headers?: Record<string, string> } = {}
 ): Promise<{ status: number; body: Json; headers: Headers }> {
+  o = { ...o, body: await withShownHash(method, path, o.body) };
   const headers: Record<string, string> = { origin: ORIGIN, ...(o.headers ?? {}) };
   if (o.token) headers.Authorization = `Bearer ${o.token}`;
   if (o.cookie) headers.Cookie = o.cookie;

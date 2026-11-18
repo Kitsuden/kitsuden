@@ -19,6 +19,9 @@ it has**.
 - [What the code sees](#what-the-code-sees)
 - [Calling the Kitsuden API from code](#calling-the-kitsuden-api-from-code)
 - [Calling other services (`fetch`)](#calling-other-services-fetch)
+- [Egress policy](#egress-policy)
+- [Credentials the code never sees (vault)](#credentials-the-code-never-sees-vault)
+- [OpenSandbox runtime](#opensandbox-runtime)
 - [Effects that must happen once (`kitsuden.effect`)](#effects-that-must-happen-once-kitsudeneffect)
 - [Limits](#limits)
 - [How the isolation works](#how-the-isolation-works)
@@ -131,6 +134,146 @@ to the connection (DNS rebinding) cannot reach an internal service. TLS still us
 the name for SNI and the certificate (`apps/api/src/lib/safe-fetch.ts`). If
 your actions really call an internal service, set
 `KITSUDEN_SANDBOX_ALLOW_INTERNAL_FETCH=true` on the server.
+
+## Egress policy
+
+`fetchAllow` and `KITSUDEN_SANDBOX_FETCH_ALLOW` are the simple form of a policy
+with two layers (`apps/api/src/lib/egress-policy.ts`). The first layer that
+decides wins:
+
+1. **Platform `denyAlways`**: set by the operator; no action can undo it.
+2. **Platform `allowAlways`**: set by the operator; every action can reach it.
+3. **The action's rules**: `config.egress.rules`, plus every `fetchAllow` host and
+   `KITSUDEN_SANDBOX_FETCH_ALLOW` as `allow` rules. Inside this layer a matching
+   `deny` beats a matching `allow`, whatever the order.
+4. **Platform default**: `deny` unless the operator sets `allow`. An action
+   cannot choose its own default (`egress.defaultAction` is refused): that would
+   open every host with one field.
+
+Before all of that, the platform **port floor** (`ports`), when set, refuses any
+TCP port outside it.
+
+```json
+{
+  "egress": {
+    "rules": [
+      { "action": "allow", "target": "*.stripe.com", "ports": [443] },
+      { "action": "deny", "target": "files.stripe.com" },
+      { "action": "allow", "target": "203.0.113.0/24" },
+      { "action": "deny", "ports": [25] }
+    ]
+  }
+}
+```
+
+A target is a host (`api.example.com`), subdomains (`*.example.com`), any host
+(`*`), an IP or a CIDR (`10.0.0.0/8`, `fd00::/8`). IP and CIDR targets are
+matched against the **addresses the name resolved to**, in the same resolution
+the connection is pinned to, so a name cannot slip past a CIDR deny by resolving
+differently later. A rule with `ports` and no target matches any host on those
+ports. The private-address guard still comes first: allowing `10.0.0.0/8` does
+nothing unless `KITSUDEN_SANDBOX_ALLOW_INTERNAL_FETCH=true`.
+
+The platform layer comes from the environment (`KITSUDEN_EGRESS_DEFAULT`,
+`KITSUDEN_EGRESS_DENY_ALWAYS`, `KITSUDEN_EGRESS_ALLOW_ALWAYS`,
+`KITSUDEN_EGRESS_PORTS`: comma-separated targets or ports) and, optionally, a
+JSON file (`KITSUDEN_EGRESS_POLICY_FILE`):
+
+```json
+{
+  "defaultAction": "deny",
+  "denyAlways": [{ "action": "deny", "target": "169.254.0.0/16" }],
+  "allowAlways": [{ "action": "allow", "target": "status.example.org" }],
+  "ports": [80, 443]
+}
+```
+
+The file is **re-read when it changes**, with no restart, within a second. Every
+sandbox request opens a fresh connection, so a tightened policy also applies to
+the next request of an execution that is already running: there are no open
+connections to drop. It **fails closed**: if the file is set and has never been
+read correctly, every sandbox request is refused; if a later edit is invalid,
+the last valid version stays in force and the error is logged.
+
+Agents declare `egress` in a draft like `fetchAllow`. A draft that adds an
+`allow` the active version did not have, or drops one of its `deny` rules, waits
+for a human (`new_outbound_hosts`, [promotion.md](promotion.md)). Promotion tests
+apply the same policy (without DNS: a name that only an IP/CIDR rule allows is
+refused in a test).
+
+Inspired by OpenSandbox's egress sidecar (Apache-2.0); no code is copied.
+
+## Credentials the code never sees (vault)
+
+`config.envVars` reach the code as `env`: the code sees them, so a buggy or
+hostile version can log them or send them anywhere `fetch` reaches. For an API
+key, bind it instead (`apps/api/src/lib/credential-vault.ts`):
+
+```json
+{
+  "credentials": [
+    {
+      "secret": "STRIPE_KEY",
+      "host": "api.stripe.com",
+      "header": "Authorization",
+      "format": "Bearer {secret}"
+    }
+  ]
+}
+```
+
+- `secret` is a key in the secrets store (**Settings → Secrets**,
+  `/api/admin/secrets`); `header` defaults to `Authorization` and `format` to
+  `Bearer {secret}`.
+- The API process adds the header **after** the egress policy and the
+  customer-data check, only over **https**, and only when the request's host
+  matches `host` (exact or `*.domain`; never `*`, an IP range or a URL). The
+  code's own header of the same name is replaced.
+- The value never reaches the sandbox: not in `env`, not in the request the code
+  built. If the response echoes it (in a header or the body), it comes back as
+  `[redacted:vault]`.
+- A missing or reserved secret fails the execution instead of calling the host
+  without its credential.
+- Only a **person** sets `credentials` (an agent gets `403`, reason
+  `credentials_by_humans`). A new code version for an action with credentials
+  always waits for a human (`target_has_credentials`): it never sees the value,
+  but its requests carry that authority.
+- In a promotion test the header carries `[vault:STRIPE_KEY]`, never the value.
+
+Inspired by OpenSandbox's Credential Vault (Apache-2.0); no code is copied.
+
+## OpenSandbox runtime
+
+QuickJS runs JavaScript only. For a code action that needs **Python or a
+shell**, an operator can point Kitsuden at an
+[OpenSandbox](https://github.com/opensandbox-group/OpenSandbox) server
+(Docker, Kubernetes or Firecracker microVMs) and give the action
+`config.runtime: "opensandbox:python"` or `"opensandbox:shell"`.
+
+```bash
+KITSUDEN_OPENSANDBOX_URL=http://opensandbox:8080/v1
+KITSUDEN_OPENSANDBOX_IMAGE=<an image with execd, pinned by digest>
+KITSUDEN_OPENSANDBOX_API_KEY=<the server's key>
+```
+
+Each execution creates a sandbox with the action's memory limit, **no
+environment**, and a network policy that **denies everything** except the hosts
+below; runs the code through execd (Python receives the payload as `event`, a
+shell command as `$EVENT_JSON`); returns stdout and the last result; and deletes
+the sandbox in every case (`apps/api/src/lib/sandbox/opensandbox.ts`).
+
+What this runtime does not have, on purpose:
+
+- no `kitsuden.api` (the code cannot call the Kitsuden API) and no vault
+  credentials (an action with `credentials` is refused on it);
+- no per-request customer-data check (that runs in Kitsuden's process). To keep
+  the same guarantee, the sandbox may only reach hosts the action allows **and**
+  that may receive customer data (`customerDataHosts`,
+  `KITSUDEN_CUSTOMER_DATA_HOSTS`). IP, CIDR and port-only allows are dropped.
+
+Changing an action's runtime always needs a human (`runtime_changed`), and
+promotion does not run tests on this runtime (they would need the network), so a
+draft for it is always a proposal. Off unless both the URL and the image are set.
 
 ## Effects that must happen once (`kitsuden.effect`)
 

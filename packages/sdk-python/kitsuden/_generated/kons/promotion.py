@@ -40,6 +40,19 @@ class ProposeDraftBodyTarget(TypedDict, total=False):
     name: str
 
 
+class _ProposeDraftBodyEgressRulesItemRequired(TypedDict):
+    action: Literal["allow", "deny"]
+
+
+class ProposeDraftBodyEgressRulesItem(_ProposeDraftBodyEgressRulesItemRequired, total=False):
+    target: str
+    ports: List[int]
+
+
+class ProposeDraftBodyEgress(TypedDict):
+    rules: List[ProposeDraftBodyEgressRulesItem]
+
+
 class ProposeDraftBodyTestsItemApiValue(TypedDict, total=False):
     status: int
     body: Any
@@ -75,6 +88,8 @@ class _ProposeDraftBodyRequired(TypedDict):
 class ProposeDraftBody(_ProposeDraftBodyRequired, total=False):
     scopes: List[str]
     fetchAllow: List[str]
+    egress: ProposeDraftBodyEgress
+    runtime: Literal["quickjs", "opensandbox:python", "opensandbox:shell"]
     timeoutMs: int
     memoryLimitMb: int
     maxCalls: int

@@ -7,9 +7,11 @@ from typing import TYPE_CHECKING, Literal, Tuple
 
 if TYPE_CHECKING:  # the kon modules are imported lazily, on first use of the attribute
     from .kons.agent_notifications import AsyncAgentNotificationsApi, AgentNotificationsApi
+    from .kons.agent_token import AsyncAgentTokenApi, AgentTokenApi
     from .kons.agents import AsyncAgentsApi, AgentsApi
     from .kons.analytics import AsyncAnalyticsApi, AnalyticsApi
     from .kons.approvals import AsyncApprovalsApi, ApprovalsApi
+    from .kons.audit import AsyncAuditApi, AuditApi
     from .kons.automation import AsyncAutomationApi, AutomationApi
     from .kons.blocks import AsyncBlocksApi, BlocksApi
     from .kons.brain import AsyncBrainApi, BrainApi
@@ -46,6 +48,7 @@ KitsudenErrorCode = Literal[
     "KITSUDEN_E_QUOTA_EXCEEDED",
     "KITSUDEN_E_APPROVAL_REQUIRED",
     "KITSUDEN_E_APPROVAL_UNSUPPORTED",
+    "KITSUDEN_E_APPROVAL_STALE",
     "KITSUDEN_E_DENIED_UNATTENDED",
     "KITSUDEN_E_AGENT_SPONSOR_INVALID",
     "KITSUDEN_E_IDEMPOTENCY_KEY_INVALID",
@@ -76,6 +79,7 @@ ERROR_CODES: Tuple[str, ...] = (
     "KITSUDEN_E_QUOTA_EXCEEDED",
     "KITSUDEN_E_APPROVAL_REQUIRED",
     "KITSUDEN_E_APPROVAL_UNSUPPORTED",
+    "KITSUDEN_E_APPROVAL_STALE",
     "KITSUDEN_E_DENIED_UNATTENDED",
     "KITSUDEN_E_AGENT_SPONSOR_INVALID",
     "KITSUDEN_E_IDEMPOTENCY_KEY_INVALID",
@@ -92,9 +96,11 @@ ERROR_CODES: Tuple[str, ...] = (
 
 KONS: Tuple[Tuple[str, str, str, str], ...] = (
     ("agent_notifications", "kon-agent-notifications", "kitsuden._generated.kons.agent_notifications", "AgentNotificationsApi"),
+    ("agent_token", "kon-agent-token", "kitsuden._generated.kons.agent_token", "AgentTokenApi"),
     ("agents", "kon-agents", "kitsuden._generated.kons.agents", "AgentsApi"),
     ("analytics", "kon-analytics", "kitsuden._generated.kons.analytics", "AnalyticsApi"),
     ("approvals", "kon-approvals", "kitsuden._generated.kons.approvals", "ApprovalsApi"),
+    ("audit", "kon-audit", "kitsuden._generated.kons.audit", "AuditApi"),
     ("automation", "kon-automation", "kitsuden._generated.kons.automation", "AutomationApi"),
     ("blocks", "kon-blocks", "kitsuden._generated.kons.blocks", "BlocksApi"),
     ("brain", "kon-brain", "kitsuden._generated.kons.brain", "BrainApi"),
@@ -121,9 +127,11 @@ class GeneratedKons:
     """Typed attributes of the sync client (one per kon)."""
 
     agent_notifications: AgentNotificationsApi
+    agent_token: AgentTokenApi
     agents: AgentsApi
     analytics: AnalyticsApi
     approvals: ApprovalsApi
+    audit: AuditApi
     automation: AutomationApi
     blocks: BlocksApi
     brain: BrainApi
@@ -148,9 +156,11 @@ class AsyncGeneratedKons:
     """Typed attributes of the async client (one per kon)."""
 
     agent_notifications: AsyncAgentNotificationsApi
+    agent_token: AsyncAgentTokenApi
     agents: AsyncAgentsApi
     analytics: AsyncAnalyticsApi
     approvals: AsyncApprovalsApi
+    audit: AsyncAuditApi
     automation: AsyncAutomationApi
     blocks: AsyncBlocksApi
     brain: AsyncBrainApi

@@ -25,6 +25,7 @@ settings, audit) and **Agents → (an agent) → Approval**.
 - [Image uploads](#image-uploads)
 - [Approving and rejecting](#approving-and-rejecting)
 - [Who can approve what](#who-can-approve-what)
+- [Binding: what you approve is what runs](#binding-what-you-approve-is-what-runs)
 - [Execution](#execution)
 - [Expiry](#expiry)
 - [Audit](#audit)
@@ -406,6 +407,32 @@ never runs anything. The detail view says whether you can approve
 (`canDecide`) and why not. The role is read from the database at that moment,
 not from the session cookie.
 
+## Binding: what you approve is what runs
+
+Since migration `0087` every proposal stores an `operationHash`: SHA-256 of a
+canonical form of the exact operation (channel, method, path with query,
+content type, body with sorted keys, tool, operation, and the SHA-256 of each
+held file; `apps/api/src/lib/operation-hash.ts`). The proposal views show it,
+with `binding: "bound"`.
+
+- **Approving needs it.** `POST /api/approvals/proposals/:id/approve` must carry
+  the `operationHash` you were shown. Missing or different: `409
+KITSUDEN_E_APPROVAL_STALE` and nothing runs. The panel sends it for you.
+- **The approval is signed.** The server stores `approved_operation_hash` and an
+  HMAC over proposal id, hash, approver, time and field decisions, with a key
+  derived from `KITSUDEN_SECRETS_KEY` (a subkey of its own).
+- **It is checked again just before running.** The stored row is re-hashed; the
+  hash must equal the one stored and approved, and the signature must verify. If
+  anything changed between showing and running (the row edited in the database,
+  a bug, a race), the proposal ends `failed` with
+  `result.error: "not_executed: integrity_check_failed (…)"`, nothing runs, and
+  `proposal_integrity_failed` is written to the audit log.
+- **Field decisions still work**: what runs is the approved body with exactly
+  the recorded field decisions applied.
+
+Proposals held before `0087` have no hash (`binding: "legacy"`): they are
+approved and executed as before.
+
 ## Execution
 
 On approval the stored request runs **once**, by the same path it came in:
@@ -467,6 +494,10 @@ other value that is not a positive number = 90. Before 2026-11-12 the log was ne
 although the comment of core migration 0076 says it was; the first sweep after upgrading
 deletes everything older than the limit. Set `AGENT_AUDIT_RETENTION_DAYS=0` before upgrading
 to keep it all.
+
+Since migration `0088` the log is a hash chain and append-only: retention removes
+only the oldest rows and leaves a checkpoint, so what remains still verifies. See
+[audit-chain.md](audit-chain.md).
 
 ## Configuration changes and cost
 

@@ -8,6 +8,7 @@ import { describe, it, expect, mock, beforeEach, afterAll } from "bun:test";
 let selectResults: any[][] = [];
 let insertResult: any[] = [];
 let deleteResult: any = { rowCount: 0 };
+let pruneResult: Record<string, unknown> = {};
 let selectCallIndex = 0;
 
 function createDbProxy(result: any): any {
@@ -31,6 +32,8 @@ const mockDb = {
   insert: mock(() => createDbProxy(insertResult)),
   delete: mock(() => createDbProxy(deleteResult)),
   update: mock(() => createDbProxy([])),
+  // The retention prune is the SQL function kitsuden_audit_prune (migration 0088).
+  execute: mock(() => Promise.resolve({ rows: [pruneResult] })),
 };
 
 mock.module("../db", () => ({ db: mockDb, mergedSchema: {} }));
@@ -216,7 +219,7 @@ describe("detectSuspiciousActivity", () => {
 
 describe("cleanupOldLogs", () => {
   it("deletes old logs and returns count", async () => {
-    deleteResult = { rowCount: 5 };
+    pruneResult = { rows_pruned: 4, legacy_rows_pruned: 1, checkpoint_seq: "9" };
     const deleted = await cleanupOldLogs(90);
     expect(deleted).toBe(5);
     expect((logger.info as any).mock.calls.length).toBe(1);

@@ -48,9 +48,11 @@ import {
 } from "@/db/schema";
 import {
   CodeOutsidePromotion,
+  CREDENTIALS_MESSAGE,
   CUSTOMER_DATA_HOSTS_MESSAGE,
   TABLES_ONLY_VIA_THEIR_ROUTE,
   bringsCode,
+  changesCredentials,
   changesCustomerDataPolicy,
 } from "@/lib/actions-code";
 import { emailProblem, type CustomerDataGuard } from "@/lib/customer-data";
@@ -1500,6 +1502,7 @@ const TABLES_WITHOUT_MCP_WRITE = new Set([
   "agent_proposals",
   "agent_proposal_files",
   "agent_audit_logs",
+  "agent_audit_checkpoints",
   "approval_settings",
   "actions",
   "data_sources",
@@ -1948,6 +1951,8 @@ async function kitsudenDefineAction(args: ArgsOf<"kitsuden_define_action">): Pro
   // Only a person decides where an action may send customer data.
   if (changesCustomerDataPolicy({}, config))
     throw new CodeOutsidePromotion(CUSTOMER_DATA_HOSTS_MESSAGE);
+  // Nor which secret goes to which host (lib/credential-vault.ts).
+  if (changesCredentials({}, config ?? {})) throw new CodeOutsidePromotion(CREDENTIALS_MESSAGE);
   // A webhook_out target is checked when it is saved (and again when it is sent).
   if (type === "webhook_out") {
     const { webhookConfigUrlProblem } = await import("@/lib/actions/handlers/webhook-out-handler");

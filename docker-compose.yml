@@ -46,7 +46,7 @@ services:
   # PostgreSQL 16 with pgvector (REQUIRED)
   # ═══════════════════════════════════════════════════════════════════════
   kitsuden_db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_db_prod
     restart: unless-stopped
     # Point-in-time restore (KITSUDEN_PITR=on): the wrapper switches WAL archiving
@@ -95,7 +95,7 @@ services:
   # value that needs no URL encoding (openssl rand -hex 32): it goes in REDIS_URL.
   # ═══════════════════════════════════════════════════════════════════════
   kitsuden_state:
-    image: valkey/valkey:9-alpine
+    image: valkey/valkey:9-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_state_prod
     restart: unless-stopped
     # The password reaches valkey-server on stdin (`-` reads config from it), not
@@ -149,7 +149,7 @@ services:
     # An exact version, never `latest`: `latest` is exactly what left MinIO frozen
     # without anything warning. (Postgres and Valkey above follow their major:
     # `pg16`, `9-alpine`. The dev and test compose files pin them by digest.)
-    image: chrislusf/seaweedfs:4.52
+    image: chrislusf/seaweedfs:4.52@sha256:57877e32bb90073b37dc109b438ba66e84fd5ed9ced5f5c04f56444ef243ce59
     container_name: ${KITSUDEN_INSTANCE:-kitsuden}_seaweedfs_prod
     restart: unless-stopped
     profiles: ["s3", "full", "dev"]
@@ -294,6 +294,10 @@ services:
       - ADMIN_URL=${ADMIN_URL:-http://localhost:3001}
       # OAuth issuer for MCP. Empty = BETTER_AUTH_URL (lib/oauth/config.ts).
       - OAUTH_ISSUER_URL=${OAUTH_ISSUER_URL:-}
+      # Pushed authorization requests for MCP OAuth (docs/agents/oauth.md).
+      # Empty = optional, 60 s.
+      - OAUTH_REQUIRE_PAR=${OAUTH_REQUIRE_PAR:-}
+      - OAUTH_PAR_TTL=${OAUTH_PAR_TTL:-}
       - APP_URL=${APP_URL:-http://localhost:3001}
       # Public site (frontend)
       - SITE_URL=${SITE_URL:-http://localhost:4321}
@@ -335,6 +339,21 @@ services:
       - KITSUDEN_CUSTOMER_DATA_HOSTS=${KITSUDEN_CUSTOMER_DATA_HOSTS:-}
       - KITSUDEN_EXTERNAL_MCP_ALLOW_INTERNAL=${KITSUDEN_EXTERNAL_MCP_ALLOW_INTERNAL:-}
       - KITSUDEN_EXTERNAL_MCP_REFRESH_MINUTES=${KITSUDEN_EXTERNAL_MCP_REFRESH_MINUTES:-}
+      # Platform layer of the sandbox egress policy (docs/agents/sandbox.md).
+      # Empty = deny what no rule allows, no extra deny/allow, any port.
+      - KITSUDEN_EGRESS_DEFAULT=${KITSUDEN_EGRESS_DEFAULT:-}
+      - KITSUDEN_EGRESS_DENY_ALWAYS=${KITSUDEN_EGRESS_DENY_ALWAYS:-}
+      - KITSUDEN_EGRESS_ALLOW_ALWAYS=${KITSUDEN_EGRESS_ALLOW_ALWAYS:-}
+      - KITSUDEN_EGRESS_PORTS=${KITSUDEN_EGRESS_PORTS:-}
+      # A JSON file (mount it read-only); re-read when it changes. Empty = none.
+      - KITSUDEN_EGRESS_POLICY_FILE=${KITSUDEN_EGRESS_POLICY_FILE:-}
+      # Optional OpenSandbox runtime for Python/shell code actions. Empty = off.
+      - KITSUDEN_OPENSANDBOX_URL=${KITSUDEN_OPENSANDBOX_URL:-}
+      - KITSUDEN_OPENSANDBOX_IMAGE=${KITSUDEN_OPENSANDBOX_IMAGE:-}
+      - KITSUDEN_OPENSANDBOX_API_KEY=${KITSUDEN_OPENSANDBOX_API_KEY:-}
+      - KITSUDEN_OPENSANDBOX_ENTRYPOINT=${KITSUDEN_OPENSANDBOX_ENTRYPOINT:-}
+      - KITSUDEN_OPENSANDBOX_EXECD_PORT=${KITSUDEN_OPENSANDBOX_EXECD_PORT:-}
+      - KITSUDEN_OPENSANDBOX_START_TIMEOUT_MS=${KITSUDEN_OPENSANDBOX_START_TIMEOUT_MS:-}
       # kon-payments: the plan/price ids that can be bought, comma-separated.
       # Empty = nothing is sold. Only read when that kon is installed.
       - PAYMENTS_ALLOWED_PLANS=${PAYMENTS_ALLOWED_PLANS:-}
@@ -357,6 +376,11 @@ services:
       # Days a new agent key lives when whoever creates it does not say.
       # Empty = 90; 0 = keys never expire (the behaviour before 2026-11-04).
       - AGENT_KEY_DEFAULT_EXPIRY_DAYS=${AGENT_KEY_DEFAULT_EXPIRY_DAYS:-}
+      # Short-lived agent credentials and DPoP (docs/agents/dpop-and-short-tokens.md).
+      # Empty = 900 s, 600 s and 60 s.
+      - AGENT_SHORT_TOKEN_MAX_TTL=${AGENT_SHORT_TOKEN_MAX_TTL:-}
+      - AGENT_RUN_CREDENTIAL_TTL=${AGENT_RUN_CREDENTIAL_TTL:-}
+      - DPOP_IAT_SKEW_SECONDS=${DPOP_IAT_SKEW_SECONDS:-}
       # Days the per-record change history is kept (docs/record-history.md).
       # Empty = 365; 0 = keep it forever.
       - RECORD_HISTORY_RETENTION_DAYS=${RECORD_HISTORY_RETENTION_DAYS:-}

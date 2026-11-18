@@ -299,10 +299,12 @@ is true:
 | `tests_failed` / `tests_errored`                                         | a test failed / errored or timed out                                                                                                               |
 | `scan_failed`                                                            | the scan has a `high` or `medium` finding                                                                                                          |
 | `scope_escalation`                                                       | it asks for scopes the active version did not have, or drops a deny                                                                                |
-| `new_outbound_hosts`                                                     | it reaches hosts the active version could not                                                                                                      |
+| `new_outbound_hosts`                                                     | it reaches hosts the active version could not (`fetchAllow` or an `egress` allow rule), or drops one of its `egress` deny rules                    |
 | `limits_increased`                                                       | it raises time, memory or call limits                                                                                                              |
 | `touches_secrets` / `touches_users_or_roles` / `touches_security_config` | something the active version did not touch, see [declared capabilities](#declared-capabilities)                                                    |
 | `target_has_env_vars`                                                    | the target action has environment variables: a new version would receive their real values, and the scan cannot prove what the code does with them |
+| `target_has_credentials`                                                 | the target action has vault credentials: a new version never sees them, but its requests to the bound hosts carry them                             |
+| `runtime_changed`                                                        | it runs on another runtime than the active version (QuickJS or OpenSandbox)                                                                        |
 | `sensitive_operation`                                                    | it calls a sensitive operation the active version did not call                                                                                     |
 | `unclassifiable_api_call`                                                | an API call whose path is computed at runtime (or through an alias): nothing can be said about it, so a human decides                              |
 

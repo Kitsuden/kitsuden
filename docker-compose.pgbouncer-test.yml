@@ -17,7 +17,7 @@ services:
   kitsuden_test_pgbouncer:
     # Pinned version (1.24.x): it supports protocol-level prepared statements
     # in transaction mode (`MAX_PREPARED_STATEMENTS`), since 1.21.
-    image: edoburu/pgbouncer:v1.24.1-p1
+    image: edoburu/pgbouncer:v1.24.1-p1@sha256:3db3d7223e93af52b4116f642951a1a5fa44702a88c2a59cf7562cac19320c9e
     container_name: kitsuden_test_pgbouncer
     environment:
       DB_HOST: kitsuden_test_db
