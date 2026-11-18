@@ -29,3 +29,9 @@ description = "Fake keys that the tests feed to the key and secret detectors"
 condition = "AND"
 paths = ['''^tests/unit/(agent-auth|code-promotion)\.test\.ts$''']
 regexes = ['''kitsuden_sk_abc123''', '''AKIAABCDEFGHIJKLMNOP''']
+
+[[allowlists]]
+description = "Fake vault value in the history of the credential-vault test (f7584f8); the file now uses vault-fixture-value-*"
+condition = "AND"
+paths = ['''^apps/api/src/tests-unit/credential-vault\.test\.ts$''']
+regexes = ['''sk_test_abcdef123456''']
