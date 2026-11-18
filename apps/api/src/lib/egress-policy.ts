@@ -43,7 +43,7 @@
  * See docs/agents/egress.md.
  */
 
-import { readFileSync, statSync } from "node:fs";
+import { closeSync, fstatSync, openSync, readFileSync } from "node:fs";
 import { BlockList, isIP } from "node:net";
 
 import { logger } from "./logger";
@@ -358,47 +358,53 @@ const RECHECK_MS = 1000;
 function readFileLayer(path: string, now: number): PlatformEgressPolicy | null {
   if (fileState && fileState.path === path && now - fileState.checkedAt < RECHECK_MS)
     return fileState.policy;
-  let st: { mtimeMs: number; size: number };
+  const last = fileState?.path === path ? fileState.policy : null;
+  // One descriptor for the stat and the read: what is parsed is the file that was
+  // stat-ed, even if it is replaced in between (no check-then-use race).
+  let fd: number;
   try {
-    st = statSync(path);
+    fd = openSync(path, "r");
   } catch (err) {
     logger.error(
       { path, err: (err as Error).message },
       "[egress] Policy file unreadable; keeping the last valid one"
     );
-    const last = fileState?.path === path ? fileState.policy : null;
     fileState = { path, mtimeMs: -1, size: -1, policy: last, checkedAt: now };
     return last;
   }
-  if (
-    fileState &&
-    fileState.path === path &&
-    fileState.mtimeMs === st.mtimeMs &&
-    fileState.size === st.size
-  ) {
-    fileState.checkedAt = now;
-    return fileState.policy;
-  }
-  const last = fileState?.path === path ? fileState.policy : null;
-  let parsed: PlatformEgressPolicy | string;
   try {
-    parsed = parsePlatformPolicy(readFileSync(path, "utf8"));
-  } catch (err) {
-    parsed = (err as Error).message;
+    const st = fstatSync(fd);
+    if (
+      fileState &&
+      fileState.path === path &&
+      fileState.mtimeMs === st.mtimeMs &&
+      fileState.size === st.size
+    ) {
+      fileState.checkedAt = now;
+      return fileState.policy;
+    }
+    let parsed: PlatformEgressPolicy | string;
+    try {
+      parsed = parsePlatformPolicy(readFileSync(fd, "utf8"));
+    } catch (err) {
+      parsed = (err as Error).message;
+    }
+    if (typeof parsed === "string") {
+      logger.error(
+        { path, problem: parsed },
+        last
+          ? "[egress] Invalid policy file; the last valid version stays in force"
+          : "[egress] Invalid policy file and no valid version yet: every request is denied"
+      );
+      fileState = { path, mtimeMs: st.mtimeMs, size: st.size, policy: last, checkedAt: now };
+      return last;
+    }
+    if (last) logger.info({ path }, "[egress] Policy file reloaded");
+    fileState = { path, mtimeMs: st.mtimeMs, size: st.size, policy: parsed, checkedAt: now };
+    return parsed;
+  } finally {
+    closeSync(fd);
   }
-  if (typeof parsed === "string") {
-    logger.error(
-      { path, problem: parsed },
-      last
-        ? "[egress] Invalid policy file; the last valid version stays in force"
-        : "[egress] Invalid policy file and no valid version yet: every request is denied"
-    );
-    fileState = { path, mtimeMs: st.mtimeMs, size: st.size, policy: last, checkedAt: now };
-    return last;
-  }
-  if (last) logger.info({ path }, "[egress] Policy file reloaded");
-  fileState = { path, mtimeMs: st.mtimeMs, size: st.size, policy: parsed, checkedAt: now };
-  return parsed;
 }
 
 /**

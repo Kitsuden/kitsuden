@@ -144,7 +144,7 @@ describe("vault in the sandbox", () => {
             host: "api.stripe.com",
             header: "Authorization",
             format: "Bearer {secret}",
-            value: "sk_live_real",
+            value: "vault-fixture-value-0002",
           },
         ],
         probe: {
@@ -158,7 +158,7 @@ describe("vault in the sandbox", () => {
     expect(r.error).toBeNull();
     expect(r.result).toEqual({ env: [], body: "ok" });
     expect(seen[0]!.headers).toEqual({ Authorization: "Bearer [vault:STRIPE_KEY]" });
-    expect(JSON.stringify(seen)).not.toContain("sk_live_real");
+    expect(JSON.stringify(seen)).not.toContain("vault-fixture-value-0002");
   });
 
   test("the test path applies the same egress policy", async () => {

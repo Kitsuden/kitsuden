@@ -20,7 +20,7 @@ const stripe: VaultCredential = {
   host: "api.stripe.com",
   header: "Authorization",
   format: "Bearer {secret}",
-  value: "sk_test_abcdef123456",
+  value: "vault-fixture-value-0001",
 };
 
 describe("bindings", () => {
@@ -61,8 +61,8 @@ describe("injection", () => {
       new URL("https://api.stripe.com/v1/charges"),
       headers
     );
-    expect(headers).toEqual({ accept: "json", Authorization: "Bearer sk_test_abcdef123456" });
-    expect(values).toContain("sk_test_abcdef123456");
+    expect(headers).toEqual({ accept: "json", Authorization: "Bearer vault-fixture-value-0001" });
+    expect(values).toContain("vault-fixture-value-0001");
 
     const other: Record<string, string> = {};
     expect(injectCredentials([stripe], new URL("https://evil.example/"), other)).toEqual([]);
@@ -93,7 +93,7 @@ describe("injection", () => {
 
   test("an echoed value is redacted", () => {
     const values = injectCredentials([stripe], new URL("https://api.stripe.com/"), {});
-    expect(redact('{"echo":"Bearer sk_test_abcdef123456"}', values)).toBe(
+    expect(redact('{"echo":"Bearer vault-fixture-value-0001"}', values)).toBe(
       '{"echo":"[redacted:vault]"}'
     );
     expect(redact("nothing here", values)).toBe("nothing here");

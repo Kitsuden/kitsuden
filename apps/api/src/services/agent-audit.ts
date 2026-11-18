@@ -328,14 +328,26 @@ async function writeAuditBatch(batch: PendingAudit[]): Promise<void> {
   }
 }
 
+/** The fields of an audit entry that are safe to put in the process log. */
+function entrySummary(entry: AuditLogEntry) {
+  return {
+    agentId: entry.agentId,
+    action: entry.action,
+    resource: entry.resource,
+    resourceId: entry.resourceId,
+    success: entry.success,
+  };
+}
+
 /**
  * Records an agent action in the audit log
  * Runs asynchronously so as not to block the response
  */
 export function logAgentAction(entry: AuditLogEntry): void {
   enqueueAudit(entry).catch((error) => {
-    // Log the error but do not fail the main operation
-    logger.error({ error, entry }, "Failed to write agent audit log");
+    // Log the error but do not fail the main operation. Only what identifies the
+    // lost row: not the key id, the details or the client (CodeQL js/clear-text-logging).
+    logger.error({ error, entry: entrySummary(entry) }, "Failed to write agent audit log");
   });
 }
 
