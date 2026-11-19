@@ -343,6 +343,10 @@ export {
   KONS_SDK_VERSION,
   defineOperation,
   checkOperations,
+  checkDeprecations,
+  dayToTime,
+  deprecationHeaders,
+  deprecationNote,
   isSensitive,
   isReadOnly,
   isIdempotent,
@@ -369,6 +373,7 @@ export {
   REDIRECT_STATUSES,
 } from "./operations";
 export type {
+  OperationDeprecation,
   OperationGuide,
   OperationMethod,
   OperationAccess,

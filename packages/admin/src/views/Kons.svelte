@@ -10,14 +10,16 @@
     Dialog,
     Field,
     Input,
+    Sheet,
     Spinner,
     toast,
   } from "$lib/tallao";
   import { t } from "$lib/i18n";
   import KonIcon from "$lib/components/KonIcon.svelte";
-  import { Archive, Trash2 } from "lucide-svelte";
+  import { Archive, Braces, Trash2 } from "lucide-svelte";
   import { onMount } from "svelte";
 
+  import ApiConsole from "$lib/components/api-console/ApiConsole.svelte";
   import UninstalledGrimoireCard from "$lib/components/modules/UninstalledGrimoireCard.svelte";
   import { moduleStore, type ModuleInfo, type UninstalledKon } from "$lib/states/modules.svelte";
 
@@ -32,6 +34,8 @@
   let selectedModule = $state<ModuleInfo | UninstalledKon | null>(null);
   let deleteConfirmText = $state("");
   let uninstallPreserveData = $state(true);
+  /** The kon whose API console is open (an enabled kon: a disabled one's routes do not answer). */
+  let apiKon = $state<ModuleInfo | null>(null);
 
   // Core infrastructure modules that are NOT grimoires (should not appear in list)
   const INFRASTRUCTURE_MODULES = ["media-library"];
@@ -235,20 +239,33 @@
                   </p>
                 {/if}
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  loading={uninstalling === mod.key}
-                  disabled={uninstalling === mod.key}
-                  onclick={() => openUninstallModal(mod)}
-                >
-                  {#if uninstalling === mod.key}
-                    {t("kons.uninstalling")}
-                  {:else}
-                    <Archive size={14} aria-hidden="true" />
-                    {t("kons.uninstallPreserveData")}
+                <div class="kon-card-more">
+                  {#if mod.enabled}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      ariaLabel={t("apiConsole.openLabel", { name: mod.name })}
+                      onclick={() => (apiKon = mod)}
+                    >
+                      <Braces size={14} aria-hidden="true" />
+                      {t("apiConsole.open")}
+                    </Button>
                   {/if}
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={uninstalling === mod.key}
+                    disabled={uninstalling === mod.key}
+                    onclick={() => openUninstallModal(mod)}
+                  >
+                    {#if uninstalling === mod.key}
+                      {t("kons.uninstalling")}
+                    {:else}
+                      <Archive size={14} aria-hidden="true" />
+                      {t("kons.uninstallPreserveData")}
+                    {/if}
+                  </Button>
+                </div>
               </CardFooter>
             </Card>
           {/each}
@@ -280,6 +297,24 @@
     {/if}
   {/if}
 </div>
+
+<!--
+  The API console of one kon (developer oversight): RapiDoc's <rapi-doc-mini>, loaded only
+  when this opens. See lib/components/api-console/ApiConsole.svelte.
+-->
+<Sheet
+  open={apiKon !== null}
+  title={apiKon ? t("apiConsole.title", { name: apiKon.name }) : ""}
+  description={t("apiConsole.description")}
+  size="2xl"
+  onClose={() => (apiKon = null)}
+>
+  {#if apiKon}
+    {#key apiKon.key}
+      <ApiConsole konId={apiKon.key} />
+    {/key}
+  {/if}
+</Sheet>
 
 <!-- Uninstall: the kon goes, its data stays. -->
 <Dialog
@@ -511,6 +546,12 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+  }
+  .kon-card-more {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-inline-start: auto;
   }
   .kon-card-note {
     margin: 0;

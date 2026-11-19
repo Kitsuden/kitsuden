@@ -1,0 +1,43 @@
+{
+  "$comment": "Written by scripts/sdk/generate.mjs: what this client was generated from. Do not edit; `pnpm sdk:generate` rewrites it (and keeps the filters).",
+  "lockVersion": 1,
+  "generator": {
+    "script": "scripts/sdk/generate.mjs",
+    "sha256": "5af84b35fafba158f878932cc8cb5dbac9da64e217eea966e202b59b1504ad50"
+  },
+  "contract": {
+    "apiVersion": "0.9.0-beta",
+    "sha256": "a1f44d30b1ae721479121c54bff8fed63a460a60970bf0a8d3e9c24037cce302"
+  },
+  "filters": {
+    "includeKons": [],
+    "excludeKons": [],
+    "includePaths": [],
+    "excludePaths": []
+  },
+  "operations": 178,
+  "kons": {
+    "kon-agent-notifications": 3,
+    "kon-agents": 18,
+    "kon-analytics": 3,
+    "kon-approvals": 15,
+    "kon-automation": 2,
+    "kon-blocks": 18,
+    "kon-brain": 13,
+    "kon-connections": 8,
+    "kon-datasets": 32,
+    "kon-external-mcp": 9,
+    "kon-external-mcp-oauth": 1,
+    "kon-media": 15,
+    "kon-models": 1,
+    "kon-oauth": 4,
+    "kon-promotion": 4,
+    "kon-promotion-admin": 9,
+    "kon-proposals": 3,
+    "kon-queue": 3,
+    "kon-record-history": 1,
+    "kon-reports": 13,
+    "kon-secret-access": 1,
+    "kon-traces": 2
+  }
+}

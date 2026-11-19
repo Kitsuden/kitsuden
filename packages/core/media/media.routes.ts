@@ -396,6 +396,8 @@ export function mediaOperations(ctx: KonContext): AnyOperation[] {
   ops.push(
     defineOperation({
       id: "list-folders",
+      unpaginated:
+        "The folder tree, whole so a client can draw it; files are listed elsewhere, with pages.",
       method: "GET",
       route: "/folders",
       summary: "List media folders",

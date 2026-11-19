@@ -98,10 +98,12 @@ class DeleteDashboardResponse(TypedDict):
 
 class ListDashboardsResponse(TypedDict):
     dashboards: List[CreateDashboardResponseDashboard]
+    hasMore: bool
 
 
 class ListReportsResponse(TypedDict):
     reports: List[CreateReportResponseReport]
+    hasMore: bool
 
 
 class RunDashboardResponseTilesItem(TypedDict):
@@ -282,7 +284,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         method="GET",
         path="/reports/dashboards",
         path_params=(),
-        query_params=(),
+        query_params=("limit", "offset"),
         body=None,
         responses={200: "json"},
         idempotent=True,
@@ -290,7 +292,8 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:reports:list-dashboards",
         mcp_tool=None,
-        errors=("KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        pagination=PaginationInfo(style="offset", items="dashboards", limit="limit"),
     ),
     "list-reports": OperationInfo(
         kon="kon-reports",
@@ -299,7 +302,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         method="GET",
         path="/reports",
         path_params=(),
-        query_params=(),
+        query_params=("limit", "offset"),
         body=None,
         responses={200: "json"},
         idempotent=True,
@@ -307,7 +310,8 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:reports:list-reports",
         mcp_tool="reports_list",
-        errors=("KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        pagination=PaginationInfo(style="offset", items="reports", limit="limit"),
     ),
     "run-dashboard": OperationInfo(
         kon="kon-reports",
@@ -465,27 +469,49 @@ class ReportsApi(KonApi):
         """
         return self._call(OPERATIONS["get-report"], {"id": id}, None, request_options)
 
-    def list_dashboards(self, *, request_options: Optional[RequestOptions] = None) -> Outcome[ListDashboardsResult]:
+    def list_dashboards(self, *, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListDashboardsResult]:
         """List dashboards
 
         Every dashboard with its tiles. Each tile points at a report; run them with run-dashboard.
 
         REST: `GET /api/reports/dashboards` · scope `kon:reports:list-dashboards`
         idempotent (safe to retry)
-        Errors: `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
-        """
-        return self._call(OPERATIONS["list-dashboards"], {}, None, request_options)
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
-    def list_reports(self, *, request_options: Optional[RequestOptions] = None) -> Outcome[ListReportsResult]:
+        Args:
+            limit: Rows per page (1-200). The default is the maximum, what the list always returned.
+            offset: Rows to skip.
+        """
+        return self._call(OPERATIONS["list-dashboards"], {"limit": limit, "offset": offset}, None, request_options)
+
+    def iter_list_dashboards(self, *, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Iterator[CreateDashboardResponseDashboard]:
+        """Every item of `list_dashboards`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-dashboards"], {"limit": limit}, request_options)
+
+    def list_reports(self, *, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListReportsResult]:
         """List reports
 
         The reports people saved (`source: saved`) and the ones installed kons ship (`source: kon`, read-only, id `kon:<kon id>/<report id>`), each with its query.
 
         REST: `GET /api/reports` · scope `kon:reports:list-reports`
         idempotent (safe to retry) · MCP tool `reports_list`
-        Errors: `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+
+        Args:
+            limit: Rows per page (1-500). The default is the maximum, what the list always returned.
+            offset: Rows to skip.
         """
-        return self._call(OPERATIONS["list-reports"], {}, None, request_options)
+        return self._call(OPERATIONS["list-reports"], {"limit": limit, "offset": offset}, None, request_options)
+
+    def iter_list_reports(self, *, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Iterator[CreateReportResponseReport]:
+        """Every item of `list_reports`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-reports"], {"limit": limit}, request_options)
 
     def run_dashboard(self, *, id: Union[str, int], request_options: Optional[RequestOptions] = None) -> Outcome[RunDashboardResult]:
         """Run every report of a dashboard
@@ -617,27 +643,49 @@ class AsyncReportsApi(AsyncKonApi):
         """
         return await self._call(OPERATIONS["get-report"], {"id": id}, None, request_options)
 
-    async def list_dashboards(self, *, request_options: Optional[RequestOptions] = None) -> Outcome[ListDashboardsResult]:
+    async def list_dashboards(self, *, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListDashboardsResult]:
         """List dashboards
 
         Every dashboard with its tiles. Each tile points at a report; run them with run-dashboard.
 
         REST: `GET /api/reports/dashboards` · scope `kon:reports:list-dashboards`
         idempotent (safe to retry)
-        Errors: `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
-        """
-        return await self._call(OPERATIONS["list-dashboards"], {}, None, request_options)
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
-    async def list_reports(self, *, request_options: Optional[RequestOptions] = None) -> Outcome[ListReportsResult]:
+        Args:
+            limit: Rows per page (1-200). The default is the maximum, what the list always returned.
+            offset: Rows to skip.
+        """
+        return await self._call(OPERATIONS["list-dashboards"], {"limit": limit, "offset": offset}, None, request_options)
+
+    def iter_list_dashboards(self, *, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[CreateDashboardResponseDashboard]:
+        """Every item of `list_dashboards`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-dashboards"], {"limit": limit}, request_options)
+
+    async def list_reports(self, *, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListReportsResult]:
         """List reports
 
         The reports people saved (`source: saved`) and the ones installed kons ship (`source: kon`, read-only, id `kon:<kon id>/<report id>`), each with its query.
 
         REST: `GET /api/reports` · scope `kon:reports:list-reports`
         idempotent (safe to retry) · MCP tool `reports_list`
-        Errors: `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+
+        Args:
+            limit: Rows per page (1-500). The default is the maximum, what the list always returned.
+            offset: Rows to skip.
         """
-        return await self._call(OPERATIONS["list-reports"], {}, None, request_options)
+        return await self._call(OPERATIONS["list-reports"], {"limit": limit, "offset": offset}, None, request_options)
+
+    def iter_list_reports(self, *, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[CreateReportResponseReport]:
+        """Every item of `list_reports`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-reports"], {"limit": limit}, request_options)
 
     async def run_dashboard(self, *, id: Union[str, int], request_options: Optional[RequestOptions] = None) -> Outcome[RunDashboardResult]:
         """Run every report of a dashboard

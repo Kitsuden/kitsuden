@@ -584,6 +584,8 @@ export type ListCalculatedFieldsResponse = {
 export type ListDatasetsParams = {
   /** 1-200, default 50 */
   limit?: string | number;
+  /** Datasets to skip, default 0 */
+  offset?: string | number;
 };
 
 /** Success response of `datasets.list-datasets`. */
@@ -602,6 +604,22 @@ export type ListDatasetsResponse = {
     [key: string]: unknown;
   }[];
   totalDocs: number;
+  hasMore: boolean;
+};
+
+/** One item of the list `datasets.list-datasets` pages through. */
+export type ListDatasetsItem = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  /** Field definitions (array, or legacy {fields}) */
+  schema: unknown;
+  policyJson: Record<string, unknown> | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  [key: string]: unknown;
 };
 
 /** Arguments of `datasets.list-entries`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
@@ -610,6 +628,8 @@ export type ListEntriesParams = {
   id: string | number;
   /** 1-1000, default 500 */
   limit?: string | number;
+  /** Entries to skip, default 0 */
+  offset?: string | number;
   status?: string | number;
   includeCalculated?: "true" | "false";
   /** Comma-separated calculated field names */
@@ -634,12 +654,29 @@ export type ListEntriesResponse = {
     [key: string]: unknown;
   }[];
   totalDocs: number;
+  hasMore: boolean;
   calculatedFields?: Record<string, unknown>[];
   dataset: {
     id: string;
     name: string;
     slug: string;
   };
+};
+
+/** One item of the list `datasets.list-entries` pages through. */
+export type ListEntriesItem = {
+  id: string;
+  dataSetId: string;
+  title: string;
+  data: Record<string, unknown>;
+  status: string;
+  sortOrder: number;
+  ownerId: string | null;
+  thumbnailUrl?: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  _calculated?: Record<string, unknown>;
+  [key: string]: unknown;
 };
 
 /** Arguments of `datasets.read-snapshot`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
@@ -926,8 +963,8 @@ export type UpdateEntryResponse = {
 export const operations = {
   "applyIndexes": {"kon":"kon-datasets","id":"apply-indexes","operationId":"datasets.apply-indexes","method":"POST","path":"/datasets/{id}/indexes/apply","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:datasets:apply-indexes","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "autoIndexes": {"kon":"kon-datasets","id":"auto-indexes","operationId":"datasets.auto-indexes","method":"POST","path":"/datasets/indexes/auto","pathParams":[],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:datasets:auto-indexes","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "compareEntries": {"kon":"kon-datasets","id":"compare-entries","operationId":"datasets.compare-entries","method":"POST","path":"/datasets/{id}/compare","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:compare-entries","mcpTool":"datasets__compare-entries","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "compareSnapshots": {"kon":"kon-datasets","id":"compare-snapshots","operationId":"datasets.compare-snapshots","method":"POST","path":"/datasets/{id}/entries/{entryId}/compare","pathParams":["id","entryId"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:compare-snapshots","mcpTool":"datasets__compare-snapshots","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "compareEntries": {"kon":"kon-datasets","id":"compare-entries","operationId":"datasets.compare-entries","method":"POST","path":"/datasets/{id}/compare","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:compare-entries","mcpTool":"datasets__compare-entries","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "compareSnapshots": {"kon":"kon-datasets","id":"compare-snapshots","operationId":"datasets.compare-snapshots","method":"POST","path":"/datasets/{id}/entries/{entryId}/compare","pathParams":["id","entryId"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:compare-snapshots","mcpTool":"datasets__compare-snapshots","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "createCalculatedField": {"kon":"kon-datasets","id":"create-calculated-field","operationId":"datasets.create-calculated-field","method":"POST","path":"/datasets/{id}/calculated-fields","pathParams":["id"],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:datasets:create-calculated-field","mcpTool":"datasets__create-calculated-field","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "createDataset": {"kon":"kon-datasets","id":"create-dataset","operationId":"datasets.create-dataset","method":"POST","path":"/datasets","pathParams":[],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:datasets:create-dataset","mcpTool":"datasets__create-dataset","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "createEntry": {"kon":"kon-datasets","id":"create-entry","operationId":"datasets.create-entry","method":"POST","path":"/datasets/{id}/entries","pathParams":["id"],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:datasets:create-entry","mcpTool":"datasets__create-entry","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
@@ -935,23 +972,23 @@ export const operations = {
   "deleteCalculatedField": {"kon":"kon-datasets","id":"delete-calculated-field","operationId":"datasets.delete-calculated-field","method":"DELETE","path":"/datasets/{id}/calculated-fields/{fieldId}","pathParams":["id","fieldId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:datasets:delete-calculated-field","mcpTool":"datasets__delete-calculated-field","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "deleteDataset": {"kon":"kon-datasets","id":"delete-dataset","operationId":"datasets.delete-dataset","method":"DELETE","path":"/datasets/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:datasets:delete-dataset","mcpTool":"datasets__delete-dataset","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "deleteEntry": {"kon":"kon-datasets","id":"delete-entry","operationId":"datasets.delete-entry","method":"DELETE","path":"/datasets/{id}/entries/{entryId}","pathParams":["id","entryId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:datasets:delete-entry","mcpTool":"datasets__delete-entry","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "entryHistory": {"kon":"kon-datasets","id":"entry-history","operationId":"datasets.entry-history","method":"GET","path":"/datasets/{id}/entries/{entryId}/history","pathParams":["id","entryId"],"queryParams":["limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:entry-history","mcpTool":"datasets__entry-history","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"history","limit":"limit"}},
+  "entryHistory": {"kon":"kon-datasets","id":"entry-history","operationId":"datasets.entry-history","method":"GET","path":"/datasets/{id}/entries/{entryId}/history","pathParams":["id","entryId"],"queryParams":["limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:entry-history","mcpTool":"datasets__entry-history","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"history","limit":"limit"}},
   "exportDatasets": {"kon":"kon-datasets","id":"export-datasets","operationId":"datasets.export-datasets","method":"POST","path":"/datasets/export","pathParams":[],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:datasets:export-datasets","mcpTool":"datasets__export-datasets","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "getCalculatedField": {"kon":"kon-datasets","id":"get-calculated-field","operationId":"datasets.get-calculated-field","method":"GET","path":"/datasets/{id}/calculated-fields/{fieldId}","pathParams":["id","fieldId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:get-calculated-field","mcpTool":"datasets__get-calculated-field","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "getDataset": {"kon":"kon-datasets","id":"get-dataset","operationId":"datasets.get-dataset","method":"GET","path":"/datasets/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:get-dataset","mcpTool":"datasets__get-dataset","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "getDatasetBySlug": {"kon":"kon-datasets","id":"get-dataset-by-slug","operationId":"datasets.get-dataset-by-slug","method":"GET","path":"/datasets/slug/{slug}","pathParams":["slug"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:get-dataset-by-slug","mcpTool":"datasets__get-dataset-by-slug","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "getEntry": {"kon":"kon-datasets","id":"get-entry","operationId":"datasets.get-entry","method":"GET","path":"/datasets/{id}/entries/{entryId}","pathParams":["id","entryId"],"queryParams":["includeThumbnailUrl"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:get-entry","mcpTool":"datasets__get-entry","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "getCalculatedField": {"kon":"kon-datasets","id":"get-calculated-field","operationId":"datasets.get-calculated-field","method":"GET","path":"/datasets/{id}/calculated-fields/{fieldId}","pathParams":["id","fieldId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:get-calculated-field","mcpTool":"datasets__get-calculated-field","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "getDataset": {"kon":"kon-datasets","id":"get-dataset","operationId":"datasets.get-dataset","method":"GET","path":"/datasets/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:get-dataset","mcpTool":"datasets__get-dataset","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "getDatasetBySlug": {"kon":"kon-datasets","id":"get-dataset-by-slug","operationId":"datasets.get-dataset-by-slug","method":"GET","path":"/datasets/slug/{slug}","pathParams":["slug"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:get-dataset-by-slug","mcpTool":"datasets__get-dataset-by-slug","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "getEntry": {"kon":"kon-datasets","id":"get-entry","operationId":"datasets.get-entry","method":"GET","path":"/datasets/{id}/entries/{entryId}","pathParams":["id","entryId"],"queryParams":["includeThumbnailUrl"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:get-entry","mcpTool":"datasets__get-entry","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "importPackage": {"kon":"kon-datasets","id":"import-package","operationId":"datasets.import-package","method":"POST","path":"/datasets/import/package","pathParams":[],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":true,"scope":"kon:datasets:import-package","mcpTool":"datasets__import-package","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "importToDataset": {"kon":"kon-datasets","id":"import-to-dataset","operationId":"datasets.import-to-dataset","method":"POST","path":"/datasets/import","pathParams":[],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":true,"scope":"kon:datasets:import-to-dataset","mcpTool":"datasets__import-to-dataset","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "indexReport": {"kon":"kon-datasets","id":"index-report","operationId":"datasets.index-report","method":"POST","path":"/datasets/indexes/report","pathParams":[],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:index-report","mcpTool":"datasets__index-report","errors":["KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "indexStats": {"kon":"kon-datasets","id":"index-stats","operationId":"datasets.index-stats","method":"GET","path":"/datasets/indexes/stats","pathParams":[],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:index-stats","mcpTool":"datasets__index-stats","errors":["KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "listCalculatedFields": {"kon":"kon-datasets","id":"list-calculated-fields","operationId":"datasets.list-calculated-fields","method":"GET","path":"/datasets/{id}/calculated-fields","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:list-calculated-fields","mcpTool":"datasets__list-calculated-fields","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "listDatasets": {"kon":"kon-datasets","id":"list-datasets","operationId":"datasets.list-datasets","method":"GET","path":"/datasets","pathParams":[],"queryParams":["limit"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:list-datasets","mcpTool":"datasets__list-datasets","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "listEntries": {"kon":"kon-datasets","id":"list-entries","operationId":"datasets.list-entries","method":"GET","path":"/datasets/{id}/entries","pathParams":["id"],"queryParams":["limit","status","includeCalculated","calculatedFields","includeThumbnailUrl"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:list-entries","mcpTool":"datasets__list-entries","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "readSnapshot": {"kon":"kon-datasets","id":"read-snapshot","operationId":"datasets.read-snapshot","method":"GET","path":"/datasets/{id}/entries/{entryId}/snapshot","pathParams":["id","entryId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:read-snapshot","mcpTool":"datasets__read-snapshot","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "listCalculatedFields": {"kon":"kon-datasets","id":"list-calculated-fields","operationId":"datasets.list-calculated-fields","method":"GET","path":"/datasets/{id}/calculated-fields","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:list-calculated-fields","mcpTool":"datasets__list-calculated-fields","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "listDatasets": {"kon":"kon-datasets","id":"list-datasets","operationId":"datasets.list-datasets","method":"GET","path":"/datasets","pathParams":[],"queryParams":["limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:list-datasets","mcpTool":"datasets__list-datasets","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"docs","limit":"limit"}},
+  "listEntries": {"kon":"kon-datasets","id":"list-entries","operationId":"datasets.list-entries","method":"GET","path":"/datasets/{id}/entries","pathParams":["id"],"queryParams":["limit","offset","status","includeCalculated","calculatedFields","includeThumbnailUrl"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:list-entries","mcpTool":"datasets__list-entries","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"docs","limit":"limit"}},
+  "readSnapshot": {"kon":"kon-datasets","id":"read-snapshot","operationId":"datasets.read-snapshot","method":"GET","path":"/datasets/{id}/entries/{entryId}/snapshot","pathParams":["id","entryId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:read-snapshot","mcpTool":"datasets__read-snapshot","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "restoreSnapshot": {"kon":"kon-datasets","id":"restore-snapshot","operationId":"datasets.restore-snapshot","method":"POST","path":"/datasets/{id}/entries/{entryId}/restore","pathParams":["id","entryId"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:datasets:restore-snapshot","mcpTool":"datasets__restore-snapshot","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "searchEntries": {"kon":"kon-datasets","id":"search-entries","operationId":"datasets.search-entries","method":"GET","path":"/datasets/{id}/search","pathParams":["id"],"queryParams":["q","filters","facets","status","limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:search-entries","mcpTool":"datasets__search-entries","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"data","limit":"limit"}},
-  "snapshotHistory": {"kon":"kon-datasets","id":"snapshot-history","operationId":"datasets.snapshot-history","method":"GET","path":"/datasets/{id}/entries/{entryId}/snapshots","pathParams":["id","entryId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:snapshot-history","mcpTool":"datasets__snapshot-history","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "searchEntries": {"kon":"kon-datasets","id":"search-entries","operationId":"datasets.search-entries","method":"GET","path":"/datasets/{id}/search","pathParams":["id"],"queryParams":["q","filters","facets","status","limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:search-entries","mcpTool":"datasets__search-entries","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"data","limit":"limit"}},
+  "snapshotHistory": {"kon":"kon-datasets","id":"snapshot-history","operationId":"datasets.snapshot-history","method":"GET","path":"/datasets/{id}/entries/{entryId}/snapshots","pathParams":["id","entryId"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:snapshot-history","mcpTool":"datasets__snapshot-history","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "suggestIndexes": {"kon":"kon-datasets","id":"suggest-indexes","operationId":"datasets.suggest-indexes","method":"GET","path":"/datasets/{id}/indexes/suggest","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:datasets:suggest-indexes","mcpTool":"datasets__suggest-indexes","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "updateCalculatedField": {"kon":"kon-datasets","id":"update-calculated-field","operationId":"datasets.update-calculated-field","method":"PATCH","path":"/datasets/{id}/calculated-fields/{fieldId}","pathParams":["id","fieldId"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:datasets:update-calculated-field","mcpTool":"datasets__update-calculated-field","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "updateDataset": {"kon":"kon-datasets","id":"update-dataset","operationId":"datasets.update-dataset","method":"PATCH","path":"/datasets/{id}","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:datasets:update-dataset","mcpTool":"datasets__update-dataset","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
@@ -991,7 +1028,7 @@ export interface DatasetsApi {
    *
    * REST: `POST /api/datasets/{id}/compare` · scope `kon:datasets:compare-entries`
    * idempotent (safe to retry) · MCP tool `datasets__compare-entries`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly compareEntries: Operation<CompareEntriesParams, CompareEntriesResponse>;
   /**
@@ -1001,7 +1038,7 @@ export interface DatasetsApi {
    *
    * REST: `POST /api/datasets/{id}/entries/{entryId}/compare` · scope `kon:datasets:compare-snapshots`
    * idempotent (safe to retry) · MCP tool `datasets__compare-snapshots`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly compareSnapshots: Operation<CompareSnapshotsParams, CompareSnapshotsResponse>;
   /**
@@ -1081,7 +1118,7 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets/{id}/entries/{entryId}/history` · scope `kon:datasets:entry-history`
    * idempotent (safe to retry) · MCP tool `datasets__entry-history`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly entryHistory: PageableOperation<EntryHistoryParams, EntryHistoryResponse, EntryHistoryItem>;
   /**
@@ -1101,7 +1138,7 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets/{id}/calculated-fields/{fieldId}` · scope `kon:datasets:get-calculated-field`
    * idempotent (safe to retry) · MCP tool `datasets__get-calculated-field`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly getCalculatedField: Operation<GetCalculatedFieldParams, GetCalculatedFieldResponse>;
   /**
@@ -1111,7 +1148,7 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets/{id}` · scope `kon:datasets:get-dataset`
    * idempotent (safe to retry) · MCP tool `datasets__get-dataset`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly getDataset: Operation<GetDatasetParams, GetDatasetResponse>;
   /**
@@ -1121,7 +1158,7 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets/slug/{slug}` · scope `kon:datasets:get-dataset-by-slug`
    * idempotent (safe to retry) · MCP tool `datasets__get-dataset-by-slug`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly getDatasetBySlug: Operation<GetDatasetBySlugParams, GetDatasetBySlugResponse>;
   /**
@@ -1131,7 +1168,7 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets/{id}/entries/{entryId}` · scope `kon:datasets:get-entry`
    * idempotent (safe to retry) · MCP tool `datasets__get-entry`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly getEntry: Operation<GetEntryParams, GetEntryResponse>;
   /**
@@ -1181,7 +1218,7 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets/{id}/calculated-fields` · scope `kon:datasets:list-calculated-fields`
    * idempotent (safe to retry) · MCP tool `datasets__list-calculated-fields`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly listCalculatedFields: Operation<ListCalculatedFieldsParams, ListCalculatedFieldsResponse>;
   /**
@@ -1191,9 +1228,9 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets` · scope `kon:datasets:list-datasets`
    * idempotent (safe to retry) · MCP tool `datasets__list-datasets`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
-  readonly listDatasets: Operation<ListDatasetsParams, ListDatasetsResponse>;
+  readonly listDatasets: PageableOperation<ListDatasetsParams, ListDatasetsResponse, ListDatasetsItem>;
   /**
    * List the entries of a dataset
    *
@@ -1201,9 +1238,9 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets/{id}/entries` · scope `kon:datasets:list-entries`
    * idempotent (safe to retry) · MCP tool `datasets__list-entries`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
-  readonly listEntries: Operation<ListEntriesParams, ListEntriesResponse>;
+  readonly listEntries: PageableOperation<ListEntriesParams, ListEntriesResponse, ListEntriesItem>;
   /**
    * Current snapshot of an entry
    *
@@ -1211,7 +1248,7 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets/{id}/entries/{entryId}/snapshot` · scope `kon:datasets:read-snapshot`
    * idempotent (safe to retry) · MCP tool `datasets__read-snapshot`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly readSnapshot: Operation<ReadSnapshotParams, ReadSnapshotResponse>;
   /**
@@ -1231,7 +1268,7 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets/{id}/search` · scope `kon:datasets:search-entries`
    * idempotent (safe to retry) · MCP tool `datasets__search-entries`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly searchEntries: PageableOperation<SearchEntriesParams, SearchEntriesResponse, SearchEntriesItem>;
   /**
@@ -1241,7 +1278,7 @@ export interface DatasetsApi {
    *
    * REST: `GET /api/datasets/{id}/entries/{entryId}/snapshots` · scope `kon:datasets:snapshot-history`
    * idempotent (safe to retry) · MCP tool `datasets__snapshot-history`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly snapshotHistory: Operation<SnapshotHistoryParams, SnapshotHistoryResponse>;
   /**

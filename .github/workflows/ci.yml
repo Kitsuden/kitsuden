@@ -610,6 +610,46 @@ jobs:
           npm ci
           bun test packages/adapter-kitsuden
 
+  # ── The published contract: breaking changes and Kitsuden's rules ─────────
+  #
+  # Both read the committed snapshot packages/sdk/openapi/kitsuden.openapi.json
+  # (the input of the typed clients). Neither tool is a dependency: oasdiff is a
+  # pinned Go binary checked by SHA-256, Spectral runs with npx at a pinned
+  # version (docs/api-contract.md).
+  #
+  #   · oasdiff: what changed against the base branch (a pull request) or the
+  #     previous commit (a push to main), and whether it breaks an existing
+  #     client. NOT blocking yet: read the job summary; make it blocking once the
+  #     deprecation policy (x-sunset) is in use.
+  #   · Spectral: scripts/api-contract/spectral.yaml. Blocking: its `error`
+  #     rules hold for the whole contract today; the `warn` ones are known gaps.
+  api-contract:
+    name: API contract (breaking changes + rules)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # oasdiff reads the snapshot at the base revision.
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Breaking changes (oasdiff)
+        continue-on-error: true
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$BASE_REF" ]; then base="origin/$BASE_REF"
+          elif [ "$GITHUB_REF_NAME" = "$DEFAULT_BRANCH" ] && [ -n "$BEFORE" ]; then base="$BEFORE"
+          else base="origin/${DEFAULT_BRANCH:-main}"; fi
+          node scripts/api-contract/oasdiff.mjs --base="$base" --github --summary="$GITHUB_STEP_SUMMARY"
+
+      - name: Contract rules (Spectral)
+        run: node scripts/api-contract/lint.mjs --github --summary="$GITHUB_STEP_SUMMARY"
+
   # ── Typed clients (TypeScript + Python) generated from the OpenAPI ─────────
   #
   # `pnpm sdk:check` fails when the committed clients are stale: regenerating

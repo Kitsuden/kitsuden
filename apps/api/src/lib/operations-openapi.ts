@@ -23,6 +23,7 @@ import {
   MCP_BODY_ARGUMENT,
   MCP_IDEMPOTENCY_ARGUMENT,
   KITSUDEN_ERRORS,
+  deprecationNote,
   shortGuide,
   operationErrors,
   isIdempotent,
@@ -37,6 +38,8 @@ import {
   type KonOperation,
 } from "@kitsuden/shared";
 import { z, type ZodTypeAny } from "zod";
+
+import { codeSamples, operationBadges } from "./code-samples";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- variance boundary: each operation brings its own schemas
 type Operation = KonOperation<any, any, any>;
@@ -214,6 +217,10 @@ export function openApiOperation(
       required: query?.required?.includes(name) ?? false,
       schema,
       ...(typeof schema.description === "string" ? { description: schema.description } : {}),
+      // `.meta({ deprecated: true })` on the field: a parameter kept for old clients.
+      // Its `x-sunset` too: oasdiff refuses a deprecated parameter without one.
+      ...(schema.deprecated === true ? { deprecated: true } : {}),
+      ...(typeof schema["x-sunset"] === "string" ? { "x-sunset": schema["x-sunset"] } : {}),
     });
   }
   const idempotent = isIdempotent(op);
@@ -236,6 +243,11 @@ export function openApiOperation(
     tags: [konId, ...(op.tags ?? [])],
   };
   if (parameters.length > 0) operation.parameters = parameters;
+  // oasdiff reads `deprecated` + `x-sunset` on the operation before it lets it go.
+  if (op.deprecated) {
+    operation.deprecated = true;
+    operation["x-sunset"] = op.deprecated.sunset;
+  }
 
   if (op.input?.body) {
     const type = op.input.format === "multipart" ? "multipart/form-data" : "application/json";
@@ -336,15 +348,70 @@ export function openApiOperation(
     ...(op.input?.validatesHandler ? { bodyValidatedBy: "handler (400 Validation failed)" } : {}),
     errors,
     ...(op.output.flow ? { stream: true } : {}),
+    ...(op.deprecated ? { deprecated: op.deprecated } : {}),
+    ...(op.unpaginated ? { unpaginated: op.unpaginated } : {}),
     mcp: exclusion === null ? { tool: toolName(konId, op) } : { excluded: exclusion },
   };
   if (op.guide) operation["x-kitsuden-guide"] = op.guide;
 
-  return {
-    path,
-    method: op.method.toLowerCase() as OpenApiOperation["method"],
-    operation,
-  };
+  // The call with the generated clients, and what to know before calling (Scalar, RapiDoc).
+  operation["x-codeSamples"] = codeSamples({
+    konId,
+    operationId: op.id,
+    args: parameters
+      .filter((p) => p.in === "path" || (p.in === "query" && p.required === true))
+      .map((p) => ({ name: String(p.name), schema: p.schema as Record<string, unknown> })),
+    body: op.input?.body
+      ? op.input.format === "multipart"
+        ? "multipart"
+        : (jsonSchema(op.input.body) as Record<string, unknown>)
+      : null,
+  });
+  const badges = operationBadges({
+    access: op.access,
+    sensitive: isSensitive(op),
+    stream: op.output.flow === true,
+    mcpExcluded: exclusion !== null,
+  });
+  if (badges.length) operation["x-badges"] = badges;
+
+  const method = op.method.toLowerCase() as OpenApiOperation["method"];
+  rebaseDefs(operation, `#/paths/${pointerPart(path)}/${method}`);
+  return { path, method, operation };
+}
+
+const pointerPart = (s: string) => s.replace(/~/g, "~0").replace(/\//g, "~1");
+
+/**
+ * A recursive zod schema (z.lazy) converts with its own `$defs` and refs like
+ * `#/$defs/__schema0`. Inside the OpenAPI document those refs resolve against the
+ * DOCUMENT root, where there is no `$defs`: Scalar, Spectral (`invalid-ref`) and any
+ * client generator saw a broken reference (kon-dc's blueprints). Each such ref is
+ * rewritten as a JSON Pointer from the root to where the schema really lives
+ * (`#/paths/~1dc~1blueprints/get/responses/200/…/$defs/__schema0`). MCP tools keep
+ * `#/$defs/…`: there the schema is a document of its own.
+ */
+function rebaseDefs(node: unknown, pointer: string): void {
+  if (!node || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    node.forEach((child, i) => rebaseDefs(child, `${pointer}/${i}`));
+    return;
+  }
+  const obj = node as Record<string, unknown>;
+  if (obj.$defs && typeof obj.$defs === "object") {
+    const rewrite = (n: unknown): void => {
+      if (!n || typeof n !== "object") return;
+      if (Array.isArray(n)) return n.forEach(rewrite);
+      const o = n as Record<string, unknown>;
+      if (typeof o.$ref === "string" && o.$ref.startsWith("#/$defs/")) {
+        o.$ref = `${pointer}/$defs/${o.$ref.slice("#/$defs/".length)}`;
+      }
+      for (const v of Object.values(o)) rewrite(v);
+    };
+    rewrite(obj);
+    return;
+  }
+  for (const [k, v] of Object.entries(obj)) rebaseDefs(v, `${pointer}/${pointerPart(k)}`);
 }
 
 // ── MCP ─────────────────────────────────────────────────────────────────────
@@ -444,6 +511,12 @@ export function mcpTool(konId: string, mountPath: string, op: Operation): McpToo
     name,
     title: op.summary,
     description: [
+      op.deprecated
+        ? deprecationNote(
+            op.deprecated,
+            op.deprecated.use ? toolName(konId, { id: op.deprecated.use }) : undefined
+          )
+        : null,
       op.description,
       guide
         ? guide.replace("read the guide resource", `read the resource ${guideUri(name)}`)

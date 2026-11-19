@@ -25,6 +25,7 @@ __all__ = ["TracesApi", "AsyncTracesApi", "OPERATIONS"]
 class ListRequestsResponse(TypedDict):
     enabled: bool
     requests: List[Dict[str, Any]]
+    hasMore: bool
 
 
 class RequestsSummaryResponse(TypedDict):
@@ -44,7 +45,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         method="GET",
         path="/admin/requests",
         path_params=(),
-        query_params=("hours", "limit", "blocked", "errors", "actor"),
+        query_params=("hours", "limit", "offset", "blocked", "errors", "actor"),
         body=None,
         responses={200: "json"},
         idempotent=True,
@@ -53,6 +54,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         scope="kon:traces:list-requests",
         mcp_tool=None,
         errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        pagination=PaginationInfo(style="offset", items="requests", limit="limit"),
     ),
     "requests-summary": OperationInfo(
         kon="kon-traces",
@@ -82,7 +84,7 @@ class TracesApi(KonApi):
 
     kon = "kon-traces"
 
-    def list_requests(self, *, hours: Optional[int] = None, limit: Optional[int] = None, blocked: Optional[Literal["0", "1"]] = None, errors: Optional[Literal["0", "1"]] = None, actor: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListRequestsResult]:
+    def list_requests(self, *, hours: Optional[int] = None, limit: Optional[int] = None, offset: Optional[int] = None, blocked: Optional[Literal["0", "1"]] = None, errors: Optional[Literal["0", "1"]] = None, actor: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListRequestsResult]:
         """Request traces (admin)
 
         Recorded requests, newest first: actor, kon, operation, duration, database time, rows written and blocked writes (owner filter or RLS). Writes, errors and blocks are always recorded; reads are sampled.
@@ -91,7 +93,14 @@ class TracesApi(KonApi):
         idempotent (safe to retry)
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
-        return self._call(OPERATIONS["list-requests"], {"hours": hours, "limit": limit, "blocked": blocked, "errors": errors, "actor": actor}, None, request_options)
+        return self._call(OPERATIONS["list-requests"], {"hours": hours, "limit": limit, "offset": offset, "blocked": blocked, "errors": errors, "actor": actor}, None, request_options)
+
+    def iter_list_requests(self, *, hours: Optional[int] = None, limit: Optional[int] = None, blocked: Optional[Literal["0", "1"]] = None, errors: Optional[Literal["0", "1"]] = None, actor: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Iterator[Dict[str, Any]]:
+        """Every item of `list_requests`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-requests"], {"hours": hours, "limit": limit, "blocked": blocked, "errors": errors, "actor": actor}, request_options)
 
     def requests_summary(self, *, hours: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[RequestsSummaryResult]:
         """Request traces by operation (admin)
@@ -113,7 +122,7 @@ class AsyncTracesApi(AsyncKonApi):
 
     kon = "kon-traces"
 
-    async def list_requests(self, *, hours: Optional[int] = None, limit: Optional[int] = None, blocked: Optional[Literal["0", "1"]] = None, errors: Optional[Literal["0", "1"]] = None, actor: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListRequestsResult]:
+    async def list_requests(self, *, hours: Optional[int] = None, limit: Optional[int] = None, offset: Optional[int] = None, blocked: Optional[Literal["0", "1"]] = None, errors: Optional[Literal["0", "1"]] = None, actor: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListRequestsResult]:
         """Request traces (admin)
 
         Recorded requests, newest first: actor, kon, operation, duration, database time, rows written and blocked writes (owner filter or RLS). Writes, errors and blocks are always recorded; reads are sampled.
@@ -122,7 +131,14 @@ class AsyncTracesApi(AsyncKonApi):
         idempotent (safe to retry)
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
-        return await self._call(OPERATIONS["list-requests"], {"hours": hours, "limit": limit, "blocked": blocked, "errors": errors, "actor": actor}, None, request_options)
+        return await self._call(OPERATIONS["list-requests"], {"hours": hours, "limit": limit, "offset": offset, "blocked": blocked, "errors": errors, "actor": actor}, None, request_options)
+
+    def iter_list_requests(self, *, hours: Optional[int] = None, limit: Optional[int] = None, blocked: Optional[Literal["0", "1"]] = None, errors: Optional[Literal["0", "1"]] = None, actor: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[Dict[str, Any]]:
+        """Every item of `list_requests`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-requests"], {"hours": hours, "limit": limit, "blocked": blocked, "errors": errors, "actor": actor}, request_options)
 
     async def requests_summary(self, *, hours: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[RequestsSummaryResult]:
         """Request traces by operation (admin)

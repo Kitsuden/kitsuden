@@ -132,4 +132,16 @@ for (const entry of ENTRIES) {
   );
 }
 
+// The API documentation viewers travel inside the package (dist/docs-viewers):
+// the API serves them itself instead of loading them from a CDN, and
+// installing `kitsuden` must not need a download afterwards.
+const viewers = Bun.spawnSync(
+  ["node", join(ROOT, "scripts/docs-viewers.mjs"), `--out=${join(OUT, "docs-viewers")}`],
+  { stdout: "inherit", stderr: "inherit" }
+);
+if (viewers.exitCode !== 0) {
+  console.error("❌ Could not fetch the API documentation viewers (scripts/docs-viewers.mjs).");
+  process.exit(1);
+}
+
 console.log("\n✅ dist/ ready. Verify with: npm pack --dry-run\n");

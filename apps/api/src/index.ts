@@ -271,6 +271,10 @@ app.use(
     allowMethods: corsConfig.methods,
     allowHeaders: corsConfig.headers,
     credentials: corsConfig.credentials,
+    // Without this a browser on another origin cannot read them: a deprecated
+    // operation's Deprecation/Sunset (docs/api-contract.md), when to retry after a 429,
+    // and X-Has-More on the lists that answer a bare array (kon-esports).
+    exposeHeaders: ["Deprecation", "Sunset", "Retry-After", "X-Has-More"],
   })
 );
 

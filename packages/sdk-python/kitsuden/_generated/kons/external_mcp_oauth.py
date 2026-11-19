@@ -41,7 +41,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:external-mcp-oauth:mcp-server-oauth-callback",
         mcp_tool=None,
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
 }
 
@@ -61,7 +61,7 @@ class ExternalMcpOauthApi(KonApi):
 
         REST: `GET /api/mcp-oauth/callback` · scope `kon:external-mcp-oauth:mcp-server-oauth-callback`
         idempotent (safe to retry)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["mcp-server-oauth-callback"], {"state": state, "code": code, "error": error}, None, request_options)
 
@@ -81,6 +81,6 @@ class AsyncExternalMcpOauthApi(AsyncKonApi):
 
         REST: `GET /api/mcp-oauth/callback` · scope `kon:external-mcp-oauth:mcp-server-oauth-callback`
         idempotent (safe to retry)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["mcp-server-oauth-callback"], {"state": state, "code": code, "error": error}, None, request_options)

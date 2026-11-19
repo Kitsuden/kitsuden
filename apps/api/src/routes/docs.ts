@@ -6,7 +6,6 @@
  * Provides interactive API documentation at /api/docs
  */
 
-import { swaggerUI } from "@hono/swagger-ui";
 import { Hono } from "hono";
 
 import { SECURITY_SCHEMES } from "../lib/operations-openapi";
@@ -140,59 +139,15 @@ Included headers:
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCALAR API REFERENCE (Modern, better UI)
+// VIEWER
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Scalar API Reference - modern UI for OpenAPI documentation
- * Nicer and more functional than the traditional Swagger UI
+ * The interactive viewers live in routes/docs-dynamic.ts, served from this API
+ * with pinned files (lib/docs-viewers.ts). This hand-written document has no
+ * viewer of its own: its Swagger UI and Scalar pages loaded unpinned code from a CDN.
  */
-const scalarHtml = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Kitsuden API Reference</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <style>
-      body { margin: 0; padding: 0; }
-    </style>
-  </head>
-  <body>
-    <script
-      id="api-reference"
-      type="application/json"
-      data-url="/api/docs/openapi.json"
-    ></script>
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@latest"></script>
-  </body>
-</html>
-`;
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SWAGGER UI (Classic, familiar)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Swagger UI - the classic OpenAPI documentation
- * Familiar to many developers
- */
-docsRoutes.get(
-  "/",
-  swaggerUI({
-    url: "/api/docs/openapi.json",
-    title: "Kitsuden API Documentation",
-  })
-);
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SCALAR REFERENCE
-// ═══════════════════════════════════════════════════════════════════════════════
-
-docsRoutes.get("/modern", (c) => {
-  return c.html(scalarHtml);
-});
+docsRoutes.get("/", (c) => c.redirect("/api/docs"));
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // OPENAPI JSON SPEC

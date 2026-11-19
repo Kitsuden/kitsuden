@@ -224,6 +224,11 @@ pnpm sdk:check       # CI: fails if 1 or 2 would change anything
 `sdk:check` compares only the kons installed where it runs: in a clean clone (CI) the
 kitsuden-kons kons are absent and are reported as "not installed, not checked".
 
+A client for part of the API (`--include-kon`, `--exclude-kon`, `--include-path`,
+`--exclude-path`) and the `kitsuden-lock.json` each output folder carries (filters kept between
+runs, and why `--check` finds a client stale) are in
+[../api-contract.md](../api-contract.md#typed-clients-filters-and-kitsuden-lockjson).
+
 ### JSON Schema mapping
 
 | JSON Schema                     | TypeScript                          | Python                                 |

@@ -9,6 +9,41 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Deprecating an operation** ([docs/api-contract.md](docs/api-contract.md#deprecation-policy)):
+  `deprecated: { since, sunset, use? }` in `defineOperation` publishes `deprecated` + `x-sunset`
+  (what oasdiff reads), sends `Deprecation`/`Sunset` headers (RFC 9745, RFC 8594) on every response,
+  starts the MCP tool's description with the note, logs each call with its caller, and marks the
+  generated clients (`@deprecated`, `DeprecationWarning`). A query parameter is deprecated with
+  `.meta({ deprecated: true, "x-sunset": … })`.
+- `unpaginated: "<why>"` in `defineOperation`: a list that returns its whole collection on purpose
+  says so (`x-kitsuden-operation.unpaginated`). The contract rules for pagination and camelCase are
+  now errors; the contract has none.
+- The OpenAPI document carries `x-codeSamples` (the call with the TypeScript and Python clients,
+  checked against them by a test) and `x-badges` (Public, Sensitive, Stream, Not an MCP tool), which
+  Scalar and RapiDoc show. `GET /api/docs/operations?filter=` takes RapiDoc-style terms
+  (`kon:media !deprecated /api/media/**`).
+- `node scripts/docs-viewers.mjs --outdated` and a monthly workflow say when a pinned documentation
+  viewer has a newer release.
+- CORS exposes `Deprecation`, `Sunset`, `Retry-After` and `X-Has-More`: a browser on another origin could not
+  read a deprecated operation's headers, when to retry after a 429, or whether a list that answers a bare
+  array has more.
+- **API console in the panel**: each enabled kon's card under Kons has an **API** button that opens
+  RapiDoc's `<rapi-doc-mini>` in a side panel, to read and try one operation (or a tag) of that kon
+  with the panel session. RapiDoc 12.0.0 is pinned like the other viewers and loaded only when the
+  console opens. The panel fetches the kon's document itself and neutralises every description
+  first: RapiDoc's own sanitizer lets `iframe srcdoc`, remote images and more through
+  ([docs/api-contract.md](docs/api-contract.md#the-api-console-in-the-panel)).
+- **Checks on the API contract** ([docs/api-contract.md](docs/api-contract.md)): `pnpm api:diff`
+  (oasdiff) says what changed in `packages/sdk/openapi/kitsuden.openapi.json` against another revision
+  and whether it breaks a client; `pnpm api:lint` (Spectral) applies Kitsuden's rules (operation ids,
+  fine scopes, problem+json errors, Idempotency-Key, pagination). New CI job `api-contract`: the
+  diff reports without failing, the rules fail the build. Neither tool is a dependency: oasdiff is a
+  pinned binary checked by SHA-256, Spectral runs with npx at a pinned version.
+- The typed-client generator builds a client for part of the API (`--include-kon`, `--exclude-kon`,
+  `--include-path`, `--exclude-path`) and writes `kitsuden-lock.json` next to each client: the filters
+  (kept between runs), the hash of the contract and of the generator. `pnpm sdk:check` now says why a
+  client is stale.
+- `/api/docs/modern` (Scalar) lists each kon as its own document, next to the whole API.
 - **Job queue**: `queue.dispatch(…, { dedupeKey })` does not queue the same work twice. While a
   job with that key is pending or running on the queue, the dispatch answers that job's id with
   `deduplicated: true` (migration `0085`). A queue can open itself to automation rules
@@ -90,8 +125,37 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   [benchmarks.md §4](docs/agents/benchmarks.md#4-agent-context-tokens-per-call): the tokens an
   agent reads per call, before and after.
 
+### Deprecated
+
+- `include_blocks` on `GET /api/page-builder/pages/:id`: use `includeBlocks`. It keeps working until
+  2027-05-18 (`x-sunset`). In Python, `get_page(include_blocks=…)` already sends the new name.
+
 ### Fixed
 
+- `GET /api/docs/operations` listed only hand-written `openApi.paths`, which no kon declares, so it
+  was empty for every operation declared with `defineOperation` (the Postman export too). It now lists
+  the routes each kon serves, with `sdk` and `deprecated` on each row.
+- A recursive zod schema (kon-dc's blueprints) was published with `$ref`s to a `#/$defs` that does
+  not exist at the root of the OpenAPI document: Scalar and client generators saw broken references.
+  They now point to where the schema lives.
+- Three lists stopped at a cap with no sign: `GET /api/connections/connections` (200), the saved
+  reports (500) and the dashboards (200). They take `limit` and `offset` (the default is the old
+  cap, so a client that sent nothing gets the same) and answer `hasMore`.
+- Five lists took a `limit` and nothing to reach the next page, so rows past it were unreachable:
+  `GET /api/datasets`, `GET /api/datasets/:id/entries` (500 entries by default), the request traces
+  (`GET /api/admin/requests`), the secret-access log and the brain's claims. They take `offset` and
+  answer `hasMore`. `GET /api/datasets` also cut 50 rows before filtering by permission, so a reader
+  who could not see some datasets got fewer than `limit` while more existed: it now filters, then pages.
+  The traces database function capped at 1000 rows with no offset; migration `0089` adds
+  `kitsuden_traces_page`. The contract rule for lists now asks for a way to the next page, not only a
+  page size.
+- The signer an admin picks for an agent (`/api/v1/agents/:id/sponsor`) came from a list cut at 500
+  admins and editors by name, with no sign: past that, the agent's current signer could be missing from
+  its own choices. The current signer is always listed now, and `candidatesTruncated` says the list was cut.
+- The contract declared `403 KITSUDEN_E_FORBIDDEN` only on operations with a `permission`, but a
+  denial in an agent key's scopes answers 403 on any operation, public ones included. 34 operations
+  (analytics, connections, datasets, media, page builder, proposals) now declare it; the typed
+  clients were regenerated.
 - Contract testing: the Schemathesis runner ends every `$` of the spec it tests in `$(?!\n)`.
   The generator read `$` the Python way (also before a final newline), threw away about a third
   of the values of each `^…$` pattern, and an operation with several patterned fields failed
@@ -142,6 +206,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- The API documentation viewers (`/api/docs`, `/api/docs/modern`) loaded their code from jsDelivr
+  with no pinned version, on pages where people paste tokens. The API now serves pinned copies
+  itself, downloaded and verified by `scripts/docs-viewers.mjs` (npm tarball integrity, then SRI per
+  file), with a nonce-based CSP that allows connections only to the API. Scalar's telemetry, font
+  CDN, AI agent and MCP generator are off. `@hono/swagger-ui` is no longer a dependency, and
+  `/api/docs-legacy/modern` (another unpinned Scalar page) is gone; `/api/docs-legacy` redirects to
+  `/api/docs`.
 - Files a kon stores were readable by anyone holding their address: `ctx.storage.getSignedDownloadUrl`
   returned the public URL for every key, on local disk and on S3. Keys under `private/` are now served only
   through a short-lived signed address (an HMAC on local disk, a presigned GET on S3); `/media/private/…`

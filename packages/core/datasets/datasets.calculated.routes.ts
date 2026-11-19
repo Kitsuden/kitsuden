@@ -86,6 +86,7 @@ export function computedFieldOperations(ctx: KonContext): AnyOperation[] {
   ops.push(
     defineOperation({
       id: "list-calculated-fields",
+      unpaginated: "The calculated fields of one dataset: part of its schema, not its data.",
       method: "GET",
       route: "/:id/calculated-fields",
       summary: "List the calculated fields of a dataset",

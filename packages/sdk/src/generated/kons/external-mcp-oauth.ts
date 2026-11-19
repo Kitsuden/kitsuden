@@ -16,7 +16,7 @@ export type McpServerOauthCallbackResponse = RedirectResult;
 
 /** Runtime description of every operation of kon-external-mcp-oauth (path, method, pagination…). */
 export const operations = {
-  "mcpServerOauthCallback": {"kon":"kon-external-mcp-oauth","id":"mcp-server-oauth-callback","operationId":"external-mcp-oauth.mcp-server-oauth-callback","method":"GET","path":"/mcp-oauth/callback","pathParams":[],"queryParams":["state","code","error"],"body":null,"responses":{"302":"redirect"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:external-mcp-oauth:mcp-server-oauth-callback","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "mcpServerOauthCallback": {"kon":"kon-external-mcp-oauth","id":"mcp-server-oauth-callback","operationId":"external-mcp-oauth.mcp-server-oauth-callback","method":"GET","path":"/mcp-oauth/callback","pathParams":[],"queryParams":["state","code","error"],"body":null,"responses":{"302":"redirect"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:external-mcp-oauth:mcp-server-oauth-callback","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
 } as const satisfies Record<string, OperationInfo>;
 
 /**
@@ -32,7 +32,7 @@ export interface ExternalMcpOauthApi {
    *
    * REST: `GET /api/mcp-oauth/callback` · scope `kon:external-mcp-oauth:mcp-server-oauth-callback`
    * idempotent (safe to retry)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly mcpServerOauthCallback: Operation<McpServerOauthCallbackParams, McpServerOauthCallbackResponse>;
 }

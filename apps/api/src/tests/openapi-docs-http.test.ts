@@ -6,12 +6,28 @@
  * and responded 500 «{} is not iterable». Now it reads the fields with
  * `schemaFields`, and the document has to come out complete and coherent.
  */
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { sql } from "drizzle-orm";
 
 import { db } from "../db";
+import pins from "../lib/docs-viewers.json";
 
 import { isDatabaseAvailable, generateTestId } from "./setup";
+
+// The viewers' files are downloaded by the API build, not by the test jobs:
+// stand-ins with the pinned names, so the pages render (lib/docs-viewers.ts).
+const viewersDir = mkdtempSync(join(tmpdir(), "kitsuden-docs-viewers-"));
+for (const [id, v] of Object.entries(pins.viewers)) {
+  mkdirSync(join(viewersDir, `${id}@${v.version}`), { recursive: true });
+  for (const file of Object.keys(v.files)) {
+    writeFileSync(join(viewersDir, `${id}@${v.version}`, file), `/* ${id} stand-in */`);
+  }
+}
+process.env.KITSUDEN_DOCS_VIEWERS_DIR = viewersDir;
 
 let dbAvailable = false;
 let app: { request: (r: Request | string) => Promise<Response> };
@@ -63,6 +79,7 @@ describe("OpenAPI", () => {
   }, 60_000);
 
   afterAll(async () => {
+    rmSync(viewersDir, { recursive: true, force: true });
     if (!dbAvailable) return;
     await db.execute(
       sql`DELETE FROM data_sets WHERE slug IN (${slugs.empty}, ${slugs.fields}, ${slugs.list})`
@@ -117,5 +134,45 @@ describe("OpenAPI", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/html");
     expect(await res.text()).toContain("/api/docs/openapi.json");
+  });
+
+  it("both viewers load pinned code from this API, with SRI and a strict CSP", async () => {
+    for (const url of ["/api/docs", "/api/docs/modern"]) {
+      const res = await app.request(`http://localhost:3000${url}`);
+      expect(res.status, url).toBe(200);
+      const html = await res.text();
+      const csp = res.headers.get("content-security-policy") ?? "";
+      const nonce = /'nonce-([^']+)'/.exec(csp)?.[1];
+      expect(nonce, url).toBeTruthy();
+      expect(csp).toContain("connect-src 'self'");
+      expect(csp).toContain("default-src 'none'");
+      expect(html).not.toMatch(/cdn\.jsdelivr|unpkg\.com|@latest/);
+      // Every script is ours: a src under /api/docs/assets with its integrity, or inline with the nonce.
+      for (const tag of html.match(/<script[^>]*>/g) ?? []) {
+        expect(tag, url).toContain(`nonce="${nonce}"`);
+        if (tag.includes("src=")) {
+          expect(tag).toMatch(/src="\/api\/docs\/assets\/[a-z-]+@[\d.]+\//);
+          expect(tag).toMatch(/integrity="sha384-/);
+        }
+      }
+    }
+    const modern = await (await app.request("http://localhost:3000/api/docs/modern")).text();
+    expect(modern).toContain('"telemetry":false');
+    expect(modern).toContain('"url":"/api/docs/openapi.json"');
+  });
+
+  it("serves only the pinned viewer files, cached forever under a versioned URL", async () => {
+    const v = pins.viewers.scalar.version;
+    const ok = await app.request(`http://localhost:3000/api/docs/assets/scalar@${v}/standalone.js`);
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("content-type")).toContain("text/javascript");
+    expect(ok.headers.get("cache-control")).toContain("immutable");
+    for (const bad of [
+      `/api/docs/assets/scalar@${v}/..%2F..%2Fpackage.json`,
+      `/api/docs/assets/scalar@0.0.1/standalone.js`,
+      `/api/docs/assets/scalar@${v}/other.js`,
+    ]) {
+      expect((await app.request(`http://localhost:3000${bad}`)).status, bad).toBe(404);
+    }
   });
 });

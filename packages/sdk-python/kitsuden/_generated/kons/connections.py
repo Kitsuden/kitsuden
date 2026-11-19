@@ -39,6 +39,11 @@ class AddApiKeyResponse(TypedDict):
 
 class ListConnectionsResponse(TypedDict):
     data: List[Dict[str, Any]]
+    hasMore: bool
+
+
+class ListProvidersResponse(TypedDict):
+    data: List[Dict[str, Any]]
 
 
 class RefreshConnectionResponse(TypedDict):
@@ -75,7 +80,7 @@ AddApiKeyResult = AddApiKeyResponse
 FinishConnectionResult = Union[AddApiKeyResponse, RedirectResult]
 GetConnectionResult = AddApiKeyResponse
 ListConnectionsResult = ListConnectionsResponse
-ListProvidersResult = ListConnectionsResponse
+ListProvidersResult = ListProvidersResponse
 RefreshConnectionResult = RefreshConnectionResponse
 RevokeConnectionResult = RevokeConnectionResponse
 StartConnectionResult = StartConnectionResponse
@@ -97,7 +102,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:connections:add-api-key",
         mcp_tool=None,
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "finish-connection": OperationInfo(
         kon="kon-connections",
@@ -114,7 +119,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:connections:finish-connection",
         mcp_tool=None,
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "get-connection": OperationInfo(
         kon="kon-connections",
@@ -131,7 +136,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:connections:get-connection",
         mcp_tool="connections__get-connection",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "list-connections": OperationInfo(
         kon="kon-connections",
@@ -140,7 +145,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         method="GET",
         path="/connections/connections",
         path_params=(),
-        query_params=(),
+        query_params=("limit", "offset"),
         body=None,
         responses={200: "json"},
         idempotent=True,
@@ -148,7 +153,8 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:connections:list-connections",
         mcp_tool="connections__list-connections",
-        errors=("KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        pagination=PaginationInfo(style="offset", items="data", limit="limit"),
     ),
     "list-providers": OperationInfo(
         kon="kon-connections",
@@ -165,7 +171,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:connections:list-providers",
         mcp_tool="connections__list-providers",
-        errors=("KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "refresh-connection": OperationInfo(
         kon="kon-connections",
@@ -182,7 +188,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:connections:refresh-connection",
         mcp_tool="connections__refresh-connection",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "revoke-connection": OperationInfo(
         kon="kon-connections",
@@ -199,7 +205,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=True,
         scope="kon:connections:revoke-connection",
         mcp_tool="connections__revoke-connection",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "start-connection": OperationInfo(
         kon="kon-connections",
@@ -216,7 +222,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:connections:start-connection",
         mcp_tool=None,
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
 }
 
@@ -236,7 +242,7 @@ class ConnectionsApi(KonApi):
 
         REST: `POST /api/connections/api-keys` · scope `kon:connections:add-api-key`
         not idempotent (an Idempotency-Key is sent automatically)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["add-api-key"], {}, body, request_options)
 
@@ -247,7 +253,7 @@ class ConnectionsApi(KonApi):
 
         REST: `GET /api/connections/oauth/callback` · scope `kon:connections:finish-connection`
         idempotent (safe to retry)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["finish-connection"], {"state": state, "code": code, "error": error}, None, request_options)
 
@@ -258,23 +264,34 @@ class ConnectionsApi(KonApi):
 
         REST: `GET /api/connections/connections/{id}` · scope `kon:connections:get-connection`
         idempotent (safe to retry) · MCP tool `connections__get-connection`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: The connection
         """
         return self._call(OPERATIONS["get-connection"], {"id": id}, None, request_options)
 
-    def list_connections(self, *, request_options: Optional[RequestOptions] = None) -> Outcome[ListConnectionsResult]:
+    def list_connections(self, *, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListConnectionsResult]:
         """Your connections
 
         Your connected accounts, and the organization's if you are an admin: provider, account, granted scopes, status (`active`, `expired`, `revoked`, `error`), expiry and last use. Never a token or a key. Nobody sees another person's connections, an admin included.
 
         REST: `GET /api/connections/connections` · scope `kon:connections:list-connections`
         idempotent (safe to retry) · MCP tool `connections__list-connections`
-        Errors: `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+
+        Args:
+            limit: Rows per page (1-200). The default is the maximum, what the list always returned.
+            offset: Rows to skip.
         """
-        return self._call(OPERATIONS["list-connections"], {}, None, request_options)
+        return self._call(OPERATIONS["list-connections"], {"limit": limit, "offset": offset}, None, request_options)
+
+    def iter_list_connections(self, *, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Iterator[Dict[str, Any]]:
+        """Every item of `list_connections`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-connections"], {"limit": limit}, request_options)
 
     def list_providers(self, *, request_options: Optional[RequestOptions] = None) -> Outcome[ListProvidersResult]:
         """The providers you can connect
@@ -283,7 +300,7 @@ class ConnectionsApi(KonApi):
 
         REST: `GET /api/connections/providers` · scope `kon:connections:list-providers`
         idempotent (safe to retry) · MCP tool `connections__list-providers`
-        Errors: `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["list-providers"], {}, None, request_options)
 
@@ -294,7 +311,7 @@ class ConnectionsApi(KonApi):
 
         REST: `POST /api/connections/connections/{id}/refresh` · scope `kon:connections:refresh-connection`
         not idempotent (an Idempotency-Key is sent automatically) · MCP tool `connections__refresh-connection`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: The connection
@@ -308,7 +325,7 @@ class ConnectionsApi(KonApi):
 
         REST: `POST /api/connections/connections/{id}/revoke` · scope `kon:connections:revoke-connection`
         not idempotent (an Idempotency-Key is sent automatically) · sensitive: may come back as a proposal pending human approval · MCP tool `connections__revoke-connection`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: The connection
@@ -322,7 +339,7 @@ class ConnectionsApi(KonApi):
 
         REST: `POST /api/connections/oauth/start` · scope `kon:connections:start-connection`
         not idempotent (an Idempotency-Key is sent automatically)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["start-connection"], {}, body, request_options)
 
@@ -342,7 +359,7 @@ class AsyncConnectionsApi(AsyncKonApi):
 
         REST: `POST /api/connections/api-keys` · scope `kon:connections:add-api-key`
         not idempotent (an Idempotency-Key is sent automatically)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["add-api-key"], {}, body, request_options)
 
@@ -353,7 +370,7 @@ class AsyncConnectionsApi(AsyncKonApi):
 
         REST: `GET /api/connections/oauth/callback` · scope `kon:connections:finish-connection`
         idempotent (safe to retry)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["finish-connection"], {"state": state, "code": code, "error": error}, None, request_options)
 
@@ -364,23 +381,34 @@ class AsyncConnectionsApi(AsyncKonApi):
 
         REST: `GET /api/connections/connections/{id}` · scope `kon:connections:get-connection`
         idempotent (safe to retry) · MCP tool `connections__get-connection`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: The connection
         """
         return await self._call(OPERATIONS["get-connection"], {"id": id}, None, request_options)
 
-    async def list_connections(self, *, request_options: Optional[RequestOptions] = None) -> Outcome[ListConnectionsResult]:
+    async def list_connections(self, *, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListConnectionsResult]:
         """Your connections
 
         Your connected accounts, and the organization's if you are an admin: provider, account, granted scopes, status (`active`, `expired`, `revoked`, `error`), expiry and last use. Never a token or a key. Nobody sees another person's connections, an admin included.
 
         REST: `GET /api/connections/connections` · scope `kon:connections:list-connections`
         idempotent (safe to retry) · MCP tool `connections__list-connections`
-        Errors: `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+
+        Args:
+            limit: Rows per page (1-200). The default is the maximum, what the list always returned.
+            offset: Rows to skip.
         """
-        return await self._call(OPERATIONS["list-connections"], {}, None, request_options)
+        return await self._call(OPERATIONS["list-connections"], {"limit": limit, "offset": offset}, None, request_options)
+
+    def iter_list_connections(self, *, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[Dict[str, Any]]:
+        """Every item of `list_connections`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-connections"], {"limit": limit}, request_options)
 
     async def list_providers(self, *, request_options: Optional[RequestOptions] = None) -> Outcome[ListProvidersResult]:
         """The providers you can connect
@@ -389,7 +417,7 @@ class AsyncConnectionsApi(AsyncKonApi):
 
         REST: `GET /api/connections/providers` · scope `kon:connections:list-providers`
         idempotent (safe to retry) · MCP tool `connections__list-providers`
-        Errors: `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["list-providers"], {}, None, request_options)
 
@@ -400,7 +428,7 @@ class AsyncConnectionsApi(AsyncKonApi):
 
         REST: `POST /api/connections/connections/{id}/refresh` · scope `kon:connections:refresh-connection`
         not idempotent (an Idempotency-Key is sent automatically) · MCP tool `connections__refresh-connection`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: The connection
@@ -414,7 +442,7 @@ class AsyncConnectionsApi(AsyncKonApi):
 
         REST: `POST /api/connections/connections/{id}/revoke` · scope `kon:connections:revoke-connection`
         not idempotent (an Idempotency-Key is sent automatically) · sensitive: may come back as a proposal pending human approval · MCP tool `connections__revoke-connection`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: The connection
@@ -428,6 +456,6 @@ class AsyncConnectionsApi(AsyncKonApi):
 
         REST: `POST /api/connections/oauth/start` · scope `kon:connections:start-connection`
         not idempotent (an Idempotency-Key is sent automatically)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["start-connection"], {}, body, request_options)

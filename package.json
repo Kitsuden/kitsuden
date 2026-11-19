@@ -82,6 +82,9 @@
     "sdk:watch": "node scripts/sdk/watch.mjs",
     "sync:tallao": "node scripts/sync-tallao.mjs",
     "sdk:check": "node scripts/sdk/generate.mjs --check && node scripts/sdk/tron-fixtures.mjs --check && cd apps/api && bun --no-env-file scripts/sdk-openapi.ts --check",
+    "api:diff": "node scripts/api-contract/oasdiff.mjs",
+    "api:lint": "node scripts/api-contract/lint.mjs",
+    "docs:viewers": "node scripts/docs-viewers.mjs",
     "test:sdk": "pnpm run test:sdk:ts && pnpm run test:sdk:py",
     "test:sdk:ts": "vitest run --config packages/sdk/vitest.config.ts",
     "test:sdk:py": "cd packages/sdk-python && uv run --no-project --python 3.12 --with \"httpx>=0.24\" --with pytest -- python -m pytest -q -p no:cacheprovider tests",
@@ -150,7 +153,6 @@
     ]
   },
   "dependencies": {
-    "@hono/swagger-ui": "^0.6.2",
     "@paralleldrive/cuid2": "^3.3.0",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.11",

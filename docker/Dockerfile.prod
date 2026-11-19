@@ -198,6 +198,9 @@ RUN apk upgrade --no-cache && apk add --no-cache postgresql-client curl nodejs
 
 # Copy built API artifact
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+# The API documentation viewers (Swagger UI, Scalar): the build downloaded and
+# verified them (scripts/docs-viewers.mjs); the API serves them itself.
+COPY --from=builder /app/apps/api/docs-viewers ./apps/api/docs-viewers
 
 # Copy API source for dynamic imports used by startup scripts & module-loader
 COPY --from=builder /app/apps/api/src ./apps/api/src

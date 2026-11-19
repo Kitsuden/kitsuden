@@ -199,10 +199,13 @@ export const secretAccessOperations: AnyOperation[] = [
       query: z.object({
         kon: z.string().max(100).optional(),
         limit: z.coerce.number().int().min(1).max(500).optional(),
+        // There was no way past the first page of the audit trail.
+        offset: z.coerce.number().int().min(0).default(0),
       }),
     },
     output: {
       schema: z.object({
+        hasMore: z.boolean(),
         entries: z.array(
           z.object({
             id: z.string(),
@@ -219,11 +222,20 @@ export const secretAccessOperations: AnyOperation[] = [
     },
     mcp: { exclude: "An audit trail for administrators." },
     handle: async (e) => {
-      const query = e.query as { kon?: string; limit?: number };
+      const query = e.query as { kon?: string; limit?: number; offset: number };
       const { listSecretAccess } = await import("../lib/kon-secrets");
-      const entries = await listSecretAccess({ konId: query.kon, limit: query.limit });
+      const limit = query.limit ?? 100;
+      const rows = await listSecretAccess({
+        konId: query.kon,
+        limit,
+        offset: query.offset,
+        withMore: true,
+      });
       return {
-        entries: entries.map((entry) => ({ ...entry, createdAt: entry.createdAt.toISOString() })),
+        hasMore: rows.length > limit,
+        entries: rows
+          .slice(0, limit)
+          .map((entry) => ({ ...entry, createdAt: entry.createdAt.toISOString() })),
       };
     },
   }),
