@@ -23,8 +23,10 @@ import {
 import {
   changesCode,
   changesSchedule,
+  changesCredentials,
   changesCustomerDataPolicy,
   codeOutsidePromotionProblem,
+  credentialsPolicyProblem,
   customerDataPolicyProblem,
   respondProblem,
   bringsCode,
@@ -76,6 +78,26 @@ async function reasonNotToDefineAgent(
  */
 async function rules() {
   return import("../lib/actions/rules");
+}
+
+/**
+ * The shape of `config.egress` and `config.credentials`, checked when an action
+ * is saved so a bad rule fails here and not at its next run.
+ */
+async function sandboxConfigProblem(config: unknown): Promise<string | null> {
+  if (!config || typeof config !== "object") return null;
+  const c = config as { egress?: unknown; credentials?: unknown; runtime?: unknown };
+  if (c.runtime !== undefined) {
+    const { CODE_RUNTIMES } = await import("../lib/sandbox/opensandbox");
+    if (!(CODE_RUNTIMES as readonly unknown[]).includes(c.runtime))
+      return `config.runtime must be one of: ${CODE_RUNTIMES.join(", ")}`;
+  }
+  const { actionEgressProblem } = await import("../lib/egress-policy");
+  const egress = actionEgressProblem(c.egress);
+  if (egress) return `config.egress: ${egress}`;
+  const { credentialsProblem } = await import("../lib/credential-vault");
+  const credentials = credentialsProblem(c.credentials);
+  return credentials ? `config.${credentials}` : null;
 }
 
 /**
@@ -195,6 +217,14 @@ export async function createActionHandler(c: Context) {
   if (executor?.type !== "human" && changesCustomerDataPolicy({}, body.config)) {
     return respondProblem(c as never, customerDataPolicyProblem(c.req.path, requestIdOf(c)));
   }
+  // Binding a vault credential to a host is a person's decision too.
+  if (executor?.type !== "human" && changesCredentials({}, body.config ?? {})) {
+    return respondProblem(c as never, credentialsPolicyProblem(c.req.path, requestIdOf(c)));
+  }
+  {
+    const problem = await sandboxConfigProblem(body.config);
+    if (problem) return c.json({ error: problem }, 400);
+  }
   if (body.type === "webhook_out") {
     const problem = await webhookUrlProblem(body.config);
     if (problem) return c.json({ error: problem }, 400);
@@ -277,6 +307,13 @@ export async function updateActionHandler(c: Context) {
     changesCustomerDataPolicy(before.config, body.config)
   ) {
     return respondProblem(c as never, customerDataPolicyProblem(c.req.path, requestIdOf(c)));
+  }
+  if (before && executor?.type !== "human" && changesCredentials(before.config, body.config)) {
+    return respondProblem(c as never, credentialsPolicyProblem(c.req.path, requestIdOf(c)));
+  }
+  if (body.config !== undefined) {
+    const problem = await sandboxConfigProblem(body.config);
+    if (problem) return c.json({ error: problem }, 400);
   }
   if (body.triggerConfig !== undefined) {
     const problem = (await rules()).triggerConditionsProblem(body.triggerConfig);

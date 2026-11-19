@@ -149,6 +149,23 @@ export interface CodeCapabilities {
   timeoutMs: number;
   memoryLimitMb: number;
   maxCalls: number;
+  /**
+   * `egress.rules` (lib/egress-policy.ts), normalized and sorted. Optional so a
+   * version stored before it existed still reads; missing = no rules.
+   */
+  egress?: CodeEgressRule[];
+  /**
+   * Where the code runs when it is not the default QuickJS sandbox
+   * (`opensandbox:python`, `opensandbox:shell`). Optional: missing = quickjs.
+   */
+  runtime?: string;
+}
+
+/** One egress rule as the promotion contract sees it (same shape as the sandbox's). */
+export interface CodeEgressRule {
+  action: "allow" | "deny";
+  target?: string;
+  ports?: number[];
 }
 
 /** The same default values as the sandbox (`lib/worker-sandbox.ts`, `code-handler.ts`). */
@@ -166,16 +183,104 @@ function integer(v: unknown, defaultValue: number): number {
   return typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.floor(v) : defaultValue;
 }
 
+/**
+ * `egress.rules` of a config, leniently normalized (lowercase targets, sorted
+ * unique ports, sorted rules). Invalid entries are dropped here: the strict
+ * check (`actionEgressProblem` in apps/api) refuses them when the action or
+ * draft is saved, so they never reach the sandbox either.
+ */
+export function egressRulesOf(config: unknown): CodeEgressRule[] {
+  const c = (config && typeof config === "object" ? config : {}) as Record<string, unknown>;
+  const e = c.egress as { rules?: unknown } | undefined;
+  const raw = e && typeof e === "object" && Array.isArray(e.rules) ? e.rules : [];
+  const out: CodeEgressRule[] = [];
+  for (const r of raw) {
+    if (!r || typeof r !== "object") continue;
+    const x = r as Record<string, unknown>;
+    if (x.action !== "allow" && x.action !== "deny") continue;
+    const target =
+      typeof x.target === "string" && x.target.trim()
+        ? x.target.trim().toLowerCase().replace(/\.$/, "")
+        : undefined;
+    const ports = Array.isArray(x.ports)
+      ? [
+          ...new Set(
+            x.ports.filter(
+              (p): p is number => Number.isInteger(p) && (p as number) > 0 && (p as number) < 65536
+            )
+          ),
+        ].sort((a, b) => a - b)
+      : [];
+    if (!target && !ports.length) continue;
+    out.push({
+      action: x.action,
+      ...(target ? { target } : {}),
+      ...(ports.length ? { ports } : {}),
+    });
+  }
+  const key = (r: CodeEgressRule) => `${r.action} ${r.target ?? "*"} ${(r.ports ?? []).join(",")}`;
+  const unique = new Map(out.map((r) => [key(r), r]));
+  return [...unique.values()].sort((a, b) => key(a).localeCompare(key(b)));
+}
+
 /** From an action's (or a draft's) `config` to its capabilities, normalized and sorted. */
 export function capabilitiesOf(config: unknown): CodeCapabilities {
   const c = (config && typeof config === "object" ? config : {}) as Record<string, unknown>;
+  const egress = egressRulesOf(c);
+  const runtime =
+    typeof c.runtime === "string" && c.runtime && c.runtime !== "quickjs" ? c.runtime : null;
   return {
+    ...(runtime ? { runtime } : {}),
     scopes: textList(c.scopes),
     fetchAllow: textList(c.fetchAllow, true),
     timeoutMs: integer(c.timeoutMs, DEFAULT_CODE_LIMITS.timeoutMs),
     memoryLimitMb: integer(c.memoryLimitMb, DEFAULT_CODE_LIMITS.memoryLimitMb),
     maxCalls: integer(c.maxCalls, DEFAULT_CODE_LIMITS.maxCalls),
+    ...(egress.length ? { egress } : {}),
   };
+}
+
+/**
+ * The reach of a capability set as `target` or `target:port` entries (`*` =
+ * any host). `fetchAllow` hosts are any-port entries.
+ */
+function reachOf(c: CodeCapabilities): { allow: string[]; deny: string[] } {
+  const entries = (r: CodeEgressRule) => {
+    const t = r.target ?? "*";
+    const shown = t.includes(":") ? `[${t}]` : t;
+    return r.ports?.length ? r.ports.map((p) => `${shown}:${p}`) : [t];
+  };
+  const rules = c.egress ?? [];
+  return {
+    allow: [
+      ...new Set([...c.fetchAllow, ...rules.filter((r) => r.action === "allow").flatMap(entries)]),
+    ],
+    deny: [...new Set(rules.filter((r) => r.action === "deny").flatMap(entries))],
+  };
+}
+
+/**
+ * Splits a reach entry: `target`, `target:port`, or `[ipv6-or-cidr]:port`. An
+ * unbracketed entry with several colons is an IPv6 target with no port.
+ */
+function splitReach(entry: string): { target: string; port: string | null } {
+  const bracketed = /^\[([^\]]+)\]:(\d+)$/.exec(entry);
+  if (bracketed) return { target: bracketed[1]!, port: bracketed[2]! };
+  const parts = entry.split(":");
+  if (parts.length === 2 && /^\d+$/.test(parts[1]!)) return { target: parts[0]!, port: parts[1]! };
+  return { target: entry, port: null };
+}
+
+/**
+ * Does reach entry `p` cover everything `q` covers? Host part with
+ * `hostCovers` (plus `*` = any host); a port-less `p` covers any port. IP and
+ * CIDR targets only cover themselves (a conservative answer: a human looks).
+ */
+export function reachCovers(p: string, q: string): boolean {
+  const a = splitReach(p);
+  const b = splitReach(q);
+  if (a.port !== null && a.port !== b.port) return false;
+  return a.target === "*" || hostCovers(a.target, b.target);
 }
 
 /**
@@ -201,9 +306,16 @@ export interface CapabilitiesDiff {
   /** Denials (`!x`) of the active one that the draft removes: that also widens. */
   denialsRemoved: string[];
   denialsAdded: string[];
-  /** Hosts in the draft that the active one's list did not cover. */
+  /**
+   * Hosts in the draft that the active one's list did not cover: `fetchAllow`
+   * entries and `egress` allow rules (`target` or `target:port`, `*` = any host).
+   */
   hostsAdded: string[];
   hostsRemoved: string[];
+  /** `egress` deny rules of the active version that the draft drops: that also widens. */
+  egressDenialsRemoved: string[];
+  /** The draft runs somewhere else than the active version (quickjs ↔ opensandbox:*). */
+  runtimeChanged: boolean;
   /** Limits that go up (time, memory, host calls). */
   limitsIncreased: {
     field: "timeoutMs" | "memoryLimitMb" | "maxCalls";
@@ -224,12 +336,15 @@ export function capabilitiesDiff(
   const scopesRemoved = a.grants.filter((s) => !concedeScope(b.grants, s));
   const denialsRemoved = a.denials.filter((d) => !b.denials.includes(d)).map((d) => `!${d}`);
   const denialsAdded = b.denials.filter((d) => !a.denials.includes(d)).map((d) => `!${d}`);
-  const hostsAdded = draft.fetchAllow.filter(
-    (h) => !before.fetchAllow.some((p) => hostCovers(p, h))
+  const reachBefore = reachOf(before);
+  const reachDraft = reachOf(draft);
+  const hostsAdded = reachDraft.allow.filter(
+    (h) => !reachBefore.allow.some((p) => reachCovers(p, h))
   );
-  const hostsRemoved = before.fetchAllow.filter(
-    (h) => !draft.fetchAllow.some((p) => hostCovers(p, h))
+  const hostsRemoved = reachBefore.allow.filter(
+    (h) => !reachDraft.allow.some((p) => reachCovers(p, h))
   );
+  const egressDenialsRemoved = reachBefore.deny.filter((d) => !reachDraft.deny.includes(d));
   const limitsIncreased: CapabilitiesDiff["limitsIncreased"] = [];
   for (const field of ["timeoutMs", "memoryLimitMb", "maxCalls"] as const) {
     if (draft[field] > before[field])
@@ -243,6 +358,8 @@ export function capabilitiesDiff(
     denialsAdded,
     hostsAdded,
     hostsRemoved,
+    egressDenialsRemoved,
+    runtimeChanged: (before.runtime ?? "quickjs") !== (draft.runtime ?? "quickjs"),
     limitsIncreased,
   };
 }
@@ -345,6 +462,8 @@ export type FallbackReason =
   | "limits_increased"
   | "touches_secrets"
   | "target_has_env_vars"
+  | "target_has_credentials"
+  | "runtime_changed"
   | "touches_users_or_roles"
   | "touches_security_config"
   | "sensitive_operation"
@@ -364,6 +483,8 @@ export const FALLBACK_REASONS: readonly FallbackReason[] = [
   "limits_increased",
   "touches_secrets",
   "target_has_env_vars",
+  "target_has_credentials",
+  "runtime_changed",
   "touches_users_or_roles",
   "touches_security_config",
   "sensitive_operation",
@@ -400,6 +521,12 @@ export interface DecisionInput {
    * code leaves them alone, so these targets always wait for a human.
    */
   targetWithVariables?: boolean;
+  /**
+   * The target action has vault credentials bound (`credentials` in its config).
+   * A new version never SEES them, but its requests to the bound hosts carry
+   * them: what it does with that authority is a human's call.
+   */
+  targetWithCredentials?: boolean;
 }
 
 export interface PromotionDecision {
@@ -424,10 +551,13 @@ export function decidePromotion(e: DecisionInput): PromotionDecision {
   if (e.tests.errored > 0) m.push("tests_errored");
   if (!e.approvedScan) m.push("scan_failed");
   if (e.diff.scopesAdded.length > 0 || e.diff.denialsRemoved.length > 0) m.push("scope_escalation");
-  if (e.diff.hostsAdded.length > 0) m.push("new_outbound_hosts");
+  if (e.diff.hostsAdded.length > 0 || (e.diff.egressDenialsRemoved?.length ?? 0) > 0)
+    m.push("new_outbound_hosts");
   if (e.diff.limitsIncreased.length > 0) m.push("limits_increased");
   if (e.touches.includes("secrets")) m.push("touches_secrets");
   if (e.targetWithVariables) m.push("target_has_env_vars");
+  if (e.targetWithCredentials) m.push("target_has_credentials");
+  if (e.diff.runtimeChanged) m.push("runtime_changed");
   if (e.touches.includes("users_roles")) m.push("touches_users_or_roles");
   if (e.touches.includes("security_config")) m.push("touches_security_config");
   if (e.sensitiveOperation) m.push("sensitive_operation");

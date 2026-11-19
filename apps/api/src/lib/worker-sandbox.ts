@@ -53,7 +53,17 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { messageOf, type EffectStore } from "@kitsuden/engine";
 
+import { injectCredentials, redact, VaultError, type VaultCredential } from "./credential-vault";
 import { egressProblem, type CustomerDataGuard } from "./customer-data";
+import {
+  decideEgress,
+  describeDenial,
+  normalizeTarget,
+  platformEgressPolicy,
+  portOf,
+  resolutionCouldAllow,
+  type EgressRule,
+} from "./egress-policy";
 import { inProduction } from "./environment";
 import { pinnedFetch, resolveTarget, UnsafeTargetError } from "./safe-fetch";
 
@@ -89,6 +99,18 @@ export interface SandboxInput {
   memoryLimitMb: number;
   /** Hosts that `fetch` may call, in addition to KITSUDEN_SANDBOX_FETCH_ALLOW. */
   fetchAllow?: string[];
+  /**
+   * The action's egress rules (`config.egress.rules`, already parsed). With
+   * `fetchAllow` they form the ACTION layer of lib/egress-policy.ts; the
+   * platform layer (env + KITSUDEN_EGRESS_POLICY_FILE) wraps both.
+   */
+  egress?: EgressRule[];
+  /**
+   * Vault credentials (lib/credential-vault.ts): added to matching HTTPS
+   * requests by THIS process, never sent to the child. `value: null` (a test)
+   * sends a placeholder.
+   */
+  credentials?: VaultCredential[];
   /** Kitsuden API with the identity of whoever executes (without it, no API). */
   api?: SandboxApi | null;
   /** Maximum host calls (fetch + api) per execution. */
@@ -128,6 +150,8 @@ export interface MockFetchRequest {
   url: string;
   method: string;
   body?: string;
+  /** The headers as they would leave, vault placeholders included (`[vault:KEY]`). */
+  headers?: Record<string, string>;
 }
 
 export interface SandboxResult {
@@ -390,11 +414,17 @@ function checkCustomerData(
   throw new CallError(problem.message);
 }
 
-async function callFetch(
-  args: Record<string, unknown>,
-  list: string[],
-  guard?: CustomerDataGuard
-): Promise<SandboxResponse> {
+/** The action layer of the egress policy: its rules plus every allowed host. */
+export function egressRulesFor(input: Pick<SandboxInput, "egress" | "fetchAllow">): EgressRule[] {
+  const hosts = allowedHosts(input.fetchAllow)
+    .map((h) => normalizeTarget(h))
+    .filter((t): t is string => !!t)
+    .map((target) => ({ action: "allow" as const, target }));
+  return [...(input.egress ?? []), ...hosts];
+}
+
+/** Parses the URL the code asked for and checks what does not need the network. */
+function sandboxUrl(args: Record<string, unknown>): URL {
   let url: URL;
   try {
     url = new URL(String(args.url ?? ""));
@@ -405,11 +435,43 @@ async function callFetch(
     throw new CallError(`Protocol not allowed: ${url.protocol}`);
   }
   if (url.username || url.password) throw new CallError("Credentials in URL are not allowed");
-  if (!allowedHost(url.hostname, list)) {
-    throw new CallError(
-      `Host not allowed: ${url.hostname} (allowed: ${list.length ? list.join(", ") : "none"})`
-    );
+  return url;
+}
+
+/**
+ * The egress decision on the NAME (before resolving). Refuses early when no
+ * resolution could turn it into an allow; otherwise the final decision is taken
+ * again on the resolved addresses (`beforeConnect`).
+ */
+function checkEgressByName(url: URL, rules: EgressRule[]): void {
+  const platform = platformEgressPolicy();
+  const req = { hostname: url.hostname, port: portOf(url) };
+  const d = decideEgress(platform, rules, req);
+  if (d.allowed) return;
+  if (d.layer === "default" && resolutionCouldAllow(platform, rules)) return;
+  throw new CallError(describeDenial(d, req));
+}
+
+function injectOrRefuse(
+  credentials: VaultCredential[] | undefined,
+  url: URL,
+  headers: Record<string, string>
+): string[] {
+  try {
+    return injectCredentials(credentials, url, headers);
+  } catch (err) {
+    throw err instanceof VaultError ? new CallError(err.message) : err;
   }
+}
+
+async function callFetch(
+  args: Record<string, unknown>,
+  rules: EgressRule[],
+  guard?: CustomerDataGuard,
+  credentials?: VaultCredential[]
+): Promise<SandboxResponse> {
+  const url = sandboxUrl(args);
+  checkEgressByName(url, rules);
   const method = String(args.method ?? "GET").toUpperCase();
   if (!/^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$/.test(method)) {
     throw new CallError(`Method not allowed: ${method}`);
@@ -421,7 +483,9 @@ async function callFetch(
   const headers = safeHeaders(args.headers);
   const body =
     typeof args.body === "string" && method !== "GET" && method !== "HEAD" ? args.body : undefined;
+  // Customer data is checked on what the CODE wrote; the vault adds its header after.
   checkCustomerData(guard, url, headers, body);
+  const injected = injectOrRefuse(credentials, url, headers);
   let res: Response;
   try {
     res = await pinnedFetch(url, {
@@ -430,15 +494,24 @@ async function callFetch(
       body,
       timeoutMs: LIMITS.fetchTimeoutMs,
       allowInternal: sandboxAllowsInternal(),
+      // The final decision, on the addresses the connection is pinned to (IP/CIDR rules).
+      beforeConnect: (addresses, port) => {
+        const req = { hostname: url.hostname, port, addresses: addresses.map((a) => a.address) };
+        const d = decideEgress(platformEgressPolicy(), rules, req);
+        if (!d.allowed) throw new CallError(describeDenial(d, req));
+      },
     });
   } catch (err) {
     throw err instanceof UnsafeTargetError ? new CallError(err.message) : err;
   }
+  const responseHeaders = Object.fromEntries(
+    [...res.headers.entries()].map(([k, v]) => [k, redact(v, injected)])
+  );
   return {
     status: res.status,
     statusText: res.statusText,
-    headers: Object.fromEntries(res.headers.entries()),
-    body: await readBounded(res, LIMITS.maxResponse),
+    headers: responseHeaders,
+    body: redact(await readBounded(res, LIMITS.maxResponse), injected),
     url: url.href,
   };
 }
@@ -647,36 +720,29 @@ function failure(
 async function callMockFetch(
   args: Record<string, unknown>,
   test: NonNullable<SandboxInput["probe"]>,
-  list: string[],
-  guard?: CustomerDataGuard
+  rules: EgressRule[],
+  guard?: CustomerDataGuard,
+  credentials?: VaultCredential[]
 ): Promise<SandboxResponse> {
-  let url: URL;
-  try {
-    url = new URL(String(args.url ?? ""));
-  } catch {
-    throw new CallError("Invalid URL");
-  }
-  if (url.protocol !== "https:" && url.protocol !== "http:") {
-    throw new CallError(`Protocol not allowed: ${url.protocol}`);
-  }
-  // The same allowlist as in production: the test must not pass something that is later rejected.
-  if (!allowedHost(url.hostname, list)) {
-    throw new CallError(
-      `Host not allowed: ${url.hostname} (allowed: ${list.length ? list.join(", ") : "none"})`
-    );
-  }
+  const url = sandboxUrl(args);
+  // The same policy as in production, without DNS: the test must not pass
+  // something that is later rejected. A name that only an IP/CIDR rule could
+  // allow is refused here (there is no resolution in a test).
+  const platform = platformEgressPolicy();
+  const req = { hostname: url.hostname, port: portOf(url) };
+  const d = decideEgress(platform, rules, req);
+  if (!d.allowed) throw new CallError(describeDenial(d, req));
   const method = String(args.method ?? "GET").toUpperCase();
-  checkCustomerData(
-    guard,
+  const headers = safeHeaders(args.headers);
+  const body = typeof args.body === "string" ? args.body : undefined;
+  checkCustomerData(guard, url, headers, body);
+  // Placeholders only: a test never holds a real credential.
+  injectOrRefuse(
+    credentials?.map((c) => ({ ...c, value: null })),
     url,
-    safeHeaders(args.headers),
-    typeof args.body === "string" ? args.body : undefined
+    headers
   );
-  const r = await test.fetch({
-    url: url.href,
-    method,
-    body: typeof args.body === "string" ? args.body : undefined,
-  });
+  const r = await test.fetch({ url: url.href, method, body, headers });
   if (r.body.length > LIMITS.maxResponse) throw new CallError("Response too large");
   return r;
 }
@@ -700,7 +766,7 @@ export async function executeSandbox(input: SandboxInput): Promise<SandboxResult
     Math.max(Number(input.maxCalls) || LIMITS.defaultCalls, 0),
     LIMITS.maxCalls
   );
-  const list = allowedHosts(input.fetchAllow);
+  const rules = egressRulesFor(input);
   const effects = effectState(
     input.effects ??
       (input.probe ? { scope: "probe", runId: null, store: memoryEffectStore() } : null)
@@ -781,8 +847,8 @@ export async function executeSandbox(input: SandboxInput): Promise<SandboxResult
         const value =
           m.op === "fetch"
             ? input.probe
-              ? await callMockFetch(args, input.probe, list, input.customerData)
-              : await callFetch(args, list, input.customerData)
+              ? await callMockFetch(args, input.probe, rules, input.customerData, input.credentials)
+              : await callFetch(args, rules, input.customerData, input.credentials)
             : m.op === "api"
               ? await callApi(args, input.api)
               : (() => {

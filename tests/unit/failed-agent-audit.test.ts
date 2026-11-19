@@ -81,6 +81,8 @@ beforeAll(async () => {
   await pg.exec(`CREATE TABLE agent_identities (id text PRIMARY KEY);`);
   await pg.exec(auditDdl());
   await pg.exec(readFileSync(resolve(MIGRATIONS, "0044_agent_audit_without_agent.sql"), "utf8"));
+  // The hash chain (0088): what the writer fills in, and the append-only trigger.
+  await pg.exec(readFileSync(resolve(MIGRATIONS, "0088_audit_chain.sql"), "utf8"));
   await pg.exec(`INSERT INTO agent_identities (id) VALUES ('real-agent');`);
 });
 
@@ -90,7 +92,10 @@ afterAll(async () => {
 
 beforeEach(async () => {
   errors.length = 0;
-  await pg.exec("DELETE FROM agent_audit_logs");
+  // Append-only since 0088: emptied the way only a test may, trigger off.
+  await pg.exec(`ALTER TABLE agent_audit_logs DISABLE TRIGGER USER;
+    DELETE FROM agent_audit_logs; DELETE FROM agent_audit_checkpoints;
+    ALTER TABLE agent_audit_logs ENABLE TRIGGER USER;`);
 });
 
 describe("authentication failures with no known agent", () => {
@@ -126,12 +131,12 @@ describe("authentication failures with no known agent", () => {
     expect(f[0]?.agent_id).toBe("real-agent");
   });
 
-  it("the FK still stands: a nonexistent id does not slip through", async () => {
+  it("a raw INSERT that does not extend the hash chain is refused (0088)", async () => {
     await expect(
       pg.query(
         "INSERT INTO agent_audit_logs (agent_id, action, success) VALUES ('unknown', 'auth_failure', false)"
       )
-    ).rejects.toMatchObject({ code: "23503" });
+    ).rejects.toMatchObject({ code: "23514" });
   });
 });
 

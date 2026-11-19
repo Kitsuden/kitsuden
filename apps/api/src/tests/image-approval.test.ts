@@ -36,6 +36,7 @@ import { clearQuotaMemory } from "../lib/agent-quotas";
 import { expireProposals, invalidateApprovalsConfig } from "../lib/approvals";
 import { createAgent } from "../services/agent-auth";
 
+import { withShownHash } from "./approval-shown-hash";
 import { enterAs, generateTestId, isDatabaseAvailable } from "./setup";
 
 const ORIGIN = "http://localhost:4321";
@@ -74,6 +75,7 @@ async function request(
     raw?: { type: string; text: string };
   } = {}
 ): Promise<Response> {
+  if (!o.form && !o.raw) o = { ...o, body: await withShownHash(method, path, o.body) };
   const headers: Record<string, string> = { origin: ORIGIN };
   if (o.token) headers.Authorization = `Bearer ${o.token}`;
   if (o.cookie) headers.Cookie = o.cookie;

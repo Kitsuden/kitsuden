@@ -145,7 +145,7 @@ describe("external MCP: scheduled refresh", () => {
     mcp?.close();
     delete process.env.KITSUDEN_EXTERNAL_MCP_ALLOW_INTERNAL;
     if (dbAvailable) {
-      await db.execute(sql`DELETE FROM agent_audit_logs WHERE resource_id = ${serverId}`);
+      // agent_audit_logs is append-only (0088): its rows stay, like in production.
       await db.execute(sql`DELETE FROM external_mcp_servers WHERE name LIKE ${`${tag}%`}`);
     }
   });

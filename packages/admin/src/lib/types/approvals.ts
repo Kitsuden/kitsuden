@@ -19,6 +19,13 @@ export interface ProposalResult {
 export interface Proposal {
   id: string;
   status: ProposalStatus;
+  /**
+   * Hash of the exact operation (migration 0087). Sent back on approval: the
+   * API refuses to run anything other than what the reviewer was shown.
+   */
+  operationHash?: string | null;
+  /** `bound` (it has an operationHash) or `legacy` (held before 0087). */
+  binding?: "bound" | "legacy";
   reason: "sensitive" | "propose_only";
   channel: "rest" | "mcp";
   method: string;

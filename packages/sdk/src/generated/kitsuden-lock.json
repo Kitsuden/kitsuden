@@ -7,7 +7,7 @@
   },
   "contract": {
     "apiVersion": "0.9.0-beta",
-    "sha256": "a1f44d30b1ae721479121c54bff8fed63a460a60970bf0a8d3e9c24037cce302"
+    "sha256": "c6ce669274a96d44c59490f07539f0925b1a2c277c6157ff819bfe7288fe5936"
   },
   "filters": {
     "includeKons": [],
@@ -15,12 +15,14 @@
     "includePaths": [],
     "excludePaths": []
   },
-  "operations": 178,
+  "operations": 183,
   "kons": {
     "kon-agent-notifications": 3,
-    "kon-agents": 18,
+    "kon-agent-token": 1,
+    "kon-agents": 20,
     "kon-analytics": 3,
     "kon-approvals": 15,
+    "kon-audit": 2,
     "kon-automation": 2,
     "kon-blocks": 18,
     "kon-brain": 13,

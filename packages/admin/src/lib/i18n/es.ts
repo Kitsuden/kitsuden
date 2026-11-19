@@ -3953,6 +3953,10 @@ const es = {
     reason_touches_secrets: "Toca secretos que la versión activa no tocaba",
     reason_target_has_env_vars:
       "La acción tiene variables de entorno, y una versión nueva recibiría sus valores",
+    reason_target_has_credentials:
+      "La acción tiene credenciales de la bóveda: una versión nueva nunca las ve, pero sus peticiones a esos hosts las llevan",
+    reason_runtime_changed:
+      "Se ejecuta en otro runtime que la versión activa (QuickJS u OpenSandbox)",
     reason_touches_users_or_roles: "Toca usuarios, agentes o roles que la versión activa no tocaba",
     reason_touches_security_config:
       "Toca configuración de seguridad que la versión activa no tocaba",

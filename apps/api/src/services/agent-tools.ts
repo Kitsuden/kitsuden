@@ -45,6 +45,13 @@ export interface AgentToolContext {
    * where it may go. External MCP tools check their arguments with it.
    */
   customerData?: CustomerDataGuard;
+  /**
+   * The run's short-lived credential (services/agent-short-tokens.ts). When set,
+   * it is checked before EVERY tool call (not revoked, not expired, agent still
+   * active), its id is the call's `keyId`, and the call's scopes are the agent's
+   * NOW narrowed by the credential's.
+   */
+  runCredentialId?: string;
 }
 
 /**
@@ -120,6 +127,25 @@ export async function executeAgentTool(
   // `getAgentTools(allowedTools)` only filtered what is SHOWN to the model; what
   // the model asked for (e.g. after a prompt injection) was run
   // all the same, and without going through human approval.
+  if (context.runCredentialId) {
+    const { runCredentialStatus } = await import("./agent-short-tokens");
+    const status = await runCredentialStatus(context.runCredentialId, context.agentId);
+    if (!status.ok) {
+      const { logAgentAction } = await import("./agent-audit");
+      logAgentAction({
+        agentId: context.agentId,
+        keyId: context.runCredentialId,
+        action: "run_credential_refused",
+        resource: "tool",
+        resourceId: name,
+        details: { reason: status.reason, traceId: context.traceId ?? null },
+        success: false,
+        errorMessage: status.reason,
+      });
+      throw new Error(`This run can no longer call tools: ${status.reason}.`);
+    }
+    context = { ...context, keyId: context.runCredentialId, scopes: status.scopes };
+  }
   const allowedOnes = context.allowedTools ?? [];
   if (allowedOnes.length > 0 && !allowedOnes.includes(name)) {
     throw new Error(`Tool '${name}' is not in this agent's allowed tools.`);

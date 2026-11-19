@@ -29,6 +29,7 @@ import { invalidateApprovalsConfig } from "../lib/approvals";
 import { externalNaming } from "../lib/external-mcp-bridge";
 import { createAgent } from "../services/agent-auth";
 
+import { withShownHash } from "./approval-shown-hash";
 import { enterAs, generateTestId, isDatabaseAvailable } from "./setup";
 
 setDefaultTimeout(120_000);
@@ -61,6 +62,7 @@ async function request(
   path: string,
   body?: unknown
 ) {
+  body = await withShownHash(method, path, body);
   const headers: Record<string, string> = { origin: ORIGIN, "Content-Type": "application/json" };
   if (auth.cookie) headers.Cookie = auth.cookie;
   if (auth.token) headers.Authorization = `Bearer ${auth.token}`;

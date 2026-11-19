@@ -45,9 +45,9 @@ async function connected() {
   }
 }
 
-// 30 s, not bun's default 5: the first test of a file runs this while the app it just
+// 90 s, not bun's default 5: the first test of a file runs this while the app it just
 // imported is still starting (kons, queue workers, realtime) on the same event loop, and
-// on Windows the connection alone waited ~15 s. The test then failed as "a beforeEach/
+// on Windows the connection alone waited 15 to 45 s. The test then failed as "a beforeEach/
 // afterEach hook timed out" with nothing wrong in it (openapi-docs-http, 2026-11-18).
 beforeEach(async () => {
   const c = await connected();
@@ -56,7 +56,7 @@ beforeEach(async () => {
   for await (const batch of c.scanIterator({ MATCH: "ratelimit:*", COUNT: 500 }))
     keys.push(...(Array.isArray(batch) ? batch : [batch]));
   if (keys.length) await c.del(keys);
-}, 30_000);
+}, 90_000);
 
 afterAll(async () => {
   await client?.quit().catch(() => {});

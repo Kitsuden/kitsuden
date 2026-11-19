@@ -84,6 +84,7 @@ import { frictionReport } from "../lib/agent-friction";
 import { agentUsage } from "../lib/agent-quotas";
 import { snapshotAgent } from "../lib/agent-versions";
 import { registerCoreOperations } from "../lib/core-operations";
+import { jwkThumbprint, publicJwkOf } from "../lib/dpop";
 import { agentSavings } from "../lib/format-savings";
 import { mountedKons } from "../lib/kon-routes";
 import { logger } from "../lib/logger";
@@ -363,6 +364,8 @@ const keyView = (k: typeof agentApiKeys.$inferSelect) => ({
   status: keyStatus(k),
   // OAuth for MCP (0055): the row of an OAuth connection (it has no secret of its own)
   kind: k.algorithm === "oauth" ? "oauth" : "static",
+  // DPoP (0086): the thumbprint of the public key it is bound to, or null.
+  dpopJkt: k.dpopJkt ?? null,
 });
 
 async function listKeys(c: Context): Promise<Response> {
@@ -491,6 +494,58 @@ async function revokeKey(c: Context): Promise<Response> {
     .returning();
   audit(c, a.id, "key_revoked", { keyId: k.id });
   return c.json({ key: keyView(revoked!) });
+}
+
+// ── Proof of possession (DPoP, lib/dpop.ts) ─────────────────────────────────
+
+/**
+ * Binds a static key to a public JWK (or unbinds it with `jwk: null`). A bound
+ * key only works with a DPoP proof signed by the matching private key, so the
+ * key alone, if it leaks, is useless. OAuth connections bind themselves at the
+ * token endpoint instead.
+ */
+async function bindKeyDpop(c: Context): Promise<Response> {
+  const a = await agentById(c.req.param("id") ?? "");
+  if (!a) return c.json({ error: "Agent not found" }, 404);
+  const k = await agentKey(a.id, c.req.param("keyId") ?? "");
+  if (!k) return c.json({ error: "Key not found" }, 404);
+  if (k.algorithm === "oauth") {
+    return c.json(
+      { error: "An OAuth connection is bound with a DPoP proof at the token endpoint, not here" },
+      409
+    );
+  }
+  const body = (await c.req.json().catch(() => null)) as { jwk?: unknown } | null;
+  if (!body || !("jwk" in body))
+    return c.json({ error: "Body must be { jwk } (null to unbind)" }, 422);
+  let jkt: string | null = null;
+  if (body.jwk !== null) {
+    const pub = publicJwkOf(body.jwk);
+    if (!pub.ok) return c.json({ error: `jwk ${pub.reason}` }, 422);
+    jkt = jwkThumbprint(pub.jwk);
+  }
+  const [updated] = await db
+    .update(agentApiKeys)
+    .set({ dpopJkt: jkt })
+    .where(eq(agentApiKeys.id, k.id))
+    .returning();
+  audit(c, a.id, jkt ? "key_dpop_bound" : "key_dpop_unbound", { keyId: k.id, jkt });
+  return c.json({ key: keyView(updated!) });
+}
+
+/** Requires (or stops requiring) a DPoP proof for every credential of the agent. */
+async function saveRequireDpop(c: Context): Promise<Response> {
+  const a = await agentById(c.req.param("id") ?? "");
+  if (!a) return c.json({ error: "Agent not found" }, 404);
+  const body = (await c.req.json().catch(() => null)) as { required?: unknown } | null;
+  if (!body || typeof body.required !== "boolean")
+    return c.json({ error: "Body must be { required: boolean }" }, 422);
+  await db
+    .update(agentIdentities)
+    .set({ requireDpop: body.required })
+    .where(eq(agentIdentities.id, a.id));
+  audit(c, a.id, "require_dpop_changed", { required: body.required });
+  return c.json({ requireDpop: body.required });
 }
 
 // ── Quotas ──────────────────────────────────────────────────────────────────
@@ -967,6 +1022,32 @@ export const agentOperations: AnyOperation[] = [
     output: { schema: Obj },
     errors: ["KITSUDEN_E_NOT_FOUND"],
     handle: (_e, { c }) => revokeKey(c),
+  }),
+  defineOperation({
+    ...common,
+    id: "bind-key-dpop",
+    method: "PUT",
+    route: "/agents/:id/keys/:keyId/dpop",
+    summary: "Bind an API key to a public key (DPoP)",
+    description:
+      "Body { jwk } with a public EC P-256 or Ed25519 JWK (null unbinds). A bound key only works with a DPoP proof signed by the matching private key (RFC 9449). See docs/agents/dpop-and-short-tokens.md.",
+    input: { params: KeyParam, body: Obj, validatesHandler: true },
+    output: { schema: Obj },
+    errors: ["KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_CONFLICT"],
+    handle: (_e, { c }) => bindKeyDpop(c),
+  }),
+  defineOperation({
+    ...common,
+    id: "save-require-dpop",
+    method: "PUT",
+    route: "/agents/:id/dpop",
+    summary: "Require DPoP for every credential of an agent",
+    description:
+      "Body { required: boolean }. When true, the agent's keys and tokens are refused without a valid DPoP proof, and an unbound key is refused outright.",
+    input: { params: AgentParam, body: Obj, validatesHandler: true },
+    output: { schema: Obj },
+    errors: ["KITSUDEN_E_NOT_FOUND"],
+    handle: (_e, { c }) => saveRequireDpop(c),
   }),
   defineOperation({
     ...common,

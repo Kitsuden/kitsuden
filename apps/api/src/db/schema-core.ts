@@ -609,6 +609,11 @@ export const agentIdentities = pgTable(
     unattendedApproval: text("unattended_approval"),
     /** What that refusal tells the agent to do instead (NULL = the global text). */
     unattendedAlternative: text("unattended_alternative"),
+    /**
+     * Every credential of this agent must be DPoP-bound and come with a valid
+     * proof (migration 0086, lib/dpop.ts). In-process runs are not HTTP: exempt.
+     */
+    requireDpop: boolean("require_dpop").default(false).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -642,12 +647,50 @@ export const agentApiKeys = pgTable(
     revokedBy: text("revoked_by"),
     /** The key this one replaced when rotated (the old one expires after the grace period). */
     rotatedFrom: text("rotated_from"),
+    /**
+     * DPoP (RFC 9449, migration 0086): RFC 7638 thumbprint of the public key this
+     * key is bound to. Set: the key only works with `Authorization: DPoP` and a
+     * proof signed by that key. NULL: a bearer key, as before.
+     */
+    dpopJkt: text("dpop_jkt"),
   },
   (t) => [
     index("agent_api_keys_agent_id_idx").on(t.agentId),
     uniqueIndex("agent_api_keys_hash_idx").on(t.keyHash),
     uniqueIndex("agent_api_keys_key_id_idx").on(t.keyId),
     index("agent_api_keys_expires_at_idx").on(t.expiresAt),
+  ]
+);
+
+/**
+ * Short-lived agent credentials (migration 0086, services/agent-short-tokens.ts):
+ * `kitsuden_ast_*` tokens an agent exchanged its long-lived key for, and the
+ * credential of each in-process run (`runId`). Only the SHA-256 is stored.
+ */
+export const agentShortTokens = pgTable(
+  "agent_short_tokens",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    agentId: text("agent_id")
+      .references(() => agentIdentities.id, { onDelete: "cascade" })
+      .notNull(),
+    parentKeyId: text("parent_key_id").references(() => agentApiKeys.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    scopes: jsonb("scopes").$type<string[]>().default([]).notNull(),
+    audience: text("audience"),
+    dpopJkt: text("dpop_jkt"),
+    runId: text("run_id"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("agent_short_tokens_hash_idx").on(t.tokenHash),
+    index("agent_short_tokens_agent_idx").on(t.agentId),
+    index("agent_short_tokens_parent_idx").on(t.parentKeyId),
+    index("agent_short_tokens_expires_idx").on(t.expiresAt),
   ]
 );
 
@@ -757,6 +800,14 @@ export const agentProposals = pgTable(
     evidence: jsonb("evidence"),
     /** The reviewer's decision per field (accept / reject / edited value). */
     fieldDecisions: jsonb("field_decisions"),
+    /**
+     * Binding (0087, lib/operation-hash.ts): sha256 of the canonical operation,
+     * computed when it was stored (`null`: stored before 0087, "legacy"); the
+     * hash the approver said they saw; and the HMAC over the approval.
+     */
+    operationHash: text("operation_hash"),
+    approvedOperationHash: text("approved_operation_hash"),
+    approvalMac: text("approval_mac"),
   },
   (t) => [
     index("agent_proposals_status_idx").on(t.status, t.createdAt),
@@ -988,7 +1039,9 @@ export const agentAuditLogs = pgTable(
     // NULL = attempt by an agent that does not exist (made-up or malformed
     // key). With NOT NULL those authentication failures could not be
     // recorded: "unknown" violated the FK. Migration 0044.
-    agentId: text("agent_id").references(() => agentIdentities.id, { onDelete: "cascade" }),
+    // No foreign key since 0088: deleting an agent keeps its history (the
+    // CASCADE erased it, and SET NULL would rewrite a chained row).
+    agentId: text("agent_id"),
     keyId: text("key_id"),
     action: text("action").notNull(),
     resource: text("resource"),
@@ -1000,12 +1053,40 @@ export const agentAuditLogs = pgTable(
     success: boolean().default(true).notNull(),
     errorMessage: text("error_message"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    // Hash chain (0088, lib/audit-chain.ts). NULL on legacy rows written before it.
+    seq: bigint("seq", { mode: "number" }),
+    prevHash: text("prev_hash"),
+    rowHash: text("row_hash"),
+    mac: text("mac"),
+    keyVersion: text("key_version"),
   },
   (t) => [
     index("agent_audit_agent_id_idx").on(t.agentId),
     index("agent_audit_created_at_idx").on(t.createdAt),
     index("agent_audit_action_idx").on(t.action),
+    uniqueIndex("agent_audit_seq_idx").on(t.seq),
   ]
+);
+
+/**
+ * Where the audit hash chain starts after a retention prune (0088): the last
+ * pruned row's seq, row_hash, mac and key version. Written only by
+ * `kitsuden_audit_prune()`; never changed.
+ */
+export const agentAuditCheckpoints = pgTable(
+  "agent_audit_checkpoints",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    seq: bigint("seq", { mode: "number" }).notNull(),
+    rowHash: text("row_hash").notNull(),
+    mac: text("mac").notNull(),
+    keyVersion: text("key_version").notNull(),
+    rowsPruned: integer("rows_pruned").notNull(),
+    legacyRowsPruned: integer("legacy_rows_pruned").default(0).notNull(),
+    prunedBefore: timestamp("pruned_before", { withTimezone: true }),
+    prunedAt: timestamp("pruned_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("agent_audit_checkpoints_seq_idx").on(t.seq)]
 );
 
 // ═══════════════════════════════════════════════

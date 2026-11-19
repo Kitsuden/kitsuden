@@ -26,6 +26,8 @@
  *   KITSUDEN_OAUTH_CUSTOM_SCHEMES `false` rejects custom schemes (`cursor://…`).
  *   OAUTH_REGISTER_LIMIT        registrations per IP and hour (30).
  *   OAUTH_TOKEN_LIMIT           token requests per IP and minute (60).
+ *   OAUTH_PAR_TTL               seconds a pushed request_uri lives (RFC 9126; default 60, max 600).
+ *   OAUTH_REQUIRE_PAR           `true`: /authorize only accepts a request_uri from POST /api/oauth/par.
  */
 
 import { inProduction } from "../environment";
@@ -104,6 +106,14 @@ export const allowedOwnSchemas = () => !off("KITSUDEN_OAUTH_CUSTOM_SCHEMES");
 export const recordLimit = () => number("OAUTH_REGISTER_LIMIT", 30, 1, 10_000);
 export const tokenLimit = () => number("OAUTH_TOKEN_LIMIT", 60, 1, 100_000);
 
+/** Pushed Authorization Requests (RFC 9126): lifetime of a `request_uri`. */
+export const parTtl = () => number("OAUTH_PAR_TTL", 60, 1, 600);
+/** Every authorization must be pushed first (RFC 9126 §5, server-wide). */
+export const parRequired = () =>
+  (process.env.OAUTH_REQUIRE_PAR ?? "").trim().toLowerCase() === "true";
+/** The prefix of a `request_uri` (RFC 9126 §2.2). */
+export const REQUEST_URI_PREFIX = "urn:ietf:params:oauth:request_uri:";
+
 export function allowedCimdHosts(): string[] {
   return (process.env.KITSUDEN_OAUTH_CIMD_ALLOWED_HOSTS ?? "")
     .split(",")
@@ -130,6 +140,7 @@ export const OAUTH_PROTOCOL_ROUTES: readonly string[] = [
   "GET /.well-known/oauth-protected-resource/api/mcp",
   "GET /.well-known/oauth-authorization-server",
   "POST /api/oauth/register",
+  "POST /api/oauth/par",
   "GET /api/oauth/authorize",
   "POST /api/oauth/token",
   "POST /api/oauth/revoke",

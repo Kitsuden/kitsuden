@@ -137,6 +137,7 @@ import agentMemoryRoutes from "./routes/agent-memory";
 import { agentNotificationsRoutes } from "./routes/agent-notifications";
 import { agentPermissionsRoutes } from "./routes/agent-permissions";
 import agentPlaygroundRoutes from "./routes/agent-playground";
+import { AGENT_TOKEN_ROUTE, agentTokenRoutes } from "./routes/agent-token";
 import agentRoutes from "./routes/agents";
 import {
   ANALYTICS_KON,
@@ -146,6 +147,7 @@ import {
 } from "./routes/analytics";
 import { apiKeysRoutes } from "./routes/api-keys";
 import { approvalsRoutes, proposalsRoutes } from "./routes/approvals";
+import { AUDIT_CHAIN_ROUTE, auditChainRoutes } from "./routes/audit-chain";
 import {
   AUTOMATION_ROUTE,
   automationRoutes,
@@ -221,8 +223,11 @@ import { setKonAvailability, versionRoutes } from "./routes/version";
 import { rpcSurface } from "./rpc";
 import { startAgentAuditSweep } from "./services/agent-audit";
 import {
+  agentCredentialFromHeader,
   authenticateAgent,
-  isAgentCredential,
+  DPOP_CHALLENGE,
+  DPOP_FAILURE_CODE,
+  dpopRequestOf,
   rememberRequestAuthentication,
 } from "./services/agent-auth";
 import type { AgentAuthContext } from "./services/agent-auth";
@@ -529,8 +534,11 @@ app.use("*", async (c, next) => {
   // Format: Bearer kitsuden_agent_xxxxx (the legacy grm_agent_* no longer: see
   // ACCEPTED_API_KEY_PREFIXES en services/agent-auth).
   // OAuth for MCP (0055): also `kitsuden_oat_*`, which is only valid on /api/mcp.
-  if (authHeader?.startsWith("Bearer ") && isAgentCredential(authHeader.slice(7).trim())) {
-    const rawToken = authHeader.replace("Bearer ", "").trim();
+  // Short-lived tokens (0086): `kitsuden_ast_*`. A DPoP-bound credential comes as
+  // `Authorization: DPoP <token>` with a `DPoP` proof header (lib/dpop.ts).
+  const agentCredential = agentCredentialFromHeader(authHeader);
+  if (agentCredential) {
+    const rawToken = agentCredential.token;
 
     const result = await authenticateAgent(rawToken, {
       // The real IP, not the raw header (spoofable)
@@ -538,6 +546,8 @@ app.use("*", async (c, next) => {
       userAgent: c.req.header("user-agent") || undefined,
       // The audience of an OAuth token (RFC 8707): checked against the path
       route: c.req.path,
+      // Proof of possession (RFC 9449): required when the credential is bound
+      dpop: dpopRequestOf(c.req, agentCredential.scheme),
     });
 
     if (result.success && result.context) {
@@ -576,6 +586,7 @@ app.use("*", async (c, next) => {
           503
         );
       }
+      if (result.code === DPOP_FAILURE_CODE) c.header("WWW-Authenticate", DPOP_CHALLENGE);
       return c.json(
         {
           error: result.error || "Agent authentication failed",
@@ -1139,6 +1150,8 @@ app.route(EXTERNAL_MCP_ROUTE, externalMcpRoutes);
 app.route(EXTERNAL_MCP_OAUTH_ROUTE, externalMcpOAuthRoutes);
 // Logged requests: actor, kon, operation, database time, blocks.
 app.route("/api/admin/requests", tracesRoutes);
+// The agent audit hash chain: verify it and read its head (lib/audit-chain.ts).
+app.route(AUDIT_CHAIN_ROUTE, auditChainRoutes);
 // Agent identities, keys, scopes, quotas and sponsors are changed by humans
 // only. An agent with the `admin` scope passed the admin gate and could mint a
 // key for another agent (one set to `direct`, without approval) or widen its
@@ -1213,6 +1226,8 @@ app.route("/api/agent/memory", agentMemoryRoutes);
 // What an agent chose NOT to do, and why: written by the agent itself, read
 // by admins in the panel (lib/agent-decisions.ts, docs/agents/decisions.md).
 app.route("/api/agent/decisions", agentDecisionsRoutes);
+// An agent trades its key for a short-lived token (services/agent-short-tokens.ts).
+app.route(AGENT_TOKEN_ROUTE, agentTokenRoutes);
 app.route("/api/admin/data-sources", dataSourcesRoutes);
 app.route("/api/explorer", explorerRoutes);
 // Agent memory (2026-10-28): SDK operations with owner and RLS, in

@@ -6,7 +6,7 @@
  * only `lib/oauth/` uses them, with drizzle's query builder (they do not
  * need to be registered in the relational schema). See docs/agents/oauth.md.
  */
-import { index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 import { agentApiKeys, agentIdentities } from "./schema-core";
 
@@ -31,6 +31,10 @@ export const oauthClients = pgTable(
     metadataExpiresAt: timestamp("metadata_expires_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    /** RFC 9126 §6: this client may only start an authorization through PAR (0087). */
+    requirePushedAuthorizationRequests: boolean("require_pushed_authorization_requests")
+      .default(false)
+      .notNull(),
   },
   (t) => [index("oauth_clients_created_at_idx").on(t.createdAt)]
 );
@@ -50,8 +54,18 @@ export const oauthAuthorizationRequests = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
+    /**
+     * Pushed Authorization Request (RFC 9126, 0087): sha256 of the random part
+     * of its `request_uri`, and when /authorize redeemed it (single use). A
+     * pushed request that was never redeemed cannot be consented to.
+     */
+    requestUriHash: text("request_uri_hash"),
+    pushedUsedAt: timestamp("pushed_used_at", { withTimezone: true }),
   },
-  (t) => [index("oauth_authorization_requests_expires_idx").on(t.expiresAt)]
+  (t) => [
+    index("oauth_authorization_requests_expires_idx").on(t.expiresAt),
+    uniqueIndex("oauth_authorization_requests_request_uri_idx").on(t.requestUriHash),
+  ]
 );
 
 export const oauthGrants = pgTable(
@@ -121,6 +135,12 @@ export const oauthTokens = pgTable(
     familyExpiresAt: timestamp("family_expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    /**
+     * DPoP (RFC 9449, migration 0086): thumbprint of the key the token request
+     * proved; the access token then needs a proof with it on every request and
+     * the refresh token one at /token. NULL: a bearer token.
+     */
+    dpopJkt: text("dpop_jkt"),
   },
   (t) => [
     uniqueIndex("oauth_tokens_hash_idx").on(t.tokenHash),

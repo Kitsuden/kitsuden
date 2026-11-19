@@ -26,7 +26,7 @@
 # ===================================================================
 # STAGE 1: Base with pnpm
 # ===================================================================
-FROM oven/bun:1.4.4-alpine AS base
+FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS base
 RUN apk add --no-cache nodejs npm curl
 WORKDIR /app
 RUN npm install -g pnpm@9.15.4
@@ -185,7 +185,7 @@ RUN rm -rf /app/node_modules/.pnpm/@esbuild+* /app/node_modules/.pnpm/esbuild@*/
 # ===================================================================
 # STAGE 4: API Runtime - Minimal image for backend
 # ===================================================================
-FROM oven/bun:1.4.4-alpine AS api
+FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS api
 WORKDIR /app
 
 # nodejs: the user-code sandbox runs its interpreter (QuickJS) in a
@@ -306,7 +306,7 @@ CMD ["sh", "/app/docker/start-with-check.sh"]
 # nginx-unprivileged instead of nginx:alpine, whose master process runs as root.
 # It runs as uid 101 and listens on 8080 (docker/nginx-admin.conf).
 # ===================================================================
-FROM nginxinc/nginx-unprivileged:1.31-alpine AS admin
+FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e AS admin
 
 # Alpine security fixes the image does not have yet (Trivy in CI); back to nginx's
 # unprivileged user (101) afterwards.

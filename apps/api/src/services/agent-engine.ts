@@ -153,9 +153,41 @@ const MAX_BRAIN_NOTES = 3;
 const MAX_TOOL_ITERATIONS = 5;
 
 /**
- * Runs a message through the Agent Engine.
+ * Runs a message through the Agent Engine, under a credential of its own.
+ *
+ * Every run gets a short-lived credential (services/agent-short-tokens.ts):
+ * minted here with the agent's scopes, checked before each tool call, recorded
+ * as the call's `keyId` (audit, proposals) and revoked when the run ends,
+ * however it ends. A run that outlives `AGENT_RUN_CREDENTIAL_TTL`, or whose
+ * agent is deactivated mid-run, cannot call tools any more.
  */
 export async function runAgent(options: AgentEngineOptions): Promise<AgentEngineResult> {
+  const [row] = await db
+    .select({ scopes: agentIdentities.scopes, isActive: agentIdentities.isActive })
+    .from(agentIdentities)
+    .where(eq(agentIdentities.id, options.agentId))
+    .limit(1);
+  if (!row) throw new Error(`Agent not found: ${options.agentId}`);
+  if (!row.isActive) throw new Error(`Agent is inactive: ${options.agentId}`);
+  const { mintRunCredential, revokeShortToken } = await import("./agent-short-tokens");
+  const credential = await mintRunCredential(
+    options.agentId,
+    (row.scopes as string[] | null) ?? [],
+    crypto.randomUUID()
+  );
+  try {
+    return await runAgentWithCredential(options, credential.id);
+  } finally {
+    await revokeShortToken(credential.id).catch((err: unknown) =>
+      logger.warn({ err, agentId: options.agentId }, "Could not revoke a run credential")
+    );
+  }
+}
+
+async function runAgentWithCredential(
+  options: AgentEngineOptions,
+  runCredentialId: string
+): Promise<AgentEngineResult> {
   const startTime = Date.now();
   const sessionId = options.sessionId || crypto.randomUUID();
 
@@ -434,6 +466,7 @@ export async function runAgent(options: AgentEngineOptions): Promise<AgentEngine
           unattended: options.unattended === true,
           holdWrites: options.holdWrites === true,
           customerData: prompt.guard,
+          runCredentialId,
         });
       } catch (err: unknown) {
         ok = false;

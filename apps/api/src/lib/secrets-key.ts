@@ -24,7 +24,7 @@
  * anything else loads, and the re-key script uses it without the API.
  */
 
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes, scryptSync } from "node:crypto";
 
 import { publicOrProduction } from "./placeholder-secrets";
 
@@ -119,4 +119,15 @@ export function secretsKeyStatus(env: Env = process.env): SecretsKeyStatus {
 /** The raw master value the manager uses now, or null if there is none. */
 export function masterSecretValue(env: Env = process.env): string | null {
   return env["KITSUDEN_SECRETS_KEY"] || env["BETTER_AUTH_SECRET"] || null;
+}
+
+/**
+ * A key for ONE purpose, derived from the master value with HKDF-SHA256 and a
+ * label (`approval-mac`, …). Never the encryption key itself: a subkey that
+ * leaks (or is misused) opens nothing else. `null` when there is no master value.
+ */
+export function deriveSubkey(label: string, env: Env = process.env): Buffer | null {
+  const master = masterSecretValue(env);
+  if (!master) return null;
+  return Buffer.from(hkdfSync("sha256", master, "kitsuden-subkey-v1", `kitsuden:${label}`, 32));
 }

@@ -3932,6 +3932,10 @@ const en = {
     reason_touches_secrets: "It touches secrets the active version did not touch",
     reason_target_has_env_vars:
       "The target action has environment variables, and a new version would receive their values",
+    reason_target_has_credentials:
+      "The target action has vault credentials: a new version never sees them, but its requests to those hosts carry them",
+    reason_runtime_changed:
+      "It runs on another runtime than the active version (QuickJS or OpenSandbox)",
     reason_touches_users_or_roles:
       "It touches users, agents or roles the active version did not touch",
     reason_touches_security_config:

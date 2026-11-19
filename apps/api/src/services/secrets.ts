@@ -305,6 +305,22 @@ export async function deleteSecret(key: string): Promise<boolean> {
   return false;
 }
 
+/**
+ * The plaintext of one stored secret, or null if there is none. It does NOT
+ * touch `process.env`: the credential vault (lib/credential-vault.ts) puts the
+ * value in a single outbound header and nowhere else.
+ */
+export async function readSecretValue(key: string): Promise<string | null> {
+  await ensureSecretsTable();
+  const [row] = await db
+    .select()
+    .from(kitsudenSecrets)
+    .where(eq(kitsudenSecrets.key, key))
+    .limit(1);
+  if (!row) return null;
+  return decryptSecret({ valueEncrypted: row.valueEncrypted, iv: row.iv, authTag: row.authTag });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // HOT INJECTION
 // ═══════════════════════════════════════════════════════════════
