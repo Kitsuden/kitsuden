@@ -115,14 +115,30 @@ export function isEffectiveStaff(user: Who, kon?: string): boolean {
  * A human account always passes (what it may then do is the row's policy); an agent passes with
  * `user:act`/`admin` or a non-denied scope that starts with `<kon>:` or `kon:<kon>:`; nobody
  * without an id passes.
+ *
+ * `{ wholeKon: true }` is for a policy that is the ONLY authorization of many operations
+ * (koe's `use`): there an agent passes only with `user:act`, `admin` or a scope that opens the
+ * whole kon (`<kon>:*`, `kon:<kon>:*`; see `opensWholeKon`). Without it, a key scoped to one
+ * operation (`kon:<kon>:list-x`) also passed the policy, and `grantsOperation` falls back to the
+ * policy, so that key ran every other operation guarded by it. A fine scope still opens its own
+ * operation through the scope check (`grantsByScopes`), which runs first.
  */
-export function actsAsUserIn(kon: string): (user: Who) => boolean {
+export function actsAsUserIn(
+  kon: string,
+  options: { wholeKon?: boolean } = {}
+): (user: Who) => boolean {
   return (user) => {
     if (!user?.id) return false;
     if (user.role !== "agent") return true;
-    const scopes = (Array.isArray(user.scopes) ? (user.scopes as unknown[]) : [])
-      .filter((s): s is string => typeof s === "string")
-      .filter((s) => !s.startsWith("!"));
+    const all = (Array.isArray(user.scopes) ? (user.scopes as unknown[]) : []).filter(
+      (s): s is string => typeof s === "string"
+    );
+    if (options.wholeKon) {
+      // A denial of the whole kon wins, `admin` and `user:act` included.
+      if (denialThatCovers(all, [`${kon}:*`, `kon:${kon}:*`])) return false;
+      return agentActsAsUser(all) || opensWholeKon(all, kon);
+    }
+    const scopes = all.filter((s) => !s.startsWith("!"));
     return (
       agentActsAsUser(scopes) ||
       scopes.some((s) => s.startsWith(`${kon}:`) || s.startsWith(`kon:${kon}:`))

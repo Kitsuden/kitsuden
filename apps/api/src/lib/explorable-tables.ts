@@ -192,6 +192,23 @@ export function writeRequiresAdmin(name: string): boolean {
 }
 
 /**
+ * Tables an AGENT never writes through a generic surface (explorer, items,
+ * GraphQL, inline relations, MCP native tools), whatever its scopes. People
+ * still can.
+ *
+ * `data_sets`: its `schema` holds the customer-data marks (`sensitivity`).
+ * Only a person removes one, and the dataset route (`/api/data-sets`,
+ * datasets.routes.ts) is where that rule is checked. A generic write of the
+ * same row skipped it (security audit 2026-11-19).
+ */
+export const AGENT_WRITES_ONLY_VIA_THEIR_ROUTE: ReadonlySet<string> = new Set(["data_sets"]);
+
+/** May an agent NOT write this table through a generic surface? */
+export function agentWriteNeedsOwnRoute(name: string): boolean {
+  return AGENT_WRITES_ONLY_VIA_THEIR_ROUTE.has(name);
+}
+
+/**
  * ── NATIVE TABLES THROUGH THE GENERIC SURFACES (security review 2026-11-04) ─
  *
  * GraphQL, inline relations and `POST /api/datasets/query/:table` resolve
@@ -204,6 +221,8 @@ export function writeRequiresAdmin(name: string): boolean {
  *   · `TABLES_ONLY_VIA_THEIR_ROUTE` are not written through them.
  *   · `ADMIN_WRITE_TABLES` are written only by a HUMAN admin: an agent key
  *     with `admin` does not change a role or turn kons on this way.
+ *   · `AGENT_WRITES_ONLY_VIA_THEIR_ROUTE` are not written by an agent through
+ *     them (dataset definitions: the customer-data marks).
  *   · Secret columns (`isSecretColumn`) are not returned, not written, and
  *     not filtered or sorted by (a filter is an oracle).
  */
@@ -216,13 +235,16 @@ export type NotWritableReason = "forbidden" | "only-via-own-route" | "requires-h
 /**
  * Why can this table not be written through a generic surface? `null` if it
  * can. `humanAdmin`: a person's session with the `admin` role (not a key).
+ * `agent`: the caller is an agent key (see `AGENT_WRITES_ONLY_VIA_THEIR_ROUTE`).
  */
 export function whyNativeTableIsNotWritable(
   name: string,
-  humanAdmin: boolean
+  humanAdmin: boolean,
+  agent = false
 ): NotWritableReason | null {
   if (isForbiddenNativeTable(name)) return "forbidden";
   if (TABLES_ONLY_VIA_THEIR_ROUTE.has(name)) return "only-via-own-route";
+  if (agent && agentWriteNeedsOwnRoute(name)) return "only-via-own-route";
   if (writeRequiresAdmin(name) && !humanAdmin) return "requires-human-admin";
   return null;
 }

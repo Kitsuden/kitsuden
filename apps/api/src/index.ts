@@ -1366,6 +1366,9 @@ const autoMcpProxy = {
       trigger: `agent.tool:${toolDef.name}`,
       description: toolDef.description,
       inputSchema: toolDef.inputSchema,
+      // Auto-kon tools query their table outside RLS and dataset policy: only an admin key
+      // runs them (security audit 2026-11-19).
+      meta: { requiredScopes: ["admin"] },
       run: async (ctx: any) => {
         // Execute the native handler for this Auto-Kon tool
         return toolDef.handler(ctx.payload, {

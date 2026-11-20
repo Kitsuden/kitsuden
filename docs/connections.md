@@ -47,10 +47,15 @@ const res = await google.fetch("https://gmail.googleapis.com/gmail/v1/users/me/m
 | `GET /api/connections/connections`              | a signed-in person                  | Your connections; an admin also the organization's. |
 | `GET /api/connections/connections/:id`          | the owner                           | One connection.                                     |
 | `POST /api/connections/oauth/start`             | a person                            | The consent URL (PKCE, ten minutes, one use).       |
-| `GET /api/connections/oauth/callback`           | public, by `state`                  | Stores the credential sealed and redirects back.    |
+| `GET /api/connections/oauth/callback`           | by `state`, starter only (below)    | Stores the credential sealed and redirects back.    |
 | `POST /api/connections/api-keys`                | a person (admin for `organization`) | Stores an API key sealed.                           |
 | `POST /api/connections/connections/:id/refresh` | the owner                           | Refreshes now.                                      |
 | `POST /api/connections/connections/:id/revoke`  | the owner                           | Revokes and deletes the credential.                 |
+
+The callback must come back to whoever started the round trip: the browser that holds the HttpOnly
+`kitsuden_conn_oauth` cookie set by `/oauth/start`, or a session of the same person. A consent link
+opened by anyone else answers 403 and the round trip is burnt, so nobody can send their link to
+another person and keep that person's account in a connection of their own.
 
 ## Who sees what
 

@@ -423,6 +423,21 @@ definePolicy("booking", {
 permission: { policy: { resource: "booking", action: "actAsUser" } },
 ```
 
+Any scope of your kon passes this rule, including a fine operation scope such as
+`kon:booking:list`. That is fine when the handler then checks the row. It is NOT fine when the
+policy is the only check on many operations: an operation whose scope check fails falls back to
+the policy, so a key scoped to one operation would reach all of them. For such a policy use
+`actsAsUserIn("<kon>", { wholeKon: true })`: an agent then passes only with `user:act`, `admin`,
+`<kon>:*` or `kon:<kon>:*` (a denial of the whole kon wins), and a fine scope opens only its own
+operation through the scope check.
+
+### Disabling a kon takes effect at once
+
+A kon loaded at startup sits behind an activation guard. After `PATCH /api/modules/:key` with
+`enabled: false`, or `POST /api/modules/:key/uninstall`, its routes and its MCP tools answer
+404 "Kon not activated" right away in that process (other API replicas see it within about 10
+seconds). No restart is needed to turn a kon off.
+
 ## Testing a kon
 
 Mount the generated router on a Hono app with a test kon context

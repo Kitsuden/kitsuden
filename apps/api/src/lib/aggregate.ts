@@ -19,6 +19,17 @@
  *      with no policies counts every row: that is why the operation is for
  *      administrators and for agents holding the scope.
  *
+ * For AGENTS, two more (security audit 2026-11-19), because a kon may keep
+ * columns from agents in its own responses (kon-crm's notes and amounts) and
+ * this reader never runs that kon's filter:
+ *
+ *   4. WHOSE TABLE. A kon table needs a scope of the kon that owns it (the
+ *      kon.json `reportAccess.agentScope`, or else any grant in the kon's
+ *      namespace: `crm:view`, `kon:crm:list-contacts`), on top of `reports:read`.
+ *   5. WHICH COLUMNS, PER KON. Columns the kon lists in `reportAccess.restricted`
+ *      cannot be read through the result by an agent (as marked columns),
+ *      unless it holds `reportAccess.restrictedScope`.
+ *
  * ── HOW THE SQL IS WRITTEN ─────────────────────────────────────────────────
  *
  * Identifiers go through `sql.identifier` AFTER being found in the catalog;
@@ -35,7 +46,11 @@
 import {
   DEFAULT_AGGREGATE_GROUPS,
   aggregateQueryProblem,
+  concedeScope,
+  denialThatCovers,
   dimensionAlias,
+  konShortName,
+  splitScopes,
   measureAlias,
   schemaFields,
   type AggregateDimension,
@@ -52,6 +67,7 @@ import { db } from "../db";
 import type { SensitivityCatalog } from "./customer-data";
 import { loadSensitivityCatalog } from "./customer-data-catalog";
 import { FORBIDDEN_TABLES, isForbiddenNativeTable, tableIsExplorable } from "./explorable-tables";
+import { listInstalledKons } from "./installed-kons";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Catalog: what a source is made of
@@ -195,6 +211,99 @@ interface Policy {
    * value. Counting rows and checking for nulls stay allowed. For agents.
    */
   marks: SensitivityCatalog | null;
+  /**
+   * Columns of THIS table its kon keeps from agents in reports (`reportAccess.restricted`): refused
+   * like marked columns. `null` = none (a person, or an agent holding `restrictedScope`).
+   */
+  restricted?: { konId: string; columns: ReadonlySet<string> } | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// What a kon says about its tables in reports (kon.json `reportAccess`)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface KonReportAccess {
+  /** The scope an agent needs to aggregate the kon's tables; `null` = any grant in its namespace. */
+  agentScope: string | null;
+  /** table → columns an agent cannot read the values of through a report. */
+  restricted: Map<string, Set<string>>;
+  /** A scope that lifts `restricted` for an agent (`crm:read-all`); `null` = nothing lifts it. */
+  restrictedScope: string | null;
+}
+
+const SCOPE_TEXT = /^!?[a-z0-9_*][a-z0-9_.:*-]{0,199}$/;
+
+/**
+ * The `reportAccess` block of a kon manifest, validated. Anything malformed is
+ * ignored (and a malformed scope means "no special scope", so the default rule applies):
+ *
+ *   "reportAccess": {
+ *     "agentScope": "crm:view",
+ *     "restricted": { "crm_contacts": ["notes"], "crm_deals": ["value", "lost_notes"] },
+ *     "restrictedScope": "crm:read-all"
+ *   }
+ */
+export function konReportAccess(manifest: unknown): KonReportAccess {
+  const raw = (manifest as { reportAccess?: unknown } | null)?.reportAccess;
+  const out: KonReportAccess = { agentScope: null, restricted: new Map(), restrictedScope: null };
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  const r = raw as Record<string, unknown>;
+  const scope = (v: unknown) =>
+    typeof v === "string" && SCOPE_TEXT.test(v) && !v.startsWith("!") ? v : null;
+  out.agentScope = scope(r.agentScope);
+  out.restrictedScope = scope(r.restrictedScope);
+  if (r.restricted && typeof r.restricted === "object" && !Array.isArray(r.restricted)) {
+    for (const [table, columns] of Object.entries(r.restricted as Record<string, unknown>)) {
+      if (!Array.isArray(columns)) continue;
+      const set = new Set(
+        columns
+          .filter((c): c is string => typeof c === "string" && c.trim() !== "")
+          .map((c) => c.trim())
+      );
+      if (set.size) out.restricted.set(table, set);
+    }
+  }
+  return out;
+}
+
+/** The installed kon (not a core one) that declares `table`, with its manifest. */
+function konOwning(table: string): { id: string; manifest: unknown } | null {
+  for (const kon of listInstalledKons()) {
+    if (kon.source === "core" || !kon.manifest) continue;
+    const m = kon.manifest as {
+      tables?: unknown;
+      admin?: { views?: Array<{ table?: unknown }> };
+    };
+    const tables = Array.isArray(m.tables) ? m.tables : [];
+    for (const t of tables) {
+      const name = typeof t === "string" ? t : (t as { name?: unknown } | null)?.name;
+      if (name === table) return { id: kon.id, manifest: kon.manifest };
+    }
+    for (const v of Array.isArray(m.admin?.views) ? m.admin.views : []) {
+      if (v?.table === table) return { id: kon.id, manifest: kon.manifest };
+    }
+  }
+  return null;
+}
+
+/**
+ * May an agent with these scopes aggregate the tables of kon `konId`? With the
+ * kon's `agentScope`, exactly that (as any scope check: `admin` covers it, a
+ * denial beats it). Without one: `admin`, or any grant in the kon's namespace
+ * (`crm:…`, `kon:crm:…`), unless a denial covers the whole kon (`!crm:*`).
+ */
+export function agentOpensKonForReports(
+  scopes: readonly string[] | undefined,
+  konId: string,
+  access: KonReportAccess
+): boolean {
+  if (access.agentScope) return concedeScope(scopes, access.agentScope);
+  const short = konShortName(konId);
+  if (denialThatCovers(scopes, [`${short}:*`, `kon:${short}:*`])) return false;
+  return splitScopes(scopes).grants.some(
+    (g) =>
+      g === "admin" || g === "admin:*" || g.startsWith(`${short}:`) || g.startsWith(`kon:${short}:`)
+  );
 }
 
 /** `value`: the query can learn what the column holds. `presence`: only whether there is one. */
@@ -224,6 +333,12 @@ function resolveField(
     throw new AggregateError(
       403,
       `${where}: "${field}" is marked as customer or personal data, so an agent cannot read its values through a report (counting rows and checking for empty values is allowed).`
+    );
+  }
+  if (use === "value" && policy.restricted?.columns.has(field)) {
+    throw new AggregateError(
+      403,
+      `${where}: ${policy.restricted.konId} keeps "${field}" from agents, so an agent cannot read its values through a report (counting rows and checking for empty values is allowed). Use the kon's own operations.`
     );
   }
   if (catalog.kind === "table") {
@@ -534,11 +649,40 @@ export interface AggregateOptions {
    * result (see `Policy`). A person with the administrator role sees everything the explorer shows.
    */
   restrictSensitive?: boolean;
+  /**
+   * The agent's scopes (with `restrictSensitive`): a kon table needs a scope of its kon, and the
+   * kon's restricted columns stay closed unless they hold its `restrictedScope`. Missing = none.
+   */
+  agentScopes?: readonly string[];
 }
 
-async function policyFor(options: AggregateOptions): Promise<Policy> {
+async function policyFor(options: AggregateOptions, catalog: Catalog): Promise<Policy> {
+  if (!options.restrictSensitive) return { marks: null };
+  let restricted: Policy["restricted"] = null;
+  if (catalog.kind === "table") {
+    const owner = konOwning(catalog.table);
+    // Fails closed: a table no installed kon owns has no rules to check against.
+    if (!owner) {
+      throw new AggregateError(
+        403,
+        `The table "${catalog.table}" is not owned by an installed kon, so an agent cannot use it in a report.`
+      );
+    }
+    const access = konReportAccess(owner.manifest);
+    if (!agentOpensKonForReports(options.agentScopes, owner.id, access)) {
+      const needs = access.agentScope ?? `a scope of ${owner.id} (${konShortName(owner.id)}:…)`;
+      throw new AggregateError(
+        403,
+        `The table "${catalog.table}" belongs to ${owner.id}: an agent needs ${needs} as well as reports:read to use it in a report.`
+      );
+    }
+    const columns = access.restricted.get(catalog.table);
+    const lifted =
+      access.restrictedScope !== null && concedeScope(options.agentScopes, access.restrictedScope);
+    if (columns && !lifted) restricted = { konId: owner.id, columns };
+  }
   // Fails closed: if the marks cannot be read, the query is not run.
-  return { marks: options.restrictSensitive ? await loadSensitivityCatalog() : null };
+  return { marks: await loadSensitivityCatalog(), restricted };
 }
 
 /**
@@ -557,7 +701,11 @@ export async function runAggregate(
     q.source.table !== undefined
       ? await tableCatalog(q.source.table)
       : await datasetCatalog(q.source.dataset as string);
-  const { statement, columns, numeric, limit } = build(await policyFor(options), catalog, q);
+  const { statement, columns, numeric, limit } = build(
+    await policyFor(options, catalog),
+    catalog,
+    q
+  );
 
   // The request's connection: the row policies of the table decide what is counted.
   const rows = rowsOf<Record<string, unknown>>(await resolveExecutor(db).execute(statement));

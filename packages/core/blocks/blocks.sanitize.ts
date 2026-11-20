@@ -405,29 +405,76 @@ export function sanitizeEmbed(code: unknown): string {
   );
 }
 
+/** Block types whose renderers honor `format: "plain"` and escape the text. */
+const ESCAPES_PLAIN = new Set(["text", "richtext"]);
+
+/** How deep grids may nest before the rest is dropped. */
+const MAX_GRID_DEPTH = 5;
+
+/**
+ * The type a frontend renders a grid item as. The schema does not store it, so
+ * frontends take `item.type` or guess from the keys (the starter's
+ * `Block.astro` does exactly this). Kept in step with that guess so a
+ * `plain` skip never applies to an item that is rendered as something else.
+ */
+function gridItemType(item: Record<string, unknown>, inner: Record<string, unknown>): string {
+  if (typeof item.type === "string") return item.type;
+  if ("headline" in inner) return "hero";
+  if ("quote" in inner) return "quote";
+  if ("buttonLabel" in inner) return "cta";
+  if ("cards" in inner) return "cards";
+  if ("mediaId" in inner) return "image";
+  if ("code" in inner) return "embed";
+  return "text";
+}
+
 /**
  * The `content` of a page block, ready to save or serve.
  *
- *   · `text`/`richtext`: `text`/`content` according to its `format` (html, markdown;
- *     `plain` is left alone, the frontend escapes it).
+ *   · `text`/`content`/`html`/`body` according to `format` (html, markdown).
+ *     `plain` is left alone only for `text`/`richtext`, whose frontends escape
+ *     it; any other block (a `callout`, say) is sanitized whatever its format,
+ *     because its renderer may ignore the flag.
  *   · `embed`: `code` with `sanitizeEmbed`.
+ *   · `grid`: every `items[].content` goes through this same function, so
+ *     nested blocks get the same treatment as top-level ones. In a nested item
+ *     `code` is always reduced with `sanitizeEmbed` and text keys are always
+ *     sanitized (frontends guess the nested type from its keys).
  *   · Any block: URLs in URL keys (`url`, `buttonUrl`,
  *     `linkUrl`, `embedUrl`…) with a dangerous scheme, emptied.
  */
 export function sanitizeBlockContent(type: unknown, content: unknown): unknown {
+  return sanitizeContentAt(type, content, 0);
+}
+
+function sanitizeContentAt(type: unknown, content: unknown, depth: number): unknown {
   if (!content || typeof content !== "object" || Array.isArray(content)) {
     return sanitizeUrlsOf(content);
   }
   const c = sanitizeUrlsOf(content) as Record<string, unknown>;
+  const nested = depth > 0;
   const format = c.format;
   for (const key of ["text", "content", "html", "body"]) {
     const v = c[key];
     if (typeof v !== "string") continue;
-    if (type === "embed") continue;
-    if (format === "plain") continue;
+    if (type === "embed" && !nested) continue;
+    if (format === "plain" && typeof type === "string" && ESCAPES_PLAIN.has(type)) continue;
     c[key] = format === "html" || key === "html" ? sanitizeHtml(v) : sanitizeMarkdown(v);
   }
-  if (type === "embed" && typeof c.code === "string") c.code = sanitizeEmbed(c.code);
+  if ((type === "embed" || nested) && typeof c.code === "string") c.code = sanitizeEmbed(c.code);
+  if (type === "grid" && Array.isArray(c.items)) {
+    c.items =
+      depth >= MAX_GRID_DEPTH
+        ? []
+        : c.items.map((item) => {
+            if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+            const it = item as Record<string, unknown>;
+            const inner = it.content;
+            if (!inner || typeof inner !== "object" || Array.isArray(inner)) return it;
+            const innerType = gridItemType(it, inner as Record<string, unknown>);
+            return { ...it, content: sanitizeContentAt(innerType, inner, depth + 1) };
+          });
+  }
   return c;
 }
 

@@ -152,7 +152,12 @@ export function renderPromptTemplate(template: string, context: ActionContext): 
   // Replace simple variables: {{event.field}} or {{request.body.field}}
   const data = context.event?.data || context.request?.body || {};
   const result = template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_match, path: string) => {
-    const value = readRoute(data, path);
+    // `{{event.x}}` (how rules write it) is `x` of the event's data; a payload
+    // with its own `event` key keeps the literal reading.
+    let value = readRoute(data, path);
+    if (value === undefined && path.startsWith("event.")) {
+      value = readRoute(data, path.slice("event.".length));
+    }
     if (value === undefined || value === null) return "";
     const text = String(value);
     if (text === "") return "";

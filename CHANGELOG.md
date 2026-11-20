@@ -306,6 +306,65 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Pass `limit` for more.
 - MCP: kon tool schemas leave out the default integer bounds and the `pattern` next to a `format`
   (about 5 % smaller). The OpenAPI and the server's validation are unchanged.
+- Security: a rule's `core:run-agent` step no longer fills `{{event.*}}` in its prompt with raw
+  text. The agent handler fills it, marks the event text as untrusted data and holds the agent's
+  writes for a person, as for a plain `agent` action.
+- Security: `POST /api/code-graph/edit/:op` with `apply: true` answers 403 to an agent, even one
+  with the `admin` scope. Only a person applies source edits; agents can still ask for a dry run.
+- Security: the page-builder sanitizer now cleans blocks nested in a `grid` (`items[].content`) at
+  save and at serve time, the same way as top-level blocks. Before, only their URLs were checked.
+- Security: `format: "plain"` no longer skips the page-builder sanitizer for blocks other than
+  `text` and `richtext`. A `callout` marked plain is rendered as Markdown, so it is now sanitized.
+- Security: the promotion scanner reads a `/` after `++` or `--` as a division and reports it as
+  `ambiguous_slash`, so code after it can no longer hide from the scan and the turbo route.
+- Security: `GET /api/proposals`, `/api/proposals/:id` and `/api/proposals/:id/events` show a team
+  member the result body of a proposal they could not approve as `REDACTED_CONTENT`, as the inbox
+  does. Before, an editor could read there the responses of admin-only requests.
+- Security: an agent request held for approval whose decoded path has a backslash, a control
+  character or a `.`/`..` segment is refused with `ambiguous_path`, and an approved replay never runs
+  such a path. Replayed, it could have reached a different route than the one approved.
+- Security: a GraphQL document with a `delete…` mutation (`POST /api/graphql`) counts as a `DELETE`
+  for the approval rules, so the default "hold every DELETE" rule now holds it.
+- Security: an unattended agent run (cron, action, rule, queue) whose brain search puts in a shared
+  note written by someone other than the agent or its signer holds every write for a person, even
+  with approvals off. Interactive chat is unchanged.
+- Security: the bundled SeaweedFS no longer lets anonymous read the whole media bucket. It reads only
+  the public prefixes (`S3_PUBLIC_PREFIXES`, default `uploads transforms cartas juegos media dms`), and
+  `private` can never be one of them, so a `private/` key needs its presigned URL.
+- Security: the local `/media` route decides whether a key is private after normalizing it the way the
+  disk does, so `uploads/../private/...`, a backslash or `Private/` no longer skip the signature check.
+- Security: the connections OAuth callback only completes for the browser that started the round trip
+  (an HttpOnly binding cookie) or a session of the same person. A consent link sent to someone else
+  answers 403 instead of storing that person's account in the sender's connection.
+- Security: kons get `ctx.realtime.capability(material)`, a channel name keyed by the server secret, for
+  channels authorized to whoever names them (a web-chat visitor). A value read from the kon's tables no
+  longer gives the channel.
+- Security: MCP `kitsuden_update_record` keeps an entry's stored `data.ownerId`. Only an agent with
+  `admin` may change it (and then `owner_id` moves with it); any other agent gets 403, so it can no
+  longer slip rows into another user's per-owner view.
+- Security: on a dataset whose workflow requires approval, MCP `kitsuden_create_record` and
+  `kitsuden_insert_record` always store `draft`, and `kitsuden_update_record` refuses to publish an
+  entry, as REST already did for agents.
+- Security: `POST /api/datasets/export` (MCP `datasets__export-datasets`) answers 403 when the key
+  carries a deny for any requested dataset (`!datasets:<slug>:*` or `:read`), even with `admin`.
+- Security: an engine action's `meta.requiredScopes` follows the core scope rule: a `!` denial wins,
+  `admin` included (`['admin', '!kon:crm:*']` no longer runs a `kon:crm:export` action).
+- Security: the REST routes an engine auto-kon (`defineKon`) generates now require a human admin or an
+  agent that opens the whole kon. Sorting and MCP filters accept only the model's column names
+  (no raw SQL), and create and update write only model columns (update never changes `id`).
+- Security: disabling or uninstalling a kon loaded at startup takes effect at once: its routes and MCP
+  tools answer 404 "Kon not activated" instead of serving until the next restart.
+- Security: `actsAsUserIn(kon, { wholeKon: true })` lets a kon policy that guards many operations accept
+  an agent only with `user:act`, `admin` or a whole-kon scope, so a key scoped to one operation no longer
+  opens the others.
+- Security: the engine's email check excuses only the recipient's own record. Mail to an address the run
+  read is still refused when it carries another customer's tracked value.
+- Security: an agent no longer writes `data_sets` through the explorer, items, GraphQL or inline
+  relations, so it cannot strip a field's customer-data mark there; `/api/data-sets` still checks it.
+- Security: only a person writes secrets (agents get 403, even with `admin`), and `QUEUE_*`,
+  `RATE_LIMIT_*` and `AGENT_KEY_*` are reserved keys, so an agent can no longer turn off job budgets.
+- Security: `reports_aggregate` and running reports need, for an agent, a scope of the kon that owns
+  the table, and refuse the columns a kon lists in `kon.json` `reportAccess.restricted`.
 
 ## [0.9.0-beta]
 

@@ -15014,7 +15014,7 @@
       "get": {
         "operationId": "connections.finish-connection",
         "summary": "Where the provider sends the person back",
-        "description": "The provider's redirect after consent. The `state` authenticates it (one use, ten minutes); no session is needed. Exchanges the code, stores the credential sealed, and redirects to `returnTo` with `?connection=<id>`, or answers JSON without one. 400 for an unknown, used or refused consent.",
+        "description": "The provider's redirect after consent. The `state` authenticates it (one use, ten minutes), and it must come back to the browser that started it (the binding cookie `/oauth/start` sets) or to a session of the same person; otherwise 403 and the round trip is burnt. Exchanges the code, stores the credential sealed, and redirects to `returnTo` with `?connection=<id>`, or answers JSON without one. 400 for an unknown, used or refused consent.",
         "tags": [
           "kon-connections",
           "connections"
@@ -15131,11 +15131,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
         "x-kitsuden-operation": {
           "kon": "kon-connections",
           "id": "finish-connection",
-          "access": "public",
+          "access": "optional",
           "scope": "kon:connections:finish-connection",
           "grantedBy": [],
           "sensitive": false,
@@ -15165,11 +15173,6 @@
           }
         ],
         "x-badges": [
-          {
-            "name": "Public",
-            "label": "Public",
-            "color": "#2563eb"
-          },
           {
             "name": "Not an MCP tool",
             "label": "Not an MCP tool",

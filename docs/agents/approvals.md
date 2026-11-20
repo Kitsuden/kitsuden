@@ -105,7 +105,10 @@ pending a human.
   `{ method, path }` rules. `method` is `*` or an HTTP method; in `path`, `*` is
   one segment and `**` any rest. The default list is
   `[{ "method": "DELETE", "path": "/api/**" }]`, so every `DELETE` is sensitive,
-  SDK or not. Remove it, or add your own (`PATCH /api/games/*`, …).
+  SDK or not. Remove it, or add your own (`PATCH /api/games/*`, …). A `POST`
+  that deletes counts as a `DELETE` for these rules: a batch with a `delete`
+  operation (`POST /api/datasets/batch`) and a GraphQL document with a
+  `delete…` mutation (`POST /api/graphql`).
 - **Core MCP tools** (`kitsuden_*`, and tools that kons register as actions):
   key `mcp:<tool name>`. Sensitive by default when the name contains `delete`
   (`kitsuden_delete_record`). A tool "writes" when its scope is `mcp:write` or
@@ -524,7 +527,9 @@ proposal costs a few queries (and one internal `GET` for the diff).
 
 ## API reference
 
-Agents (their own proposals; a team member sees all of them):
+Agents (their own proposals; a team member sees all of them, but the result
+body of a proposal they could not approve comes back as
+`{ "redacted": true, "reason": "viewer_cannot_approve" }`, as in the inbox):
 
 | Method | Path                         |                                                      |
 | ------ | ---------------------------- | ---------------------------------------------------- |

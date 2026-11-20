@@ -177,7 +177,11 @@ inlineRelationsRoutes.post("/:tableName/inlines/:parentId", async (c) => {
 
     // Neither tables with their own route nor, without a person who is an
     // admin, the ones that grant power (`auth_users`, `modules`...).
-    const reason = whyNativeTableIsNotWritable(config.table, isHumanAdmin(c));
+    const reason = whyNativeTableIsNotWritable(
+      config.table,
+      isHumanAdmin(c),
+      !!(c.get as (k: string) => unknown)("agent")
+    );
     if (reason) {
       return c.json(
         {

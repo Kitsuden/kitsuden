@@ -45,6 +45,7 @@ import {
   AggregateError,
   aggregateProblem,
   runAggregate,
+  type AggregateOptions,
   type AggregateResult,
 } from "../lib/aggregate";
 import { registerCoreOperations } from "../lib/core-operations";
@@ -169,16 +170,24 @@ async function findReport(id: string): Promise<ReportView | null> {
 }
 
 /**
- * Is the caller an agent? Agents cannot read the values of columns marked as customer or personal
- * data through a report (lib/aggregate.ts); a person with the administrator role can.
+ * Who is asking, for the aggregate: a person with the administrator role (no restriction) or an
+ * agent with its scopes. An agent cannot read the values of columns marked as customer or personal
+ * data, needs a scope of the kon that owns a table, and cannot read the columns that kon restricts
+ * (lib/aggregate.ts, security audit 2026-11-19).
  */
-function callerIsAgent(c: unknown): boolean {
-  return Boolean((c as { get?: (key: string) => unknown }).get?.("agent"));
+function aggregateOptionsFor(c: unknown): AggregateOptions {
+  const agent = (c as { get?: (key: string) => unknown }).get?.("agent") as
+    { scopes?: unknown } | undefined;
+  if (!agent) return { restrictSensitive: false };
+  const scopes = Array.isArray(agent.scopes)
+    ? agent.scopes.filter((s): s is string => typeof s === "string")
+    : [];
+  return { restrictSensitive: true, agentScopes: scopes };
 }
 
-async function aggregate(query: unknown, agent: boolean): Promise<AggregateResult> {
+async function aggregate(query: unknown, options: AggregateOptions): Promise<AggregateResult> {
   try {
-    return await runAggregate(query, { restrictSensitive: agent });
+    return await runAggregate(query, options);
   } catch (err: unknown) {
     if (err instanceof AggregateError) {
       if (err.status === 403) throw AppError.forbidden(err.message);
@@ -249,7 +258,8 @@ export const reportOperations: AnyOperation[] = [
         },
       ],
     },
-    handle: async (e, { c }) => aggregate((e.body as { query: unknown }).query, callerIsAgent(c)),
+    handle: async (e, { c }) =>
+      aggregate((e.body as { query: unknown }).query, aggregateOptionsFor(c)),
   }),
   defineOperation({
     ...read,
@@ -308,7 +318,7 @@ export const reportOperations: AnyOperation[] = [
     handle: async (e, { c }) => {
       const report = await findReport((e.body as { report: string }).report);
       if (!report) throw AppError.notFound("There is no such report.");
-      return { report, result: await aggregate(report.query, callerIsAgent(c)) };
+      return { report, result: await aggregate(report.query, aggregateOptionsFor(c)) };
     },
   }),
   defineOperation({
@@ -485,7 +495,7 @@ export const reportOperations: AnyOperation[] = [
           error = "The report no longer exists.";
         } else {
           try {
-            result = await runAggregate(report.query, { restrictSensitive: callerIsAgent(c) });
+            result = await runAggregate(report.query, aggregateOptionsFor(c));
           } catch (err: unknown) {
             // A failed statement would poison the request's transaction for the next tile; only
             // errors found BEFORE the statement runs are tolerated here.

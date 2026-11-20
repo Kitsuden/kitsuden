@@ -161,17 +161,21 @@ function readTokens(code: string): Read {
     if (u.t === "n" || u.t === "s" || u.t === "re") return false;
     if (u.v === ")") return lastCloseIsControl;
     if (u.v === "}") return lastBraceIsBlock;
+    // `a++ / b` is a division; reading it as a regex would hide the rest of the line
+    if (u.v === "++" || u.v === "--") return false;
     return u.v !== "]";
   };
   /**
    * A slash the lexer cannot settle without a real parser: after `}` (a block
-   * or an object?) and after `of`/`yield` (a keyword or a name?). A wrong guess
+   * or an object?), after `of`/`yield` (a keyword or a name?) and after `++`/`--`
+   * (postfix, so a division, or prefix on a regex like `++/x/.lastIndex`). A wrong guess
    * would swallow code as if it were a regex or a string, so it is reported and
    * the draft goes to a human.
    */
   const ambiguousSlash = () => {
     const u = lastSignificant();
-    return u?.t === "id" ? BEFORE_REGEX_AMBIGUOUS.includes(u.v) : u?.t === "p" && u.v === "}";
+    if (u?.t === "id") return BEFORE_REGEX_AMBIGUOUS.includes(u.v);
+    return u?.t === "p" && (u.v === "}" || u.v === "++" || u.v === "--");
   };
 
   /**
@@ -595,7 +599,7 @@ export function scanCode(code: string, options: ScanOptions = {}): ScanReport {
       "ambiguous_slash",
       "medium",
       line,
-      "A '/' after '}', 'of' or 'yield' can be a regex or a division: the code after it cannot be reviewed reliably"
+      "A '/' after '}', 'of', 'yield', '++' or '--' can be a regex or a division: the code after it cannot be reviewed reliably"
     );
   }
 

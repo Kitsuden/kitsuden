@@ -16,6 +16,11 @@ Store under `private/` anything that belongs to a person: a customer's voice not
   `Cache-Control: private, no-store`.
 - **S3:** a presigned `GET`. The bucket's policy must not make `private/` public-read: a bucket-wide
   public-read policy would still expose it. Limit public reads to the prefixes that are meant to be public.
+  The bundled SeaweedFS (`docker/seaweedfs-startup.sh`) does this: anonymous reads only the prefixes in
+  `S3_PUBLIC_PREFIXES` (default `uploads transforms cartas juegos media dms`) and refuses to start if
+  `private` is listed. A kon that serves public files under another top-level prefix adds it there.
+- **Keys are normalized before the check:** `uploads/../private/x`, `.\private\x` and `Private/x` count as
+  private, because that is the file the disk opens.
 
 Signed addresses last between 30 seconds and 7 days (one hour by default). Do not store them: ask for a new
 one when you need it.

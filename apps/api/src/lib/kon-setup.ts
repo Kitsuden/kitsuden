@@ -41,7 +41,7 @@ import { messageOf } from "../../../../packages/engine/src/errors";
 import { registerKonContributions } from "./kon-contributions";
 import { syncKonEntities } from "./kon-entities";
 import { registerKonSecretColumns } from "./kon-secrets";
-import { registerKonChannels } from "./realtime-kon-channels";
+import { konCapability, registerKonChannels } from "./realtime-kon-channels";
 
 function own(owner: string, given: unknown, what: string): void {
   if (given !== owner) {
@@ -128,6 +128,9 @@ export function bindKonContext(base: KonContext, konId: string): KonContext {
           realtime: {
             ...base.realtime,
             channels: (authorize) => registerKonChannels(konId, authorize),
+            // Keyed by the installation's secret and this kon's id: a value read from the kon's tables
+            // does not give the channel (lib/realtime-kon-channels.ts).
+            capability: (material: string) => konCapability(konId, material),
           },
         }
       : {}),

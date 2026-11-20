@@ -52,6 +52,7 @@
  */
 
 import type { KonContext } from "@kitsuden/shared";
+import { concedeScope } from "@kitsuden/shared";
 import type { Hono, Context as HonoContext } from "hono";
 
 import { runEffect, type EffectOptions } from "./effects";
@@ -703,20 +704,17 @@ class MCPAdapter implements ActionAdapter {
 }
 
 /**
- * Required scopes that the granted ones do not cover. Same semantics as
- * `hasScope` in the API (`admin`/`admin:*` cover everything, `resource:*` and
- * `*:action` as wildcards); it lives here because the engine does not import from the app.
+ * Required scopes that the granted ones do not cover. The core rule,
+ * `concedeScope` in @kitsuden/shared: a `!` denial that covers the scope wins,
+ * `admin` included; then `admin`/`admin:*` and the wildcards grant. It used to
+ * reimplement the matching, short-circuit on `admin` and ignore denials, so
+ * `['admin', '!kon:crm:*']` ran an action that every core gate refused.
  */
 export function missingScopes(
   requiredValues: readonly string[],
   grantedItems: readonly string[]
 ): string[] {
-  if (grantedItems.includes("admin") || grantedItems.includes("admin:*")) return [];
-  const coversNow = (granted: string, required: string) =>
-    granted === required ||
-    (granted.endsWith(":*") && required.startsWith(granted.slice(0, -1))) ||
-    (granted.startsWith("*:") && required.endsWith(granted.slice(1)));
-  return requiredValues.filter((r) => !grantedItems.some((c) => coversNow(c, r)));
+  return requiredValues.filter((r) => !concedeScope(grantedItems, r));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

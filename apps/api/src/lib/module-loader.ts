@@ -84,6 +84,7 @@ import { file } from "./file";
 import { readGrimoireKons, readKonJsonManifest } from "./grimoire-manifest";
 import { konIdOf, installedKon, listInstalledKons, incompatibleSdkReason } from "./installed-kons";
 import { checkKonCompatibility } from "./kitsuden-compat";
+import { konActivationGuard, trackStartupKon } from "./kon-activation";
 import { konEntities } from "./kon-entities";
 import { registerKonRouter } from "./kon-routes";
 import { konSecrets } from "./kon-secrets";
@@ -127,9 +128,17 @@ interface AppWithMiddleware {
  * Mounts the RLS transaction in front of a kon router: at `route` and at everything
  * under it. It must be registered BEFORE the router (in Hono, middleware
  * only runs if it was registered before the route).
+ *
+ * With `konId` (a kon loaded by `loadKons`), an activation guard goes first:
+ * once the kon is disabled or uninstalled it answers 404 "Kon not activated"
+ * instead of serving until the next restart (`lib/kon-activation.ts`).
  */
-export function mountKonRls(app: AppWithMiddleware, route: string): void {
+export function mountKonRls(app: AppWithMiddleware, route: string, konId?: string): void {
   const base = route.replace(/\/+$/, "");
+  if (konId) {
+    app.use(base, konActivationGuard(konId));
+    app.use(`${base}/*`, konActivationGuard(konId));
+  }
   app.use(base, withTransactionalRLS());
   app.use(`${base}/*`, withTransactionalRLS());
 }
@@ -1002,6 +1011,9 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
 
   // Get kons enabled in DB (includes filesystem-discovered kons toggled ON)
   const dbEnabledKeys = await getEnabledKonsFromDB();
+  // For the activation guard: a kon that had a row and loses it was uninstalled.
+  const hadModulesRow = (konId: string): boolean =>
+    dbEnabledKeys.some((k) => k === konId || k.replace(/^kon-/, "") === konId.replace(/^kon-/, ""));
 
   // Get kons installed via npm/marketplace from installed_kons table
   const dbInstalled = await getInstalledKonsFromDB();
@@ -1295,8 +1307,10 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
         registerKonToolsets(konDef.id, konDef.mcpToolsets);
         await announceKon(konDef, konContext);
 
-        // Every request to the kon, in its RLS transaction (see `theRequestDb`).
-        mountKonRls(app, finalMountPath);
+        // Every request to the kon, in its RLS transaction (see `theRequestDb`),
+        // behind the activation guard: disabling it from the panel takes effect now.
+        trackStartupKon(kon.id, hadModulesRow(kon.id));
+        mountKonRls(app, finalMountPath, kon.id);
         app.route(finalMountPath, router);
         // What is mounted is what is documented: the OpenAPI, the 404 with
         // suggestions and the guide for agents come from this registry.
@@ -1346,7 +1360,8 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
       // ═══════════════════════════════════════════════════════════════════════
       for (const [, exportValue] of Object.entries(mod)) {
         if (isHonoRouter(exportValue)) {
-          mountKonRls(app, mountPath);
+          trackStartupKon(kon.id, hadModulesRow(kon.id));
+          mountKonRls(app, mountPath, kon.id);
           app.route(mountPath, exportValue as Hono);
           registerKonRouter(kon.id, mountPath, exportValue);
           routerMounted = true;

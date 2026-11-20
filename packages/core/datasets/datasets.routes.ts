@@ -28,6 +28,7 @@ import {
   type AnyOperation,
 } from "@kitsuden/engine";
 import {
+  accessToDataset,
   buildDatasetWhere,
   droppedSensitivity,
   agentSignature,
@@ -1171,6 +1172,25 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
         try {
           const body = input.body ?? {};
           const config = exportConfigSchema.parse(body) as ExportConfig;
+
+          // A key that carries `!datasets:<slug>:*` (or `:read`) is closed to that dataset
+          // on every path, export included: the operation's own grant (`admin`,
+          // `datasets:*`…) does not name the slug, so it is checked here, before
+          // anything of the dataset is read (security audit 2026-11-19).
+          const scopes = (userOf(c) as { scopes?: string[] } | null)?.scopes;
+          const denied = config.datasets.find(
+            (slug) => accessToDataset(scopes, slug, "read") === "denied"
+          );
+          if (denied) {
+            return c.json(
+              {
+                error: "Forbidden",
+                code: "KITSUDEN_E_FORBIDDEN",
+                message: `This key is denied read access to dataset '${denied}'`,
+              },
+              403
+            );
+          }
 
           const exportPackage = await exportDatasets(
             ctx,
