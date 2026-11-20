@@ -144,7 +144,76 @@ part lives:
   **(not tested)**. Either way, `ALLOWED_ORIGINS` must include the website's
   origin.
 
-## 5. Common problems
+## 5. Purging the website's cache when a page changes
+
+A website that caches pages (a CDN, Astro's own cache, a static build) has to
+learn when one changed. Kitsuden emits `page:updated` after every committed
+change to a page or one of its blocks, and `page:deleted` when one is deleted.
+Payload:
+
+| Field          | When                       | What                                                   |
+| -------------- | -------------------------- | ------------------------------------------------------ |
+| `id`           | always                     | the page's uuid                                        |
+| `slug`         | always                     | the slug it has now (`page:deleted`: the one it had)   |
+| `previousSlug` | `page:updated`, on renames | the slug before the rename: purge that address **too** |
+
+The webhook is an [automation rule](../automation.md) on that event with a
+`core:webhook` step. With an administrator session:
+
+```bash
+curl -s -X POST http://127.0.0.1:3000/api/actions -b cookies.txt   -H 'origin: http://localhost:3001' -H 'content-type: application/json' -d '{
+  "name": "Purge the website",
+  "slug": "purge-website-pages",
+  "type": "rule",
+  "trigger": "event",
+  "triggerConfig": { "eventName": "page:updated" },
+  "config": { "steps": [ {
+    "handler": "core:webhook",
+    "config": {
+      "url": "https://example.com/_purge",
+      "secret": "<a long random string, also in the website environment>"
+    }
+  } ] }
+}'
+```
+
+Repeat it with `"eventName": "page:deleted"` if the website must also drop
+deleted pages. What the website receives:
+
+- `POST` with `Content-Type: application/json` and the body
+  `{"event":"page:updated","data":{"id":…,"slug":…,"previousSlug":…},"timestamp":…,"action":{…}}`.
+- `X-Kitsuden-Signature: sha256=<hex>`: the HMAC-SHA256 of the **raw body**
+  with the `secret`. Check it over the bytes as they arrived, before parsing,
+  and compare in constant time.
+- `Idempotency-Key`: the same on every retry of one delivery. Purging twice is
+  harmless, but a receiver that keeps a log can use it.
+
+The URL's host must be written out (the event cannot choose it) and passes the
+same target check as any webhook: an internal address is refused unless the
+operator allowed it (`KITSUDEN_WEBHOOK_ALLOW_INTERNAL`, [variables.md](variables.md)). A
+placeholder may go in the path or the query:
+`https://example.com/_purge/{{event.slug}}`.
+
+**Retries.** The first attempt is made right away. If the website does not
+answer, or answers 5xx or 429, the retries go to the job queue
+(`kitsuden-rule-webhooks`, [queue.md](queue.md)), with backoff, and survive a
+restart of the API. A 4xx is final. The rule's run history shows
+`retrying: true` with the job id; a delivery that ran out of attempts is in the
+queue's dead letter (panel → Queue).
+
+**Listing pages to warm or rebuild a cache.** `GET /api/page-builder/pages`
+with `?paging=cursor` answers `nextCursor`; pass it back as `?cursor=` until it
+is `null`. Cursor paging counts nothing and does not skip or repeat a page that
+is edited while the walk runs. The `offset` form still works and answers
+`totalDocs`.
+
+**Searching pages.** `POST /api/search` answers, beside `results` (dataset
+entries), `pages`: published pages that do not require a session, matched on
+the title, description, meta fields and the text of the blocks visible now. Up
+to 10, only on the first page of results (`offset` 0) and without `datasetId`;
+`"pages": false` leaves them out.
+
+## 6. Common problems
 
 | Symptom                                                                       | Cause                                                                                                |
 | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |

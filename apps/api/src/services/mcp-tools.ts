@@ -2048,6 +2048,11 @@ async function kitsudenDefineAction(args: ArgsOf<"kitsuden_define_action">): Pro
     const problem = await webhookConfigUrlProblem((config as { url?: unknown } | undefined)?.url);
     if (problem) return problem;
   }
+  if (type === "webhook_in") {
+    const { webhookInConfigProblem } = await import("@/lib/actions/handlers/webhook-in-handler");
+    const problem = webhookInConfigProblem(config);
+    if (problem) return problem;
+  }
   // An agent does not define an action that makes an agent with MORE
   // permissions act (its `config.agentId` would run with that agent's scopes).
   const agentId = (config as { agentId?: unknown } | undefined)?.agentId;

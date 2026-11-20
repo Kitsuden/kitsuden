@@ -40,6 +40,7 @@ import { messageOf } from "../../../../packages/engine/src/errors";
 
 import { registerKonContributions } from "./kon-contributions";
 import { syncKonEntities } from "./kon-entities";
+import { registerKonSchedules } from "./kon-schedules";
 import { registerKonSecretColumns } from "./kon-secrets";
 import { konCapability, registerKonChannels } from "./realtime-kon-channels";
 
@@ -145,13 +146,16 @@ export function bindKonContext(base: KonContext, konId: string): KonContext {
 export async function announceKon(
   konDef: Pick<
     KonDefinition,
-    "id" | "events" | "actionHandlers" | "reports" | "entities" | "secretColumns"
+    "id" | "events" | "actionHandlers" | "reports" | "entities" | "secretColumns" | "schedules"
   >,
   context: KonContext,
   warn: (message: string) => void = (message) => console.warn(`  ⚠️  ${konDef.id}: ${message}`)
 ): Promise<void> {
   // Its events, its automation steps and its reports (lib/kon-contributions.ts).
   for (const problem of registerKonContributions(konDef, context)) warn(problem);
+
+  // Its periodic tasks: one run per tick across every replica (lib/kon-schedules.ts).
+  for (const problem of registerKonSchedules(konDef, context)) warn(problem);
 
   // The entities it owns: one dataset each, created here with no migration (lib/kon-entities.ts).
   if (konDef.entities) {

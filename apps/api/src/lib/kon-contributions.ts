@@ -65,6 +65,25 @@ const CORE_EVENTS: KonEventCatalogEntry[] = [
     payload: { post: "the post as stored" },
     listeners: [],
   },
+  {
+    name: "page:updated",
+    source: "core",
+    description:
+      "A page-builder page or one of its blocks changed (after commit). What a site's cache purge listens to (docs/install/inti.md).",
+    payload: {
+      id: "uuid of the page",
+      slug: "the page's slug now",
+      previousSlug: "only when the page was renamed: the slug it had, which a site must purge too",
+    },
+    listeners: [],
+  },
+  {
+    name: "page:deleted",
+    source: "core",
+    description: "A page-builder page was deleted (after commit).",
+    payload: { id: "uuid of the page", slug: "the slug it had" },
+    listeners: [],
+  },
 ];
 
 /** Every event a rule can listen to: the core's, then each kon's. */

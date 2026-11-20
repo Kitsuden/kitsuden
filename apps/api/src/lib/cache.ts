@@ -32,7 +32,8 @@ async function hasCache(): Promise<boolean> {
 export async function cachedQuery<T>(
   key: string,
   ttl: number,
-  queryFn: () => Promise<T>
+  queryFn: () => Promise<T>,
+  options: { tags?: string[] } = {}
 ): Promise<T> {
   try {
     if (await hasCache()) {
@@ -52,6 +53,7 @@ export async function cachedQuery<T>(
   try {
     if (await hasCache()) {
       await cacheSet(key, JSON.stringify(result), ttl);
+      if (options.tags?.length) await tagKey(key, options.tags, ttl);
     }
   } catch {
     // Valkey write failed — non-critical
@@ -94,6 +96,82 @@ export async function invalidateCache(...patterns: string[]): Promise<void> {
           await client.del(key);
         }
       }
+    }
+  } catch {
+    // Cache invalidation is non-critical
+  }
+}
+
+// ── Invalidation by tag ────────────────────────────────────────
+
+/**
+ * Tags name what a cached value was built from (`page:<id>`, `dataset:<id>`), so a write purges exactly the
+ * entries that read it: `invalidateTags("page:<id>")` instead of a SCAN over a key pattern, which walks the
+ * whole keyspace and misses keys whose name does not carry the id (a list, a search).
+ *
+ * Valkey: one set per tag (`cache:tag:<tag>`) holding the keys. Memory: a map. A tag set lives as long as
+ * the longest entry put in it (refreshed on every add, at least a day); a key that expired before its tag
+ * is harmless (deleting it again is a no-op).
+ */
+const TAG_PREFIX = "cache:tag:";
+const memoryTags = new Map<string, Set<string>>();
+const TAG = /^[A-Za-z0-9:._/-]{1,200}$/;
+
+function validTags(tags: string[]): string[] {
+  return tags.filter((t) => typeof t === "string" && TAG.test(t));
+}
+
+async function tagKey(key: string, tags: string[], ttl: number): Promise<void> {
+  const list = validTags(tags);
+  if (!valkeyConfigured()) {
+    for (const tag of list) {
+      const keys = memoryTags.get(tag) ?? new Set<string>();
+      keys.add(key);
+      memoryTags.set(tag, keys);
+    }
+    return;
+  }
+  const client = await getValkeyClient();
+  for (const tag of list) {
+    await client.sAdd(TAG_PREFIX + tag, key);
+    await client.expire(TAG_PREFIX + tag, Math.max(ttl, 86_400));
+  }
+}
+
+/** Stores a value under `key` with tags (what `cachedQuery` does after a miss). */
+export async function cacheSetTagged(
+  key: string,
+  value: unknown,
+  ttl: number,
+  tags: string[]
+): Promise<void> {
+  try {
+    if (!(await hasCache())) return;
+    await cacheSet(key, JSON.stringify(value), ttl);
+    await tagKey(key, tags, ttl);
+  } catch {
+    // Non-critical, like every cache write
+  }
+}
+
+/** Deletes every entry stored with any of these tags. */
+export async function invalidateTags(...tags: string[]): Promise<void> {
+  const list = validTags(tags);
+  if (list.length === 0) return;
+  try {
+    if (!valkeyConfigured()) {
+      for (const tag of list) {
+        for (const key of memoryTags.get(tag) ?? []) memoryOf(key);
+        memoryTags.delete(tag);
+      }
+      return;
+    }
+    if (!(await isValkeyAvailable())) return;
+    const client = await getValkeyClient();
+    for (const tag of list) {
+      const keys = (await client.sMembers(TAG_PREFIX + tag)) as string[];
+      for (const key of keys) await client.del(key);
+      await client.del(TAG_PREFIX + tag);
     }
   } catch {
     // Cache invalidation is non-critical

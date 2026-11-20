@@ -128,6 +128,14 @@ instead, on the same table, with keys scoped to the action (`action:<id>`); see
 | **A reason per job.**                                                                                                       | `queue.dispatch(queue, name, payload, { reason })` stores why it was queued; the dead letter shows it.                                                                                                                                                                                                                                                         |
 | **Retries and a dead letter.**                                                                                              | A handler that throws is retried with exponential backoff (2 s, 4 s, 8 s … up to 10 min) until `attempts` (default 3, set per `dispatch`). Then, or on `PermanentError`, the job is `dead`.                                                                                                                                                                    |
 
+### The system's own queues
+
+`kitsuden-*` queues belong to the core and are never charged to an agent:
+`kitsuden-email`, `kitsuden-webhooks` (agents' proposal notifications),
+`kitsuden-rule-webhooks` (retries of the `core:webhook` step of automation
+rules), `kitsuden-kon-schedules` (kons' [periodic tasks](../kons/schedules.md))
+and the classifier, embedding and ledger queues.
+
 ### What happens to a dead job
 
 It stays in the table with its last error, and is **never deleted

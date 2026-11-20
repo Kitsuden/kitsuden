@@ -173,11 +173,15 @@ class ListPagesResponseDocsItem(TypedDict):
     updatedAt: str
 
 
-class ListPagesResponse(TypedDict):
+class _ListPagesResponseRequired(TypedDict):
     docs: List[ListPagesResponseDocsItem]
-    totalDocs: int
     limit: int
+
+
+class ListPagesResponse(_ListPagesResponseRequired, total=False):
+    totalDocs: int
     offset: int
+    nextCursor: Optional[str]
 
 
 class ListTemplatesResponse(TypedDict):
@@ -449,7 +453,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         method="GET",
         path="/page-builder/pages",
         path_params=(),
-        query_params=("status", "limit", "offset", "layout", "search"),
+        query_params=("status", "limit", "offset", "layout", "search", "cursor", "paging"),
         body=None,
         responses={200: "json"},
         idempotent=True,
@@ -458,7 +462,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         scope="kon:blocks:list-pages",
         mcp_tool="blocks__list-pages",
         errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
-        pagination=PaginationInfo(style="offset", items="docs", limit="limit"),
+        pagination=PaginationInfo(style="cursor", items="docs", limit="limit"),
     ),
     "list-templates": OperationInfo(
         kon="kon-blocks",
@@ -725,7 +729,7 @@ class BlocksApi(KonApi):
         """
         return self._call(OPERATIONS["get-page"], {"id": id, "includeBlocks": include_blocks}, None, request_options)
 
-    def list_pages(self, *, status: Optional[Union[str, int]] = None, limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, layout: Optional[Union[str, int]] = None, search: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListPagesResult]:
+    def list_pages(self, *, status: Optional[Union[str, int]] = None, limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, layout: Optional[Union[str, int]] = None, search: Optional[Union[str, int]] = None, cursor: Optional[Union[str, int]] = None, paging: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListPagesResult]:
         """List pages
 
         Paginated list of page-builder pages, newest update first. The public (and any caller without the content role) only sees published pages that do not require a session; staff and agents with content:edit can filter by any status.
@@ -738,15 +742,17 @@ class BlocksApi(KonApi):
             status: draft | published | archived (only staff see non-published)
             limit: 1-100, default 50
             search: Title contains (max 200 chars)
+            cursor: Keyset paging: the `nextCursor` of the previous batch (no count is made)
+            paging: `cursor` for the first batch in keyset paging (answers `nextCursor`)
         """
-        return self._call(OPERATIONS["list-pages"], {"status": status, "limit": limit, "offset": offset, "layout": layout, "search": search}, None, request_options)
+        return self._call(OPERATIONS["list-pages"], {"status": status, "limit": limit, "offset": offset, "layout": layout, "search": search, "cursor": cursor, "paging": paging}, None, request_options)
 
-    def iter_list_pages(self, *, status: Optional[Union[str, int]] = None, limit: Optional[Union[str, int]] = None, layout: Optional[Union[str, int]] = None, search: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Iterator[ListPagesResponseDocsItem]:
-        """Every item of `list_pages`, page after page (moves `offset`).
+    def iter_list_pages(self, *, status: Optional[Union[str, int]] = None, limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, layout: Optional[Union[str, int]] = None, search: Optional[Union[str, int]] = None, paging: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Iterator[ListPagesResponseDocsItem]:
+        """Every item of `list_pages`, page after page (moves `cursor`).
 
         Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
         """
-        return self._iterate(OPERATIONS["list-pages"], {"status": status, "limit": limit, "layout": layout, "search": search}, request_options)
+        return self._iterate(OPERATIONS["list-pages"], {"status": status, "limit": limit, "offset": offset, "layout": layout, "search": search, "paging": paging}, request_options)
 
     def list_templates(self, *, category: Optional[Union[str, int]] = None, type: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListTemplatesResult]:
         """List block templates
@@ -978,7 +984,7 @@ class AsyncBlocksApi(AsyncKonApi):
         """
         return await self._call(OPERATIONS["get-page"], {"id": id, "includeBlocks": include_blocks}, None, request_options)
 
-    async def list_pages(self, *, status: Optional[Union[str, int]] = None, limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, layout: Optional[Union[str, int]] = None, search: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListPagesResult]:
+    async def list_pages(self, *, status: Optional[Union[str, int]] = None, limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, layout: Optional[Union[str, int]] = None, search: Optional[Union[str, int]] = None, cursor: Optional[Union[str, int]] = None, paging: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListPagesResult]:
         """List pages
 
         Paginated list of page-builder pages, newest update first. The public (and any caller without the content role) only sees published pages that do not require a session; staff and agents with content:edit can filter by any status.
@@ -991,15 +997,17 @@ class AsyncBlocksApi(AsyncKonApi):
             status: draft | published | archived (only staff see non-published)
             limit: 1-100, default 50
             search: Title contains (max 200 chars)
+            cursor: Keyset paging: the `nextCursor` of the previous batch (no count is made)
+            paging: `cursor` for the first batch in keyset paging (answers `nextCursor`)
         """
-        return await self._call(OPERATIONS["list-pages"], {"status": status, "limit": limit, "offset": offset, "layout": layout, "search": search}, None, request_options)
+        return await self._call(OPERATIONS["list-pages"], {"status": status, "limit": limit, "offset": offset, "layout": layout, "search": search, "cursor": cursor, "paging": paging}, None, request_options)
 
-    def iter_list_pages(self, *, status: Optional[Union[str, int]] = None, limit: Optional[Union[str, int]] = None, layout: Optional[Union[str, int]] = None, search: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[ListPagesResponseDocsItem]:
-        """Every item of `list_pages`, page after page (moves `offset`).
+    def iter_list_pages(self, *, status: Optional[Union[str, int]] = None, limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, layout: Optional[Union[str, int]] = None, search: Optional[Union[str, int]] = None, paging: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[ListPagesResponseDocsItem]:
+        """Every item of `list_pages`, page after page (moves `cursor`).
 
         Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
         """
-        return self._iterate(OPERATIONS["list-pages"], {"status": status, "limit": limit, "layout": layout, "search": search}, request_options)
+        return self._iterate(OPERATIONS["list-pages"], {"status": status, "limit": limit, "offset": offset, "layout": layout, "search": search, "paging": paging}, request_options)
 
     async def list_templates(self, *, category: Optional[Union[str, int]] = None, type: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListTemplatesResult]:
         """List block templates

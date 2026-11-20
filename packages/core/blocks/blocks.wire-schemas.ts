@@ -133,6 +133,12 @@ export const PageListQuery = z
     offset: text().optional(),
     layout: text().optional(),
     search: text().optional().describe("Title contains (max 200 chars)"),
+    cursor: text()
+      .optional()
+      .describe("Keyset paging: the `nextCursor` of the previous batch (no count is made)"),
+    paging: text()
+      .optional()
+      .describe("`cursor` for the first batch in keyset paging (answers `nextCursor`)"),
   })
   .passthrough();
 
@@ -216,9 +222,13 @@ export const PagesList = z.object({
       updatedAt: true,
     })
   ),
-  totalDocs: z.number().int(),
+  /** Offset paging only: cursor paging counts nothing. */
+  totalDocs: z.number().int().optional(),
   limit: z.number().int(),
-  offset: z.number().int(),
+  /** Offset paging only. */
+  offset: z.number().int().optional(),
+  /** Cursor paging only: pass it as `?cursor=` for the next batch; `null` on the last one. */
+  nextCursor: z.string().nullable().optional(),
 });
 
 export const RenderedPage = z.object({

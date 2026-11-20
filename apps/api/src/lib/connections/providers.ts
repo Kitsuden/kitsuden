@@ -22,6 +22,8 @@
  * cannot be connected; nothing else changes.
  */
 
+import { isPrivateHostAllowed } from "./network";
+
 export interface OAuthSpec {
   authorizeUrl: string;
   tokenUrl: string;
@@ -154,8 +156,10 @@ export function providerProblem(p: ProviderDefinition): string | null {
     return `provider ${p.id} says oauth but has no oauth spec`;
   if (!p.apiHosts?.length) return `provider ${p.id} must list the hosts its token may be sent to`;
   for (const host of p.apiHosts) {
-    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host))
-      return `provider ${p.id}: "${host}" is not a host name`;
+    // A public name with a top-level domain, or a host the operator listed as private
+    // (`CONNECTIONS_PRIVATE_HOSTS`, network.ts): `odoo`, `10.0.4.12`.
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host) && !isPrivateHostAllowed(host))
+      return `provider ${p.id}: "${host}" is not a host name (a private host must be in CONNECTIONS_PRIVATE_HOSTS)`;
   }
   if (p.oauth) {
     for (const url of [

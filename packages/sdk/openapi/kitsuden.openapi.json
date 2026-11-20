@@ -28974,6 +28974,26 @@
               "type": "string"
             },
             "description": "Title contains (max 200 chars)"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Keyset paging: the `nextCursor` of the previous batch (no count is made)",
+              "type": "string"
+            },
+            "description": "Keyset paging: the `nextCursor` of the previous batch (no count is made)"
+          },
+          {
+            "name": "paging",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "`cursor` for the first batch in keyset paging (answers `nextCursor`)",
+              "type": "string"
+            },
+            "description": "`cursor` for the first batch in keyset paging (answers `nextCursor`)"
           }
         ],
         "responses": {
@@ -29066,13 +29086,17 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     }
                   },
                   "required": [
                     "docs",
-                    "totalDocs",
-                    "limit",
-                    "offset"
+                    "limit"
                   ]
                 }
               }

@@ -34,6 +34,7 @@ import { konSecrets } from "../kon-secrets";
 import { logger } from "../logger";
 
 import { clientFor } from "./client";
+import { connectionFetch } from "./network";
 import {
   covers,
   providerOf,
@@ -103,7 +104,7 @@ export const konConnections: KonConnections = {
 };
 
 /** One pass: refresh what runs out soon, announce what expired. */
-export async function refreshTick(network: Fetch = (u, i) => fetch(u, i), now = new Date()) {
+export async function refreshTick(network: Fetch = connectionFetch, now = new Date()) {
   const result = { refreshed: 0, expired: 0, failed: 0 };
   for (const row of await dueForRefresh(db, now)) {
     try {

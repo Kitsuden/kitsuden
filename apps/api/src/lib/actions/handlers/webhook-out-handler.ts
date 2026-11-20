@@ -181,9 +181,29 @@ async function readBounded(response: Response, max: number): Promise<string> {
   return new TextDecoder().decode(Buffer.concat(chunks));
 }
 
+/**
+ * Whether a failed delivery is worth trying again later: no answer at all (network, timeout), a 5xx or a
+ * 429. A 4xx is the receiver's final word, and a target that resolved to an internal address stays one.
+ */
+export function retryableWebhookFailure(result: ActionResult): boolean {
+  if (result.success) return false;
+  if (result.unanswered) return true;
+  const status = result.httpResponse?.statusCode;
+  return status !== undefined && (status >= 500 || status === 429);
+}
+
+export interface WebhookOutOptions {
+  /**
+   * `false`: one attempt, no in-process retries. The automation step uses it and hands the retries to the
+   * durable queue (rules.ts), where a restart does not lose them.
+   */
+  inlineRetries?: boolean;
+}
+
 export async function executeWebhookOutAction(
   action: Action,
-  context: ActionContext
+  context: ActionContext,
+  options: WebhookOutOptions = {}
 ): Promise<ActionResult> {
   const startTime = Date.now();
 
@@ -249,10 +269,10 @@ export async function executeWebhookOutAction(
   }
 
   // Execute request with retry logic
-  const maxRetries = Math.min(
-    Math.max(Number(config.retryPolicy?.maxRetries ?? 3) || 0, 0),
-    MAX_RETRIES
-  );
+  const maxRetries =
+    options.inlineRetries === false
+      ? 0
+      : Math.min(Math.max(Number(config.retryPolicy?.maxRetries ?? 3) || 0, 0), MAX_RETRIES);
   const backoffMs = Math.min(
     Math.max(Number(config.retryPolicy?.backoffMs ?? 1000) || 0, 0),
     MAX_BACKOFF_MS
@@ -318,5 +338,6 @@ export async function executeWebhookOutAction(
     success: false,
     error: `Failed after ${maxRetries + 1} attempts: ${lastError?.message}`,
     durationMs: Date.now() - startTime,
+    unanswered: true,
   };
 }

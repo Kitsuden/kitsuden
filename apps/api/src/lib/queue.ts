@@ -645,6 +645,12 @@ export async function setupWorkers(): Promise<void> {
   // Signed webhooks to agents when their proposal is resolved (B3).
   const { registerNotificationDelivery } = await import("./proposal-notifications");
   registerNotificationDelivery();
+  // Retries of automation rules' webhook steps (they used to sleep in this process).
+  const { registerRuleWebhookDelivery } = await import("./actions/rules");
+  registerRuleWebhookDelivery();
+  // Kons' periodic tasks: one run per tick, whichever replica claimed it (lib/kon-schedules.ts).
+  const { registerKonScheduleWorker } = await import("./kon-schedules");
+  registerKonScheduleWorker();
   // Embeddings for models with semantic search.
   const { registerModelEmbeddings } = await import("./model-embeddings");
   registerModelEmbeddings();

@@ -23,6 +23,7 @@ import { actions, kitsudenFunctions } from "../db/schema";
 
 import { executeActionById } from "./actions";
 import { logger } from "./logger";
+import { claimTick, tickOf } from "./schedule-claim";
 
 // ═══════════════════════════════════════════════════════════════
 // State
@@ -63,6 +64,8 @@ function scheduleCronJob(action: typeof actions.$inferSelect): void {
       cronExpression,
       {
         name: `kitsuden-action:${action.slug}`,
+        // The timer does not keep the process alive on its own (tests, a graceful stop).
+        unref: true,
         catch: (err) => {
           logger.error({ err, action: action.name }, "[CRON] failure during execution");
         },
@@ -71,6 +74,12 @@ function scheduleCronJob(action: typeof actions.$inferSelect): void {
         // Per EXECUTION. A cron that fires too often or too little is diagnosed
         // by cross-referencing these lines with what the action did, and for that they
         // need to share a trace.
+        // One replica per tick: every API process runs this timer, and a cron action used to fire in
+        // each of them (lib/schedule-claim.ts).
+        if (!(await claimTick(`action:${action.id}`, tickOf(new Date(), cronExpression)))) {
+          logger.debug({ action: action.name }, "[CRON] tick claimed by another process");
+          return;
+        }
         logger.info({ action: action.name, cron: cronExpression }, "[CRON] triggering");
 
         // Re-fetch action to get latest status
