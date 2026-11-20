@@ -20,6 +20,7 @@ import {
   deleteAction,
   executeActionById,
 } from "../lib/actions";
+import { webhookInConfigProblem } from "../lib/actions/handlers/webhook-in-handler";
 import {
   changesCode,
   changesSchedule,
@@ -229,6 +230,10 @@ export async function createActionHandler(c: Context) {
     const problem = await webhookUrlProblem(body.config);
     if (problem) return c.json({ error: problem }, 400);
   }
+  if (body.type === "webhook_in") {
+    const problem = webhookInConfigProblem(body.config);
+    if (problem) return c.json({ error: problem }, 400);
+  }
   // An agent does not define an `agent` action against an agent with more permissions.
   if (executor?.type === "agent" && (body.type === "agent" || body.config?.agentId !== undefined)) {
     const reason = await reasonNotToDefineAgent(body.config?.agentId, executor.agent.scopes ?? []);
@@ -334,6 +339,10 @@ export async function updateActionHandler(c: Context) {
   // A new config for a webhook_out passes the same target check as at creation.
   if (before?.type === "webhook_out" && body.config !== undefined) {
     const problem = await webhookUrlProblem(body.config);
+    if (problem) return c.json({ error: problem }, 400);
+  }
+  if (before?.type === "webhook_in" && body.config !== undefined) {
+    const problem = webhookInConfigProblem(body.config);
     if (problem) return c.json({ error: problem }, 400);
   }
   // An agent editing an `agent` action (its prompt, its trigger, its agent…)

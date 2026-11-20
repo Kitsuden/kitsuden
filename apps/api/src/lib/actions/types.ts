@@ -146,6 +146,8 @@ export interface ActionContext {
     headers: Record<string, string>;
     body: unknown;
     query: Record<string, string>;
+    /** The body as it arrived: what an HMAC signature covers (webhook_in). */
+    rawBody?: string;
   };
 
   // Environment variables
@@ -181,6 +183,8 @@ export interface ActionResult {
     headers: Record<string, string>;
     body: unknown;
   };
+  /** webhook_out: the request never got an answer (network, timeout): trying later may work. */
+  unanswered?: boolean;
 }
 
 export interface ActionHandler {

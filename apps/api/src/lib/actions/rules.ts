@@ -52,6 +52,8 @@ interface StepRun {
   /** The stored rule and the execution context: what the reused handlers need. */
   action: Action;
   context: ActionContext;
+  /** Position of the step in the rule: a durable retry re-reads the step by it. */
+  stepIndex: number;
 }
 
 interface RuleHandler {
@@ -112,14 +114,29 @@ const coreHandlers: RuleHandler[] = [
       }
       return webhookConfigUrlProblem(config.url);
     },
-    async run({ input, action, context }) {
-      const { executeWebhookOutAction } = await import("./handlers/webhook-out-handler");
+    async run({ input, action, context, stepIndex }) {
+      const { executeWebhookOutAction, retryableWebhookFailure } =
+        await import("./handlers/webhook-out-handler");
+      // One attempt here. The retries used to sleep in this process (a restart lost them); a failure
+      // worth retrying now goes to the durable queue (RULE_WEBHOOKS_QUEUE below).
       const result = await executeWebhookOutAction(
         { ...action, type: "webhook_out", config: input.config } as Action,
-        context
+        context,
+        { inlineRetries: false }
       );
-      if (!result.success) throw new StepFailed(result.error ?? "the webhook failed");
-      return { statusCode: result.httpResponse?.statusCode ?? null };
+      if (result.success) return { statusCode: result.httpResponse?.statusCode ?? null };
+      if (retryableWebhookFailure(result) && queue.configured()) {
+        const job = await queueRuleWebhookRetry(action, context, stepIndex, input.config);
+        if (job) {
+          return {
+            statusCode: result.httpResponse?.statusCode ?? null,
+            retrying: true,
+            jobId: job,
+            error: result.error ?? null,
+          };
+        }
+      }
+      throw new StepFailed(result.error ?? "the webhook failed");
     },
   },
   {
@@ -504,6 +521,7 @@ export async function executeRuleAction(
         input: stepInput(action, context, step),
         action,
         context,
+        stepIndex: steps.indexOf(step),
       });
       outcomes.push({
         handler: step.handler,
@@ -590,7 +608,8 @@ export async function dryRunAction(
   } as ActionContext;
 
   const steps: DryRunStep[] = [];
-  for (const step of ((action.config as Partial<RuleConfig> | null)?.steps ?? []) as RuleStep[]) {
+  const ruleSteps = ((action.config as Partial<RuleConfig> | null)?.steps ?? []) as RuleStep[];
+  for (const [stepIndex, step] of ruleSteps.entries()) {
     const input = stepInput(action, context, step);
     const handler = handlerById(step.handler);
     if (!handler) {
@@ -605,11 +624,106 @@ export async function dryRunAction(
     try {
       const problem = await handler.validate?.(input.config);
       if (problem) entry.problem = problem;
-      else if (handler.preview) entry.preview = await handler.preview({ input, action, context });
+      else if (handler.preview) {
+        entry.preview = await handler.preview({ input, action, context, stepIndex });
+      }
     } catch (err: unknown) {
       entry.problem = messageOf(err) || "the preview failed";
     }
     steps.push(entry);
   }
   return { wouldRun: conditions.passed, conditions, steps };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// core:webhook retries on the durable queue
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The queue that retries `core:webhook` deliveries. A system queue (`kitsuden-*`): never charged to an
+ * agent. Its payload carries no secret and no filled config: the delivery re-reads the stored rule and
+ * fills the step again from the event, so a secret rotated meanwhile is the one used, and a rule deleted
+ * or paused meanwhile sends nothing.
+ */
+export const RULE_WEBHOOKS_QUEUE = "kitsuden-rule-webhooks";
+
+interface RuleWebhookJob {
+  actionId: string;
+  stepIndex: number;
+  executionId: string;
+  event: { name: string; data: Record<string, unknown>; timestamp: string } | null;
+  trigger: string;
+}
+
+function retryAttempts(config: Record<string, unknown>): number {
+  const policy = config.retryPolicy as { maxRetries?: unknown } | undefined;
+  const n = Number(policy?.maxRetries ?? 3);
+  return Math.min(Math.max(Number.isFinite(n) ? Math.floor(n) : 3, 1), 10);
+}
+
+async function queueRuleWebhookRetry(
+  action: Action,
+  context: ActionContext,
+  stepIndex: number,
+  config: Record<string, unknown>
+): Promise<string | null> {
+  const payload: RuleWebhookJob = {
+    actionId: action.id,
+    stepIndex,
+    executionId: context.executionId,
+    event: context.event ?? null,
+    trigger: context.trigger,
+  };
+  try {
+    const job = await queue.dispatch(RULE_WEBHOOKS_QUEUE, "deliver", payload, {
+      attempts: retryAttempts(config),
+      // The first try already happened here: the queue's backoff starts the next one later.
+      delayMs: 2_000,
+      // One retry chain per execution and step, even if the rule's run is repeated.
+      dedupeKey: `${context.executionId}:${stepIndex}`,
+    });
+    return job.id;
+  } catch {
+    return null;
+  }
+}
+
+/** One delivery attempt of a queued `core:webhook` retry. Throws to let the queue back off. */
+export async function deliverRuleWebhook(job: { payload: unknown }): Promise<void> {
+  const { PermanentError } = await import("../../../../../packages/engine/src/queue");
+  const data = job.payload as RuleWebhookJob;
+  const { getAction } = await import("./engine");
+  const action = await getAction(data.actionId);
+  // Deleted or paused since: nothing to send, and no point retrying.
+  if (!action || action.status !== "active" || action.type !== "rule") return;
+  const step = ((action.config as Partial<RuleConfig> | null)?.steps ?? [])[data.stepIndex] as
+    RuleStep | undefined;
+  if (!step || step.handler !== "core:webhook") return;
+
+  const context = {
+    actionId: action.id,
+    actionName: action.name,
+    actionType: "rule",
+    trigger: data.trigger,
+    event: data.event ?? undefined,
+    env: {},
+    executionId: data.executionId,
+    startedAt: new Date(),
+  } as ActionContext;
+  const input = stepInput(action, context, step);
+  const { executeWebhookOutAction, retryableWebhookFailure } =
+    await import("./handlers/webhook-out-handler");
+  const result = await executeWebhookOutAction(
+    { ...action, type: "webhook_out", config: input.config } as Action,
+    context,
+    { inlineRetries: false }
+  );
+  if (result.success) return;
+  if (!retryableWebhookFailure(result)) throw new PermanentError(result.error ?? "refused");
+  throw new Error(result.error ?? "the webhook failed");
+}
+
+/** Registers the retry handler (called by the worker startup, lib/queue.ts). */
+export function registerRuleWebhookDelivery(): void {
+  queue.handle(RULE_WEBHOOKS_QUEUE, deliverRuleWebhook, { concurrency: 4 });
 }
