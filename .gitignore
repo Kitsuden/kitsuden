@@ -109,3 +109,6 @@ Thumbs.db
 .llms/
 graphify-out/
 .security/
+
+# API documentation viewers, downloaded and verified by scripts/docs-viewers.mjs
+apps/api/docs-viewers/

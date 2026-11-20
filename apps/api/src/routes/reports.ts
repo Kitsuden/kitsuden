@@ -259,11 +259,36 @@ export const reportOperations: AnyOperation[] = [
     summary: "List reports",
     description:
       "The reports people saved (`source: saved`) and the ones installed kons ship (`source: kon`, read-only, id `kon:<kon id>/<report id>`), each with its query.",
-    output: { schema: z.object({ reports: z.array(Report) }) },
+    // It stopped at 500 saved reports with no sign. The kons' reports (not in the
+    // table) come with the first page.
+    input: {
+      query: z.object({
+        limit: z.coerce
+          .number()
+          .int()
+          .min(1)
+          .max(500)
+          .default(500)
+          .describe(
+            "Rows per page (1-500). The default is the maximum, what the list always returned."
+          ),
+        offset: z.coerce.number().int().min(0).default(0).describe("Rows to skip."),
+      }),
+    },
+    output: { schema: z.object({ reports: z.array(Report), hasMore: z.boolean() }) },
     mcp: { name: "reports_list" },
-    handle: async () => {
-      const rows = await ex().select().from(reports).orderBy(desc(reports.updatedAt)).limit(500);
-      return { reports: [...rows.map(savedView), ...konViews()] };
+    handle: async (input) => {
+      const { limit, offset } = input.query as { limit: number; offset: number };
+      const rows = await ex()
+        .select()
+        .from(reports)
+        .orderBy(desc(reports.updatedAt), desc(reports.id))
+        .limit(limit + 1)
+        .offset(offset);
+      return {
+        reports: [...rows.slice(0, limit).map(savedView), ...(offset === 0 ? konViews() : [])],
+        hasMore: rows.length > limit,
+      };
     },
   }),
   defineOperation({
@@ -336,17 +361,34 @@ export const reportOperations: AnyOperation[] = [
     summary: "List dashboards",
     description:
       "Every dashboard with its tiles. Each tile points at a report; run them with run-dashboard.",
-    output: { schema: z.object({ dashboards: z.array(Dashboard) }) },
+    // It stopped at 200 with no sign: page through it, `hasMore` says when to stop.
+    input: {
+      query: z.object({
+        limit: z.coerce
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .default(200)
+          .describe(
+            "Rows per page (1-200). The default is the maximum, what the list always returned."
+          ),
+        offset: z.coerce.number().int().min(0).default(0).describe("Rows to skip."),
+      }),
+    },
+    output: { schema: z.object({ dashboards: z.array(Dashboard), hasMore: z.boolean() }) },
     mcp: {
       exclude: "Dashboards are a layout for the panel; an agent uses reports_list and reports_run.",
     },
-    handle: async () => {
+    handle: async (input) => {
+      const { limit, offset } = input.query as { limit: number; offset: number };
       const rows = await ex()
         .select()
         .from(dashboards)
-        .orderBy(desc(dashboards.updatedAt))
-        .limit(200);
-      return { dashboards: rows.map(dashboardView) };
+        .orderBy(desc(dashboards.updatedAt), desc(dashboards.id))
+        .limit(limit + 1)
+        .offset(offset);
+      return { dashboards: rows.slice(0, limit).map(dashboardView), hasMore: rows.length > limit };
     },
   }),
   defineOperation({

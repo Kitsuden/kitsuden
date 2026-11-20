@@ -176,6 +176,7 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
     defineOperation({
       ...session,
       id: "list-providers",
+      unpaginated: "The fixed catalogue of providers this installation knows.",
       method: "GET",
       route: "/providers",
       tags: ["connections"],
@@ -195,8 +196,24 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
       summary: "Your connections",
       description:
         "Your connected accounts, and the organization's if you are an admin: provider, account, granted scopes, status (`active`, `expired`, `revoked`, `error`), expiry and last use. Never a token or a key. Nobody sees another person's connections, an admin included.",
-      output: { schema: z.object({ data: z.array(Connection) }) },
-      handle: async (_input, h) => {
+      // It stopped at 200 with no sign: page through it, `hasMore` says when to stop.
+      input: {
+        query: z.object({
+          limit: z.coerce
+            .number()
+            .int()
+            .min(1)
+            .max(200)
+            .default(200)
+            .describe(
+              "Rows per page (1-200). The default is the maximum, what the list always returned."
+            ),
+          offset: z.coerce.number().int().min(0).default(0).describe("Rows to skip."),
+        }),
+      },
+      output: { schema: z.object({ data: z.array(Connection), hasMore: z.boolean() }) },
+      handle: async (input, h) => {
+        const { limit, offset } = input.query as { limit: number; offset: number };
         const own = h.user?.id
           ? and(eq(connConnections.scope, "user"), eq(connConnections.ownerId, h.user.id))
           : undefined;
@@ -205,9 +222,14 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
           .select()
           .from(connConnections)
           .where(where)
-          .orderBy(desc(connConnections.createdAt))
-          .limit(200);
-        return { data: (rows as ConnectionRow[]).map(publicConnection) };
+          .orderBy(desc(connConnections.createdAt), desc(connConnections.id))
+          .limit(limit + 1)
+          .offset(offset);
+        const hasMore = rows.length > limit;
+        return {
+          data: (rows.slice(0, limit) as ConnectionRow[]).map(publicConnection),
+          hasMore,
+        };
       },
     }),
 

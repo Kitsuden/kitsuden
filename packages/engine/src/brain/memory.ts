@@ -764,7 +764,14 @@ function claimsOfVisibleNotes(actor: BrainActor): SQL | undefined {
 export async function listClaims(
   db: BrainDb,
   actor: BrainActor,
-  f: { noteId?: string; status?: "fresh" | "stale"; limit?: number } = {}
+  f: {
+    noteId?: string;
+    status?: "fresh" | "stale";
+    limit?: number;
+    offset?: number;
+    /** One claim past the page, so the caller can say whether there is more. */
+    withMore?: boolean;
+  } = {}
 ): Promise<MemoryClaim[]> {
   if (f.noteId) await getVisibleNote(db, actor, f.noteId);
   const conds: SQL[] = [];
@@ -777,7 +784,8 @@ export async function listClaims(
     .from(brainClaims)
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(asc(brainClaims.createdAt), asc(brainClaims.id))
-    .limit(Math.min(f.limit ?? 200, 1000));
+    .limit(Math.min(f.limit ?? 200, 1000) + (f.withMore ? 1 : 0))
+    .offset(Math.max(Math.trunc(f.offset ?? 0), 0));
   return (rows as ClaimRow[]).map(toClaim);
 }
 

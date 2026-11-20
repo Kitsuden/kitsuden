@@ -415,14 +415,24 @@ export const memoryOperations: AnyOperation[] = [
         noteId: z.guid().optional(),
         status: z.enum(["fresh", "stale"]).optional(),
         limit: z.coerce.number().int().min(1).max(1000).optional(),
+        // There was no way past the first page (200 by default).
+        offset: z.coerce.number().int().min(0).default(0),
       }),
     },
-    output: { schema: z.object({ claims: z.array(Assertion) }) },
+    output: { schema: z.object({ claims: z.array(Assertion), hasMore: z.boolean() }) },
     errors: ["KITSUDEN_E_NOT_FOUND"],
     mcp: { name: "brain_claims" },
-    handle: async (e, { user: user }) => ({
-      claims: await listClaims(ex(), actor(user), e.query as never),
-    }),
+    handle: async (e, { user: user }) => {
+      const q = e.query as {
+        noteId?: string;
+        status?: "fresh" | "stale";
+        limit?: number;
+        offset: number;
+      };
+      const limit = q.limit ?? 200;
+      const rows = await listClaims(ex(), actor(user), { ...q, limit, withMore: true });
+      return { claims: rows.slice(0, limit), hasMore: rows.length > limit };
+    },
   }),
   defineOperation({
     ...write,

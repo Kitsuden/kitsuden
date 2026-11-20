@@ -519,7 +519,8 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
       errors: ["KITSUDEN_E_NOT_FOUND"],
       handle: async (_input, { c }) => {
         const { id } = c.req.param();
-        const includeBlocks = c.req.query("include_blocks") !== "false";
+        const includeBlocks =
+          (c.req.query("includeBlocks") ?? c.req.query("include_blocks")) !== "false";
 
         const pageData = await cachedQuery(`page:${id}:${includeBlocks}`, 120, async () => {
           // Get page
@@ -1480,6 +1481,7 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
   ops.push(
     defineOperation({
       id: "list-templates",
+      unpaginated: "Page templates: a library curated by hand, filtered by category and type.",
       method: "GET",
       route: "/templates",
       summary: "List block templates",

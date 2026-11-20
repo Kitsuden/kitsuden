@@ -1,0 +1,178 @@
+# Kitsuden's rules for its OpenAPI contract (Spectral). docs/api-contract.md.
+#
+#   node scripts/api-contract/lint.mjs                       # the committed SDK snapshot
+#   node scripts/api-contract/lint.mjs --spec=<file or URL>  # e.g. a kon's /api/docs/<kon>/openapi.json
+#
+# `error` rules hold for the whole contract today and fail CI. `warn` rules are
+# known gaps (counted in the report, they do not fail): fix the gap, then raise
+# the rule to `error`.
+#
+# Every Kitsuden rule applies to operations declared with `defineOperation`
+# (they carry `x-kitsuden-operation`); hand-written routes found by discovery
+# only get `kitsuden-operation-declared`.
+
+extends:
+  - [spectral:oas, recommended]
+
+functionsDir: ./functions
+functions:
+  - kitsudenOperation
+
+aliases:
+  Operation:
+    - "$.paths[*][get,put,post,delete,patch]"
+
+rules:
+  # ── spectral:oas, adjusted to this contract ────────────────────────────────
+  # The contract carries no contact: the repository and docs say where to ask.
+  info-contact: off
+  # Every server is described by the API itself (`servers` from the request).
+  oas3-api-servers: off
+  # Tags come from the kon ids; their descriptions are the kons' own.
+  operation-tag-defined: off
+  # OpenAPI 3.1 tuples (`z.tuple`) are `prefixItems` + `items: false`, valid JSON Schema
+  # 2020-12; this rule reads `items: false` as a missing `items` (kon-dc, kon-broadcast).
+  array-items: off
+  # `operation-operationId-unique` and `oas3-schema` stay `error` (recommended).
+
+  # ── Declared with the SDK ──────────────────────────────────────────────────
+  kitsuden-operation-declared:
+    description: Every route is declared with defineOperation.
+    severity: warn
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: declared }
+
+  kitsuden-operation-extension:
+    description: x-kitsuden-operation names its kon, id, access, sensitivity and errors.
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: extension }
+
+  kitsuden-operation-id:
+    description: operationId is <kon>.<operation>; clients and MCP tools are named from it.
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: operation-id }
+
+  kitsuden-kon-tag:
+    description: The first tag is the kon id.
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: tag }
+
+  # ── Scopes ─────────────────────────────────────────────────────────────────
+  kitsuden-fine-scope:
+    description: Each operation has its fine scope kon:<kon>:<operation>.
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: scope }
+
+  # ── Errors ─────────────────────────────────────────────────────────────────
+  kitsuden-errors-documented:
+    description: Every declared code has a problem+json response that names it.
+    severity: error
+    # Unresolved: the check looks at the `$ref` to #/components/schemas/Problem.
+    resolved: false
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: errors-documented }
+
+  kitsuden-standard-errors:
+    description: 403, 429 and 500 everywhere, 401 on session operations.
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: standard-errors }
+
+  # ── Shape ──────────────────────────────────────────────────────────────────
+  kitsuden-idempotency-key:
+    description: Non-GET operations announce Idempotency-Key.
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: idempotency-key }
+
+  kitsuden-success-response:
+    description: At least one 2xx or 3xx response.
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: success }
+
+  kitsuden-get-no-body:
+    description: GET takes no body.
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: get-no-body }
+
+  kitsuden-documented:
+    description: Summary and description on every operation.
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: documented }
+
+  kitsuden-deprecation-sunset:
+    description: A deprecated operation or parameter says when it goes (x-sunset).
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: deprecation-sunset }
+
+  kitsuden-path-style:
+    description: Paths are lowercase kebab-case, no trailing slash; the last segment may be a file (widget.js). A deprecated operation keeps its old path until its sunset.
+    message: "{{error}}"
+    severity: error
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: path-style }
+
+  # ── Formerly known gaps, now closed ────────────────────────────────────────
+  kitsuden-list-pagination:
+    description: list-*/search-* operations take a page size or declare `unpaginated` with a reason.
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: pagination }
+
+  kitsuden-query-camel-case:
+    description: Query parameters are camelCase (a deprecated alias is exempt).
+    severity: error
+    message: "{{error}}"
+    given: "#Operation"
+    then:
+      function: kitsudenOperation
+      functionOptions: { check: query-camel-case }

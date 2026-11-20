@@ -146,6 +146,7 @@ export const oauthOperations: AnyOperation[] = [
   defineOperation({
     ...ofTheTeam,
     id: "list-connections",
+    unpaginated: "One grant per agent and OAuth client; revoked ones only with includeRevoked.",
     method: "GET",
     route: "/grants",
     summary: "Connected MCP clients",

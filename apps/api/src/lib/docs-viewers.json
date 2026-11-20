@@ -1,0 +1,48 @@
+{
+  "$comment": "Pinned API documentation viewers, served by the API itself from apps/api/docs-viewers (scripts/docs-viewers.mjs downloads and verifies them). Bump: change version, tarball and integrity (npm view <pkg>@<version> dist.integrity dist.tarball), then run `node scripts/docs-viewers.mjs --update` to recompute every file's sri. docs/api-contract.md.",
+  "viewers": {
+    "scalar": {
+      "package": "@scalar/api-reference",
+      "version": "1.78.1",
+      "license": "MIT",
+      "tarball": "https://registry.npmjs.org/@scalar/api-reference/-/api-reference-1.78.1.tgz",
+      "integrity": "sha512-d2M/gvqTkvrm7YAxcCxqM1xUvB58Ec1yhfw3uPeioHeaK+6j81MU9Z3nmFkIU6O5kMZMprG3dR9VdmxOG8potA==",
+      "files": {
+        "standalone.js": {
+          "from": "package/dist/browser/standalone.js",
+          "sri": "sha384-HVpqul+lojb2wwVK554SYr5rD2XqgJZqkYKGl4MyZarBSg+rHR9F0x1LVgzgj7JZ"
+        }
+      }
+    },
+    "swagger-ui": {
+      "package": "swagger-ui-dist",
+      "version": "5.35.0",
+      "license": "Apache-2.0",
+      "tarball": "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.35.0.tgz",
+      "integrity": "sha512-U06rpMtW9V3XPGOBeamTUSr0Z09jMX4IJuANpE/EZbAhw0G8CgwrzU4YmXkn/h0wCDNsXdGarTNNHC3sU8yVUQ==",
+      "files": {
+        "swagger-ui-bundle.js": {
+          "from": "package/swagger-ui-bundle.js",
+          "sri": "sha384-gjRm0bEPMeTmMh5jT2cHccIwCUZSTd8YC+j0d0sXw0MdGEfScduGpSyF3ZSSLkX9"
+        },
+        "swagger-ui.css": {
+          "from": "package/swagger-ui.css",
+          "sri": "sha384-WlYgdmXYOOBWL5apwjDEZwN+U3HmXSSu5R6V5aGxEcf7z+KuRNwBhoxKVN1i3D5I"
+        }
+      }
+    },
+    "rapidoc": {
+      "package": "rapidoc",
+      "version": "12.0.0",
+      "license": "MIT",
+      "tarball": "https://registry.npmjs.org/rapidoc/-/rapidoc-12.0.0.tgz",
+      "integrity": "sha512-RpPUgmT2tzzoJD79LS+Q7n/iSIyewZrq7uIQKXECQG4uDqul2QJTlwj7ohqkL0Pioa88rq5T08Njnn+6p92puw==",
+      "files": {
+        "rapidoc-min.js": {
+          "from": "package/dist/rapidoc-min.js",
+          "sri": "sha384-QgwrhsBdOySDD7ldlM3yp/ISh4ADYI10LMeOtgMoRt1t3zyOgjwOaBLTsSiCRVBG"
+        }
+      }
+    }
+  }
+}

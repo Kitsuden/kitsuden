@@ -209,6 +209,54 @@ describe("Dataset HTTP CRUD", () => {
       expect(body.docs[0].title).toBe("Test Entry A");
     });
 
+    // There was no way past the first `limit` entries (500 by default): `offset` and
+    // `hasMore` (api:lint, kitsuden-list-pagination).
+    it("pages entries with limit, offset and hasMore", async () => {
+      if (!dbAvailable) return;
+      for (const title of ["Test Entry B", "Test Entry C"]) {
+        const created = await app.request(
+          req(
+            `/api/datasets/${datasetId}/entries`,
+            {
+              method: "POST",
+              body: JSON.stringify({ title, data: { title }, status: "published" }),
+            },
+            cookieA
+          )
+        );
+        expect(created.status).toBe(201);
+      }
+      const get = async (q: string) =>
+        (await (
+          await app.request(req(`/api/datasets/${datasetId}/entries${q}`, {}, cookieA))
+        ).json()) as any;
+      const all = await get("");
+      expect(all.docs.length).toBe(3);
+      expect(all.hasMore).toBe(false);
+      const first = await get("?limit=1");
+      const second = await get("?limit=1&offset=1");
+      const last = await get("?limit=2&offset=2");
+      expect(first.docs.length).toBe(1);
+      expect(first.hasMore).toBe(true);
+      expect(second.docs[0].id).toBe(all.docs[1].id);
+      expect(last.docs.map((d: any) => d.id)).toEqual([all.docs[2].id]);
+      expect(last.hasMore).toBe(false);
+    });
+
+    it("pages the datasets a reader can see, after filtering by permission", async () => {
+      if (!dbAvailable) return;
+      const get = async (q: string) =>
+        (await (await app.request(req(`/api/datasets${q}`, {}, cookieA))).json()) as any;
+      const all = await get("?limit=200");
+      expect(all.hasMore).toBe(false);
+      if (all.docs.length < 2) return;
+      const first = await get("?limit=1");
+      const second = await get("?limit=1&offset=1");
+      expect(first.docs).toHaveLength(1);
+      expect(first.hasMore).toBe(true);
+      expect(second.docs[0].id).toBe(all.docs[1].id);
+    });
+
     it("should reject entry insert without auth", async () => {
       if (!dbAvailable) return;
 

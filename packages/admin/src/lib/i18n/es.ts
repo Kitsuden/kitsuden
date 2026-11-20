@@ -4444,6 +4444,25 @@ const es = {
     bulkDone: "{n} aprobadas y ejecutadas",
     bulkFailed: "{n} no se pudieron aprobar o fallaron",
   },
+  apiConsole: {
+    open: "API",
+    openLabel: "Consola de la API de {name}",
+    title: "Consola de la API: {name}",
+    description: "Lee y prueba las operaciones de este kon.",
+    loading: "Cargando la consola de la API...",
+    loadFailed: "La consola de la API no se pudo cargar",
+    scriptFailed:
+      "El script de la consola no se cargó. La API lo sirve desde /api/docs/assets: ejecuta node scripts/docs-viewers.mjs donde corre la API.",
+    notDocumented:
+      "Este kon no tiene aquí documento de la API, o la documentación de la API está desactivada en este servidor (ENABLE_SWAGGER).",
+    noOperations: "Este kon no documenta operaciones de la API",
+    sessionNotice:
+      "Las peticiones usan tu sesión del panel: leen y cambian datos reales, con tus permisos.",
+    operation: "Operación",
+    allInTag: "Todas las operaciones de {tag}",
+    untagged: "Sin etiqueta",
+    note: "RapiDoc {version}, servido por esta API. El HTML de las descripciones se muestra como texto.",
+  },
 };
 
 export default es;

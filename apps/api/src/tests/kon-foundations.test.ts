@@ -809,6 +809,13 @@ describe("sealed secrets", () => {
     expect(res.json.entries.length).toBeGreaterThanOrEqual(3);
     expect(res.json.entries.every((e: any) => e.konId === KON)).toBe(true);
     expect(JSON.stringify(res.json)).not.toContain(TOKEN);
+    expect(res.json.hasMore).toBe(false);
+    // It had no way past the first page: `offset` and `hasMore`.
+    const first = await call("GET", `/api/admin/secret-access?kon=${KON}&limit=1`);
+    const second = await call("GET", `/api/admin/secret-access?kon=${KON}&limit=1&offset=1`);
+    expect(first.json.entries).toHaveLength(1);
+    expect(first.json.hasMore).toBe(true);
+    expect(second.json.entries[0].id).toBe(res.json.entries[1].id);
     expect((await call("GET", "/api/admin/secret-access", undefined, member)).status).toBe(403);
   });
 

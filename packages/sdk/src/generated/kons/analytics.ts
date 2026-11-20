@@ -68,9 +68,9 @@ export type GetSubjectSeriesResponse = {
 
 /** Runtime description of every operation of kon-analytics (path, method, pagination…). */
 export const operations = {
-  "addView": {"kon":"kon-analytics","id":"add-view","operationId":"analytics.add-view","method":"POST","path":"/analytics/hit","pathParams":[],"queryParams":[],"body":"json","responses":{"204":"empty"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:analytics:add-view","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "getMostViewed": {"kon":"kon-analytics","id":"get-most-viewed","operationId":"analytics.get-most-viewed","method":"GET","path":"/analytics/top","pathParams":[],"queryParams":["type","days","limit","ids"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:analytics:get-most-viewed","mcpTool":"analytics__get-most-viewed","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "getSubjectSeries": {"kon":"kon-analytics","id":"get-subject-series","operationId":"analytics.get-subject-series","method":"GET","path":"/analytics/subject/{type}/{id}","pathParams":["type","id"],"queryParams":["days"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:analytics:get-subject-series","mcpTool":"analytics__get-subject-series","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "addView": {"kon":"kon-analytics","id":"add-view","operationId":"analytics.add-view","method":"POST","path":"/analytics/hit","pathParams":[],"queryParams":[],"body":"json","responses":{"204":"empty"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:analytics:add-view","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "getMostViewed": {"kon":"kon-analytics","id":"get-most-viewed","operationId":"analytics.get-most-viewed","method":"GET","path":"/analytics/top","pathParams":[],"queryParams":["type","days","limit","ids"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:analytics:get-most-viewed","mcpTool":"analytics__get-most-viewed","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "getSubjectSeries": {"kon":"kon-analytics","id":"get-subject-series","operationId":"analytics.get-subject-series","method":"GET","path":"/analytics/subject/{type}/{id}","pathParams":["type","id"],"queryParams":["days"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:analytics:get-subject-series","mcpTool":"analytics__get-subject-series","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
 } as const satisfies Record<string, OperationInfo>;
 
 /**
@@ -86,7 +86,7 @@ export interface AnalyticsApi {
    *
    * REST: `POST /api/analytics/hit` · scope `kon:analytics:add-view`
    * not idempotent (an Idempotency-Key is sent automatically)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly addView: Operation<AddViewParams, AddViewResponse>;
   /**
@@ -96,7 +96,7 @@ export interface AnalyticsApi {
    *
    * REST: `GET /api/analytics/top` · scope `kon:analytics:get-most-viewed`
    * idempotent (safe to retry) · MCP tool `analytics__get-most-viewed`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly getMostViewed: Operation<GetMostViewedParams, GetMostViewedResponse>;
   /**
@@ -106,7 +106,7 @@ export interface AnalyticsApi {
    *
    * REST: `GET /api/analytics/subject/{type}/{id}` · scope `kon:analytics:get-subject-series`
    * idempotent (safe to retry) · MCP tool `analytics__get-subject-series`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly getSubjectSeries: Operation<GetSubjectSeriesParams, GetSubjectSeriesResponse>;
 }

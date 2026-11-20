@@ -43,6 +43,7 @@ import {
   commonComponents,
   jsonSchema,
   openApiOperation,
+  openApiPath,
 } from "./operations-openapi";
 import { checkReadAccess, type PolicyJson, type RLSUser } from "./rls-builder";
 
@@ -872,6 +873,15 @@ export async function generateOpenAPISpec(
 }
 
 /**
+ * Does `GET /api/docs/<kon>/openapi.json` have a document for this kon? (The
+ * docs viewer lists only these, so none of its entries answers 404.)
+ */
+export function konHasDocs(kon: KonDefinition): boolean {
+  // Before it was only a manual declaration, which no kon has.
+  return !!kon.openApi || konRoutes().some((r) => r.konId === kon.id);
+}
+
+/**
  * Generate OpenAPI spec for a single kon
  */
 export async function generateKonSpec(
@@ -879,9 +889,7 @@ export async function generateKonSpec(
   /** Who asks: see `OpenApiAggregatorOptions.user`. */
   user: RLSUser | null = null
 ): Promise<OpenAPIObject | null> {
-  // Before it returned `null` for every kon without a manual declaration, which was all of them.
-  const hasRoutes = konRoutes().some((r) => r.konId === kon.id);
-  if (!kon.openApi && !hasRoutes) {
+  if (!konHasDocs(kon)) {
     return null;
   }
 
@@ -916,43 +924,68 @@ export function getOperationId(
   );
 }
 
-/**
- * List all available operations across kons
- */
-export function listOperations(kons: KonDefinition[]): Array<{
+/** One row of `GET /api/docs/operations`. */
+export interface ListedOperation {
   konId: string;
   operationId: string;
   method: string;
   path: string;
   summary: string;
   tags: string[];
-}> {
-  const operations: Array<{
-    konId: string;
-    operationId: string;
-    method: string;
-    path: string;
-    summary: string;
-    tags: string[];
-  }> = [];
+  /** Declared with `defineOperation` (typed clients, MCP tool) rather than by hand. */
+  sdk: boolean;
+  deprecated: boolean;
+}
+
+/**
+ * List all available operations across kons: the hand-declared `openApi.paths` and
+ * the routes each mounted kon really serves. Before it read only `openApi.paths`,
+ * which no kon declares, so the list was empty for every SDK operation.
+ */
+export function listOperations(kons: KonDefinition[]): ListedOperation[] {
+  const operations: ListedOperation[] = [];
+  const seen = new Set<string>();
+  const ids = new Set(kons.map((k) => k.id));
 
   for (const kon of kons) {
     if (!kon.openApi) continue;
-
     const konPrefix = kon.id.replace(/^kon-/, "");
-
     for (const path of kon.openApi.paths) {
+      const full = getFullPath(kon, path.path);
+      seen.add(`${path.method.toUpperCase()} ${full}`);
       operations.push({
         konId: kon.id,
         operationId:
           path.operationId ||
           `${konPrefix}_${path.method}_${path.path.replace(/[^a-zA-Z0-9]/g, "_")}`,
         method: path.method.toUpperCase(),
-        path: getFullPath(kon, path.path),
+        path: full,
         summary: path.summary,
         tags: path.tags || [kon.name],
+        sdk: false,
+        deprecated: false,
       });
     }
+  }
+
+  for (const r of konRoutes()) {
+    if (!ids.has(r.konId)) continue;
+    const full = openApiPath(r.path);
+    if (seen.has(`${r.method} ${full}`)) continue;
+    seen.add(`${r.method} ${full}`);
+    const declaration = r.operation?.declaration as { deprecated?: unknown } | undefined;
+    operations.push({
+      konId: r.konId,
+      operationId:
+        r.operationId ??
+        `${r.konId.replace(/^kon-/, "")}_${r.method.toLowerCase()}_${r.relativePath.replace(/[^a-zA-Z0-9]/g, "_")}`,
+      method: r.method,
+      path: full,
+      summary: r.summary ?? "",
+      tags: r.tags?.length ? [r.konId, ...r.tags] : [r.konId],
+      sdk: !!r.operation,
+      deprecated: !!declaration?.deprecated,
+    });
   }
 
   return operations;

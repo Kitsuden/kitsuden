@@ -34,12 +34,16 @@ export const FieldParam = z.object({
 });
 
 export const LimitQuery = z
-  .object({ limit: z.string().optional().describe("1-200, default 50") })
+  .object({
+    limit: z.string().optional().describe("1-200, default 50"),
+    offset: z.string().optional().describe("Datasets to skip, default 0"),
+  })
   .passthrough();
 
 export const InputsQuery = z
   .object({
     limit: z.string().optional().describe("1-1000, default 500"),
+    offset: z.string().optional().describe("Entries to skip, default 0"),
     status: z.string().optional(),
     includeCalculated: z.enum(["true", "false"]).optional(),
     calculatedFields: z.string().optional().describe("Comma-separated calculated field names"),
@@ -184,7 +188,12 @@ export const Dataset = z
   })
   .passthrough();
 
-export const DatasetsList = z.object({ docs: z.array(Dataset), totalDocs: z.number().int() });
+export const DatasetsList = z.object({
+  docs: z.array(Dataset),
+  totalDocs: z.number().int(),
+  /** More datasets past this page (`offset` + `limit`). */
+  hasMore: z.boolean(),
+});
 
 export const Input = z
   .object({
@@ -206,6 +215,8 @@ export const EntriesList = z.object({
     Input.extend({ _calculated: z.record(z.string(), z.unknown()).optional() }).passthrough()
   ),
   totalDocs: z.number().int(),
+  /** More entries past this page (`offset` + `limit`). */
+  hasMore: z.boolean(),
   calculatedFields: z.array(z.record(z.string(), z.unknown())).optional(),
   dataset: z.object({ id: z.guid(), name: z.string(), slug: z.string() }),
 });

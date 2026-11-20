@@ -309,6 +309,15 @@ describe("brain over MCP: tools, scopes and owners", () => {
     expect(stale.find((s) => s.claimId === claim.id)!.reason).toContain("source changed");
     const listing = await call(a, "brain_claims", { noteId: note.id });
     expect(listing.structuredContent.data.claims[0].status).toBe("stale");
+    expect(listing.structuredContent.data.hasMore).toBe(false);
+    // It had no way past the first page (200 by default): `offset` and `hasMore`.
+    const everyClaim = (await call(a, "brain_claims", {})).structuredContent.data.claims;
+    expect(everyClaim.length).toBeGreaterThanOrEqual(2);
+    const first = (await call(a, "brain_claims", { limit: 1 })).structuredContent.data;
+    const second = (await call(a, "brain_claims", { limit: 1, offset: 1 })).structuredContent.data;
+    expect(first.claims).toHaveLength(1);
+    expect(first.hasMore).toBe(true);
+    expect(second.claims[0].id).toBe(everyClaim[1].id);
 
     const withoutRebind = await call(a, "brain_claim_verify", { id: claim.id, body: {} });
     expect(withoutRebind.structuredContent.data.check.status).toBe("stale");

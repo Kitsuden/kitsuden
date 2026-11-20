@@ -300,6 +300,7 @@ class ListCalculatedFieldsResponse(TypedDict):
 class ListDatasetsResponse(TypedDict):
     docs: List[CreateDatasetResponse]
     totalDocs: int
+    hasMore: bool
 
 
 class _ListEntriesResponseDocsItemRequired(TypedDict):
@@ -328,6 +329,7 @@ class ListEntriesResponseDataset(TypedDict):
 class _ListEntriesResponseRequired(TypedDict):
     docs: List[ListEntriesResponseDocsItem]
     totalDocs: int
+    hasMore: bool
     dataset: ListEntriesResponseDataset
 
 
@@ -470,7 +472,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:compare-entries",
         mcp_tool="datasets__compare-entries",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "compare-snapshots": OperationInfo(
         kon="kon-datasets",
@@ -487,7 +489,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:compare-snapshots",
         mcp_tool="datasets__compare-snapshots",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_IDEMPOTENCY_KEY_REUSED", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "create-calculated-field": OperationInfo(
         kon="kon-datasets",
@@ -623,7 +625,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:entry-history",
         mcp_tool="datasets__entry-history",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
         pagination=PaginationInfo(style="offset", items="history", limit="limit"),
     ),
     "export-datasets": OperationInfo(
@@ -658,7 +660,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:get-calculated-field",
         mcp_tool="datasets__get-calculated-field",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "get-dataset": OperationInfo(
         kon="kon-datasets",
@@ -675,7 +677,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:get-dataset",
         mcp_tool="datasets__get-dataset",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "get-dataset-by-slug": OperationInfo(
         kon="kon-datasets",
@@ -692,7 +694,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:get-dataset-by-slug",
         mcp_tool="datasets__get-dataset-by-slug",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "get-entry": OperationInfo(
         kon="kon-datasets",
@@ -709,7 +711,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:get-entry",
         mcp_tool="datasets__get-entry",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "import-package": OperationInfo(
         kon="kon-datasets",
@@ -794,7 +796,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:list-calculated-fields",
         mcp_tool="datasets__list-calculated-fields",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "list-datasets": OperationInfo(
         kon="kon-datasets",
@@ -803,7 +805,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         method="GET",
         path="/datasets",
         path_params=(),
-        query_params=("limit",),
+        query_params=("limit", "offset"),
         body=None,
         responses={200: "json"},
         idempotent=True,
@@ -811,7 +813,8 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:list-datasets",
         mcp_tool="datasets__list-datasets",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        pagination=PaginationInfo(style="offset", items="docs", limit="limit"),
     ),
     "list-entries": OperationInfo(
         kon="kon-datasets",
@@ -820,7 +823,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         method="GET",
         path="/datasets/{id}/entries",
         path_params=("id",),
-        query_params=("limit", "status", "includeCalculated", "calculatedFields", "includeThumbnailUrl"),
+        query_params=("limit", "offset", "status", "includeCalculated", "calculatedFields", "includeThumbnailUrl"),
         body=None,
         responses={200: "json"},
         idempotent=True,
@@ -828,7 +831,8 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:list-entries",
         mcp_tool="datasets__list-entries",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        pagination=PaginationInfo(style="offset", items="docs", limit="limit"),
     ),
     "read-snapshot": OperationInfo(
         kon="kon-datasets",
@@ -845,7 +849,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:read-snapshot",
         mcp_tool="datasets__read-snapshot",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "restore-snapshot": OperationInfo(
         kon="kon-datasets",
@@ -879,7 +883,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:search-entries",
         mcp_tool="datasets__search-entries",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
         pagination=PaginationInfo(style="offset", items="data", limit="limit"),
     ),
     "snapshot-history": OperationInfo(
@@ -897,7 +901,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:datasets:snapshot-history",
         mcp_tool="datasets__snapshot-history",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "suggest-indexes": OperationInfo(
         kon="kon-datasets",
@@ -1010,7 +1014,7 @@ class DatasetsApi(KonApi):
 
         REST: `POST /api/datasets/{id}/compare` · scope `kon:datasets:compare-entries`
         idempotent (safe to retry) · MCP tool `datasets__compare-entries`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid; anything else is a 404)
@@ -1024,7 +1028,7 @@ class DatasetsApi(KonApi):
 
         REST: `POST /api/datasets/{id}/entries/{entryId}/compare` · scope `kon:datasets:compare-snapshots`
         idempotent (safe to retry) · MCP tool `datasets__compare-snapshots`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1137,7 +1141,7 @@ class DatasetsApi(KonApi):
 
         REST: `GET /api/datasets/{id}/entries/{entryId}/history` · scope `kon:datasets:entry-history`
         idempotent (safe to retry) · MCP tool `datasets__entry-history`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1172,7 +1176,7 @@ class DatasetsApi(KonApi):
 
         REST: `GET /api/datasets/{id}/calculated-fields/{fieldId}` · scope `kon:datasets:get-calculated-field`
         idempotent (safe to retry) · MCP tool `datasets__get-calculated-field`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1187,7 +1191,7 @@ class DatasetsApi(KonApi):
 
         REST: `GET /api/datasets/{id}` · scope `kon:datasets:get-dataset`
         idempotent (safe to retry) · MCP tool `datasets__get-dataset`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid; anything else is a 404)
@@ -1201,7 +1205,7 @@ class DatasetsApi(KonApi):
 
         REST: `GET /api/datasets/slug/{slug}` · scope `kon:datasets:get-dataset-by-slug`
         idempotent (safe to retry) · MCP tool `datasets__get-dataset-by-slug`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["get-dataset-by-slug"], {"slug": slug}, None, request_options)
 
@@ -1212,7 +1216,7 @@ class DatasetsApi(KonApi):
 
         REST: `GET /api/datasets/{id}/entries/{entryId}` · scope `kon:datasets:get-entry`
         idempotent (safe to retry) · MCP tool `datasets__get-entry`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1271,42 +1275,58 @@ class DatasetsApi(KonApi):
 
         REST: `GET /api/datasets/{id}/calculated-fields` · scope `kon:datasets:list-calculated-fields`
         idempotent (safe to retry) · MCP tool `datasets__list-calculated-fields`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid; anything else is a 404)
         """
         return self._call(OPERATIONS["list-calculated-fields"], {"id": id}, None, request_options)
 
-    def list_datasets(self, *, limit: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListDatasetsResult]:
+    def list_datasets(self, *, limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListDatasetsResult]:
         """List datasets
 
         The datasets this caller can read (each dataset's policyJson.readAccess decides; staff see all), ordered by name, with their field schema.
 
         REST: `GET /api/datasets` · scope `kon:datasets:list-datasets`
         idempotent (safe to retry) · MCP tool `datasets__list-datasets`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             limit: 1-200, default 50
+            offset: Datasets to skip, default 0
         """
-        return self._call(OPERATIONS["list-datasets"], {"limit": limit}, None, request_options)
+        return self._call(OPERATIONS["list-datasets"], {"limit": limit, "offset": offset}, None, request_options)
 
-    def list_entries(self, *, id: Union[str, int], limit: Optional[Union[str, int]] = None, status: Optional[Union[str, int]] = None, include_calculated: Optional[Literal["true", "false"]] = None, calculated_fields: Optional[Union[str, int]] = None, include_thumbnail_url: Optional[Literal["true", "false"]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListEntriesResult]:
+    def iter_list_datasets(self, *, limit: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Iterator[CreateDatasetResponse]:
+        """Every item of `list_datasets`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-datasets"], {"limit": limit}, request_options)
+
+    def list_entries(self, *, id: Union[str, int], limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, status: Optional[Union[str, int]] = None, include_calculated: Optional[Literal["true", "false"]] = None, calculated_fields: Optional[Union[str, int]] = None, include_thumbnail_url: Optional[Literal["true", "false"]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListEntriesResult]:
         """List the entries of a dataset
 
         Entries in sortOrder (up to 1000), filtered by the dataset's row rules for this caller. Optionally with calculated fields evaluated and thumbnail URLs.
 
         REST: `GET /api/datasets/{id}/entries` · scope `kon:datasets:list-entries`
         idempotent (safe to retry) · MCP tool `datasets__list-entries`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid; anything else is a 404)
             limit: 1-1000, default 500
+            offset: Entries to skip, default 0
             calculated_fields: Comma-separated calculated field names
         """
-        return self._call(OPERATIONS["list-entries"], {"id": id, "limit": limit, "status": status, "includeCalculated": include_calculated, "calculatedFields": calculated_fields, "includeThumbnailUrl": include_thumbnail_url}, None, request_options)
+        return self._call(OPERATIONS["list-entries"], {"id": id, "limit": limit, "offset": offset, "status": status, "includeCalculated": include_calculated, "calculatedFields": calculated_fields, "includeThumbnailUrl": include_thumbnail_url}, None, request_options)
+
+    def iter_list_entries(self, *, id: Union[str, int], limit: Optional[Union[str, int]] = None, status: Optional[Union[str, int]] = None, include_calculated: Optional[Literal["true", "false"]] = None, calculated_fields: Optional[Union[str, int]] = None, include_thumbnail_url: Optional[Literal["true", "false"]] = None, request_options: Optional[RequestOptions] = None) -> Iterator[ListEntriesResponseDocsItem]:
+        """Every item of `list_entries`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-entries"], {"id": id, "limit": limit, "status": status, "includeCalculated": include_calculated, "calculatedFields": calculated_fields, "includeThumbnailUrl": include_thumbnail_url}, request_options)
 
     def read_snapshot(self, *, id: Union[str, int], entry_id: Union[str, int], request_options: Optional[RequestOptions] = None) -> Outcome[ReadSnapshotResult]:
         """Current snapshot of an entry
@@ -1315,7 +1335,7 @@ class DatasetsApi(KonApi):
 
         REST: `GET /api/datasets/{id}/entries/{entryId}/snapshot` · scope `kon:datasets:read-snapshot`
         idempotent (safe to retry) · MCP tool `datasets__read-snapshot`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1345,7 +1365,7 @@ class DatasetsApi(KonApi):
 
         REST: `GET /api/datasets/{id}/search` · scope `kon:datasets:search-entries`
         idempotent (safe to retry) · MCP tool `datasets__search-entries`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid; anything else is a 404)
@@ -1369,7 +1389,7 @@ class DatasetsApi(KonApi):
 
         REST: `GET /api/datasets/{id}/entries/{entryId}/snapshots` · scope `kon:datasets:snapshot-history`
         idempotent (safe to retry) · MCP tool `datasets__snapshot-history`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1476,7 +1496,7 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `POST /api/datasets/{id}/compare` · scope `kon:datasets:compare-entries`
         idempotent (safe to retry) · MCP tool `datasets__compare-entries`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid; anything else is a 404)
@@ -1490,7 +1510,7 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `POST /api/datasets/{id}/entries/{entryId}/compare` · scope `kon:datasets:compare-snapshots`
         idempotent (safe to retry) · MCP tool `datasets__compare-snapshots`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1603,7 +1623,7 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `GET /api/datasets/{id}/entries/{entryId}/history` · scope `kon:datasets:entry-history`
         idempotent (safe to retry) · MCP tool `datasets__entry-history`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1638,7 +1658,7 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `GET /api/datasets/{id}/calculated-fields/{fieldId}` · scope `kon:datasets:get-calculated-field`
         idempotent (safe to retry) · MCP tool `datasets__get-calculated-field`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1653,7 +1673,7 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `GET /api/datasets/{id}` · scope `kon:datasets:get-dataset`
         idempotent (safe to retry) · MCP tool `datasets__get-dataset`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid; anything else is a 404)
@@ -1667,7 +1687,7 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `GET /api/datasets/slug/{slug}` · scope `kon:datasets:get-dataset-by-slug`
         idempotent (safe to retry) · MCP tool `datasets__get-dataset-by-slug`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["get-dataset-by-slug"], {"slug": slug}, None, request_options)
 
@@ -1678,7 +1698,7 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `GET /api/datasets/{id}/entries/{entryId}` · scope `kon:datasets:get-entry`
         idempotent (safe to retry) · MCP tool `datasets__get-entry`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1737,42 +1757,58 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `GET /api/datasets/{id}/calculated-fields` · scope `kon:datasets:list-calculated-fields`
         idempotent (safe to retry) · MCP tool `datasets__list-calculated-fields`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid; anything else is a 404)
         """
         return await self._call(OPERATIONS["list-calculated-fields"], {"id": id}, None, request_options)
 
-    async def list_datasets(self, *, limit: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListDatasetsResult]:
+    async def list_datasets(self, *, limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListDatasetsResult]:
         """List datasets
 
         The datasets this caller can read (each dataset's policyJson.readAccess decides; staff see all), ordered by name, with their field schema.
 
         REST: `GET /api/datasets` · scope `kon:datasets:list-datasets`
         idempotent (safe to retry) · MCP tool `datasets__list-datasets`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             limit: 1-200, default 50
+            offset: Datasets to skip, default 0
         """
-        return await self._call(OPERATIONS["list-datasets"], {"limit": limit}, None, request_options)
+        return await self._call(OPERATIONS["list-datasets"], {"limit": limit, "offset": offset}, None, request_options)
 
-    async def list_entries(self, *, id: Union[str, int], limit: Optional[Union[str, int]] = None, status: Optional[Union[str, int]] = None, include_calculated: Optional[Literal["true", "false"]] = None, calculated_fields: Optional[Union[str, int]] = None, include_thumbnail_url: Optional[Literal["true", "false"]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListEntriesResult]:
+    def iter_list_datasets(self, *, limit: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[CreateDatasetResponse]:
+        """Every item of `list_datasets`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-datasets"], {"limit": limit}, request_options)
+
+    async def list_entries(self, *, id: Union[str, int], limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, status: Optional[Union[str, int]] = None, include_calculated: Optional[Literal["true", "false"]] = None, calculated_fields: Optional[Union[str, int]] = None, include_thumbnail_url: Optional[Literal["true", "false"]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListEntriesResult]:
         """List the entries of a dataset
 
         Entries in sortOrder (up to 1000), filtered by the dataset's row rules for this caller. Optionally with calculated fields evaluated and thumbnail URLs.
 
         REST: `GET /api/datasets/{id}/entries` · scope `kon:datasets:list-entries`
         idempotent (safe to retry) · MCP tool `datasets__list-entries`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid; anything else is a 404)
             limit: 1-1000, default 500
+            offset: Entries to skip, default 0
             calculated_fields: Comma-separated calculated field names
         """
-        return await self._call(OPERATIONS["list-entries"], {"id": id, "limit": limit, "status": status, "includeCalculated": include_calculated, "calculatedFields": calculated_fields, "includeThumbnailUrl": include_thumbnail_url}, None, request_options)
+        return await self._call(OPERATIONS["list-entries"], {"id": id, "limit": limit, "offset": offset, "status": status, "includeCalculated": include_calculated, "calculatedFields": calculated_fields, "includeThumbnailUrl": include_thumbnail_url}, None, request_options)
+
+    def iter_list_entries(self, *, id: Union[str, int], limit: Optional[Union[str, int]] = None, status: Optional[Union[str, int]] = None, include_calculated: Optional[Literal["true", "false"]] = None, calculated_fields: Optional[Union[str, int]] = None, include_thumbnail_url: Optional[Literal["true", "false"]] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[ListEntriesResponseDocsItem]:
+        """Every item of `list_entries`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-entries"], {"id": id, "limit": limit, "status": status, "includeCalculated": include_calculated, "calculatedFields": calculated_fields, "includeThumbnailUrl": include_thumbnail_url}, request_options)
 
     async def read_snapshot(self, *, id: Union[str, int], entry_id: Union[str, int], request_options: Optional[RequestOptions] = None) -> Outcome[ReadSnapshotResult]:
         """Current snapshot of an entry
@@ -1781,7 +1817,7 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `GET /api/datasets/{id}/entries/{entryId}/snapshot` · scope `kon:datasets:read-snapshot`
         idempotent (safe to retry) · MCP tool `datasets__read-snapshot`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)
@@ -1811,7 +1847,7 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `GET /api/datasets/{id}/search` · scope `kon:datasets:search-entries`
         idempotent (safe to retry) · MCP tool `datasets__search-entries`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid; anything else is a 404)
@@ -1835,7 +1871,7 @@ class AsyncDatasetsApi(AsyncKonApi):
 
         REST: `GET /api/datasets/{id}/entries/{entryId}/snapshots` · scope `kon:datasets:snapshot-history`
         idempotent (safe to retry) · MCP tool `datasets__snapshot-history`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Dataset id (uuid)

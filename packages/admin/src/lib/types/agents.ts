@@ -289,4 +289,6 @@ export interface AgentSponsor {
     role: string | null;
   } | null;
   candidates: { id: string; name: string; email: string; role: string }[];
+  /** More than the 500 shown exist (the current signer is always among those shown). */
+  candidatesTruncated?: boolean;
 }

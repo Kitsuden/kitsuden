@@ -7,17 +7,33 @@
  * - /api/docs/openapi.json - Full OpenAPI spec from all kons
  * - /api/docs/:kon/openapi.json - Spec for specific kon
  * - /api/docs/ - Swagger UI
- * - /api/docs/modern - Scalar UI
+ * - /api/docs/modern - Scalar UI (the whole API, and each kon as its own document)
+ * - /api/docs/assets/<viewer>@<version>/<file> - the viewers' code, served from here
  * - /api/docs/operations - List all available operations
  * - /api/docs/sdk - SDK download links
  */
 
-import { swaggerUI } from "@hono/swagger-ui";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 
+import {
+  missingViewersPage,
+  newNonce,
+  scalarPage,
+  swaggerPage,
+  viewerAsset,
+  viewerCsp,
+  viewersInstalled,
+  type DocSource,
+} from "../lib/docs-viewers";
 import { logger } from "../lib/logger";
 import { getLoadedKons } from "../lib/module-loader";
-import { generateOpenAPISpec, generateKonSpec, listOperations } from "../lib/openapi-aggregator";
+import {
+  generateOpenAPISpec,
+  generateKonSpec,
+  konHasDocs,
+  listOperations,
+} from "../lib/openapi-aggregator";
+import { operationFilter } from "../lib/operation-filter";
 import type { RLSUser } from "../lib/rls-builder";
 import type { AppVariables } from "../types/hono";
 
@@ -28,31 +44,33 @@ const userOf = (c: { get: unknown }) =>
   ((c.get as (k: string) => unknown).call(c, "user") ?? null) as RLSUser | null;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCALAR UI (Modern)
+// VIEWERS (lib/docs-viewers.ts: pinned files, SRI, CSP with a nonce)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const scalarHtml = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Kitsuden API Reference</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <style>
-      body { margin: 0; padding: 0; }
-    </style>
-  </head>
-  <body>
-    <script
-      id="api-reference"
-      type="application/json"
-      data-url="/api/docs/openapi.json"
-    ></script>
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@latest"></script>
-  </body>
-</html>
-`;
+/** A viewer page: its own CSP, never cached (the nonce changes every time). */
+async function viewerHtml(c: Context, render: (nonce: string) => string | Promise<string>) {
+  c.header("Cache-Control", "no-store");
+  if (!viewersInstalled()) return c.html(missingViewersPage(), 503);
+  const nonce = newNonce();
+  c.header("Content-Security-Policy", viewerCsp(nonce));
+  return c.html(await render(nonce));
+}
+
+/**
+ * GET /api/docs/assets/:asset/:file
+ *
+ * The viewers' JavaScript and CSS. Only the pinned files exist here: any other
+ * name is a 404, it never becomes a path on disk.
+ */
+dynamicDocsRouter.get("/assets/:asset/:file", (c) => {
+  const found = viewerAsset(c.req.param("asset"), c.req.param("file"));
+  if (!found) return c.json({ error: "Not found" }, 404);
+  return c.body(found.body as Uint8Array<ArrayBuffer>, 200, {
+    "Content-Type": found.contentType,
+    // The version is in the URL: a new one is a new address.
+    "Cache-Control": "public, max-age=31536000, immutable",
+  });
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN ENDPOINTS
@@ -153,7 +171,9 @@ dynamicDocsRouter.get("/:kon/openapi.json", async (c) => {
  * GET /api/docs/operations
  *
  * List all available operations across all kons.
- * Useful for code generation and discovery.
+ * Useful for code generation and discovery. `?kon=`, `?tag=`, `?method=`, `?search=`, and
+ * `?filter=` with RapiDoc-style terms (lib/operation-filter.ts):
+ * `?filter=kon:media !deprecated /api/media/**`.
  */
 dynamicDocsRouter.get("/operations", async (c) => {
   try {
@@ -191,6 +211,9 @@ dynamicDocsRouter.get("/operations", async (c) => {
       );
     }
 
+    // `?filter=tag:media !deprecated /api/media/**` (lib/operation-filter.ts).
+    if (query.filter) filtered = filtered.filter(operationFilter(query.filter.slice(0, 500)));
+
     return c.json({
       total: operations.length,
       filtered: filtered.length,
@@ -213,22 +236,38 @@ dynamicDocsRouter.get("/operations", async (c) => {
  *
  * Swagger UI - Classic API documentation.
  */
-dynamicDocsRouter.get(
-  "/",
-  swaggerUI({
-    url: "/api/docs/openapi.json",
-    title: "Kitsuden API Documentation",
-  })
+dynamicDocsRouter.get("/", (c) =>
+  viewerHtml(c, (nonce) => swaggerPage("/api/docs/openapi.json", nonce))
 );
 
 /**
  * GET /api/docs/modern
  *
- * Scalar API Reference - Modern, beautiful documentation.
+ * Scalar API Reference. One document per entry of its selector: the whole API
+ * first, then each kon that has its own (`/api/docs/<kon>/openapi.json`).
  */
-dynamicDocsRouter.get("/modern", (c) => {
-  return c.html(scalarHtml);
-});
+dynamicDocsRouter.get("/modern", (c) =>
+  viewerHtml(c, async (nonce) => {
+    const sources: DocSource[] = [
+      { title: "Kitsuden API", slug: "kitsuden", url: "/api/docs/openapi.json" },
+    ];
+    try {
+      const kons = (await getLoadedKons()).filter(konHasDocs);
+      for (const k of kons.sort((a, b) => a.id.localeCompare(b.id))) {
+        const short = k.id.replace(/^kon-/, "");
+        sources.push({
+          title: k.name || k.id,
+          slug: short,
+          url: `/api/docs/${short}/openapi.json`,
+        });
+      }
+    } catch (error) {
+      // The whole-API document still works without the per-kon list.
+      logger.warn({ error }, "Docs viewer: could not list the kons");
+    }
+    return scalarPage(sources, nonce);
+  })
+);
 
 /**
  * GET /api/docs/kons

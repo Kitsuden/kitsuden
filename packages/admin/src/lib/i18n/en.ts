@@ -4418,6 +4418,25 @@ const en = {
     bulkDone: "{n} approved and run",
     bulkFailed: "{n} could not be approved or failed",
   },
+  apiConsole: {
+    open: "API",
+    openLabel: "API console of {name}",
+    title: "API console: {name}",
+    description: "Read and try this kon's operations.",
+    loading: "Loading the API console...",
+    loadFailed: "The API console could not load",
+    scriptFailed:
+      "The console's script did not load. The API serves it from /api/docs/assets: run node scripts/docs-viewers.mjs where the API runs.",
+    notDocumented:
+      "This kon has no API document here, or the API documentation is turned off on this server (ENABLE_SWAGGER).",
+    noOperations: "This kon documents no API operations",
+    sessionNotice:
+      "Requests use your panel session: they read and change real data, with your permissions.",
+    operation: "Operation",
+    allInTag: "All operations in {tag}",
+    untagged: "Without a tag",
+    note: "RapiDoc {version}, served by this API. HTML in descriptions is shown as text.",
+  },
 };
 
 export default en;

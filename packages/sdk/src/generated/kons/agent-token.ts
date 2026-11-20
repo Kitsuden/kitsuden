@@ -22,7 +22,7 @@ export type ExchangeAgentTokenResponse = Record<string, unknown>;
 
 /** Runtime description of every operation of kon-agent-token (path, method, pagination…). */
 export const operations = {
-  "exchangeAgentToken": {"kon":"kon-agent-token","id":"exchange-agent-token","operationId":"agent-token.exchange-agent-token","method":"POST","path":"/agent/token/exchange","pathParams":[],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:agent-token:exchange-agent-token","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "exchangeAgentToken": {"kon":"kon-agent-token","id":"exchange-agent-token","operationId":"agent-token.exchange-agent-token","method":"POST","path":"/agent/token/exchange","pathParams":[],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:agent-token:exchange-agent-token","mcpTool":null,"errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
 } as const satisfies Record<string, OperationInfo>;
 
 /**
@@ -38,7 +38,7 @@ export interface AgentTokenApi {
    *
    * REST: `POST /api/agent/token/exchange` · scope `kon:agent-token:exchange-agent-token`
    * not idempotent (an Idempotency-Key is sent automatically)
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_IDEMPOTENCY_KEY_REUSED`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly exchangeAgentToken: Operation<ExchangeAgentTokenParams, ExchangeAgentTokenResponse>;
 }

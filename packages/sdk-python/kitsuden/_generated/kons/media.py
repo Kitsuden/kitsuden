@@ -264,7 +264,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:media:image-with-preset",
         mcp_tool=None,
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "list-folders": OperationInfo(
         kon="kon-media",
@@ -333,7 +333,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:media:read-focal-point",
         mcp_tool="media__read-focal-point",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "save-configuration": OperationInfo(
         kon="kon-media",
@@ -401,7 +401,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:media:transform-image",
         mcp_tool=None,
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "update-media": OperationInfo(
         kon="kon-media",
@@ -508,7 +508,7 @@ class MediaApi(KonApi):
 
         REST: `GET /api/media/preset/{id}/{preset}` · scope `kon:media:image-with-preset`
         idempotent (safe to retry)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Media id (uuid)
@@ -568,7 +568,7 @@ class MediaApi(KonApi):
 
         REST: `GET /api/media/focal-point/{id}` · scope `kon:media:read-focal-point`
         idempotent (safe to retry) · MCP tool `media__read-focal-point`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Media id (uuid; anything else is a 404)
@@ -618,7 +618,7 @@ class MediaApi(KonApi):
 
         REST: `GET /api/media/transform/{id}` · scope `kon:media:transform-image`
         idempotent (safe to retry)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Media id (uuid; anything else is a 404)
@@ -729,7 +729,7 @@ class AsyncMediaApi(AsyncKonApi):
 
         REST: `GET /api/media/preset/{id}/{preset}` · scope `kon:media:image-with-preset`
         idempotent (safe to retry)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Media id (uuid)
@@ -789,7 +789,7 @@ class AsyncMediaApi(AsyncKonApi):
 
         REST: `GET /api/media/focal-point/{id}` · scope `kon:media:read-focal-point`
         idempotent (safe to retry) · MCP tool `media__read-focal-point`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Media id (uuid; anything else is a 404)
@@ -839,7 +839,7 @@ class AsyncMediaApi(AsyncKonApi):
 
         REST: `GET /api/media/transform/{id}` · scope `kon:media:transform-image`
         idempotent (safe to retry)
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Media id (uuid; anything else is a 404)

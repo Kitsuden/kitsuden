@@ -9,6 +9,8 @@
 # Build outputs (rebuilt inside Docker)
 **/dist
 **/dist-*
+# Downloaded again (and verified) by the API build
+apps/api/docs-viewers
 **/build
 **/.astro
 **/.next

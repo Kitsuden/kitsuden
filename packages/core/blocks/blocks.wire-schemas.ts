@@ -137,7 +137,19 @@ export const PageListQuery = z
   .passthrough();
 
 export const PageQuery = z
-  .object({ include_blocks: z.enum(["true", "false"]).optional() })
+  .object({
+    includeBlocks: z
+      .enum(["true", "false"])
+      .optional()
+      .describe("`false` returns the page without its blocks. Default `true`."),
+    // The old name, kept for clients that already send it (docs/api-contract.md):
+    // camelCase like every other query parameter of the API.
+    include_blocks: z.enum(["true", "false"]).optional().meta({
+      deprecated: true,
+      "x-sunset": "2027-05-18",
+      description: "Deprecated since 2026-11-18, removed after 2027-05-18: use `includeBlocks`.",
+    }),
+  })
   .passthrough();
 
 export const TemplatesQuery = z
