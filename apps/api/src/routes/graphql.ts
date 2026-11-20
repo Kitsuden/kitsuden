@@ -45,6 +45,7 @@ import { TABLES_ONLY_VIA_THEIR_ROUTE } from "../lib/actions-code";
 import { inProduction } from "../lib/environment";
 import {
   ADMIN_WRITE_TABLES,
+  agentWriteNeedsOwnRoute,
   isForbiddenNativeTable,
   isSecretColumn,
   secretColumnsIn,
@@ -377,6 +378,17 @@ export function refuseSecretColumns(tableName: string, input: Record<string, unk
 /** What every resolver gets as its third argument: who is asking. */
 interface GraphQLContext {
   user?: unknown;
+  /** Set when an agent key is asking. */
+  agent?: unknown;
+}
+
+/** An agent does not write a dataset definition here (see `AGENT_WRITES_ONLY_VIA_THEIR_ROUTE`). */
+function refuseAgentWrite(tableName: string, context: GraphQLContext | undefined): void {
+  if (context?.agent && agentWriteNeedsOwnRoute(tableName)) {
+    throw new Error(
+      `An agent does not write '${tableName}' through GraphQL: use /api/data-sets, where a customer-data mark can only be removed by a person.`
+    );
+  }
 }
 
 type Row = Record<string, unknown>;
@@ -443,6 +455,7 @@ async function buildNativeTableMutations(
       async resolve(_: any, args: any, context: GraphQLContext) {
         const input = args.input ? { ...args.input } : {};
         delete input.id;
+        refuseAgentWrite(tableName, context);
         refuseSecretColumns(tableName, input);
         try {
           const [doc] = await (exec().insert(table).values(input).returning() as Promise<any[]>);
@@ -468,6 +481,7 @@ async function buildNativeTableMutations(
       async resolve(_: any, args: any, context: GraphQLContext) {
         const input = args.input ? { ...args.input } : {};
         delete input.id;
+        refuseAgentWrite(tableName, context);
         refuseSecretColumns(tableName, input);
         try {
           const [before] = await exec().select().from(table).where(eq(table.id, args.id)).limit(1);
@@ -495,6 +509,7 @@ async function buildNativeTableMutations(
         id: { type: new GraphQLNonNull(GraphQLString) },
       },
       async resolve(_: any, args: any, context: GraphQLContext) {
+        refuseAgentWrite(tableName, context);
         try {
           const gone = (await exec()
             .delete(table)
@@ -1043,7 +1058,10 @@ graphqlRoutes.post("/", protectRoute, withTransactionalRLS(), async (c) => {
 
   try {
     const schema = await buildSchema();
-    const context: GraphQLContext = { user: c.get("user" as never) };
+    const context: GraphQLContext = {
+      user: c.get("user" as never),
+      agent: c.get("agent" as never),
+    };
     const result = await graphql({
       schema,
       source: queryStr,

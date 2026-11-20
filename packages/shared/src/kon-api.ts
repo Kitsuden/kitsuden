@@ -97,6 +97,15 @@ export interface KonRealtime {
       user: { id: string | null; role: string | null }
     ) => boolean | Promise<boolean>
   ): void;
+  /**
+   * A channel part (64 hex characters) for `material`, keyed by this installation's secret and
+   * bound to this kon. Use it for a channel the kon authorizes to whoever names it (a visitor
+   * with no account): broadcast on `kon:<short>:<prefix>:<capability>` and give the name only
+   * to whoever proves the original secret. Never use as a channel name a value the kon also
+   * stores where staff can read it: whoever once read it could listen after losing access.
+   * Throws without a secrets key. Optional: older hosts leave it undefined.
+   */
+  capability?(material: string): string;
 }
 
 /**

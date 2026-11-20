@@ -16,7 +16,10 @@
  *
  * Authorization code with PKCE (S256). The `state` is 32 random bytes, stored hashed with the PKCE verifier
  * (sealed), the owner and the scope; it lasts ten minutes and is deleted the first time it is used, so a
- * callback replayed or forged finds nothing. The installation's client id and secret come from the
+ * callback replayed or forged finds nothing. The callback must also come from the browser or the person that
+ * started it (`completedBy`): the binding cookie set at the start, or a session of the same person. Without
+ * that, someone could start a flow, send the consent link to another person, and keep that person's account
+ * in a connection of their own. The installation's client id and secret come from the
  * environment (connections.providers.ts).
  *
  * ── REFRESH AND EXPIRY ─────────────────────────────────────────────────────
@@ -28,7 +31,7 @@
  * provider down) are retried on the next tick and do not expire anything.
  */
 
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 
@@ -139,7 +142,7 @@ export async function startOAuth(
   db: Db,
   secretsIn: Secrets | null | undefined,
   req: StartRequest
-): Promise<{ url: string; expiresAt: string }> {
+): Promise<{ url: string; expiresAt: string; browserBinding: string }> {
   const secrets = requireSecrets(secretsIn);
   const provider = requireProvider(req.provider);
   if (!provider.oauth || !provider.authTypes.includes("oauth")) {
@@ -191,7 +194,33 @@ export async function startOAuth(
   url.searchParams.set("code_challenge_method", "S256");
   for (const [k, v] of Object.entries(provider.oauth.authorizeParams ?? {}))
     url.searchParams.set(k, v);
-  return { url: url.toString(), expiresAt: expiresAt.toISOString() };
+  return {
+    url: url.toString(),
+    expiresAt: expiresAt.toISOString(),
+    browserBinding: browserBindingOf(state),
+  };
+}
+
+/**
+ * The value of the cookie that ties a round trip to the browser that started it. Derived from the state, so
+ * nothing else is stored; knowing the state (it travels in the consent URL) does not help, because a cookie
+ * cannot be planted in someone else's browser.
+ */
+export function browserBindingOf(state: string): string {
+  return createHash("sha256").update(`kitsuden-connections:browser:${state}`).digest("base64url");
+}
+
+/** Whether whoever brings the callback is the one who started it: the same browser, or the same person. */
+export function finishedByStarter(
+  state: string,
+  startedBy: string | null,
+  completedBy: { userId: string | null; browserBinding: string | null }
+): boolean {
+  if (startedBy && completedBy.userId && completedBy.userId === startedBy) return true;
+  if (!completedBy.browserBinding) return false;
+  const expected = Buffer.from(browserBindingOf(state));
+  const got = Buffer.from(completedBy.browserBinding);
+  return got.length === expected.length && timingSafeEqual(got, expected);
 }
 
 // ── OAuth: the provider sends the person back ──────────────────────────────
@@ -238,6 +267,11 @@ export interface CompleteRequest {
   code: string;
   redirectUri: string;
   fetch: Fetch;
+  /**
+   * Who brings the callback: the signed-in person (if any) and the binding cookie of this browser (if any).
+   * One of them must match the start, or the round trip is refused (and, being already consumed, burnt).
+   */
+  completedBy: { userId: string | null; browserBinding: string | null };
   now?: Date;
 }
 
@@ -265,6 +299,13 @@ export async function completeOAuth(
       "This connection link is unknown or expired: start again",
       400,
       "INVALID_STATE"
+    );
+  }
+  if (!finishedByStarter(req.state, pending.userId ?? null, req.completedBy)) {
+    throw new ConnectionError(
+      "This connection was started in another browser or by another person: start it again from here",
+      403,
+      "CALLBACK_NOT_BOUND"
     );
   }
   const provider = requireProvider(pending.provider);

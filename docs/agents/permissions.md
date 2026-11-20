@@ -64,7 +64,7 @@ deny needs at least two segments.
 
 | Scope                                    | Grants                                                                                                                                                                                                                                                             |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `admin`                                  | Everything (except what a deny removes).                                                                                                                                                                                                                           |
+| `admin`                                  | Everything (except what a deny removes), apart from what only a person does: managing agents and approvals, writing secrets, and writing dataset definitions (`data_sets`) outside `/api/data-sets`.                                                               |
 | `mcp:connect`                            | Open an MCP session. Every MCP client needs it.                                                                                                                                                                                                                    |
 | `mcp:read`                               | The core's read-only MCP tools (query datasets and tables, describe, status).                                                                                                                                                                                      |
 | `mcp:write`                              | The core's MCP tools that write records.                                                                                                                                                                                                                           |
@@ -198,6 +198,11 @@ they do over REST. On native tables (not datasets) only the broad scope counts.
 > rows; a scope that names the action (`datasets:<slug>:write`,
 > `dataset-entry:update`, `admin`) reaches any row `rlsRules` let it see.
 > Reading follows REST too: outside `admin`, only published rows and its own.
+> An agent never re-points an entry's owner: `kitsuden_update_record` keeps the
+> stored `data.ownerId` and refuses a different one unless the key has `admin`.
+> On a dataset whose workflow has `requireApproval`, the record tools store new
+> entries as `draft` whatever `status` the agent sends, and refuse to publish an
+> existing one; a person publishes them, as over REST.
 
 ## Deny
 
@@ -208,7 +213,7 @@ whatever its pattern covers, and it wins over every grant.
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `!kon:blog:delete-post`    | that operation is refused (REST and MCP), even with `admin`                                                                                                 |
 | `!kon:blog:*` or `!blog:*` | every operation of the blog kon is refused — **including public ones**, for this key — and, for kons not on the SDK, every route under the kon's mount path |
-| `!datasets:payroll:*`      | the dataset `payroll` is closed for this key (REST, MCP and RLS)                                                                                            |
+| `!datasets:payroll:*`      | the dataset `payroll` is closed for this key (REST, MCP and RLS), export included: `POST /api/datasets/export` naming it answers 403                        |
 | `!datasets:*:delete`       | no entry can be deleted in any dataset                                                                                                                      |
 
 Limits of deny (by design):

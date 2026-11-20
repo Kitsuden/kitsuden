@@ -115,6 +115,12 @@ const RESERVED_PREFIXES = [
   "KITSUDEN_",
   "ENABLE_",
   "VALKEY_",
+  // Limits on agents and on the API itself (security audit 2026-11-19):
+  // `QUEUE_AGENT_JOB_COST=0` switched off every agent's job budget,
+  // `RATE_LIMIT_ENABLED=false` the rate limiter, `AGENT_KEY_*` key expiry.
+  "QUEUE_",
+  "RATE_LIMIT_",
+  "AGENT_KEY_",
 ];
 
 export function reservedSecretKey(key: string): boolean {

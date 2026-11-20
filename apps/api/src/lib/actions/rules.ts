@@ -166,7 +166,8 @@ const coreHandlers: RuleHandler[] = [
       "Runs one of the core's agents with the event as its message, with that agent's scopes, tools, approvals and traces.",
     config: {
       agentId: "id of the agent identity that answers",
-      promptTemplate: "optional prompt; {{event.field}} placeholders are filled from the event",
+      promptTemplate:
+        "optional prompt; {{event.field}} placeholders are filled from the event, marked as untrusted data, and then the agent's writes wait for a person",
       customerDataHosts:
         "optional list of model hosts that may receive customer data (only a person sets it)",
     },
@@ -431,6 +432,37 @@ export interface StepOutcome {
   durationMs: number;
 }
 
+/** `{{path}}` as the shared templates write it. */
+const PROMPT_PLACEHOLDER = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
+
+/**
+ * A step's config with its placeholders filled. `core:run-agent` is the
+ * exception for `promptTemplate`: its `{{event.*}}` placeholders stay for the
+ * agent handler, which wraps each event value in untrusted-content delimiters,
+ * puts the untrusted-data notice first and so holds the agent's writes for a
+ * person. Filled here with raw text, the event lost its provenance and the run
+ * wrote freely (security audit 2026-11-19). Only `{{eventName}}` and
+ * `{{rule.*}}`, which the system and the rule's author set, are filled here.
+ */
+function fillStepConfig(step: RuleStep, scope: Record<string, unknown>): Record<string, unknown> {
+  const raw = step.config ?? {};
+  if (step.handler !== "core:run-agent" || !Object.hasOwn(raw, "promptTemplate")) {
+    return fillTemplate(raw, scope);
+  }
+  const { promptTemplate, ...rest } = raw;
+  const filled = fillTemplate(rest, scope);
+  if (typeof promptTemplate !== "string") return filled;
+  return {
+    ...filled,
+    promptTemplate: promptTemplate.replace(PROMPT_PLACEHOLDER, (match, path: string) =>
+      path === "eventName" || path.startsWith("rule.")
+        ? // Wrapped so fillTemplate gives the text form, as for any other step.
+          fillTemplate(`(${match})`, scope).slice(1, -1)
+        : match
+    ),
+  };
+}
+
 function stepInput(action: Action, context: ActionContext, step: RuleStep): AutomationHandlerInput {
   const event = context.event ? { name: context.event.name, data: context.event.data } : undefined;
   const scope = {
@@ -439,7 +471,7 @@ function stepInput(action: Action, context: ActionContext, step: RuleStep): Auto
     rule: { id: action.id, name: action.name },
   };
   return {
-    config: fillTemplate(step.config ?? {}, scope),
+    config: fillStepConfig(step, scope),
     event,
     rule: { id: action.id, name: action.name },
     actorUserId: action.createdById ?? null,

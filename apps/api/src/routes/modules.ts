@@ -29,6 +29,7 @@ import { modules, siteSettings } from "../db/schema";
 import { file } from "../lib/file";
 import { readGrimoireManifest } from "../lib/grimoire-manifest";
 import { konRoute } from "../lib/installed-kons";
+import { invalidateKonActivation } from "../lib/kon-activation";
 import { searchByKonKey, canonicalKey, mergeByKon } from "../lib/kon-key";
 import { getLoadReport } from "../lib/module-loader";
 import {
@@ -451,6 +452,14 @@ async function getDynamicGrimoireKons(): Promise<
 }
 
 export const modulesRoutes = new Hono();
+
+// Any write here (enable, disable, uninstall, recover, delete) can switch a kon
+// loaded at startup on or off: its activation guard must see it now, not after
+// the cache TTL (lib/kon-activation.ts).
+modulesRoutes.use("*", async (c, next) => {
+  await next();
+  if (c.req.method !== "GET") invalidateKonActivation();
+});
 
 // ── The configuration file NO LONGER decides what is active ────────────────
 //

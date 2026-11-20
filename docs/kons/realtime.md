@@ -44,6 +44,20 @@ any authorizer runs.
 | **Anonymous sockets**    | The authorizer receives `id: null`. A kon may allow them (a visitor holding an unguessable key) or not.                                                |
 | **Every replica**        | `broadcast` and `sendToUser` go through the bus (Valkey, or Postgres NOTIFY without it) and reach the sockets of every API process, each exactly once. |
 
+## Channels for someone without an account
+
+A channel the authorizer allows to whoever names it (a web-chat visitor) is only as private as its
+name. Never name it after a value the kon also stores where staff can read it: whoever once read it
+could keep listening after losing access. Use `ctx.realtime.capability(material)`, 64 hex characters
+keyed by this installation's secret and bound to the kon, and give the name only to whoever proves
+the original secret:
+
+```ts
+// when the visitor presents their secret id
+const channel = `kon:koe:visitor:${ctx.realtime.capability!(visitorHash)}`;
+// broadcast on the same name; staff reading visitorHash cannot compute it
+```
+
 ## What to send
 
 Small messages: ids and what changed, never content the client could not read over REST. The

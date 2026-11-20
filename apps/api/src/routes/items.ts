@@ -52,7 +52,7 @@ import {
   buildDatasetWhereConditions,
   validateDatasetEntry,
 } from "../lib/dataset-optimizations";
-import { isForbiddenNativeTable } from "../lib/explorable-tables";
+import { agentWriteNeedsOwnRoute, isForbiddenNativeTable } from "../lib/explorable-tables";
 import { logger } from "../lib/logger";
 import { applyProvenanceInRest } from "../lib/provenance";
 import { broadcastMutation } from "../lib/realtime";
@@ -191,7 +191,9 @@ async function resolveCollection(
 /**
  * Tables that have their own route (the actions' code and
  * its history, their executions, the approvals configuration) are not
- * written through here, by any role. Returns the response, or `null`.
+ * written through here, by any role. Nor, by an agent, the dataset
+ * definitions (`data_sets`: their customer-data marks). Returns the response,
+ * or `null`.
  */
 function writeWithOwnRoute(
   c: Context,
@@ -200,7 +202,10 @@ function writeWithOwnRoute(
   if (resolved.type !== "native") return null;
   const name = (resolved.table as Record<symbol, unknown>)[Symbol.for("drizzle:Name")] as
     string | undefined;
-  if (!name || !TABLES_ONLY_VIA_THEIR_ROUTE.has(name)) return null;
+  if (!name) return null;
+  const agent = (c.get as (k: string) => unknown)("agent");
+  const own = TABLES_ONLY_VIA_THEIR_ROUTE.has(name) || (!!agent && agentWriteNeedsOwnRoute(name));
+  if (!own) return null;
   const requestId = ((c.get as (k: string) => unknown)("requestId") as string | undefined) ?? null;
   return respondProblem(c as never, tableProblemOnlyByItsRoute(name, c.req.path, requestId));
 }

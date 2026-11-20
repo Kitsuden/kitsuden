@@ -153,7 +153,7 @@ export interface ConnectionsApi {
   /**
    * Where the provider sends the person back
    *
-   * The provider's redirect after consent. The `state` authenticates it (one use, ten minutes); no session is needed. Exchanges the code, stores the credential sealed, and redirects to `returnTo` with `?connection=<id>`, or answers JSON without one. 400 for an unknown, used or refused consent.
+   * The provider's redirect after consent. The `state` authenticates it (one use, ten minutes), and it must come back to the browser that started it (the binding cookie `/oauth/start` sets) or to a session of the same person; otherwise 403 and the round trip is burnt. Exchanges the code, stores the credential sealed, and redirects to `returnTo` with `?connection=<id>`, or answers JSON without one. 400 for an unknown, used or refused consent.
    *
    * REST: `GET /api/connections/oauth/callback` · scope `kon:connections:finish-connection`
    * idempotent (safe to retry)

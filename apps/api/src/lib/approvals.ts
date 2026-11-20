@@ -67,6 +67,7 @@ import {
   type ProposalReason,
 } from "@kitsuden/shared";
 import { and, asc, desc, eq, gt, inArray, isNull, lte, ne, sql, type SQL } from "drizzle-orm";
+import { parse as parseGraphql, visit as visitGraphql } from "graphql";
 import type { Context, Next } from "hono";
 
 import { detectRealType } from "../../../../packages/core/media/real-type";
@@ -648,8 +649,32 @@ export async function internalRequest(
     headers["content-type"] = type || "application/json";
     body = JSON.stringify(bodyValue);
   }
+  // An approved proposal or a diff read runs WITHOUT the gate (it already passed it):
+  // the path it reaches must be the one that was evaluated and approved.
+  if (!e.sandbox && ambiguousPath(path)) {
+    throw new Error("Refusing an internal request whose path a URL parser would rewrite");
+  }
   const req = new Request(`http://localhost${path}`, { method, headers, body });
   return appFetch(req, { [INTERNAL_EXECUTION_MARK]: e });
+}
+
+/**
+ * Would a URL parser read this (already decoded) path as a DIFFERENT route?
+ * Security audit 2026-11-19: Hono decodes `c.req.path`, so `x%5C..%5Cadmin`
+ * reaches the gate as `x\..\admin`, which the route patterns take for ONE
+ * `:id` segment. Replayed with `new Request`, the WHATWG parser turns the
+ * backslash into `/`, drops tabs and newlines, and resolves `.` and `..`
+ * segments (also written `%2e`): the approved operation and the executed one
+ * would differ. Such a path is never held as a proposal nor replayed.
+ */
+export function ambiguousPath(path: string): boolean {
+  const pathOnly = path.split("?")[0]!;
+  // eslint-disable-next-line no-control-regex
+  if (/[\\\x00-\x1f\x7f]/.test(pathOnly)) return true;
+  return pathOnly.split("/").some((segment) => {
+    const s = segment.toLowerCase().replace(/%2e/g, ".");
+    return s === "." || s === "..";
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -662,7 +687,10 @@ const MAX_BODY_BYTES = 256 * 1024;
 const MAX_SAVED_BYTES = 256 * 1024;
 
 export class ProposalNotAdmitted extends Error {
-  constructor(readonly reason: "secret" | "multipart" | "not_image" | "not_json" | "too_large") {
+  constructor(
+    readonly reason:
+      "secret" | "multipart" | "not_image" | "not_json" | "too_large" | "ambiguous_path"
+  ) {
     super(reason);
   }
 }
@@ -1307,6 +1335,8 @@ function notAdmittedProblem(
     not_image:
       "only image uploads (JPEG, PNG, GIF, WebP or AVIF, checked by their content) can be held as proposals; any other file has to be uploaded by a human or an agent in direct mode",
     not_json: "only JSON bodies and image uploads can be held as proposals",
+    ambiguous_path:
+      "its path holds a backslash, a control character or a `.` or `..` segment, which would be executed as a different route than the one approved; send the canonical path",
     too_large: `the body is larger than ${MAX_BODY_BYTES / 1024} KiB of JSON or text, or an upload has more than ${MAX_RETAINED_IMAGES} images or one larger than ${maxBytesPerImage() / 1024 / 1024} MB`,
   };
   return buildProblem({
@@ -1358,13 +1388,50 @@ export function bodyForProposal(type: string, bytes: Uint8Array, path?: string):
  * DELETE. A body that cannot be read counts as deleting (the route will refuse it).
  */
 export async function batchDeletes(c: Context, method: string, path: string): Promise<boolean> {
-  if (method !== "POST" || path.replace(/\/+$/, "") !== "/api/datasets/batch") return false;
+  if (method !== "POST") return false;
+  const route = path.replace(/\/+$/, "");
+  // The same for GraphQL (security audit 2026-11-19): `delete<Type>` and
+  // `deleteDataset_<slug>` mutations travel as a POST to /api/graphql.
+  if (route === "/api/graphql") {
+    try {
+      return graphqlDeletes(((await c.req.raw.clone().json()) as { query?: unknown })?.query);
+    } catch {
+      return true;
+    }
+  }
+  if (route !== "/api/datasets/batch") return false;
   try {
     const body = (await c.req.raw.clone().json()) as { operations?: Array<{ op?: unknown }> };
     return !Array.isArray(body.operations) || body.operations.some((o) => o?.op === "delete");
   } catch {
     return true;
   }
+}
+
+/**
+ * Does this GraphQL document run a delete mutation? Any field named `delete…`
+ * in a document with a mutation (fragments included) counts. A document that
+ * does not parse counts as deleting; without a query string the route refuses.
+ */
+export function graphqlDeletes(source: unknown): boolean {
+  if (typeof source !== "string") return false;
+  let document;
+  try {
+    document = parseGraphql(source);
+  } catch {
+    return true;
+  }
+  let mutation = false;
+  let deleteField = false;
+  visitGraphql(document, {
+    OperationDefinition(node) {
+      if (node.operation === "mutation") mutation = true;
+    },
+    Field(node) {
+      if (node.name.value.startsWith("delete")) deleteField = true;
+    },
+  });
+  return mutation && deleteField;
 }
 
 export function approvalGate() {
@@ -1406,6 +1473,9 @@ export function approvalGate() {
         }),
         403
       );
+    }
+    if (ambiguousPath(path)) {
+      return respondJson(c, notAdmittedProblem("ambiguous_path", path, requestId), 403);
     }
     const url = new URL(c.req.url);
     const type = c.req.header("content-type") ?? "";

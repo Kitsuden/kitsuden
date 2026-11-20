@@ -219,7 +219,7 @@ export function tableProblemOnlyByItsRoute(
 ): ProblemDetails {
   return buildProblem({
     code: "KITSUDEN_E_FORBIDDEN",
-    detail: `'${table}' is not written through generic routes. Use its own route: actions through /api/actions (humans) or the code promotion pipeline (agents: promotion_propose); approval settings and proposals through /api/approvals; agents through /api/admin/agents.`,
+    detail: `'${table}' is not written through generic routes. Use its own route: actions through /api/actions (humans) or the code promotion pipeline (agents: promotion_propose); approval settings and proposals through /api/approvals; agents through /api/admin/agents; dataset definitions, for an agent, through /api/data-sets.`,
     instance,
     requestId,
     extensions: { reason: "table_has_its_own_route", table, tool: "promotion_propose" },

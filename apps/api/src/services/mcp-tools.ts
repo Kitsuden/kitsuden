@@ -59,6 +59,7 @@ import { emailProblem, type CustomerDataGuard } from "@/lib/customer-data";
 import {
   withoutSecretColumns,
   ADMIN_WRITE_TABLES,
+  AGENT_WRITES_ONLY_VIA_THEIR_ROUTE,
   isForbiddenNativeTable,
 } from "@/lib/explorable-tables";
 import { encodeResponse, type Format, type RequestedFormat } from "@/lib/formats";
@@ -527,6 +528,71 @@ const asAgent = () => ({ id: actor().id || "agent", role: "agent" });
 interface DatasetWithPolicy {
   slug: string;
   policyJson?: unknown;
+  /** The dataset's review flow (`{ requireApproval }`), as REST reads it. */
+  workflowJson?: unknown;
+}
+
+/**
+ * Does this dataset require human review before an entry is published?
+ * REST (routes/crud.ts, `resolveEntryStatus`) never lets a caller outside the
+ * team choose the status there, and an agent is never on the team: its entries
+ * start as `draft`. The MCP tools apply the same rule (security audit 2026-11-19).
+ */
+function requiresApproval(ds: DatasetWithPolicy): boolean {
+  return Boolean((ds.workflowJson as { requireApproval?: unknown } | null)?.requireApproval);
+}
+
+/** The status an agent's NEW entry gets: `draft` when the dataset requires review. */
+function statusForNewEntry(
+  ds: DatasetWithPolicy,
+  requested: "draft" | "published" | "archived"
+): "draft" | "published" | "archived" {
+  return requiresApproval(ds) ? "draft" : requested;
+}
+
+/**
+ * The `data.ownerId` an update may write, mirroring `inputOwner` on create.
+ * `data.ownerId` decides who sees a row in a per-owner dataset (`rlsRules` and
+ * the `data_entries_owner_isolation` policy), so an agent cannot re-point it:
+ * only an agent with `admin` (which create already lets name an owner) changes
+ * it. Sending the stored value back is fine. Returns `changed: false` when the
+ * stored value must be kept (security audit 2026-11-19).
+ */
+function ownerOnUpdate(
+  existing: { data: unknown },
+  incoming: Record<string, unknown>
+): { changed: false } | { changed: true; owner: string | null } {
+  if (!Object.prototype.hasOwnProperty.call(incoming, "ownerId")) return { changed: false };
+  const stored = ((existing.data ?? {}) as Record<string, unknown>).ownerId ?? null;
+  const requested = incoming.ownerId ?? null;
+  if (requested === stored) return { changed: false };
+  if (requested !== null && typeof requested !== "string") {
+    throw new ToolPermission("KITSUDEN_E_FORBIDDEN: data.ownerId must be a user id or null");
+  }
+  const a = actor();
+  // No agent (a test calling a loose function): as before.
+  if (!a.id || concedeScope(a.scopes, "admin")) return { changed: true, owner: requested };
+  throw new ToolPermission(
+    "KITSUDEN_E_FORBIDDEN: an agent cannot change a record's owner (data.ownerId). " +
+      "Leave it out, or send the stored value; only an agent with `admin` may name another account."
+  );
+}
+
+/** `existing.data` merged with the caller's `data`, keeping the stored owner unless it may change. */
+function mergedEntryData(
+  existing: { data: unknown },
+  incoming: Record<string, unknown>
+): { data: Record<string, unknown>; ownerColumn?: string | null } {
+  const before = (existing.data ?? {}) as Record<string, unknown>;
+  const owner = ownerOnUpdate(existing, incoming);
+  const data: Record<string, unknown> = { ...before, ...incoming };
+  if (owner.changed) {
+    data.ownerId = owner.owner;
+    return { data, ownerColumn: owner.owner };
+  }
+  if (Object.prototype.hasOwnProperty.call(before, "ownerId")) data.ownerId = before.ownerId;
+  else delete data.ownerId;
+  return { data };
 }
 
 /**
@@ -1082,7 +1148,8 @@ const HARD_CODED_TOOLS: LLMTool[] = [
           status: {
             type: "string",
             default: "published",
-            description: "Initial status (datasets only)",
+            description:
+              "Initial status (datasets only). A dataset that requires approval always stores 'draft'.",
           },
           _evidence: EVIDENCE_PARAMETER,
         },
@@ -1498,6 +1565,9 @@ const SCOPE_NATIVE_TABLES = "admin";
 
 const TABLES_WITHOUT_MCP_WRITE = new Set([
   ...ADMIN_WRITE_TABLES,
+  // Dataset definitions hold the customer-data marks: agents change them only through
+  // /api/data-sets, which refuses removing a mark (security audit 2026-11-19).
+  ...AGENT_WRITES_ONLY_VIA_THEIR_ROUTE,
   "agent_identities",
   "agent_proposals",
   "agent_proposal_files",
@@ -1624,7 +1694,7 @@ async function kitsudenCreateRecord(
         dataSetId: ds.id,
         title: data?.title || data?.name || "Untitled",
         data: { ...(data || {}), ownerId: owner },
-        status,
+        status: statusForNewEntry(ds, status),
         ownerId: owner,
         createdById: actor().id || null,
       } as any)
@@ -1675,9 +1745,18 @@ async function kitsudenUpdateRecord(
     if (!(await editableRow(ofDataset, existing.dataSetId, recordId, "write", scopes))) {
       return `Record not found: ${recordId}`;
     }
-    const mergedData = { ...(existing.data as any), ...data };
-    const updates: Record<string, unknown> = { data: mergedData, updatedAt: new Date() };
-    if (args.status) updates.status = args.status;
+    const merged = mergedEntryData(existing, data);
+    const updates: Record<string, unknown> = { data: merged.data, updatedAt: new Date() };
+    if (merged.ownerColumn !== undefined) updates.ownerId = merged.ownerColumn;
+    if (args.status && args.status !== existing.status) {
+      // On a dataset that requires review, only a person publishes (as in REST).
+      if (args.status === "published" && requiresApproval(ofDataset)) {
+        throw new ToolPermission(
+          `Dataset '${ofDataset.slug}' requires approval: an agent cannot publish its entries`
+        );
+      }
+      updates.status = args.status;
+    }
     const [updated] = await bd()
       .update(dataEntries)
       .set(updates)
@@ -1697,10 +1776,12 @@ async function kitsudenUpdateRecord(
     // cannot be used to write to that one.
     const existing = await editableRow(ds, ds.id, recordId, "write", scopes);
     if (!existing) return `Record not found: ${recordId}`;
-    const mergedData = { ...(existing.data as any), ...data };
+    const merged = mergedEntryData(existing, data);
+    const updates: Record<string, unknown> = { data: merged.data, updatedAt: new Date() };
+    if (merged.ownerColumn !== undefined) updates.ownerId = merged.ownerColumn;
     const [updated] = await bd()
       .update(dataEntries)
-      .set({ data: mergedData, updatedAt: new Date() })
+      .set(updates)
       .where(eq(dataEntries.id, recordId))
       .returning();
     await rememberEntries([{ action: "update", before: existing as EntryRow, after: updated }]);
@@ -1854,7 +1935,7 @@ async function kitsudenInsertRecord(
       dataSetId: datasetId,
       title: data?.title || "Untitled",
       data: { ...(data || {}), ownerId: owner },
-      status,
+      status: statusForNewEntry(ds, status),
       ownerId: owner,
       createdById: actor().id || null,
     } as any)
@@ -1869,11 +1950,19 @@ async function kitsudenInsertRecord(
 /** A dataset's slug and policy by id (empty `slug` if it does not exist). */
 async function datasetById(id: string): Promise<DatasetWithPolicy> {
   const [ds] = await bd()
-    .select({ slug: dataSets.slug, policyJson: dataSets.policyJson })
+    .select({
+      slug: dataSets.slug,
+      policyJson: dataSets.policyJson,
+      workflowJson: dataSets.workflowJson,
+    })
     .from(dataSets)
     .where(eq(dataSets.id, id))
     .limit(1);
-  return { slug: ds?.slug ?? "", policyJson: ds?.policyJson ?? null };
+  return {
+    slug: ds?.slug ?? "",
+    policyJson: ds?.policyJson ?? null,
+    workflowJson: ds?.workflowJson ?? null,
+  };
 }
 
 async function kitsudenCreateDataset(

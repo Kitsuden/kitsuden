@@ -37,7 +37,7 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
-import { dirname, join, normalize, relative, resolve, sep } from "node:path";
+import { dirname, join, normalize, posix, relative, resolve, sep } from "node:path";
 
 /**
  * `./storage` is loaded with `await import()`, NOT statically.
@@ -315,8 +315,24 @@ export const MEDIA_CSP =
  */
 export const PRIVATE_PREFIX = "private/";
 
+/**
+ * Whether a key lands under `private/` once it is resolved the way `localPathOf` resolves it.
+ *
+ * The check used to be a plain `startsWith("private/")` on the key as given, while the file opened was
+ * the NORMALIZED key: `uploads/../private/koe/x.ogg` was "public" for the signature gate of `/media` and
+ * still opened `LOCAL_DIR/private/koe/x.ogg`. So the key is normalized here the same way (dot segments
+ * collapsed, `\` taken as a separator as on Windows, leading `/` and `./` dropped) and compared without
+ * case, because a case-insensitive disk opens `Private/` as `private/`. A key that still climbs above the
+ * root after normalizing (`../uploads/private/x` resolves back inside the media directory when it is called
+ * `uploads`) is treated as private: fail closed, since no signed address is ever issued for such a key.
+ */
 export function isPrivateKey(key: string): boolean {
-  return key.replace(/^\/+/, "").startsWith(PRIVATE_PREFIX);
+  const resolved = posix
+    .normalize(key.replace(/\\/g, "/"))
+    .replace(/^(\.?\/)+/, "")
+    .toLowerCase();
+  if (resolved === ".." || resolved.startsWith("../")) return true;
+  return resolved === "private" || resolved.startsWith(PRIVATE_PREFIX);
 }
 
 function urlSigningKey(): Buffer {

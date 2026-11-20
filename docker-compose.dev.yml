@@ -57,6 +57,8 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required - set it in .env}
       S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required - set it in .env}
       S3_BUCKET: ${S3_BUCKET:-kitsuden-media}
+      # Top-level key prefixes anonymous may read; `private/` never (docker/seaweedfs-startup.sh)
+      S3_PUBLIC_PREFIXES: ${S3_PUBLIC_PREFIXES:-}
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${MINIO_PORT:-9000}:8333"
       - "${BIND_ADDRESS:-127.0.0.1}:${MINIO_CONSOLE_PORT:-9001}:23646"

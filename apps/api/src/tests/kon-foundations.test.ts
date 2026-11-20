@@ -1309,15 +1309,60 @@ describe("reports", () => {
       );
       expect([401, 403]).toContain(denied.status);
 
+      // reports:read alone does not open a kon's table: a scope of the kon that owns it is needed
+      // too (security audit 2026-11-19).
+      const reportsOnly = await createAgent({
+        name: `Reports only ${id}`,
+        scopes: ["reports:read"],
+        rateLimit: 100_000,
+      });
+      token = reportsOnly.plainApiKey;
+      const notTheKon = await asAgent(query);
+      expect(notTheKon.status).toBe(403);
+      expect(await notTheKon.text()).toContain("kon-reports-test");
+
       const reader = await createAgent({
         name: `Reports reader ${id}`,
-        scopes: ["reports:read"],
+        scopes: ["reports:read", "reports-test:view"],
         rateLimit: 100_000,
       });
       token = reader.plainApiKey;
       const res = await asAgent(query);
       expect(res.status, await res.clone().text()).toBe(200);
       expect(((await res.json()) as { rows: unknown }).rows).toEqual([{ count: 3 }]);
+    });
+
+    it("cannot read a column the kon keeps from agents, unless it holds the kon's lifting scope", async () => {
+      if (!dbAvailable) return;
+      const base = { source: { table: FIXTURE_TABLE }, measures: [{ fn: "count" }] };
+      let res = await asAgent({ ...base, groupBy: [{ field: "id" }, { field: "amount" }] });
+      expect(res.status).toBe(403);
+      res = await asAgent({ ...base, measures: [{ fn: "max", field: "amount" }] });
+      expect(res.status).toBe(403);
+      res = await asAgent({ ...base, measures: [{ fn: "sum", field: "amount" }] });
+      expect(res.status).toBe(403);
+      res = await asAgent({ ...base, filters: [{ field: "amount", op: "gt", value: 6 }] });
+      expect(res.status).toBe(403);
+      // Presence only stays allowed.
+      res = await asAgent({ ...base, filters: [{ field: "amount", op: "is_null", value: false }] });
+      expect(res.status).toBe(200);
+
+      const allowed = await createAgent({
+        name: `Reports read-all ${id}`,
+        scopes: ["reports:read", "reports-test:read-all"],
+        rateLimit: 100_000,
+      });
+      const lifted = await app.request(
+        new Request("http://localhost:3000/api/reports/aggregate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${allowed.plainApiKey}`,
+          },
+          body: JSON.stringify({ query: { ...base, measures: [{ fn: "sum", field: "amount" }] } }),
+        })
+      );
+      expect(lifted.status, await lifted.clone().text()).toBe(200);
     });
 
     it("cannot read the values of a column marked as personal data", async () => {

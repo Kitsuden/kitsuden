@@ -224,14 +224,42 @@ app.get("/semantic", protectRoute, async (c) => {
 // SEMANTIC EDITING — symbol-level refactor
 //
 // SECURITY: requires ADMIN (it modifies the server's source code) and it is
-// a dry run unless `apply: true` is explicit in the body. The engine also verifies
+// a dry run unless `apply: true` is explicit in the body. Only a person may
+// apply: an agent key, even with the `admin` scope, gets 403 for `apply: true`. The engine also verifies
 // that the result is still syntactically valid before writing.
 // ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Is the caller an agent (its key, a session with role `agent`, or an inherited
+ * `machine-*` key)? `requireAdmin` admits an agent whose scopes include `admin`,
+ * but agents never write the server's source: code reaches the server through
+ * promotion, which is human-only (security audit 2026-11-19). A dry run stays
+ * open to agents: it only returns the diff.
+ */
+export function callerIsAgent(get: (key: string) => unknown): boolean {
+  const user = get("user") as { id?: string; role?: string } | null | undefined;
+  return (
+    Boolean(get("agent")) || user?.role === "agent" || Boolean(user?.id?.startsWith("machine-"))
+  );
+}
 
 app.post("/edit/:op", protectRoute, requireAdmin, async (c) => {
   const op = c.req.param("op");
   const body = await c.req.json().catch(() => ({}) as Record<string, unknown>);
   const { name, newName, code, apply } = body as Record<string, string | boolean>;
+
+  if (apply === true && callerIsAgent(c.get as (key: string) => unknown)) {
+    return c.json(
+      {
+        error: {
+          code: "FORBIDDEN",
+          message:
+            "Agents cannot apply source edits; send a dry run (without apply) and let a person apply it or use promotion",
+        },
+      },
+      403
+    );
+  }
 
   if (typeof name !== "string" || !name) {
     return c.json({ error: { code: "VALIDATION", message: "Missing 'name'" } }, 400);

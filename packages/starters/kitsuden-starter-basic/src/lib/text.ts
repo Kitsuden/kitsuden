@@ -4,7 +4,9 @@
  *
  * The API sanitizes the HTML and Markdown of every block when it SAVES and
  * again when it SERVES it (`packages/core/blocks/blocks.sanitize.ts`): no
- * scripts, no event handlers, no `javascript:` links. This site trusts that
+ * scripts, no event handlers, no `javascript:` links. That includes blocks
+ * nested in a grid, and every block but `text`/`richtext` whatever its
+ * `format` (only those two leave `plain` text alone, and they escape it here). This site trusts that
  * for `set:html`, and adds two cheap guards of its own: plain text is always
  * escaped, and every link it builds itself goes through `safeHref`.
  */
