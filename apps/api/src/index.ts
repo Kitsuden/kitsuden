@@ -276,6 +276,10 @@ app.use(
     allowMethods: corsConfig.methods,
     allowHeaders: corsConfig.headers,
     credentials: corsConfig.credentials,
+    // Without this a browser on another origin cannot read them: a deprecated
+    // operation's Deprecation/Sunset (docs/api-contract.md), when to retry after a 429,
+    // and X-Has-More on the lists that answer a bare array (kon-esports).
+    exposeHeaders: ["Deprecation", "Sunset", "Retry-After", "X-Has-More"],
   })
 );
 
@@ -1362,6 +1366,9 @@ const autoMcpProxy = {
       trigger: `agent.tool:${toolDef.name}`,
       description: toolDef.description,
       inputSchema: toolDef.inputSchema,
+      // Auto-kon tools query their table outside RLS and dataset policy: only an admin key
+      // runs them (security audit 2026-11-19).
+      meta: { requiredScopes: ["admin"] },
       run: async (ctx: any) => {
         // Execute the native handler for this Auto-Kon tool
         return toolDef.handler(ctx.payload, {

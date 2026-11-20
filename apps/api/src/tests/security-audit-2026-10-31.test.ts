@@ -410,8 +410,8 @@ describe("first run", () => {
     if (dbAvailable) await removeNewAdmins();
   });
   afterAll(async () => {
-    // Restore in place: replacing the object would leave modules that kept a
-    // reference to it reading a stale environment in later files.
+    // Restore in place: replacing the object (`process.env = {...}`) leaves
+    // whatever captured the old one reading stale values in later files.
     for (const key of Object.keys(process.env)) if (!(key in env)) delete process.env[key];
     Object.assign(process.env, env);
     if (!dbAvailable) return;

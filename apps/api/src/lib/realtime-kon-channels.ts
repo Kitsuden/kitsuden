@@ -21,9 +21,20 @@
  *     access the kon revokes (a reassigned conversation) stops within it.
  *   - An authorizer that throws denies.
  *
- * This module has no imports on purpose: realtime.ts, the wiring and
- * kon-setup.ts all read it, and none of them may import the others.
+ * Capability channels. A channel a kon authorizes for whoever names it (a web
+ * chat visitor, who has no account) is only as private as its name. If that
+ * name is something the kon also stores where staff can read it (kon-koe used
+ * the visitor hash it keeps as the contact's identity), anyone who once read it
+ * keeps listening for ever, after their access is gone. `konCapability`
+ * (`ctx.realtime.capability(material)`) turns a value into a channel part
+ * keyed by this installation's secret: the kon broadcasts on it and hands it
+ * only to whoever proves the original secret, and a value copied from the
+ * kon's tables does not let anyone compute it.
+ *
+ * This module imports nothing but node:crypto on purpose: realtime.ts, the
+ * wiring and kon-setup.ts all read it, and none of them may import the others.
  */
+import { createHmac } from "node:crypto";
 
 export interface KonChannelUser {
   id: string | null;
@@ -81,4 +92,29 @@ export async function authorizeKonChannel(channel: string, user: KonChannelUser)
     );
     return false;
   }
+}
+
+function capabilityKey(env: NodeJS.ProcessEnv): string {
+  const raw = env.KITSUDEN_SECRETS_KEY || env.BETTER_AUTH_SECRET || "";
+  if (raw.length < 16)
+    throw new Error(
+      "A realtime capability channel needs KITSUDEN_SECRETS_KEY (or BETTER_AUTH_SECRET)"
+    );
+  return raw;
+}
+
+/**
+ * A channel part (64 hex characters) for `material`, keyed by the installation's secret and the kon: the same
+ * material gives the same part, another kon or another installation a different one, and nobody without the
+ * server key can compute it from the material. Bound to the kon's id in its context, so a kon cannot compute
+ * another kon's parts.
+ */
+export function konCapability(konId: string, material: string, env = process.env): string {
+  if (!material) throw new Error("A realtime capability needs a non-empty material");
+  const key = createHmac("sha256", capabilityKey(env))
+    .update("kitsuden:realtime-capability:v1")
+    .digest();
+  return createHmac("sha256", key)
+    .update(`${konChannelShortId(konId)}\n${material}`)
+    .digest("hex");
 }

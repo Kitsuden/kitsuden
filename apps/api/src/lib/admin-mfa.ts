@@ -79,11 +79,13 @@ type GetSession = (headers: Headers, fresh: boolean) => Promise<SessionLike | nu
  * cookie pass untouched (agents, public reads); with a cookie, the session is
  * read and, for an admin, read again bypassing the 5-minute cookie cache, so
  * an admin who just disabled their second factor elsewhere is caught at once.
+ *
+ * Without `env`, `process.env` is read on every request, not captured when the
+ * gate is built: code that replaces the whole object (`process.env = {...}`)
+ * must not leave the gate reading a stale copy.
  */
 export function adminMfaGate(getSession: GetSession, env?: Env) {
   return async (c: Context, next: Next) => {
-    // `process.env` is read per request, not captured: code that replaces the
-    // object (tests do) must not leave the gate reading a stale copy.
     if (adminMfaMode(env ?? process.env) !== "required") return next();
     if (!mfaGateApplies(c.req.path)) return next();
     if (!c.req.header("Cookie")) return next();

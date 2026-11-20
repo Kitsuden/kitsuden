@@ -176,6 +176,7 @@ export type ListClaimsParams = {
   noteId?: string | number;
   status?: "fresh" | "stale";
   limit?: number;
+  offset?: number;
 };
 
 /** Success response of `brain.list-claims`. */
@@ -205,6 +206,34 @@ export type ListClaimsResponse = {
     };
     createdAt: string;
   }[];
+  hasMore: boolean;
+};
+
+/** One item of the list `brain.list-claims` pages through. */
+export type ListClaimsItem = {
+  id: string;
+  noteId: string;
+  statement: string;
+  source: {
+    id: string | null;
+    sha256: string;
+    uri: string | null;
+    range: {
+      unit: "line" | "char";
+      start: number;
+      end: number;
+    } | null;
+  };
+  status: "fresh" | "stale";
+  staleReason: string | null;
+  checkedAt: string;
+  verifiedAt: string | null;
+  verifiedBy: string | null;
+  owner: {
+    userId: string | null;
+    agentId: string | null;
+  };
+  createdAt: string;
 };
 
 /** Arguments of `brain.list-notes`: path and query parameters flat, the body under `body` (same shape as its MCP tool). */
@@ -508,7 +537,7 @@ export const operations = {
   "exportOkf": {"kon":"kon-brain","id":"export-okf","operationId":"brain.export-okf","method":"GET","path":"/brain/memory/export/okf","pathParams":[],"queryParams":["noteIds","limit"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:brain:export-okf","mcpTool":"brain_export_okf","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "importGraphify": {"kon":"kon-brain","id":"import-graphify","operationId":"brain.import-graphify","method":"POST","path":"/brain/memory/import/graphify","pathParams":[],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:brain:import-graphify","mcpTool":"brain_import_graphify","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "lint": {"kon":"kon-brain","id":"lint","operationId":"brain.lint","method":"POST","path":"/brain/memory/lint","pathParams":[],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:brain:lint","mcpTool":"brain_lint","errors":["KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "listClaims": {"kon":"kon-brain","id":"list-claims","operationId":"brain.list-claims","method":"GET","path":"/brain/memory/claims","pathParams":[],"queryParams":["noteId","status","limit"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:brain:list-claims","mcpTool":"brain_claims","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "listClaims": {"kon":"kon-brain","id":"list-claims","operationId":"brain.list-claims","method":"GET","path":"/brain/memory/claims","pathParams":[],"queryParams":["noteId","status","limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:brain:list-claims","mcpTool":"brain_claims","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"claims","limit":"limit"}},
   "listNotes": {"kon":"kon-brain","id":"list-notes","operationId":"brain.list-notes","method":"GET","path":"/brain/memory/notes","pathParams":[],"queryParams":["mine","visibility","tag","keyPrefix","limit","offset"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:brain:list-notes","mcpTool":"brain_list","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"notes","limit":"limit"}},
   "noteConnections": {"kon":"kon-brain","id":"note-connections","operationId":"brain.note-connections","method":"GET","path":"/brain/memory/notes/{id}/connections","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:brain:note-connections","mcpTool":"brain_connections","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "readNote": {"kon":"kon-brain","id":"read-note","operationId":"brain.read-note","method":"GET","path":"/brain/memory/notes/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:brain:read-note","mcpTool":"brain_read","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
@@ -592,7 +621,7 @@ export interface BrainApi {
    * idempotent (safe to retry) · MCP tool `brain_claims`
    * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
-  readonly listClaims: Operation<ListClaimsParams, ListClaimsResponse>;
+  readonly listClaims: PageableOperation<ListClaimsParams, ListClaimsResponse, ListClaimsItem>;
   /**
    * List memory notes
    *

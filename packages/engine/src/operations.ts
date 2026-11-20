@@ -38,7 +38,9 @@
 
 import {
   KONS_SDK_VERSION,
+  checkDeprecations,
   checkOperations,
+  deprecationHeaders,
   grantsByScopes,
   operationDenial,
   isRedirect,
@@ -403,6 +405,22 @@ export function operationsRouter(
     else if (op.access === "session") {
       throw new Error(`${konId}/${op.id}: the context does not provide auth.requireAuth`);
     }
+    // A deprecated operation says so on EVERY response, errors included
+    // (RFC 9745 `Deprecation`, RFC 8594 `Sunset`), and leaves one warning per call
+    // with who called: the list of clients to warn before the sunset.
+    if (op.deprecated) {
+      const headers = deprecationHeaders(op.deprecated);
+      const replacement = op.deprecated.use;
+      before.unshift(async (c, next) => {
+        await next();
+        for (const [k, v] of Object.entries(headers)) c.res.headers.set(k, v);
+        const who =
+          (c.get as (k: string) => { id?: string } | undefined)("user")?.id ?? "anonymous";
+        ctx.logger?.warn?.(
+          `[deprecated] ${konId}/${op.id} called by ${who}; sunset ${op.deprecated?.sunset}${replacement ? `, use ${replacement}` : ""}`
+        );
+      });
+    }
     before.push(...(op.before ?? []));
 
     const routeHandler = withRouteMeta(async (c: Context) => run(c, konId, op, ctx), {
@@ -436,7 +454,9 @@ export function defineKonSdk(def: SdkKonDefinition): KonDefinition {
     sdk: KONS_SDK_VERSION,
     operations: def.operations,
     createRouter: (ctx: KonContext) => {
-      const router = operationsRouter(def.id, operationsOf(def, ctx), ctx);
+      const ops = operationsOf(def, ctx);
+      checkDeprecations(def.id, ops);
+      const router = operationsRouter(def.id, ops, ctx);
       if (legacyRoutes) router.route("/", legacyRoutes(ctx));
       return router;
     },

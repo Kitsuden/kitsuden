@@ -57,9 +57,6 @@ importers:
 
   .:
     dependencies:
-      '@hono/swagger-ui':
-        specifier: ^0.6.2
-        version: 0.6.2(hono@4.13.18)
       '@paralleldrive/cuid2':
         specifier: ^3.3.0
         version: 3.3.0
@@ -178,9 +175,6 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.6
         version: 2.1.6(hono@4.13.18)
-      '@hono/swagger-ui':
-        specifier: ^0.6.2
-        version: 0.6.2(hono@4.13.18)
       '@hono/zod-validator':
         specifier: ^0.9.1
         version: 0.9.1(hono@4.13.18)(zod@4.6.7)
@@ -639,9 +633,6 @@ importers:
         specifier: ^3.24.6
         version: 3.24.6(@types/node@22.19.13)
     devDependencies:
-      '@hono/swagger-ui':
-        specifier: ^0.6.2
-        version: 0.6.2(hono@4.13.18)
       '@hono/zod-validator':
         specifier: ^0.9.1
         version: 0.9.1(hono@4.13.18)(zod@4.6.7)
@@ -1485,11 +1476,6 @@ packages:
   '@hono/node-server@2.1.8':
     resolution: {integrity: sha512-jdf7FHh6A1lzjpHHQUgxsg2GeER2vMetnAOfeActzcoli6jamlK+NAwL6Dsr5Fl3BS3tYUQzCdtZjU8Qxv7bEA==}
     engines: {node: '>=20'}
-    peerDependencies:
-      hono: 4.13.18
-
-  '@hono/swagger-ui@0.6.2':
-    resolution: {integrity: sha512-EDLlBS+LwpAhhh5K45YH85Yyk9GJuD2E7rKdjTZsBObksXaBz+8jPsen5XZqOS9unw6H1CDq0LKzp0c51K6lsA==}
     peerDependencies:
       hono: 4.13.18
 
@@ -6766,10 +6752,6 @@ snapshots:
       hono: 4.13.18
 
   '@hono/node-server@2.1.8(hono@4.13.18)':
-    dependencies:
-      hono: 4.13.18
-
-  '@hono/swagger-ui@0.6.2(hono@4.13.18)':
     dependencies:
       hono: 4.13.18
 

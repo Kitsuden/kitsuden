@@ -28,6 +28,7 @@ import {
   type AnyOperation,
 } from "@kitsuden/engine";
 import {
+  accessToDataset,
   buildDatasetWhere,
   droppedSensitivity,
   agentSignature,
@@ -328,21 +329,26 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
       output: { schema: DatasetsList },
       handle: async (_input, { c }) => {
         const limit = Math.min(Number(c.req.query("limit")) || 50, 200);
+        const offset = Math.max(Math.trunc(Number(c.req.query("offset")) || 0), 0);
 
         const user = userOf(c);
 
+        // Filter THEN page. It cut 50 rows in SQL and filtered them here, so a reader
+        // who may not see some datasets got fewer than `limit` while more visible ones
+        // existed, and could not reach them: there was no `offset`. Datasets are
+        // configuration (dozens, a few hundred), read whole.
         const rows = await ctx.db.instance
           .select()
           .from(dataSets)
-          .orderBy(asc(dataSets.name))
-          .limit(limit);
+          .orderBy(asc(dataSets.name), asc(dataSets.id));
 
         // Only those this user can see: before, all were listed, with their
         // schema and their policy, including the admin-only ones.
-        const docs = [];
-        for (const ds of rows) if (await canViewDataset(user, ds)) docs.push(ds);
+        const visible = [];
+        for (const ds of rows) if (await canViewDataset(user, ds)) visible.push(ds);
+        const docs = visible.slice(offset, offset + limit);
 
-        return c.json({ docs, totalDocs: docs.length });
+        return c.json({ docs, totalDocs: docs.length, hasMore: offset + limit < visible.length });
       },
     })
   );
@@ -701,6 +707,8 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
         }
 
         const limit = Math.min(Number(c.req.query("limit")) || 500, 1000);
+        // There was no way past the first `limit` entries (500 by default).
+        const offset = Math.max(Math.trunc(Number(c.req.query("offset")) || 0), 0);
         const status = c.req.query("status");
         const includeCalculated = c.req.query("includeCalculated") === "true";
         const includeThumbnailUrl = c.req.query("includeThumbnailUrl") === "true";
@@ -729,7 +737,12 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
           query = query.where(and(rlsWhere, eq(dataEntries.status, status)));
         }
 
-        const docs = await query.orderBy(asc(dataEntries.sortOrder)).limit(limit);
+        const page = await query
+          .orderBy(asc(dataEntries.sortOrder), asc(dataEntries.id))
+          .limit(limit + 1)
+          .offset(offset);
+        const hasMore = page.length > limit;
+        const docs = page.slice(0, limit);
 
         // Compute calculated fields if requested
         let calculatedFields: any[] = [];
@@ -809,6 +822,7 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
         return c.json({
           docs: docsWithThumbnails,
           totalDocs: docs.length,
+          hasMore,
           calculatedFields: includeCalculated
             ? calculatedFields.map((f) => ({
                 id: f.id,
@@ -1158,6 +1172,25 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
         try {
           const body = input.body ?? {};
           const config = exportConfigSchema.parse(body) as ExportConfig;
+
+          // A key that carries `!datasets:<slug>:*` (or `:read`) is closed to that dataset
+          // on every path, export included: the operation's own grant (`admin`,
+          // `datasets:*`…) does not name the slug, so it is checked here, before
+          // anything of the dataset is read (security audit 2026-11-19).
+          const scopes = (userOf(c) as { scopes?: string[] } | null)?.scopes;
+          const denied = config.datasets.find(
+            (slug) => accessToDataset(scopes, slug, "read") === "denied"
+          );
+          if (denied) {
+            return c.json(
+              {
+                error: "Forbidden",
+                code: "KITSUDEN_E_FORBIDDEN",
+                message: `This key is denied read access to dataset '${denied}'`,
+              },
+              403
+            );
+          }
 
           const exportPackage = await exportDatasets(
             ctx,

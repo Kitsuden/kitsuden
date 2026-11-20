@@ -669,10 +669,12 @@ async function saveAgentMcpSettings(c: Context): Promise<Response> {
 
 // ── Human signer ───────────────────────────────
 
+const CANDIDATES_SHOWN = 500;
+
 /** What the panel shows about an agent's signer and whom it can choose. */
 async function signerView(a: Agent) {
   const signer = await agentSigner(a.sponsorUserId);
-  const candidates = await db
+  const rows = await db
     .select({
       id: authUsers.id,
       name: authUsers.name,
@@ -681,8 +683,13 @@ async function signerView(a: Agent) {
     })
     .from(authUsers)
     .where(inArray(authUsers.role, [...SIGNER_ROLES]))
-    .orderBy(authUsers.name)
-    .limit(500);
+    .orderBy(authUsers.name, authUsers.id)
+    .limit(CANDIDATES_SHOWN + 1);
+  // It stopped at 500 by name with no sign: past that, the panel could not even show
+  // the agent's CURRENT signer among the choices. Now the list says it was cut, and the
+  // current signer is always in it.
+  const candidatesTruncated = rows.length > CANDIDATES_SHOWN;
+  const candidates = rows.slice(0, CANDIDATES_SHOWN);
   const account = signer
     ? (
         await db
@@ -708,7 +715,13 @@ async function signerView(a: Agent) {
           role: account?.role ?? null,
         }
       : null,
-    candidates,
+    candidates:
+      account &&
+      (SIGNER_ROLES as readonly string[]).includes(String(account.role)) &&
+      !candidates.some((c) => c.id === account.id)
+        ? [account, ...candidates]
+        : candidates,
+    candidatesTruncated,
   };
 }
 
@@ -960,6 +973,7 @@ export const agentOperations: AnyOperation[] = [
   defineOperation({
     ...common,
     id: "list-keys",
+    unpaginated: "The keys of one agent: a rotation keeps the new and the old one at most.",
     method: "GET",
     route: "/agents/:id/keys",
     summary: "List an agent's API keys",

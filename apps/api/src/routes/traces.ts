@@ -52,6 +52,8 @@ export const traceOperations: AnyOperation[] = [
       query: z.object({
         hours: Hours,
         limit: z.coerce.number().int().min(1).max(1000).default(200),
+        // There was no way past the newest `limit` (migration 0089 adds the offset).
+        offset: z.coerce.number().int().min(0).default(0),
         blocked: z.enum(["0", "1"]).optional(),
         errors: z.enum(["0", "1"]).optional(),
         actor: z.string().max(200).optional(),
@@ -61,25 +63,32 @@ export const traceOperations: AnyOperation[] = [
       schema: z.object({
         enabled: z.boolean(),
         requests: z.array(z.record(z.string(), z.unknown())),
+        hasMore: z.boolean(),
       }),
     },
     handle: async ({ query }) => {
       const q = query as {
         hours: number;
         limit: number;
+        offset: number;
         blocked?: string;
         errors?: string;
         actor?: string;
       };
-      if (!tracesEnabled()) return { enabled: false, requests: [] };
-      const requests = await listTraces({
+      if (!tracesEnabled()) return { enabled: false, requests: [], hasMore: false };
+      const page = await listTraces({
         from: from(q.hours),
-        limit: q.limit,
+        limit: q.limit + 1,
+        offset: q.offset,
         onlyBlockers: q.blocked === "1",
         onlyErrors: q.errors === "1",
         actor: q.actor || null,
       });
-      return { enabled: true, requests };
+      return {
+        enabled: true,
+        requests: page.slice(0, q.limit),
+        hasMore: page.length > q.limit,
+      };
     },
   }),
   defineOperation({

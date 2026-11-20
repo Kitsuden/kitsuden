@@ -239,6 +239,12 @@ export type DuplicateBlockResponse = {
 export type GetPageParams = {
   /** Page/block/template id (uuid; anything else is a 404) */
   id: string | number;
+  /** `false` returns the page without its blocks. Default `true`. */
+  includeBlocks?: "true" | "false";
+  /**
+   * Deprecated since 2026-11-18, removed after 2027-05-18: use `includeBlocks`.
+   * @deprecated
+   */
   include_blocks?: "true" | "false";
 };
 
@@ -613,7 +619,7 @@ export type UseTemplateResponse = {
 
 /** Runtime description of every operation of kon-blocks (path, method, pagination…). */
 export const operations = {
-  "blockTypes": {"kon":"kon-blocks","id":"block-types","operationId":"blocks.block-types","method":"GET","path":"/page-builder/block-types","pathParams":[],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:block-types","mcpTool":"blocks__block-types","errors":["KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "blockTypes": {"kon":"kon-blocks","id":"block-types","operationId":"blocks.block-types","method":"GET","path":"/page-builder/block-types","pathParams":[],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:block-types","mcpTool":"blocks__block-types","errors":["KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "clonePage": {"kon":"kon-blocks","id":"clone-page","operationId":"blocks.clone-page","method":"POST","path":"/page-builder/pages/{id}/clone","pathParams":["id"],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:clone-page","mcpTool":"blocks__clone-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "createBlock": {"kon":"kon-blocks","id":"create-block","operationId":"blocks.create-block","method":"POST","path":"/page-builder/pages/{pageId}/blocks","pathParams":["pageId"],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:create-block","mcpTool":"blocks__create-block","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "createPage": {"kon":"kon-blocks","id":"create-page","operationId":"blocks.create-page","method":"POST","path":"/page-builder/pages","pathParams":[],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:create-page","mcpTool":"blocks__create-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
@@ -621,12 +627,12 @@ export const operations = {
   "deleteBlock": {"kon":"kon-blocks","id":"delete-block","operationId":"blocks.delete-block","method":"DELETE","path":"/page-builder/blocks/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:blocks:delete-block","mcpTool":"blocks__delete-block","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "deletePage": {"kon":"kon-blocks","id":"delete-page","operationId":"blocks.delete-page","method":"DELETE","path":"/page-builder/pages/{id}","pathParams":["id"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":true,"scope":"kon:blocks:delete-page","mcpTool":"blocks__delete-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "duplicateBlock": {"kon":"kon-blocks","id":"duplicate-block","operationId":"blocks.duplicate-block","method":"POST","path":"/page-builder/blocks/{id}/duplicate","pathParams":["id"],"queryParams":[],"body":null,"responses":{"201":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:duplicate-block","mcpTool":"blocks__duplicate-block","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "getPage": {"kon":"kon-blocks","id":"get-page","operationId":"blocks.get-page","method":"GET","path":"/page-builder/pages/{id}","pathParams":["id"],"queryParams":["include_blocks"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:get-page","mcpTool":"blocks__get-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "listPages": {"kon":"kon-blocks","id":"list-pages","operationId":"blocks.list-pages","method":"GET","path":"/page-builder/pages","pathParams":[],"queryParams":["status","limit","offset","layout","search"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:list-pages","mcpTool":"blocks__list-pages","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"docs","limit":"limit"}},
-  "listTemplates": {"kon":"kon-blocks","id":"list-templates","operationId":"blocks.list-templates","method":"GET","path":"/page-builder/templates","pathParams":[],"queryParams":["category","type"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:list-templates","mcpTool":"blocks__list-templates","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "getPage": {"kon":"kon-blocks","id":"get-page","operationId":"blocks.get-page","method":"GET","path":"/page-builder/pages/{id}","pathParams":["id"],"queryParams":["includeBlocks","include_blocks"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:get-page","mcpTool":"blocks__get-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "listPages": {"kon":"kon-blocks","id":"list-pages","operationId":"blocks.list-pages","method":"GET","path":"/page-builder/pages","pathParams":[],"queryParams":["status","limit","offset","layout","search"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:list-pages","mcpTool":"blocks__list-pages","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"],"pagination":{"style":"offset","items":"docs","limit":"limit"}},
+  "listTemplates": {"kon":"kon-blocks","id":"list-templates","operationId":"blocks.list-templates","method":"GET","path":"/page-builder/templates","pathParams":[],"queryParams":["category","type"],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:list-templates","mcpTool":"blocks__list-templates","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "publishBlockAsPage": {"kon":"kon-blocks","id":"publish-block-as-page","operationId":"blocks.publish-block-as-page","method":"POST","path":"/page-builder/pages/from-block","pathParams":[],"queryParams":[],"body":"json","responses":{"201":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:blocks:publish-block-as-page","mcpTool":"blocks__publish-block-as-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "publishDraft": {"kon":"kon-blocks","id":"publish-draft","operationId":"blocks.publish-draft","method":"POST","path":"/page-builder/pages/{id}/publish-draft","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:publish-draft","mcpTool":"blocks__publish-draft","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
-  "renderPage": {"kon":"kon-blocks","id":"render-page","operationId":"blocks.render-page","method":"GET","path":"/page-builder/render/{slug}","pathParams":["slug"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:render-page","mcpTool":"blocks__render-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
+  "renderPage": {"kon":"kon-blocks","id":"render-page","operationId":"blocks.render-page","method":"GET","path":"/page-builder/render/{slug}","pathParams":["slug"],"queryParams":[],"body":null,"responses":{"200":"json"},"idempotent":true,"readOnly":true,"sensitive":false,"scope":"kon:blocks:render-page","mcpTool":"blocks__render-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "reorderBlocks": {"kon":"kon-blocks","id":"reorder-blocks","operationId":"blocks.reorder-blocks","method":"POST","path":"/page-builder/pages/{pageId}/blocks/reorder","pathParams":["pageId"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":true,"readOnly":false,"sensitive":false,"scope":"kon:blocks:reorder-blocks","mcpTool":"blocks__reorder-blocks","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "updateBlock": {"kon":"kon-blocks","id":"update-block","operationId":"blocks.update-block","method":"PATCH","path":"/page-builder/blocks/{id}","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:update-block","mcpTool":"blocks__update-block","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
   "updatePage": {"kon":"kon-blocks","id":"update-page","operationId":"blocks.update-page","method":"PATCH","path":"/page-builder/pages/{id}","pathParams":["id"],"queryParams":[],"body":"json","responses":{"200":"json"},"idempotent":false,"readOnly":false,"sensitive":false,"scope":"kon:blocks:update-page","mcpTool":"blocks__update-page","errors":["KITSUDEN_E_VALIDATION","KITSUDEN_E_BAD_REQUEST","KITSUDEN_E_NOT_FOUND","KITSUDEN_E_UNAUTHENTICATED","KITSUDEN_E_FORBIDDEN","KITSUDEN_E_IDEMPOTENCY_KEY_REUSED","KITSUDEN_E_CONFLICT","KITSUDEN_E_RATE_LIMITED","KITSUDEN_E_INTERNAL"]},
@@ -646,7 +652,7 @@ export interface BlocksApi {
    *
    * REST: `GET /api/page-builder/block-types` · scope `kon:blocks:block-types`
    * idempotent (safe to retry) · MCP tool `blocks__block-types`
-   * Errors: `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly blockTypes: Operation<void, BlockTypesResponse>;
   /**
@@ -726,7 +732,7 @@ export interface BlocksApi {
    *
    * REST: `GET /api/page-builder/pages/{id}` · scope `kon:blocks:get-page`
    * idempotent (safe to retry) · MCP tool `blocks__get-page`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly getPage: Operation<GetPageParams, GetPageResponse>;
   /**
@@ -736,7 +742,7 @@ export interface BlocksApi {
    *
    * REST: `GET /api/page-builder/pages` · scope `kon:blocks:list-pages`
    * idempotent (safe to retry) · MCP tool `blocks__list-pages`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly listPages: PageableOperation<ListPagesParams, ListPagesResponse, ListPagesItem>;
   /**
@@ -746,7 +752,7 @@ export interface BlocksApi {
    *
    * REST: `GET /api/page-builder/templates` · scope `kon:blocks:list-templates`
    * idempotent (safe to retry) · MCP tool `blocks__list-templates`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly listTemplates: Operation<ListTemplatesParams, ListTemplatesResponse>;
   /**
@@ -776,7 +782,7 @@ export interface BlocksApi {
    *
    * REST: `GET /api/page-builder/render/{slug}` · scope `kon:blocks:render-page`
    * idempotent (safe to retry) · MCP tool `blocks__render-page`
-   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+   * Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
    */
   readonly renderPage: Operation<RenderPageParams, RenderPageResponse>;
   /**

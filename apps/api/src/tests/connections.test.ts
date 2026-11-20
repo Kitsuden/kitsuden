@@ -106,7 +106,12 @@ async function connectAna(): Promise<string> {
   );
   expect(started.status).toBe(200);
   const state = new URL(started.json.data.url).searchParams.get("state")!;
-  const back = await call("GET", `/api/connections/oauth/callback?state=${state}&code=the-code`);
+  const back = await call(
+    "GET",
+    `/api/connections/oauth/callback?state=${state}&code=the-code`,
+    undefined,
+    ana
+  );
   expect(back.status).toBe(302);
   return new URL(back.location!).searchParams.get("connection")!;
 }
@@ -170,7 +175,12 @@ describe("OAuth", () => {
     );
     expect(stored.verifier).toMatchObject({ v: 1, kon: "kitsuden-connections" });
 
-    const back = await call("GET", `/api/connections/oauth/callback?state=${state}&code=the-code`);
+    const back = await call(
+      "GET",
+      `/api/connections/oauth/callback?state=${state}&code=the-code`,
+      undefined,
+      ana
+    );
     expect(back.status).toBe(200);
     const exchange = new URLSearchParams(
       String(calls.find((c) => c.url.endsWith("/token"))!.init!.body)
@@ -196,7 +206,14 @@ describe("OAuth", () => {
 
     // The same state does not work twice.
     expect(
-      (await call("GET", `/api/connections/oauth/callback?state=${state}&code=the-code`)).status
+      (
+        await call(
+          "GET",
+          `/api/connections/oauth/callback?state=${state}&code=the-code`,
+          undefined,
+          ana
+        )
+      ).status
     ).toBe(400);
   });
 
@@ -224,6 +241,65 @@ describe("OAuth", () => {
         )
       ).status
     ).toBe(403);
+  });
+});
+
+describe("the callback belongs to whoever started it (security audit 2026-11-19)", () => {
+  async function startAsAna(): Promise<{ state: string; setCookie: string | null }> {
+    const res = await app.request(
+      req(
+        "/api/connections/oauth/start",
+        { method: "POST", body: JSON.stringify({ provider: "google", scopeSets: ["mail.read"] }) },
+        ana
+      )
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { url: string } };
+    return {
+      state: new URL(body.data.url).searchParams.get("state")!,
+      setCookie: res.headers.get("set-cookie"),
+    };
+  }
+
+  it("refuses a consent link completed with no session and no binding cookie, and burns it", async () => {
+    if (!dbAvailable) return;
+    const { state } = await startAsAna();
+    const back = await call("GET", `/api/connections/oauth/callback?state=${state}&code=the-code`);
+    expect(back.status).toBe(403);
+    const again = await call(
+      "GET",
+      `/api/connections/oauth/callback?state=${state}&code=the-code`,
+      undefined,
+      ana
+    );
+    expect(again.status).toBe(400);
+  });
+
+  it("refuses a consent link completed by another person's session", async () => {
+    if (!dbAvailable) return;
+    const { state } = await startAsAna();
+    const back = await call(
+      "GET",
+      `/api/connections/oauth/callback?state=${state}&code=the-code`,
+      undefined,
+      beto
+    );
+    expect(back.status).toBe(403);
+  });
+
+  it("accepts the starting browser by its binding cookie, without a session", async () => {
+    if (!dbAvailable) return;
+    const { state, setCookie } = await startAsAna();
+    const binding = /kitsuden_conn_oauth=([^;]+)/.exec(setCookie ?? "")?.[1];
+    expect(binding).toBeTruthy();
+    const back = await call(
+      "GET",
+      `/api/connections/oauth/callback?state=${state}&code=the-code`,
+      undefined,
+      `kitsuden_conn_oauth=${binding}`
+    );
+    expect(back.status).toBe(200);
+    expect(back.json.data.ownerId).toBe(anaId);
   });
 });
 

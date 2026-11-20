@@ -177,6 +177,7 @@ class LintResponse(TypedDict):
 
 class ListClaimsResponse(TypedDict):
     claims: List[AddClaimResponseClaim]
+    hasMore: bool
 
 
 class ListNotesResponseNotesItemOwner(TypedDict):
@@ -389,7 +390,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         method="GET",
         path="/brain/memory/claims",
         path_params=(),
-        query_params=("noteId", "status", "limit"),
+        query_params=("noteId", "status", "limit", "offset"),
         body=None,
         responses={200: "json"},
         idempotent=True,
@@ -398,6 +399,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         scope="kon:brain:list-claims",
         mcp_tool="brain_claims",
         errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        pagination=PaginationInfo(style="offset", items="claims", limit="limit"),
     ),
     "list-notes": OperationInfo(
         kon="kon-brain",
@@ -579,7 +581,7 @@ class BrainApi(KonApi):
         """
         return self._call(OPERATIONS["lint"], {}, None, request_options)
 
-    def list_claims(self, *, note_id: Optional[Union[str, int]] = None, status: Optional[Literal["fresh", "stale"]] = None, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListClaimsResult]:
+    def list_claims(self, *, note_id: Optional[Union[str, int]] = None, status: Optional[Literal["fresh", "stale"]] = None, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListClaimsResult]:
         """List claims with evidence
 
         Claims (statement + source + the source's SHA-256 + optional range) of the notes you can see. `status=stale` lists the ones whose evidence changed.
@@ -588,7 +590,14 @@ class BrainApi(KonApi):
         idempotent (safe to retry) · MCP tool `brain_claims`
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
-        return self._call(OPERATIONS["list-claims"], {"noteId": note_id, "status": status, "limit": limit}, None, request_options)
+        return self._call(OPERATIONS["list-claims"], {"noteId": note_id, "status": status, "limit": limit, "offset": offset}, None, request_options)
+
+    def iter_list_claims(self, *, note_id: Optional[Union[str, int]] = None, status: Optional[Literal["fresh", "stale"]] = None, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Iterator[AddClaimResponseClaim]:
+        """Every item of `list_claims`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-claims"], {"noteId": note_id, "status": status, "limit": limit}, request_options)
 
     def list_notes(self, *, mine: Optional[Literal["true", "false"]] = None, visibility: Optional[Literal["private", "shared"]] = None, tag: Optional[Union[str, int]] = None, key_prefix: Optional[Union[str, int]] = None, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListNotesResult]:
         """List memory notes
@@ -738,7 +747,7 @@ class AsyncBrainApi(AsyncKonApi):
         """
         return await self._call(OPERATIONS["lint"], {}, None, request_options)
 
-    async def list_claims(self, *, note_id: Optional[Union[str, int]] = None, status: Optional[Literal["fresh", "stale"]] = None, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListClaimsResult]:
+    async def list_claims(self, *, note_id: Optional[Union[str, int]] = None, status: Optional[Literal["fresh", "stale"]] = None, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListClaimsResult]:
         """List claims with evidence
 
         Claims (statement + source + the source's SHA-256 + optional range) of the notes you can see. `status=stale` lists the ones whose evidence changed.
@@ -747,7 +756,14 @@ class AsyncBrainApi(AsyncKonApi):
         idempotent (safe to retry) · MCP tool `brain_claims`
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
-        return await self._call(OPERATIONS["list-claims"], {"noteId": note_id, "status": status, "limit": limit}, None, request_options)
+        return await self._call(OPERATIONS["list-claims"], {"noteId": note_id, "status": status, "limit": limit, "offset": offset}, None, request_options)
+
+    def iter_list_claims(self, *, note_id: Optional[Union[str, int]] = None, status: Optional[Literal["fresh", "stale"]] = None, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[AddClaimResponseClaim]:
+        """Every item of `list_claims`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-claims"], {"noteId": note_id, "status": status, "limit": limit}, request_options)
 
     async def list_notes(self, *, mine: Optional[Literal["true", "false"]] = None, visibility: Optional[Literal["private", "shared"]] = None, tag: Optional[Union[str, int]] = None, key_prefix: Optional[Union[str, int]] = None, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListNotesResult]:
         """List memory notes

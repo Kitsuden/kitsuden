@@ -195,6 +195,38 @@ export const MCP_IDEMPOTENCY_ARGUMENT = "idempotency_key";
  * The examples are VALIDATED against the schemas when the operation is declared: an
  * example that does not validate teaches how to fail.
  */
+export interface OperationDeprecation {
+  /** Day it was deprecated (YYYY-MM-DD): the `Deprecation` header. */
+  since: string;
+  /** Day from which it may be removed (YYYY-MM-DD, after `since`): `Sunset` and `x-sunset`. */
+  sunset: string;
+  /** Id of the operation of the same kon that replaces it, if there is one. */
+  use?: string;
+}
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** `2026-11-18` → milliseconds at 00:00 UTC, or NaN if it is not a real day. */
+export function dayToTime(day: string): number {
+  if (!ISO_DAY.test(day)) return Number.NaN;
+  const t = Date.parse(`${day}T00:00:00Z`);
+  return Number.isNaN(t) || new Date(t).toISOString().slice(0, 10) !== day ? Number.NaN : t;
+}
+
+/** The headers of a deprecated operation's responses (RFC 9745 and RFC 8594). */
+export function deprecationHeaders(d: OperationDeprecation): Record<string, string> {
+  return {
+    Deprecation: `@${Math.floor(dayToTime(d.since) / 1000)}`,
+    Sunset: new Date(dayToTime(d.sunset)).toUTCString(),
+  };
+}
+
+/** One line for humans and agents: "Deprecated: removed after 2027-03-01; use list-posts." */
+export function deprecationNote(d: OperationDeprecation, replacement?: string): string {
+  const use = replacement ?? d.use;
+  return `Deprecated: removed after ${d.sunset}${use ? `; use ${use}` : ""}.`;
+}
+
 export interface OperationGuide {
   /** When to use it, and when NOT to (which other operation applies then). */
   whenToUse?: string;
@@ -305,6 +337,22 @@ export interface KonOperation<
    * (validation, authentication, permission, internal). Codes from the catalog.
    */
   errors?: KitsudenErrorCode[];
+  /**
+   * The operation is on its way out (docs/api-contract.md, deprecation policy).
+   * Published as `deprecated: true` + `x-sunset` in the OpenAPI (what oasdiff reads
+   * before it lets the operation go), `Deprecation`/`Sunset` headers on every response
+   * (RFC 9745, RFC 8594), a first line in the MCP tool description, `@deprecated` in
+   * the TypeScript client and a `DeprecationWarning` in the Python one.
+   */
+  deprecated?: OperationDeprecation;
+  /**
+   * A GET list that returns the whole collection ON PURPOSE, and why (a fixed
+   * catalogue, the tools of one server, the fields of one dataset). Without it, a
+   * `list-*` / `search-*` takes a page size: `pnpm api:lint` (kitsuden-list-pagination)
+   * fails on a list that may silently stop at a cap. Published as
+   * `x-kitsuden-operation.unpaginated`.
+   */
+  unpaginated?: string;
   /** MCP exposure (yes by default). */
   mcp?: OperationMcp;
   /** Usage guide for agents (see `OperationGuide`). Optional. */
@@ -376,7 +424,12 @@ export function operationErrors(
   // visible to the caller). Every such operation can answer it (Schemathesis).
   if (op.input?.params) list.push("KITSUDEN_E_NOT_FOUND");
   if (op.access === "session" || op.permission) list.push("KITSUDEN_E_UNAUTHENTICATED");
-  if (op.permission) list.push("KITSUDEN_E_FORBIDDEN");
+  // 403 on EVERY operation, public ones included: a denial in an agent key's
+  // scopes (`!kon:<kon>:<op>`) covers the operation before anything else runs
+  // (engine/src/operations.ts, `run`). It was declared only with `permission`,
+  // so 34 operations answered a status their contract did not list (found by
+  // the Spectral rule `kitsuden-standard-errors`).
+  list.push("KITSUDEN_E_FORBIDDEN");
   // Every non-GET operation announces `Idempotency-Key`; reusing a
   // key with another body responds 422 (idempotency middleware).
   if (op.method && op.method !== "GET") list.push("KITSUDEN_E_IDEMPOTENCY_KEY_REUSED");
@@ -555,6 +608,21 @@ export function defineOperation<
   const reason = exclusionMcp(op);
   if (reason !== null && !reason.trim()) {
     throw new Error(`${where}: excluding from MCP requires a reason`);
+  }
+  if (op.unpaginated !== undefined && (op.method !== "GET" || op.unpaginated.trim().length < 10)) {
+    throw new Error(`${where}: unpaginated is for a GET, with the reason the list is bounded`);
+  }
+  if (op.deprecated) {
+    const { since, sunset, use } = op.deprecated;
+    if (Number.isNaN(dayToTime(since)) || Number.isNaN(dayToTime(sunset))) {
+      throw new Error(`${where}: deprecated.since and deprecated.sunset are days (YYYY-MM-DD)`);
+    }
+    if (dayToTime(sunset) <= dayToTime(since)) {
+      throw new Error(`${where}: deprecated.sunset must come after deprecated.since`);
+    }
+    if (use !== undefined && (!VALID_ID.test(use) || use === op.id)) {
+      throw new Error(`${where}: deprecated.use is the id of another operation of the kon`);
+    }
   }
   if (op.cost !== undefined && !(Number.isInteger(op.cost) && op.cost >= 0)) {
     throw new Error(`${where}: the cost is an integer ≥ 0`);
@@ -739,6 +807,24 @@ export function checkOperations(konId: string, ops: readonly KonOperation[]): vo
     const key = `${op.method} ${op.route.replace(/:[^/]+/g, ":p")}`;
     if (routes.has(key)) throw new Error(`${konId}: two operations on ${op.method} ${op.route}`);
     routes.add(key);
+  }
+}
+
+/**
+ * `deprecated.use` names its replacement: a typo would send clients nowhere. Needs the
+ * kon's WHOLE list (the replacement may be declared in another file of the kon), so it
+ * runs where a kon is mounted entire (`defineKonSdk`), not in every `operationsRouter`:
+ * a router built for one operation (a test, a guard) would not find the other one.
+ */
+export function checkDeprecations(konId: string, ops: readonly KonOperation[]): void {
+  const ids = new Set(ops.map((op) => op.id));
+  for (const op of ops) {
+    const use = op.deprecated?.use;
+    if (use && !ids.has(use)) {
+      throw new Error(
+        `${konId}: '${op.id}' is deprecated in favour of '${use}', which is not an operation of the kon`
+      );
+    }
   }
 }
 

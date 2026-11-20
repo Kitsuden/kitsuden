@@ -34,6 +34,7 @@ class ListSecretAccessResponseEntriesItem(TypedDict):
 
 
 class ListSecretAccessResponse(TypedDict):
+    hasMore: bool
     entries: List[ListSecretAccessResponseEntriesItem]
 
 
@@ -48,7 +49,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         method="GET",
         path="/admin/secret-access",
         path_params=(),
-        query_params=("kon", "limit"),
+        query_params=("kon", "limit", "offset"),
         body=None,
         responses={200: "json"},
         idempotent=True,
@@ -57,6 +58,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         scope="kon:secret-access:list-secret-access",
         mcp_tool=None,
         errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_UNAUTHENTICATED", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        pagination=PaginationInfo(style="offset", items="entries", limit="limit"),
     ),
 }
 
@@ -69,7 +71,7 @@ class SecretAccessApi(KonApi):
 
     kon = "kon-secret-access"
 
-    def list_secret_access(self, *, kon: Optional[Union[str, int]] = None, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListSecretAccessResult]:
+    def list_secret_access(self, *, kon: Optional[Union[str, int]] = None, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListSecretAccessResult]:
         """Who opened which sealed secret
 
         The openings and refusals of secrets kons sealed with `ctx.secrets`, newest first: the kon, the purpose, the subject the kon named, the account and the request. Never a value.
@@ -78,7 +80,14 @@ class SecretAccessApi(KonApi):
         idempotent (safe to retry)
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
-        return self._call(OPERATIONS["list-secret-access"], {"kon": kon, "limit": limit}, None, request_options)
+        return self._call(OPERATIONS["list-secret-access"], {"kon": kon, "limit": limit, "offset": offset}, None, request_options)
+
+    def iter_list_secret_access(self, *, kon: Optional[Union[str, int]] = None, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Iterator[ListSecretAccessResponseEntriesItem]:
+        """Every item of `list_secret_access`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-secret-access"], {"kon": kon, "limit": limit}, request_options)
 
 
 class AsyncSecretAccessApi(AsyncKonApi):
@@ -89,7 +98,7 @@ class AsyncSecretAccessApi(AsyncKonApi):
 
     kon = "kon-secret-access"
 
-    async def list_secret_access(self, *, kon: Optional[Union[str, int]] = None, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListSecretAccessResult]:
+    async def list_secret_access(self, *, kon: Optional[Union[str, int]] = None, limit: Optional[int] = None, offset: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListSecretAccessResult]:
         """Who opened which sealed secret
 
         The openings and refusals of secrets kons sealed with `ctx.secrets`, newest first: the kon, the purpose, the subject the kon named, the account and the request. Never a value.
@@ -98,4 +107,11 @@ class AsyncSecretAccessApi(AsyncKonApi):
         idempotent (safe to retry)
         Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_UNAUTHENTICATED`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
-        return await self._call(OPERATIONS["list-secret-access"], {"kon": kon, "limit": limit}, None, request_options)
+        return await self._call(OPERATIONS["list-secret-access"], {"kon": kon, "limit": limit, "offset": offset}, None, request_options)
+
+    def iter_list_secret_access(self, *, kon: Optional[Union[str, int]] = None, limit: Optional[int] = None, request_options: Optional[RequestOptions] = None) -> AsyncIterator[ListSecretAccessResponseEntriesItem]:
+        """Every item of `list_secret_access`, page after page (moves `offset`).
+
+        Stops on an empty or short page, or when the response says there is no more. Raises `ProposalPendingError` if a page needs human approval.
+        """
+        return self._iterate(OPERATIONS["list-secret-access"], {"kon": kon, "limit": limit}, request_options)

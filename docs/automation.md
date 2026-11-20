@@ -89,6 +89,13 @@ payload. `{{eventName}}`, `{{rule.id}}` and `{{rule.name}}` are also available.
   `"{{event.amount}}"` becomes the number `500`.
 - A placeholder inside other text becomes text; one that points nowhere becomes
   an empty string, or `null` when it stands alone.
+- **`core:run-agent` keeps event data marked as untrusted.** The rule does not
+  fill the `{{event.<path>}}` placeholders of its `promptTemplate` (it does fill
+  `{{eventName}}` and `{{rule.*}}`). The agent handler fills them: it puts each
+  value between untrusted-content tags, starts the message with a notice that
+  this text is data, and holds every write the agent makes for a person, as for a
+  plain `agent` action. A `promptTemplate` that is not a string is dropped and
+  the agent gets the default prompt.
 
 ## Dry run
 

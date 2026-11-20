@@ -50,7 +50,9 @@ import {
 } from "../db/schema";
 import { analyticsViews } from "../db/schema-core";
 import { TABLES_ONLY_VIA_THEIR_ROUTE } from "../lib/actions-code";
+import { invalidateSensitivityCatalog } from "../lib/customer-data-catalog";
 import {
+  agentWriteNeedsOwnRoute,
   writeRequiresAdmin,
   withoutSecretColumns,
   tableIsExplorable,
@@ -228,10 +230,26 @@ async function recordExplorerChange(
  */
 function denySensitiveWrite(
   c: { get(k: "user"): { role?: string } | undefined; json: (b: unknown, s: 403) => Response },
-  table: string
+  table: string,
+  meta?: TableMeta
 ): Response | null {
+  // The SQL name too: the collection `datasets` is the table `data_sets`.
+  const sqlName = sqlNameOf(meta) ?? table;
+  // An agent does not write a dataset definition here (its customer-data
+  // marks): /api/data-sets checks that only a person removes one.
+  const agent = (c.get as (k: string) => unknown)("agent");
+  if (agent && (agentWriteNeedsOwnRoute(table) || agentWriteNeedsOwnRoute(sqlName))) {
+    return c.json(
+      {
+        error: "Forbidden",
+        code: "KITSUDEN_E_FORBIDDEN",
+        message: `An agent does not write '${sqlName}' through the explorer: use /api/data-sets, where a customer-data mark can only be removed by a person.`,
+      },
+      403
+    );
+  }
   // Tables with their own route are not written through here.
-  if (TABLES_ONLY_VIA_THEIR_ROUTE.has(table)) {
+  if (TABLES_ONLY_VIA_THEIR_ROUTE.has(table) || TABLES_ONLY_VIA_THEIR_ROUTE.has(sqlName)) {
     return c.json(
       {
         error: "Forbidden",
@@ -253,6 +271,19 @@ function denySensitiveWrite(
     },
     403
   );
+}
+
+/** The SQL name of a registry table (`datasets` → `data_sets`), if it has one. */
+function sqlNameOf(meta: TableMeta | undefined): string | undefined {
+  const name = meta?.table?.[Symbol.for("drizzle:Name")];
+  return typeof name === "string" ? name : undefined;
+}
+
+/** A write to `data_sets` can change the customer-data marks: refresh the catalog now. */
+function afterDatasetWrite(collection: string, meta: TableMeta): void {
+  if (collection === "data_sets" || sqlNameOf(meta) === "data_sets") {
+    invalidateSensitivityCatalog();
+  }
 }
 
 async function resolveTable(name: string): Promise<TableMeta | null> {
@@ -823,7 +854,7 @@ explorerRoutes.patch("/:collection/:id", async (c) => {
   }
 
   // Write to a sensitive table: `admin` only. See the helper.
-  const deniedOne = denySensitiveWrite(c, collectionName);
+  const deniedOne = denySensitiveWrite(c, collectionName, meta);
   if (deniedOne) return deniedOne;
 
   if (meta._dynamic) {
@@ -861,6 +892,7 @@ explorerRoutes.patch("/:collection/:id", async (c) => {
       before,
       after: updated,
     });
+    afterDatasetWrite(collectionName, meta);
 
     return c.json(updated);
   } catch (error: unknown) {
@@ -878,7 +910,7 @@ explorerRoutes.post("/:collection", async (c) => {
   }
 
   // Write to a sensitive table: `admin` only. See the helper.
-  const deniedOne = denySensitiveWrite(c, collectionName);
+  const deniedOne = denySensitiveWrite(c, collectionName, meta);
   if (deniedOne) return deniedOne;
 
   if (meta._dynamic) {
@@ -906,6 +938,7 @@ explorerRoutes.post("/:collection", async (c) => {
       id: created?.[meta.pk],
       after: created,
     });
+    afterDatasetWrite(collectionName, meta);
 
     return c.json(created, 201);
   } catch (error: unknown) {
@@ -924,7 +957,7 @@ explorerRoutes.delete("/:collection/:id", async (c) => {
   }
 
   // Write to a sensitive table: `admin` only. See the helper.
-  const deniedOne = denySensitiveWrite(c, collectionName);
+  const deniedOne = denySensitiveWrite(c, collectionName, meta);
   if (deniedOne) return deniedOne;
 
   if (meta._dynamic) {
@@ -944,6 +977,7 @@ explorerRoutes.delete("/:collection/:id", async (c) => {
       id,
       before: deleted,
     });
+    afterDatasetWrite(collectionName, meta);
 
     return c.json({ deleted: true, id });
   } catch (error: unknown) {

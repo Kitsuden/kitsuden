@@ -424,6 +424,14 @@ export class MarkedValues {
   /** First `PREFIX` chars → values starting with them (one scan of the text). */
   private readonly byPrefix = new Map<string, string[]>();
   private readonly min: number;
+  /**
+   * Which record (one object read: an entry, a row) each value came from, and
+   * the tracked keys (value, digests, digits) of each record. Lets the email
+   * check excuse the recipient's OWN record, not every value the run read.
+   */
+  private nextRecord = 0;
+  private readonly recordsOf = new Map<string, Set<number>>();
+  private readonly recordKeys = new Map<number, Set<string>>();
   /** More than `MAX_TRACKED_VALUES` were read: what leaves cannot be checked. */
   overflow = false;
 
@@ -453,6 +461,38 @@ export class MarkedValues {
     return this.read.has(normalize(value));
   }
 
+  /**
+   * The tracked keys of every record `value` was read from (the value itself,
+   * its digests and digits, and the other marked values of the same record).
+   * Empty when the value was not read.
+   */
+  ownRecordOf(value: string): Set<string> {
+    const out = new Set<string>();
+    for (const rec of this.recordsOf.get(normalize(value)) ?? []) {
+      for (const k of this.recordKeys.get(rec) ?? []) out.add(k);
+    }
+    return out;
+  }
+
+  /** Every key `v` is tracked under: itself, its digits, its digests. */
+  private static keysOf(v: string, raw: string): string[] {
+    const keys = [v];
+    const digits = digitsOnly(v);
+    if (digits) keys.push(digits);
+    for (const form of raw === v ? [v] : [raw, v]) keys.push(...digestsOf(form));
+    return keys;
+  }
+
+  private link(v: string, keys: readonly string[], record: number): void {
+    let recs = this.recordsOf.get(v);
+    if (!recs) this.recordsOf.set(v, (recs = new Set()));
+    if (recs.has(record)) return;
+    recs.add(record);
+    let own = this.recordKeys.get(record);
+    if (!own) this.recordKeys.set(record, (own = new Set()));
+    for (const k of keys) own.add(k);
+  }
+
   private track(v: string, label: string): void {
     if (v.length < this.min || this.values.has(v)) return;
     this.values.set(v, label);
@@ -463,33 +503,40 @@ export class MarkedValues {
   }
 
   /** Remembers a value and everything inside it (a marked `json` or repeater field). */
-  add(value: unknown, label: string, depth = 0): void {
+  add(value: unknown, label: string, depth = 0, record?: number): void {
     if (depth > 20 || value === null || value === undefined) return;
+    // A value added on its own is its own record.
+    const rec = record ?? ++this.nextRecord;
     if (typeof value === "string" || typeof value === "number" || typeof value === "bigint") {
       const raw = String(value);
       const v = normalize(raw);
-      if (v.length < this.min || this.read.has(v)) return;
+      if (v.length < this.min) return;
+      if (this.read.has(v)) {
+        // Already tracked; remember that this record holds it too.
+        if (!this.recordsOf.get(v)?.has(rec)) this.link(v, MarkedValues.keysOf(v, raw), rec);
+        return;
+      }
       if (this.read.size >= MAX_TRACKED_VALUES) {
         this.overflow = true;
         return;
       }
       this.read.add(v);
+      const keys = MarkedValues.keysOf(v, raw);
       const digits = digitsOnly(v);
       if (digits) this.digits.set(digits, label);
       // A value that is only digits is matched on whole digit groups, not inside
       // a longer number (an id, a timestamp).
       if (!(digits && digits === v)) this.track(v, label);
-      for (const form of raw === v ? [v] : [raw, v]) {
-        for (const d of digestsOf(form)) this.track(d, label);
-      }
+      for (const d of keys.slice(digits ? 2 : 1)) this.track(d, label);
+      this.link(v, keys, rec);
       return;
     }
     if (Array.isArray(value)) {
-      for (const x of value) this.add(x, label, depth + 1);
+      for (const x of value) this.add(x, label, depth + 1, rec);
       return;
     }
     if (isObject(value)) {
-      for (const x of Object.values(value)) this.add(x, label, depth + 1);
+      for (const x of Object.values(value)) this.add(x, label, depth + 1, rec);
     }
   }
 
@@ -507,11 +554,13 @@ export class MarkedValues {
     }
     const o = node as Record<string, unknown>;
     const ds = datasetOf(o) ?? dataset;
+    // This object (an entry, a row) is one record: its marked values belong together.
+    const record = ++this.nextRecord;
     for (const [k, v] of Object.entries(o)) {
       if (ds !== undefined && k === "data" && isObject(v)) {
-        this.collectScoped(v, this.catalog.datasets.get(ds), depth + 1);
+        this.collectScoped(v, this.catalog.datasets.get(ds), depth + 1, record);
       } else if (this.catalog.global.has(k)) {
-        this.add(v, this.catalog.global.get(k)!);
+        this.add(v, this.catalog.global.get(k)!, 0, record);
       } else {
         this.collect(v, ds, depth + 1);
       }
@@ -519,15 +568,20 @@ export class MarkedValues {
   }
 
   /** Inside the `data` of a known dataset: only its own marked keys (repeaters included). */
-  private collectScoped(node: unknown, keys: Map<string, string> | undefined, depth: number): void {
+  private collectScoped(
+    node: unknown,
+    keys: Map<string, string> | undefined,
+    depth: number,
+    record: number
+  ): void {
     if (!keys || depth > 40 || node === null || typeof node !== "object") return;
     if (Array.isArray(node)) {
-      for (const x of node) this.collectScoped(x, keys, depth + 1);
+      for (const x of node) this.collectScoped(x, keys, depth + 1, record);
       return;
     }
     for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-      if (keys.has(k)) this.add(v, keys.get(k)!);
-      else this.collectScoped(v, keys, depth + 1);
+      if (keys.has(k)) this.add(v, keys.get(k)!, 0, record);
+      else this.collectScoped(v, keys, depth + 1, record);
     }
   }
 
@@ -544,21 +598,35 @@ export class MarkedValues {
   }
 
   /** A tracked value (plain or digest) in already-normalized text. */
-  private findPlain(t: string): string | null {
+  private findPlain(t: string, excused?: ReadonlySet<string>): string | null {
     for (let i = 0; i + PREFIX <= t.length; i++) {
       const candidates = this.byPrefix.get(t.slice(i, i + PREFIX));
       if (!candidates) continue;
-      for (const v of candidates) if (t.startsWith(v, i)) return this.values.get(v)!;
+      for (const v of candidates) {
+        if (excused?.has(v)) continue;
+        if (t.startsWith(v, i)) return this.values.get(v)!;
+      }
     }
     return null;
   }
 
-  /** The label of the first tracked value inside `text` (in any of its decoded forms). */
-  find(text: string | null | undefined, budget?: DecodeBudget): string | null {
+  /**
+   * The label of the first tracked value inside `text` (in any of its decoded
+   * forms). Keys in `excused` (from `ownRecordOf`) are not counted.
+   */
+  find(
+    text: string | null | undefined,
+    budget?: DecodeBudget,
+    excused?: ReadonlySet<string>
+  ): string | null {
     if (!text || this.empty) return null;
+    let digits = this.digits;
+    if (excused?.size) {
+      digits = new Map([...this.digits].filter(([d]) => !excused.has(d)));
+    }
     for (const variant of variantsOf(text, budget)) {
       const t = normalize(variant);
-      const hit = this.findPlain(t) ?? digitHits(t, this.digits, true)[0]?.label ?? null;
+      const hit = this.findPlain(t, excused) ?? digitHits(t, digits, true)[0]?.label ?? null;
       if (hit) return hit;
     }
     return null;
@@ -879,7 +947,10 @@ export function egressProblem(
 /**
  * Why this email cannot be queued, or `null`. The recipient's domain is the
  * host. Writing to the customer whose address was read (the recipient is itself
- * a tracked value) is allowed: that is not a third party.
+ * a tracked value) is allowed: that is not a third party. But only that
+ * customer's OWN record is excused: the subject and body are still scanned for
+ * every other value the run read, so a tracked address (say, one an outsider
+ * put in a form) cannot receive other customers' data.
  */
 export function emailProblem(
   guard: CustomerDataGuard | undefined,
@@ -890,13 +961,13 @@ export function emailProblem(
   if (hostAllowedForCustomerData(domain, guard.allowedHosts)) return null;
   const cannot = uncheckable(guard, domain);
   if (cannot) return cannot;
-  if (guard.marked.has(mail.to)) return null;
+  const ownRecord = guard.marked.ownRecordOf(mail.to);
   for (const [where, value] of [
     ["subject", mail.subject],
     ["html", mail.html],
     ["text", mail.text],
   ] as const) {
-    const hit = guard.marked.find(value);
+    const hit = guard.marked.find(value, undefined, ownRecord);
     if (hit) {
       return {
         message: `Customer data cannot be emailed to ${domain}: the ${where} contains a value of ${hit}. ${HOW}`,

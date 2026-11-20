@@ -41,16 +41,17 @@
  */
 
 import type { KonContext } from "@kitsuden/shared";
+import { concedeScope, opensWholeKon } from "@kitsuden/shared";
 import type { Table } from "drizzle-orm";
 import {
   getTableName,
+  getTableColumns,
   InferSelectModel,
   InferInsertModel,
   eq,
   and,
   desc,
   asc,
-  sql,
   count,
 } from "drizzle-orm";
 import type { MySqlTable } from "drizzle-orm/mysql-core";
@@ -154,9 +155,14 @@ export interface KonOptions {
     basePath?: string;
     /** Enable auto-generated routes */
     enabled?: boolean;
-    /** Require authentication for auto-routes */
+    /**
+     * Kept for compatibility. Auto-routes ALWAYS require authentication: they
+     * run generic CRUD outside row-level security, so only a human `admin`
+     * or an agent that opens the whole kon (`<id>:*`, `kon:<id>:*`, `admin`)
+     * reaches them. `false` does not open them.
+     */
     requireAuth?: boolean;
-    /** Required scopes for auto-routes */
+    /** Extra scopes an AGENT must also hold for the auto-routes (denials win). */
     requiredScopes?: string[];
   };
   /** MCP configuration */
@@ -383,13 +389,21 @@ function registerAutoRoutes(
   models: DrizzleModel[],
   hono: Hono,
   db: any,
-  _options: KonOptions["api"]
+  options: KonOptions["api"]
 ): void {
   for (const route of routes) {
     const model = models.find((m) => getTableName(m) === route.tableName);
     if (!model) continue;
 
-    const handler = createRouteHandler(route, model, db);
+    const crud = createRouteHandler(route, model, db);
+    // The generic CRUD runs on the db handed over at startup (the system
+    // context, outside RLS) with no ownership check: it used to answer anyone,
+    // without a session. Now it is admin-only, failing closed.
+    const handler = async (c: HonoContext) => {
+      const refusal = autoRouteRefusal(konId, c.get("user") ?? null, options);
+      if (refusal) return c.json({ error: refusal.message }, refusal.status);
+      return crud(c);
+    };
 
     // Register with Hono
     switch (route.method) {
@@ -413,6 +427,88 @@ function registerAutoRoutes(
 }
 
 /**
+ * Who may call a kon's auto-routes. `null` = allowed; otherwise status and message.
+ *
+ * The generic CRUD has no ownership rule and runs outside RLS, so it is for
+ * whoever already administers the kon: a human `admin`, or an agent that opens
+ * the WHOLE kon (`opensWholeKon`: `<id>:*`, `kon:<id>:*`, `admin`; a covering
+ * denial wins) and holds every `requiredScopes` (denials win, `concedeScope`).
+ */
+export function autoRouteRefusal(
+  konId: string,
+  user: { role?: unknown; scopes?: unknown } | null | undefined,
+  options?: KonOptions["api"]
+): { status: 401 | 403; message: string } | null {
+  if (!user) return { status: 401, message: "Authentication required" };
+  if (user.role === "agent") {
+    const scopes = Array.isArray(user.scopes)
+      ? user.scopes.filter((s): s is string => typeof s === "string")
+      : [];
+    if (!opensWholeKon(scopes, konId)) {
+      return { status: 403, message: `Agent lacks scope '${konId}:*'` };
+    }
+    const lacking = (options?.requiredScopes ?? []).filter((r) => !concedeScope(scopes, r));
+    if (lacking.length > 0) {
+      return { status: 403, message: `Agent lacks scope(s) ${lacking.join(", ")}` };
+    }
+    return null;
+  }
+  if (user.role !== "admin") return { status: 403, message: "Admin role required" };
+  return null;
+}
+
+/**
+ * Columns of the model by their JS key. Request input names columns only
+ * through this map: it used to go to `sql.raw` (ORDER BY and filters), and the
+ * body went whole into insert/update.
+ */
+function modelColumns(model: DrizzleModel): Record<string, any> {
+  return getTableColumns(model as Table) as Record<string, any>;
+}
+
+/**
+ * Only the model's own columns. On update (`forUpdate`), never `id` (the row is
+ * chosen by the URL) nor `createdAt`.
+ */
+function writableFields(
+  model: DrizzleModel,
+  body: unknown,
+  forUpdate = false
+): Record<string, unknown> {
+  const cols = modelColumns(model);
+  const out: Record<string, unknown> = {};
+  if (!body || typeof body !== "object" || Array.isArray(body)) return out;
+  for (const [k, v] of Object.entries(body as Record<string, unknown>)) {
+    if (!Object.prototype.hasOwnProperty.call(cols, k)) continue;
+    if (forUpdate && (k === "id" || k === "createdAt")) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/** ORDER BY from a column key; an unknown key falls back to `createdAt`, or no order. */
+function orderClause(model: DrizzleModel, orderBy: unknown, order: unknown) {
+  const cols = modelColumns(model);
+  const key =
+    typeof orderBy === "string" && Object.prototype.hasOwnProperty.call(cols, orderBy)
+      ? orderBy
+      : Object.prototype.hasOwnProperty.call(cols, "createdAt")
+        ? "createdAt"
+        : null;
+  if (!key) return null;
+  return order === "asc" ? asc(cols[key]) : desc(cols[key]);
+}
+
+/** `id = ?` on the model's `id` column (no raw SQL). */
+function idEquals(model: DrizzleModel, id: string) {
+  const cols = modelColumns(model);
+  if (!Object.prototype.hasOwnProperty.call(cols, "id")) {
+    throw new Error(`Model ${getTableName(model as Table)} has no 'id' column`);
+  }
+  return eq(cols.id, id);
+}
+
+/**
  * Create a route handler for a specific operation
  */
 function createRouteHandler(route: GeneratedRoute, model: DrizzleModel, db: any) {
@@ -420,17 +516,17 @@ function createRouteHandler(route: GeneratedRoute, model: DrizzleModel, db: any)
     try {
       switch (route.operation) {
         case "list": {
-          const limit = Math.min(parseInt(c.req.query("limit") ?? "50"), 100);
-          const offset = parseInt(c.req.query("offset") ?? "0");
-          const orderBy = c.req.query("orderBy") ?? "createdAt";
-          const order = c.req.query("order") ?? "desc";
+          const limit = Math.min(Math.max(parseInt(c.req.query("limit") ?? "50") || 50, 1), 100);
+          const offset = Math.max(parseInt(c.req.query("offset") ?? "0") || 0, 0);
+          const ordering = orderClause(
+            model,
+            c.req.query("orderBy"),
+            c.req.query("order") ?? "desc"
+          );
 
-          const results = await db
-            .select()
-            .from(model)
-            .limit(limit)
-            .offset(offset)
-            .orderBy(order === "desc" ? desc(sql.raw(orderBy)) : asc(sql.raw(orderBy)));
+          let query = db.select().from(model).limit(limit).offset(offset);
+          if (ordering) query = query.orderBy(ordering);
+          const results = await query;
 
           const [{ total }] = await db.select({ total: count() }).from(model);
 
@@ -443,40 +539,35 @@ function createRouteHandler(route: GeneratedRoute, model: DrizzleModel, db: any)
         }
 
         case "create": {
-          const body = await c.req.json();
+          const body = writableFields(model, await c.req.json());
           const [result] = await db.insert(model).values(body).returning();
           return c.json(result, 201);
         }
 
         case "read": {
-          const id = c.req.param("id");
-          const [result] = await db
-            .select()
-            .from(model)
-            .where(eq(sql.raw("id"), id))
-            .limit(1);
+          const id = c.req.param("id") ?? "";
+          const [result] = await db.select().from(model).where(idEquals(model, id)).limit(1);
           if (!result) return c.json({ error: "Not found" }, 404);
           return c.json(result);
         }
 
         case "update": {
-          const id = c.req.param("id");
-          const body = await c.req.json();
-          const [result] = await db
-            .update(model)
-            .set({ ...body, updatedAt: new Date() })
-            .where(eq(sql.raw("id"), id))
-            .returning();
+          const id = c.req.param("id") ?? "";
+          const body = writableFields(model, await c.req.json(), true);
+          if (Object.prototype.hasOwnProperty.call(modelColumns(model), "updatedAt")) {
+            body.updatedAt = new Date();
+          }
+          if (Object.keys(body).length === 0) {
+            return c.json({ error: "No writable fields" }, 400);
+          }
+          const [result] = await db.update(model).set(body).where(idEquals(model, id)).returning();
           if (!result) return c.json({ error: "Not found" }, 404);
           return c.json(result);
         }
 
         case "delete": {
-          const id = c.req.param("id");
-          const [result] = await db
-            .delete(model)
-            .where(eq(sql.raw("id"), id))
-            .returning();
+          const id = c.req.param("id") ?? "";
+          const [result] = await db.delete(model).where(idEquals(model, id)).returning();
           if (!result) return c.json({ error: "Not found" }, 404);
           return c.json({ success: true, id });
         }
@@ -584,16 +675,17 @@ function createMCPTool(meta: GeneratedTool, model: DrizzleModel, db: any): MCPTo
       try {
         switch (meta.operation) {
           case "read": {
-            const limit = Math.min(args.limit ?? 50, 100);
-            const offset = args.offset ?? 0;
-            const orderBy = args.orderBy ?? "createdAt";
-            const order = args.order ?? "desc";
+            const limit = Math.min(Math.max(Number(args.limit) || 50, 1), 100);
+            const offset = Math.max(Number(args.offset) || 0, 0);
 
-            // Build where conditions from args (excluding pagination params)
+            // Filters only on the model's columns (by JS key): the keys used to
+            // go to `sql.raw`, so an argument name was SQL.
+            const cols = modelColumns(model);
             const filterFields = ["limit", "offset", "orderBy", "order"];
-            const filters = Object.entries(args)
+            const filters = Object.entries(args ?? {})
               .filter(([k]) => !filterFields.includes(k))
-              .map(([k, v]) => eq(sql.raw(k), v));
+              .filter(([k]) => Object.prototype.hasOwnProperty.call(cols, k))
+              .map(([k, v]) => eq(cols[k], v));
 
             let query = db.select().from(model).limit(limit).offset(offset);
 
@@ -601,11 +693,8 @@ function createMCPTool(meta: GeneratedTool, model: DrizzleModel, db: any): MCPTo
               query = query.where(and(...filters));
             }
 
-            if (orderBy) {
-              query = query.orderBy(
-                order === "desc" ? desc(sql.raw(orderBy)) : asc(sql.raw(orderBy))
-              );
-            }
+            const ordering = orderClause(model, args.orderBy, args.order ?? "desc");
+            if (ordering) query = query.orderBy(ordering);
 
             const results = await query;
 
@@ -624,7 +713,7 @@ function createMCPTool(meta: GeneratedTool, model: DrizzleModel, db: any): MCPTo
           }
 
           case "create": {
-            const [result] = await db.insert(model).values(args).returning();
+            const [result] = await db.insert(model).values(writableFields(model, args)).returning();
             return {
               content: [
                 {

@@ -72,18 +72,24 @@ Proposal:
 
 ## How deprecations are announced
 
-- **HTTP headers on every response of a deprecated operation**:
-  `Deprecation: @<unix time>` (RFC 9745) and `Sunset: <HTTP date>` (RFC 8594), plus
-  `Link: <docs url>; rel="deprecation"`. Today the only deprecation (`kitsuden_sk_*`
-  keys) sends `Deprecation: kitsuden_sk_*; kitsuden_agent_*` and `Sunset: 2026-08-01`,
-  which are not in the RFC formats; they would be aligned first.
-- **In the OpenAPI**: `deprecated: true` on the operation, and the `x-kitsuden-operation`
-  extension carries the sunset date, so the generated clients mark the method
-  `@deprecated` (TypeScript) or warn (Python).
-- **In MCP**: the tool description starts with "Deprecated: use …", so an agent reads
-  it before calling.
-- **In the log**: one warning per deprecated call, with the operation and the caller
-  (as the legacy keys already do).
+An operation is deprecated with `deprecated: { since, sunset, use? }` in its
+`defineOperation` (both days, `YYYY-MM-DD`; `use` the operation that replaces it). That one
+field does the first four items below; a query parameter is deprecated with
+`.meta({ deprecated: true, "x-sunset": "YYYY-MM-DD" })` on its zod field.
+
+- **HTTP headers on every response of a deprecated operation** (implemented):
+  `Deprecation: @<unix time of since>` (RFC 9745) and `Sunset: <HTTP date>` (RFC 8594),
+  errors included. Not yet: a `Link: <docs url>; rel="deprecation"`. The legacy
+  `kitsuden_sk_*` keys still send `Deprecation: kitsuden_sk_*; kitsuden_agent_*` and
+  `Sunset: 2026-08-01`, which are not in the RFC formats.
+- **In the OpenAPI** (implemented): `deprecated: true` and `x-sunset` on the operation or
+  the parameter (what oasdiff reads before it lets either go), and the declaration under
+  `x-kitsuden-operation.deprecated`. The generated clients mark the method `@deprecated`
+  (TypeScript) or raise a `DeprecationWarning` (Python).
+- **In MCP** (implemented): the tool description starts with
+  "Deprecated: removed after <sunset>; use <tool>.", so an agent reads it before calling.
+- **In the log** (implemented): one warning per deprecated call, with the operation, the
+  caller and the replacement.
 - **In `CHANGELOG.md`**: a `Deprecated` section in the release that deprecates, and a
   `Removed` section in the release that removes.
 - **Env vars and manifest fields**: the API logs a warning at startup when a deprecated
@@ -97,4 +103,7 @@ Proposal:
   approvals, proposals, agents, brain, queue, traces; the rest stay beta.
 - Is 6 months the right window for a project with one maintainer?
 - Should `snapshot diff` in CI fail on any incompatible change to a stable operation
-  (a removed field, a narrowed type) without a deprecation entry?
+  (a removed field, a narrowed type) without a deprecation entry? The diff exists now
+  (`pnpm api:diff`, oasdiff, job `api-contract`, [api-contract.md](api-contract.md)) and
+  reports without failing; making it blocking is the decision left. oasdiff reads the
+  sunset as `x-sunset` on the operation, so that is where the generator should write it.

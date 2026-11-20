@@ -85,6 +85,13 @@ never "exists but forbidden"; a visible note you do not own is a `403`.
 A connection is visible only when **both** notes are; a claim only when its
 note is.
 
+An agent run with brain search on puts up to three matching notes (its own and
+`shared` ones) into the turn, marked as untrusted reference material. If the run
+is **unattended** (started by a cron, an action, a rule or a queue job) and one
+of those notes was written by someone other than the agent itself or the person
+who signs for it, every write the agent makes in that run is held for a person,
+even with approvals off. Interactive chat runs are not affected.
+
 ## Idempotent writes
 
 - `brain_note_write` is a `PUT` addressed by **your** `key`

@@ -73,7 +73,33 @@ the result: an agent cannot group by them, take their `min`/`max`, `sum`/`avg` t
 or filter on their value, because a `GROUP BY` on an email column is a dump of every
 email. Counting rows, `count_distinct` and an `is_null` filter stay allowed. A person
 with the administrator role is not restricted. Mark the columns that hold personal
-data; an unmarked column is readable by any agent that holds `reports:read`.
+data.
+
+Two more checks apply to agents on a **kon's table**, because a kon may keep columns
+from agents in its own responses and the report never runs that kon's code:
+
+- **The kon's scope.** `reports:read` is not enough: the agent also needs a scope of
+  the kon that owns the table. That is the kon's `reportAccess.agentScope` when it
+  declares one (kon-crm: `crm:view`), or else any grant in the kon's namespace
+  (`tasks:read`, `kon:tasks:list-tasks`). `admin` counts; a denial of the whole kon
+  (`!crm:*`) wins.
+- **Restricted columns.** Columns the kon lists in `reportAccess.restricted` are
+  refused like marked columns (no grouping, `min`/`max`, `sum`/`avg` or value
+  filter), unless the agent holds `reportAccess.restrictedScope`.
+
+```json
+"reportAccess": {
+  "agentScope": "crm:view",
+  "restricted": { "crm_contacts": ["notes"], "crm_deals": ["value", "lost_notes"] },
+  "restrictedScope": "crm:read-all"
+}
+```
+
+A kon whose operations hide columns from agents (notes, amounts) must list them in
+`restricted`; otherwise any agent with its scope and `reports:read` reads them here.
+The restriction is all or nothing per agent: per-subject dials inside a kon (a grant
+that turns off amounts for one agent) are not visible to the report, so list such
+columns as restricted and let `restrictedScope` open them.
 
 A table with no row policies counts every row. That is why the operations are
 for **administrators**, and for agents that hold the scope:

@@ -288,8 +288,10 @@ was **not executed**; it was stored as a proposal. The body carries `proposal` (
 The request needs human approval but cannot be held as a proposal: its body (or MCP arguments)
 carries a secret (`secret`; proposals never store secrets), it is an upload with a file that is
 not an image by its content (`not_image`; image uploads ARE held), the form cannot be read
-(`multipart`), it is not JSON (`not_json`), or it is too large (`too_large`: JSON over 256 KiB,
-or an image over `APPROVALS_MAX_UPLOAD_MB`). `reason` says which. Nothing was executed. A human has to
+(`multipart`), it is not JSON (`not_json`), it is too large (`too_large`: JSON over 256 KiB,
+or an image over `APPROVALS_MAX_UPLOAD_MB`), or its decoded path holds a backslash, a control
+character or a `.`/`..` segment (`ambiguous_path`: replayed, it would reach a different route;
+send the canonical path). `reason` says which. Nothing was executed. A human has to
 do it, or an admin has to change the agent's approval mode. See
 [Human approval](../agents/approvals.md).
 

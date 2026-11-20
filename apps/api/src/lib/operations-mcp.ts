@@ -65,6 +65,7 @@ import { inProduction } from "./environment";
 import { encodeResponse, META_FORMAT } from "./formats";
 import { VALID_IDEMPOTENCY_KEY, requestFingerprint, savedRepetition } from "./idempotency";
 import { defaultStores } from "./idempotency-stores";
+import { konSwitchedOff } from "./kon-activation";
 import { logger } from "./logger";
 import type { WrapperMode } from "./mcp-settings";
 import { mountKonRls } from "./module-loader";
@@ -146,6 +147,9 @@ function agentUser(a: SessionAgent) {
  */
 async function visible(agent: SessionAgent, e: Input): Promise<boolean> {
   if (agent.allowedTools.length > 0 && !agent.allowedTools.includes(e.tool.name)) return false;
+  // A kon disabled or uninstalled since startup: its tools are no longer advertised
+  // (and the pipeline's guard refuses the call).
+  if (await konSwitchedOff(e.konId)) return false;
   const permission = e.op.permission;
   if (!permission) return true;
   const policy = permission.policy;
@@ -389,8 +393,8 @@ function buildPipeline(): Hono<EnvPipeline> {
   // internal message (SQL, paths) to an agent without `admin`. Inside
   // httpProblems, so the masked body still becomes a problem+json.
   app.use("*", errorsWithoutDetail(inProduction) as never);
-  for (const { mountPath, router } of mountedOperations()) {
-    mountKonRls(app as never, mountPath);
+  for (const { konId, mountPath, router } of mountedOperations()) {
+    mountKonRls(app as never, mountPath, konId);
     app.route(mountPath, router as never);
   }
   return app;

@@ -37,6 +37,7 @@ const MountedModel = z.object({
 export const modelsOperations: AnyOperation[] = [
   defineOperation({
     id: "list-models",
+    unpaginated: "The models configured for this installation.",
     method: "GET",
     route: "/",
     summary: "List the declared models",

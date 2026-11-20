@@ -261,7 +261,9 @@ function rows(r: unknown): Array<Record<string, unknown>> {
 
 export async function listTraces(o: {
   from: Date;
+  /** Up to 1001: one past a page of 1000, to know whether there is more. */
   limit: number;
+  offset?: number;
   onlyBlockers: boolean;
   onlyErrors: boolean;
   actor: string | null;
@@ -269,7 +271,7 @@ export async function listTraces(o: {
   await dump();
   return rows(
     await db.execute(
-      sql`SELECT * FROM kitsuden_traces_list(${o.from.toISOString()}::timestamptz, ${o.limit}, ${o.onlyBlockers}, ${o.actor}, ${o.onlyErrors})`
+      sql`SELECT * FROM kitsuden_traces_page(${o.from.toISOString()}::timestamptz, ${o.limit}, ${o.offset ?? 0}, ${o.onlyBlockers}, ${o.actor}, ${o.onlyErrors})`
     )
   );
 }

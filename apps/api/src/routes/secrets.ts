@@ -12,7 +12,7 @@
  */
 
 import { zValidator } from "@hono/zod-validator";
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { z } from "zod";
 
 import { logger } from "../lib/logger";
@@ -34,7 +34,33 @@ const setSecretSchema = z.object({
   injectNow: z.boolean().optional(),
 });
 
+/**
+ * Only a PERSON writes secrets (create, rotate, reload, inject, delete). A
+ * secret is injected into `process.env`, where some values are limits on
+ * agents themselves (the job budget, `QUEUE_AGENT_JOB_COST`): an agent key with
+ * `admin` must not change them (security audit 2026-11-19). The same rule as
+ * agent management and approvals (`humansOnly`). Reading the masked list stays
+ * behind the admin gate.
+ */
+const humansWriteSecrets: MiddlewareHandler = async (c, next) => {
+  if (c.req.method === "GET" || c.req.method === "HEAD") return next();
+  const get = c.get as (k: string) => unknown;
+  const user = get("user") as { id?: string; role?: string } | null;
+  if (get("agent") || user?.role === "agent" || user?.id?.startsWith("machine-")) {
+    return c.json(
+      {
+        error: "Forbidden",
+        code: "KITSUDEN_E_FORBIDDEN",
+        message: "Agents cannot create, change, inject or delete secrets: a person does that.",
+      },
+      403
+    );
+  }
+  await next();
+};
+
 export const secretsRoutes = new Hono()
+  .use("*", humansWriteSecrets)
 
   /**
    * GET /api/admin/secrets
@@ -63,7 +89,7 @@ export const secretsRoutes = new Hono()
           {
             success: false,
             error:
-              "Invalid key. Use UPPER_SNAKE_CASE (e.g. OPENAI_API_KEY); system variables (PATH, NODE_*, KITSUDEN_*, DATABASE_URL, PG*…) cannot be set here.",
+              "Invalid key. Use UPPER_SNAKE_CASE (e.g. OPENAI_API_KEY); system variables (PATH, NODE_*, KITSUDEN_*, DATABASE_URL, PG*, QUEUE_*, RATE_LIMIT_*…) cannot be set here.",
           },
           400
         );

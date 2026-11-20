@@ -97,6 +97,7 @@ export const externalMcpOperations: AnyOperation[] = [
   defineOperation({
     ...fromHumanAdmin,
     id: "list-mcp-servers",
+    unpaginated: "The MCP servers an admin registered: a handful per installation.",
     method: "GET",
     route: "/",
     summary: "External MCP servers (admin)",
@@ -181,6 +182,7 @@ export const externalMcpOperations: AnyOperation[] = [
   defineOperation({
     ...fromHumanAdmin,
     id: "list-mcp-server-tools",
+    unpaginated: "The tools one server announced on its last refresh, read as one list.",
     method: "GET",
     route: "/:id/tools",
     summary: "An external MCP server's tools (admin)",

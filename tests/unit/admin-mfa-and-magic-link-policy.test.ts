@@ -115,6 +115,21 @@ describe("the admin MFA gate", () => {
     const { app } = appWith({ role: "admin", twoFactorEnabled: false }, required);
     expect((await app.request("/api/auth/two-factor/enable", withCookie)).status).toBe(200);
   });
+
+  it("without `env`, reads process.env per request, even after the object is replaced", async () => {
+    const original = process.env;
+    const getSession = vi.fn(async () => ({ user: { role: "admin", twoFactorEnabled: false } }));
+    const app = new Hono();
+    app.use("*", adminMfaGate(getSession));
+    app.get("*", (c) => c.json({ ok: true }));
+    try {
+      // What a test restoring `process.env = { ...saved }` does: a new object.
+      process.env = { ...original, KITSUDEN_ADMIN_MFA: "required" };
+      expect((await app.request("/api/settings", withCookie)).status).toBe(403);
+    } finally {
+      process.env = original;
+    }
+  });
 });
 
 describe("who gets a magic link", () => {

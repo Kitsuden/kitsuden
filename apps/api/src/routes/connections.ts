@@ -4,8 +4,9 @@
  *
  * Mounted with the request's RLS transaction (`mountKonRls`): a person reads and changes only their own
  * `user` connections, an admin the `organization` ones and nobody's personal one (migration 0082). The
- * OAuth callback has no session (the provider redirects the browser); the `state` authenticates it, and it
- * runs as the system.
+ * OAuth callback runs as the system and is authenticated by the `state`, and it must come from the browser or
+ * the person that started the round trip: the binding cookie set by `/oauth/start`, or a session of the same
+ * person (lib/connections/service.ts, `finishedByStarter`).
  *
  * An agent can list and refresh the connections of the person it acts for, and never starts a consent or
  * stores a key: connecting an account is a person's decision.
@@ -13,6 +14,7 @@
 
 import { defineOperation } from "@kitsuden/shared";
 import { and, desc, eq, isNull, or, type SQL } from "drizzle-orm";
+import { getCookie } from "hono/cookie";
 import { z } from "zod";
 
 // Deep imports, not the facade: the facade reaches the loader, which reaches the routes.
@@ -84,6 +86,15 @@ export function callbackUrl(env = process.env): string {
   if (env.CONNECTIONS_CALLBACK_URL) return env.CONNECTIONS_CALLBACK_URL;
   const base = (env.BETTER_AUTH_URL || env.API_URL || "").replace(/\/$/, "");
   return `${base}${CONNECTIONS_ROUTE}/oauth/callback`;
+}
+
+/** The cookie that ties an OAuth round trip to the browser that started it. */
+export const OAUTH_BINDING_COOKIE = "kitsuden_conn_oauth";
+
+/** `Set-Cookie` for the binding: HttpOnly, only sent to the OAuth routes, gone with the state (10 min). */
+export function bindingCookie(value: string, env = process.env): string {
+  const secure = callbackUrl(env).startsWith("https:") ? "; Secure" : "";
+  return `${OAUTH_BINDING_COOKIE}=${value}; Path=${CONNECTIONS_ROUTE}/oauth; Max-Age=600; HttpOnly; SameSite=Lax${secure}`;
 }
 
 function person(
@@ -176,6 +187,7 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
     defineOperation({
       ...session,
       id: "list-providers",
+      unpaginated: "The fixed catalogue of providers this installation knows.",
       method: "GET",
       route: "/providers",
       tags: ["connections"],
@@ -195,8 +207,24 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
       summary: "Your connections",
       description:
         "Your connected accounts, and the organization's if you are an admin: provider, account, granted scopes, status (`active`, `expired`, `revoked`, `error`), expiry and last use. Never a token or a key. Nobody sees another person's connections, an admin included.",
-      output: { schema: z.object({ data: z.array(Connection) }) },
-      handle: async (_input, h) => {
+      // It stopped at 200 with no sign: page through it, `hasMore` says when to stop.
+      input: {
+        query: z.object({
+          limit: z.coerce
+            .number()
+            .int()
+            .min(1)
+            .max(200)
+            .default(200)
+            .describe(
+              "Rows per page (1-200). The default is the maximum, what the list always returned."
+            ),
+          offset: z.coerce.number().int().min(0).default(0).describe("Rows to skip."),
+        }),
+      },
+      output: { schema: z.object({ data: z.array(Connection), hasMore: z.boolean() }) },
+      handle: async (input, h) => {
+        const { limit, offset } = input.query as { limit: number; offset: number };
         const own = h.user?.id
           ? and(eq(connConnections.scope, "user"), eq(connConnections.ownerId, h.user.id))
           : undefined;
@@ -205,9 +233,14 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
           .select()
           .from(connConnections)
           .where(where)
-          .orderBy(desc(connConnections.createdAt))
-          .limit(200);
-        return { data: (rows as ConnectionRow[]).map(publicConnection) };
+          .orderBy(desc(connConnections.createdAt), desc(connConnections.id))
+          .limit(limit + 1)
+          .offset(offset);
+        const hasMore = rows.length > limit;
+        return {
+          data: (rows.slice(0, limit) as ConnectionRow[]).map(publicConnection),
+          hasMore,
+        };
       },
     }),
 
@@ -249,7 +282,7 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
         if (body.returnTo && !allowedReturn(body.returnTo))
           throw AppError.validation("returnTo is not one of the site's origins");
         try {
-          const data = await startOAuth(requestDb(), konSecrets, {
+          const { browserBinding, ...data } = await startOAuth(requestDb(), konSecrets, {
             provider: body.provider,
             scope: body.scope,
             userId: user.id,
@@ -258,6 +291,8 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
             returnTo: body.returnTo ?? null,
             label: body.label,
           });
+          // The callback must come back to THIS browser (or this person): see finishedByStarter.
+          h.c.header("Set-Cookie", bindingCookie(browserBinding), { append: true });
           return { data };
         } catch (err) {
           toAppError(err);
@@ -266,14 +301,15 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
     }),
 
     defineOperation({
-      access: "public",
+      // `optional`: no session is required, but when there is one it may be what proves the starter came back.
+      access: "optional",
       id: "finish-connection",
       method: "GET",
       route: "/oauth/callback",
       tags: ["connections"],
       summary: "Where the provider sends the person back",
       description:
-        "The provider's redirect after consent. The `state` authenticates it (one use, ten minutes); no session is needed. Exchanges the code, stores the credential sealed, and redirects to `returnTo` with `?connection=<id>`, or answers JSON without one. 400 for an unknown, used or refused consent.",
+        "The provider's redirect after consent. The `state` authenticates it (one use, ten minutes), and it must come back to the browser that started it (the binding cookie `/oauth/start` sets) or to a session of the same person; otherwise 403 and the round trip is burnt. Exchanges the code, stores the credential sealed, and redirects to `returnTo` with `?connection=<id>`, or answers JSON without one. 400 for an unknown, used or refused consent.",
       input: { query: Callback },
       output: { schema: z.object({ data: Connection }), otherStatuses: [302] },
       mcp: { exclude: "The provider's browser redirect, not a tool." },
@@ -287,13 +323,23 @@ export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): A
               "CONSENT_DENIED"
             );
           }
-          // As the system: no session, and the state names the owner.
+          // As the system: the state names the owner, and the browser or session must be the starter's.
+          const who = h.user as { id?: string; role?: string } | null;
           const done = await completeOAuth(db, konSecrets, {
             state: q.state,
             code: q.code,
             redirectUri: callbackUrl(),
             fetch: network,
+            completedBy: {
+              userId: who?.id && who.role !== "agent" ? who.id : null,
+              browserBinding: getCookie(h.c, OAUTH_BINDING_COOKIE) ?? null,
+            },
           });
+          h.c.header(
+            "Set-Cookie",
+            `${OAUTH_BINDING_COOKIE}=; Path=${CONNECTIONS_ROUTE}/oauth; Max-Age=0; HttpOnly; SameSite=Lax`,
+            { append: true }
+          );
           if (done.created) announceConnection("created", done.connection);
           if (done.returnTo && allowedReturn(done.returnTo)) {
             const to = new URL(done.returnTo);

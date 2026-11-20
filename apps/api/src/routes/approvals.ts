@@ -726,21 +726,48 @@ const AgentFilter = z
   })
   .strict();
 
+/**
+ * Must the result body be hidden from this caller? The agent reads its own
+ * proposals in full. A human on `/api/proposals` sees exactly what the inbox
+ * shows them: the result body of a proposal they could not approve is
+ * REDACTED_CONTENT (security audit 2026-11-19).
+ */
+async function resultHiddenFrom(c: Context, p: Proposal, human?: Human | null): Promise<boolean> {
+  if (get(c, "agent")) return false;
+  return !(await canSeeContent(human === undefined ? await humanOf(c) : human, p));
+}
+
+/** The view with its result body replaced by REDACTED_CONTENT when `hidden`. */
+export function shownTo<T extends Record<string, unknown>>(view: T, hidden: boolean): T {
+  const result = view.result as { body?: unknown } | null | undefined;
+  if (!hidden || !result || result.body === null || result.body === undefined) return view;
+  return { ...view, result: { ...result, body: REDACTED_CONTENT } };
+}
+
 async function agentOwn(c: Context, f: z.infer<typeof AgentFilter>) {
   const agent = get(c, "agent") as { agentId: string } | undefined;
   await expireProposals();
   const { proposals, total } = await listProposals({ ...f, agentId: agent?.agentId ?? null });
-  return c.json({ total, proposals: proposals.map((p) => agentView(p)) });
+  const human = agent ? null : await humanOf(c);
+  const views = [];
+  for (const p of proposals) views.push(shownTo(agentView(p), await resultHiddenFrom(c, p, human)));
+  return c.json({ total, proposals: views });
 }
 
-async function statusForAgent(c: Context, id: string) {
+/** The proposal this caller may read: its own for an agent, any for the team. */
+async function proposalForCaller(c: Context, id: string): Promise<Proposal | null> {
   const agent = get(c, "agent") as { agentId: string } | undefined;
   await expireProposals();
   const p = await proposalById(id);
   // Another agent's proposal does not exist for this one (404, not 403: nothing is confirmed).
-  if (!p || (agent && p.agentId !== agent.agentId))
-    return c.json({ error: "Proposal not found" }, 404);
-  return c.json(agentView(p));
+  if (!p || (agent && p.agentId !== agent.agentId)) return null;
+  return p;
+}
+
+async function statusForAgent(c: Context, id: string) {
+  const p = await proposalForCaller(c, id);
+  if (!p) return c.json({ error: "Proposal not found" }, 404);
+  return c.json(shownTo(agentView(p), await resultHiddenFrom(c, p)));
 }
 
 /** States in which a proposal no longer changes. */
@@ -754,8 +781,13 @@ const FLOW_LIFETIME_MS = 15 * 60_000;
  * it closes when resolved. Every 30 s without news it is re-read from the database, in case
  * the notice was lost (another replica, a bus outage).
  */
-async function* proposalEvents(id: string, initial: ProposalView): AsyncGenerator<ProposalView> {
-  yield initial;
+async function* proposalEvents(
+  id: string,
+  initial: ProposalView,
+  /** A human who could not approve it: every view arrives without the result body. */
+  hidden = false
+): AsyncGenerator<ProposalView> {
+  yield shownTo(initial, hidden);
   if (RESOLVED.has(initial.status)) return;
   const received: ProposalView[] = [];
   let wakeUp: (() => void) | null = null;
@@ -786,7 +818,7 @@ async function* proposalEvents(id: string, initial: ProposalView): AsyncGenerato
       }
       if (view.status === last) continue;
       last = view.status;
-      yield view;
+      yield shownTo(view, hidden);
       if (RESOLVED.has(view.status)) return;
     }
   } finally {
@@ -1076,9 +1108,9 @@ export const proposalOperations: AnyOperation[] = [
     async handle(e, { c }) {
       const id = (e.params as { id: string }).id;
       // A normal 404 BEFORE opening the stream (another agent's proposal does not exist either).
-      const res = await statusForAgent(c, id);
-      if (res.status !== 200) return res;
-      return proposalEvents(id, (await res.json()) as ProposalView);
+      const p = await proposalForCaller(c, id);
+      if (!p) return c.json({ error: "Proposal not found" }, 404);
+      return proposalEvents(id, agentView(p) as ProposalView, await resultHiddenFrom(c, p));
     },
   }),
 ];

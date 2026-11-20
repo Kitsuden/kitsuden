@@ -207,10 +207,15 @@ export interface SecretAccessEntry {
 }
 
 export async function listSecretAccess(
-  options: { konId?: string; limit?: number } = {}
+  options: { konId?: string; limit?: number; offset?: number; withMore?: boolean } = {}
 ): Promise<SecretAccessEntry[]> {
   const limit = Math.min(Math.max(Math.trunc(options.limit ?? 100), 1), 500);
+  const offset = Math.max(Math.trunc(options.offset ?? 0), 0);
   const query = db.select().from(secretAccessLog);
   const filtered = options.konId ? query.where(eq(secretAccessLog.konId, options.konId)) : query;
-  return filtered.orderBy(desc(secretAccessLog.createdAt)).limit(limit);
+  // `withMore`: one row past the page, so the caller can say whether there is more.
+  return filtered
+    .orderBy(desc(secretAccessLog.createdAt), desc(secretAccessLog.id))
+    .limit(limit + (options.withMore ? 1 : 0))
+    .offset(offset);
 }

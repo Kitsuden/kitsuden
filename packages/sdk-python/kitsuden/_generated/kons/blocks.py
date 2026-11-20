@@ -304,7 +304,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:blocks:block-types",
         mcp_tool="blocks__block-types",
-        errors=("KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "clone-page": OperationInfo(
         kon="kon-blocks",
@@ -432,7 +432,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         method="GET",
         path="/page-builder/pages/{id}",
         path_params=("id",),
-        query_params=("include_blocks",),
+        query_params=("includeBlocks", "include_blocks"),
         body=None,
         responses={200: "json"},
         idempotent=True,
@@ -440,7 +440,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:blocks:get-page",
         mcp_tool="blocks__get-page",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "list-pages": OperationInfo(
         kon="kon-blocks",
@@ -457,7 +457,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:blocks:list-pages",
         mcp_tool="blocks__list-pages",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
         pagination=PaginationInfo(style="offset", items="docs", limit="limit"),
     ),
     "list-templates": OperationInfo(
@@ -475,7 +475,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:blocks:list-templates",
         mcp_tool="blocks__list-templates",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "publish-block-as-page": OperationInfo(
         kon="kon-blocks",
@@ -526,7 +526,7 @@ OPERATIONS: Dict[str, OperationInfo] = {
         sensitive=False,
         scope="kon:blocks:render-page",
         mcp_tool="blocks__render-page",
-        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
+        errors=("KITSUDEN_E_VALIDATION", "KITSUDEN_E_BAD_REQUEST", "KITSUDEN_E_NOT_FOUND", "KITSUDEN_E_FORBIDDEN", "KITSUDEN_E_RATE_LIMITED", "KITSUDEN_E_INTERNAL"),
     ),
     "reorder-blocks": OperationInfo(
         kon="kon-blocks",
@@ -614,7 +614,7 @@ class BlocksApi(KonApi):
 
         REST: `GET /api/page-builder/block-types` · scope `kon:blocks:block-types`
         idempotent (safe to retry) · MCP tool `blocks__block-types`
-        Errors: `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["block-types"], {}, None, request_options)
 
@@ -717,12 +717,13 @@ class BlocksApi(KonApi):
 
         REST: `GET /api/page-builder/pages/{id}` · scope `kon:blocks:get-page`
         idempotent (safe to retry) · MCP tool `blocks__get-page`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Page/block/template id (uuid; anything else is a 404)
+            include_blocks: `false` returns the page without its blocks. Default `true`.
         """
-        return self._call(OPERATIONS["get-page"], {"id": id, "include_blocks": include_blocks}, None, request_options)
+        return self._call(OPERATIONS["get-page"], {"id": id, "includeBlocks": include_blocks}, None, request_options)
 
     def list_pages(self, *, status: Optional[Union[str, int]] = None, limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, layout: Optional[Union[str, int]] = None, search: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListPagesResult]:
         """List pages
@@ -731,7 +732,7 @@ class BlocksApi(KonApi):
 
         REST: `GET /api/page-builder/pages` · scope `kon:blocks:list-pages`
         idempotent (safe to retry) · MCP tool `blocks__list-pages`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             status: draft | published | archived (only staff see non-published)
@@ -754,7 +755,7 @@ class BlocksApi(KonApi):
 
         REST: `GET /api/page-builder/templates` · scope `kon:blocks:list-templates`
         idempotent (safe to retry) · MCP tool `blocks__list-templates`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["list-templates"], {"category": category, "type": type}, None, request_options)
 
@@ -790,7 +791,7 @@ class BlocksApi(KonApi):
 
         REST: `GET /api/page-builder/render/{slug}` · scope `kon:blocks:render-page`
         idempotent (safe to retry) · MCP tool `blocks__render-page`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return self._call(OPERATIONS["render-page"], {"slug": slug}, None, request_options)
 
@@ -866,7 +867,7 @@ class AsyncBlocksApi(AsyncKonApi):
 
         REST: `GET /api/page-builder/block-types` · scope `kon:blocks:block-types`
         idempotent (safe to retry) · MCP tool `blocks__block-types`
-        Errors: `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["block-types"], {}, None, request_options)
 
@@ -969,12 +970,13 @@ class AsyncBlocksApi(AsyncKonApi):
 
         REST: `GET /api/page-builder/pages/{id}` · scope `kon:blocks:get-page`
         idempotent (safe to retry) · MCP tool `blocks__get-page`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             id: Page/block/template id (uuid; anything else is a 404)
+            include_blocks: `false` returns the page without its blocks. Default `true`.
         """
-        return await self._call(OPERATIONS["get-page"], {"id": id, "include_blocks": include_blocks}, None, request_options)
+        return await self._call(OPERATIONS["get-page"], {"id": id, "includeBlocks": include_blocks}, None, request_options)
 
     async def list_pages(self, *, status: Optional[Union[str, int]] = None, limit: Optional[Union[str, int]] = None, offset: Optional[Union[str, int]] = None, layout: Optional[Union[str, int]] = None, search: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[ListPagesResult]:
         """List pages
@@ -983,7 +985,7 @@ class AsyncBlocksApi(AsyncKonApi):
 
         REST: `GET /api/page-builder/pages` · scope `kon:blocks:list-pages`
         idempotent (safe to retry) · MCP tool `blocks__list-pages`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
 
         Args:
             status: draft | published | archived (only staff see non-published)
@@ -1006,7 +1008,7 @@ class AsyncBlocksApi(AsyncKonApi):
 
         REST: `GET /api/page-builder/templates` · scope `kon:blocks:list-templates`
         idempotent (safe to retry) · MCP tool `blocks__list-templates`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["list-templates"], {"category": category, "type": type}, None, request_options)
 
@@ -1042,7 +1044,7 @@ class AsyncBlocksApi(AsyncKonApi):
 
         REST: `GET /api/page-builder/render/{slug}` · scope `kon:blocks:render-page`
         idempotent (safe to retry) · MCP tool `blocks__render-page`
-        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
+        Errors: `KITSUDEN_E_VALIDATION`, `KITSUDEN_E_BAD_REQUEST`, `KITSUDEN_E_NOT_FOUND`, `KITSUDEN_E_FORBIDDEN`, `KITSUDEN_E_RATE_LIMITED`, `KITSUDEN_E_INTERNAL`
         """
         return await self._call(OPERATIONS["render-page"], {"slug": slug}, None, request_options)
 

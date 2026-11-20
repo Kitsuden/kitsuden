@@ -74,7 +74,9 @@ export interface AgentEngineOptions {
   /**
    * The message carries third-party data (an `agent` action with event data in
    * its prompt): every tool call that writes is held for human approval, even
-   * with approvals off (security review 2026-11-04).
+   * with approvals off (security review 2026-11-04). An unattended run whose
+   * turn carries a shared brain note someone else wrote is held the same way
+   * (`runHoldsWrites`).
    */
   holdWrites?: boolean;
   /**
@@ -144,6 +146,39 @@ interface RelevantBrainNote {
   title: string;
   content: string;
   score: number;
+  /** Who wrote it: an agent, or a person (absent on rows from before 0051). */
+  ownerAgentId?: string | null;
+  ownerUserId?: string | null;
+}
+
+/**
+ * Did someone other than the run's agent (or the person who signs for it)
+ * write one of the notes put in the turn? An editor or a lower-scoped agent
+ * can share a note that every agent reads (security audit 2026-11-19).
+ */
+export function hasForeignBrainNote(
+  notes: ReadonlyArray<Pick<RelevantBrainNote, "ownerAgentId" | "ownerUserId">>,
+  agent: { id: string; sponsorUserId?: string | null }
+): boolean {
+  return notes.some((n) => {
+    if (n.ownerAgentId && n.ownerAgentId === agent.id) return false;
+    if (!n.ownerAgentId && n.ownerUserId && n.ownerUserId === agent.sponsorUserId) return false;
+    return true;
+  });
+}
+
+/**
+ * Are the run's writes held for a person? When the caller asks (event data in
+ * the prompt), and in an UNATTENDED run (cron, action, rule, queue) whose turn
+ * carries a shared note someone else wrote: nobody is watching that run, so
+ * the note's text must not be able to make it write. Interactive chat is left
+ * as it is: a person is there and approval settings apply.
+ */
+export function runHoldsWrites(
+  options: Pick<AgentEngineOptions, "holdWrites" | "unattended">,
+  foreignNote: boolean
+): boolean {
+  return options.holdWrites === true || (options.unattended === true && foreignNote);
 }
 
 const CACHE_TTL_SECONDS = 60 * 60; // 1 hour
@@ -259,7 +294,7 @@ async function runAgentWithCredential(
   );
 
   // 6. Build messages for the LLM
-  const messages = await buildMessages(
+  const { messages, notes: injectedNotes } = await buildMessages(
     agent.id,
     agent.systemPrompt,
     message,
@@ -322,6 +357,13 @@ async function runAgentWithCredential(
   }
 
   // 8. Tool calling loop
+  const holdWrites = runHoldsWrites(
+    options,
+    hasForeignBrainNote(injectedNotes, {
+      id: agent.id,
+      sponsorUserId: agent.sponsorUserId ?? null,
+    })
+  );
   let iteration = 0;
   let totalTokensIn = 0;
   let totalTokensOut = 0;
@@ -464,7 +506,7 @@ async function runAgentWithCredential(
           traceId: trace.id,
           allowedTools,
           unattended: options.unattended === true,
-          holdWrites: options.holdWrites === true,
+          holdWrites,
           customerData: prompt.guard,
           runCredentialId,
         });
@@ -736,7 +778,7 @@ async function buildMessages(
   sessionId: string,
   options: AgentEngineOptions,
   tools: LLMTool[]
-): Promise<LLMMessage[]> {
+): Promise<{ messages: LLMMessage[]; notes: RelevantBrainNote[] }> {
   const messages: LLMMessage[] = [];
 
   // System prompt: only what whoever configures the agent wrote
@@ -753,10 +795,10 @@ async function buildMessages(
   messages.push(...sessionHistory.slice(-MAX_HISTORY_MESSAGES));
 
   // Current message, with memories and notes before it as reference material
-  const references = await turnReferences(agentId, options);
+  const { sections: references, notes } = await turnReferences(agentId, options);
   messages.push({ role: "user", content: messageWithReferences(references, message) });
 
-  return messages;
+  return { messages, notes };
 }
 
 /**
@@ -768,17 +810,22 @@ async function buildMessages(
  * instructions of whoever configures it. Notes: only those THIS agent can see
  * (its own and shared ones), as in the brain routes.
  */
-async function turnReferences(agentId: string, options: AgentEngineOptions): Promise<string[]> {
+async function turnReferences(
+  agentId: string,
+  options: AgentEngineOptions
+): Promise<{ sections: string[]; notes: RelevantBrainNote[] }> {
   const sections: string[] = [];
+  let notes: RelevantBrainNote[] = [];
   if (options.enableMemory !== false) {
     const section = memoriesSection(await getRelevantMemories(agentId, options.message));
     if (section) sections.push(section);
   }
   if (options.enableBrainSearch !== false) {
-    const section = knowledgeSection(await getRelevantBrainNotes(options.message, agentId));
+    notes = await getRelevantBrainNotes(options.message, agentId);
+    const section = knowledgeSection(notes);
     if (section) sections.push(section);
   }
-  return sections;
+  return { sections, notes };
 }
 
 /** Marker that separates the reference material from the request in the user turn. */
@@ -1017,6 +1064,8 @@ export async function getRelevantBrainNotes(
         id: brainNotes.id,
         title: brainNotes.title,
         content: brainNotes.content,
+        ownerAgentId: brainNotes.ownerAgentId,
+        ownerUserId: brainNotes.ownerUserId,
       })
       .from(brainNotes)
       .where(
@@ -1036,6 +1085,8 @@ export async function getRelevantBrainNotes(
       title: r.title,
       content: r.content,
       score: 1,
+      ownerAgentId: r.ownerAgentId ?? null,
+      ownerUserId: r.ownerUserId ?? null,
     }));
   } catch (error) {
     logger.warn({ error }, "Failed to search brain notes");
