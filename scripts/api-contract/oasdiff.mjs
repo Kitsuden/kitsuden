@@ -34,7 +34,7 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -126,6 +126,7 @@ function run(bin, sub, base, head, extra) {
 async function main() {
   const head = resolve(ROOT, arg("spec") ?? SNAPSHOT);
   let base = arg("base-file") ? resolve(arg("base-file")) : null;
+  let work = null;
   // oasdiff reads a missing file as an empty document and reports "no changes".
   for (const f of [head, base]) {
     if (f && !existsSync(f)) throw new Error(`${f} does not exist`);
@@ -138,7 +139,9 @@ async function main() {
       process.stderr.write(`[oasdiff] ${label} does not exist: nothing to compare with.\n`);
       return 0;
     }
-    base = join(tmpdir(), `kitsuden-oasdiff-base-${process.pid}.json`);
+    // A folder only this process created (mkdtemp), not a guessable name in the temp dir.
+    work = mkdtempSync(join(tmpdir(), "kitsuden-oasdiff-"));
+    base = join(work, "base.json");
     writeFileSync(base, text);
   }
 
@@ -179,7 +182,7 @@ async function main() {
     }
     return breaking.status === 1 ? 1 : 0;
   } finally {
-    if (!arg("base-file")) rmSync(base, { force: true });
+    if (work) rmSync(work, { recursive: true, force: true });
   }
 }
 

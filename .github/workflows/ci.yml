@@ -169,6 +169,12 @@ jobs:
         working-directory: apps/api
         run: bun run scripts/verify-schema.ts
 
+      # /api/docs and /api/docs/modern serve pinned viewer files that the API build
+      # downloads (scripts/docs-viewers.mjs); without them the pages answer 503 "not
+      # installed". This job does not build, so it fetches and verifies them here.
+      - name: Documentation viewers (pinned, verified)
+        run: node scripts/docs-viewers.mjs
+
       # ALL registered GET routes are requested and none is allowed to return
       # 5xx. A 401 or a 404 is fine; a 500 means the server could not
       # serve its own route.

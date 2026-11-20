@@ -21,7 +21,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,22 +36,16 @@ const flag = (n) => args.includes(`--${n}`);
 const SEVERITY = ["error", "warn", "info", "hint"];
 
 async function main() {
-  const tmp = [];
   let spec = arg("spec") ?? "packages/sdk/openapi/kitsuden.openapi.json";
   const label = spec;
-  if (/^https?:\/\//.test(spec)) {
-    const res = await fetch(spec, { headers: { accept: "application/json" } });
-    if (!res.ok) throw new Error(`GET ${spec} → ${res.status}`);
-    const file = join(tmpdir(), `kitsuden-lint-${process.pid}.json`);
-    writeFileSync(file, await res.text());
-    tmp.push(file);
-    spec = file;
-  } else {
+  // A URL goes to Spectral as is (it fetches it): nothing downloaded is written here.
+  if (!/^https?:\/\//.test(spec)) {
     spec = resolve(ROOT, spec);
     if (!existsSync(spec)) throw new Error(`${spec} does not exist`);
   }
-  const out = join(tmpdir(), `kitsuden-lint-result-${process.pid}.json`);
-  tmp.push(out);
+  // The report goes to a folder only this process created (mkdtemp), not a guessable name.
+  const work = mkdtempSync(join(tmpdir(), "kitsuden-lint-"));
+  const out = join(work, "result.json");
 
   try {
     const r = spawnSync(
@@ -80,7 +74,7 @@ async function main() {
     const results = JSON.parse(readFileSync(out, "utf8") || "[]");
     return report(results, label);
   } finally {
-    for (const f of tmp) rmSync(f, { force: true });
+    rmSync(work, { recursive: true, force: true });
   }
 }
 
