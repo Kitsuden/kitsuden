@@ -64,6 +64,12 @@ export interface KonCache {
   set<T = any>(key: string, value: T, ttlSeconds?: number): Promise<void>;
   /** Invalidate cache by pattern (e.g. "blog:*") */
   invalidate(pattern: string): Promise<void>;
+  /**
+   * Invalidate every entry stored with any of these tags (`page:<id>`). Cheaper and more exact than a
+   * pattern: the core's cache keeps the keys of each tag. Optional: a host without it falls back to
+   * patterns.
+   */
+  invalidateTags?: (...tags: string[]) => Promise<void>;
 }
 
 /**

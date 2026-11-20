@@ -89,7 +89,8 @@ export type {
 export { emailQueue, setupWorkers } from "../../apps/api/src/lib/queue";
 
 // ── Cache ──
-export { cachedQuery, invalidateCache } from "../../apps/api/src/lib/cache";
+export { cachedQuery, invalidateCache, invalidateTags } from "../../apps/api/src/lib/cache";
+export { conditionalJson, etagMatches, weakEtag, type ConditionalOptions } from "./src/http-cache";
 
 // ── Valkey Connection ──
 export {

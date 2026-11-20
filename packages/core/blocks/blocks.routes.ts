@@ -12,13 +12,13 @@
  * at the start of the handler, with the same 401/403 responses.
  */
 
-import { createHash } from "node:crypto";
-
 import {
   can,
   defineOperation,
   eqEnum,
+  etagMatches,
   operationsRouter,
+  weakEtag,
   type AuthzUser,
   type AnyOperation,
 } from "@kitsuden/engine";
@@ -269,18 +269,6 @@ function decodePageCursor(cursor: string): { at: string; id: string } | null {
   } catch {
     return null;
   }
-}
-
-/** The `ETag` of a GET body: weak, because the JSON is re-serialized on every request. */
-function etagOf(body: unknown): string {
-  return `W/"${createHash("sha1").update(JSON.stringify(body)).digest("base64url")}"`;
-}
-
-/** Does `If-None-Match` name this ETag (weak comparison, as RFC 9110 asks for GET)? */
-function notModified(ifNoneMatch: string | undefined, etag: string): boolean {
-  if (!ifNoneMatch) return false;
-  const bare = (t: string) => t.trim().replace(/^W\//, "");
-  return ifNoneMatch.split(",").some((t) => t.trim() === "*" || bare(t) === bare(etag));
 }
 
 /** The latest `updatedAt` of a page and its blocks, for `Last-Modified`. */
@@ -641,7 +629,7 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
          * client may keep the copy but must revalidate it; drafts and session pages stay
          * `private` so a shared cache never holds them.
          */
-        const etag = etagOf(body);
+        const etag = weakEtag(body);
         const lastModified = lastModifiedOf(pageData, pageData.blocks ?? []);
         c.header("ETag", etag);
         if (lastModified) c.header("Last-Modified", lastModified.toUTCString());
@@ -651,7 +639,7 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
             ? "no-cache"
             : "private, no-cache"
         );
-        if (notModified(c.req.header("if-none-match"), etag)) {
+        if (etagMatches(c.req.header("if-none-match"), etag)) {
           return c.body(null, 304);
         }
 

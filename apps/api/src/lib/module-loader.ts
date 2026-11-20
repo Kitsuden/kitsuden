@@ -75,7 +75,7 @@ import { KON_REGISTRY } from "../services/module-registry";
 
 import { absorbedReason } from "./absorbed-kons";
 import { auth } from "./auth";
-import { invalidateCache } from "./cache";
+import { invalidateCache, invalidateTags } from "./cache";
 import { konConnections } from "./connections";
 import type { DeferredKon } from "./deferred-kons";
 import { rawNodeEnv } from "./environment";
@@ -411,6 +411,9 @@ export function createKonContext(): KonContext {
       },
       invalidate: async (pattern: string) => {
         await invalidateCache(pattern);
+      },
+      invalidateTags: async (...tags: string[]) => {
+        await invalidateTags(...tags);
       },
     },
 
