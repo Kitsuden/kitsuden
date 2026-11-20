@@ -25,6 +25,7 @@ import { db } from "../db";
 import { connConnections } from "../db/schema-core";
 import { app } from "../index";
 import { konConnections, refreshTick, resetProviderOwners } from "../lib/connections";
+import { setConnectionNetworkForTests } from "../lib/connections/network";
 import { events } from "../lib/events";
 import { bindKonContext } from "../lib/kon-setup";
 
@@ -127,6 +128,8 @@ beforeAll(async () => {
   process.env.CONNECTIONS_GOOGLE_CLIENT_SECRET = "client-secret-value";
   process.env.CONNECTIONS_RETURN_ORIGINS = "https://site.example";
   globalThis.fetch = provider as typeof fetch;
+  // The connections' calls are pinned (lib/connections/network.ts): they do not go through global fetch.
+  setConnectionNetworkForTests(provider as never);
   tokenAnswer = issued();
   ({ cookie: admin } = await enterAs(app, {
     email: `conn-admin-${id}@example.com`,
@@ -148,6 +151,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   globalThis.fetch = realFetch;
+  setConnectionNetworkForTests(null);
   resetProviderOwners();
   if (dbAvailable) {
     await db.execute(

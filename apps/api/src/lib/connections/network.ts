@@ -78,7 +78,19 @@ function bodyText(body: RequestInit["body"]): string | undefined {
  * The `fetch` a connected client uses: pinned, public addresses only, unless the host is on
  * `CONNECTIONS_PRIVATE_HOSTS`. Redirects are never followed (a 3xx comes back as is).
  */
+type Network = (url: string, init?: RequestInit) => Promise<Response>;
+let testNetwork: Network | null = null;
+
+/**
+ * Tests only: answers every connection call (client, routes, refresh tick) instead of the network.
+ * `null` restores it. Replacing `globalThis.fetch` no longer reaches here: the calls are pinned.
+ */
+export function setConnectionNetworkForTests(network: Network | null): void {
+  testNetwork = network;
+}
+
 export async function connectionFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  if (testNetwork) return testNetwork(url, init);
   const parsed = new URL(url);
   const allowInternal = isPrivateHostAllowed(parsed.hostname);
   const headers = headerRecord(init.headers);
