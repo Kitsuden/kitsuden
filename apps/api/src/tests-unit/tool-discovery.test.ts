@@ -40,7 +40,9 @@ const TOOLS: ToolDefinition[] = [
 
 const env = { ...process.env };
 afterEach(() => {
-  process.env = { ...env };
+  // In place: modules may keep a reference to the object.
+  for (const key of Object.keys(process.env)) if (!(key in env)) delete process.env[key];
+  Object.assign(process.env, env);
 });
 
 describe("budgets", () => {

@@ -75,6 +75,22 @@ describe("the admin MFA gate", () => {
     });
   });
 
+  it("without an explicit env, reads process.env per request even if the object is replaced", async () => {
+    // A test file that does `process.env = { ...saved }` used to leave the gate
+    // reading the old object: KITSUDEN_ADMIN_MFA=required set later was ignored.
+    const saved = process.env;
+    const getSession = vi.fn(async () => ({ user: { role: "admin", twoFactorEnabled: false } }));
+    const app = new Hono();
+    app.use("*", adminMfaGate(getSession));
+    app.get("*", (c) => c.json({ ok: true }));
+    try {
+      process.env = { ...saved, KITSUDEN_ADMIN_MFA: "required" };
+      expect((await app.request("/api/settings", withCookie)).status).toBe(403);
+    } finally {
+      process.env = saved;
+    }
+  });
+
   it("on: the admin reads fresh (no cookie cache) before being refused", async () => {
     const { app, getSession } = appWith({ role: "admin", twoFactorEnabled: false }, required);
     await app.request("/api/settings", withCookie);
