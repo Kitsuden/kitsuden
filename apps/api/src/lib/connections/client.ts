@@ -18,6 +18,7 @@
 import type { ConnectedClient, ConnectionRequest } from "@kitsuden/shared";
 import { eq } from "drizzle-orm";
 
+import { connectionFetch, isPrivateHostAllowed } from "./network";
 import { providerOf } from "./providers";
 import { connConnections, publicConnection, type ConnectionRow } from "./schema";
 import {
@@ -42,7 +43,10 @@ function authorize(row: ConnectionRow, credential: Credential, headers: Headers)
   headers.set("authorization", `Bearer ${credential.accessToken ?? ""}`);
 }
 
-/** Whether the credential may be sent to this URL: https, on one of the provider's hosts. */
+/**
+ * Whether the credential may be sent to this URL: on one of the provider's hosts, over https. `http:` only
+ * for a host the operator named in `CONNECTIONS_PRIVATE_HOSTS` (network.ts).
+ */
 export function allowedUrl(providerId: string, url: string): boolean {
   const provider = providerOf(providerId);
   if (!provider) return false;
@@ -52,11 +56,11 @@ export function allowedUrl(providerId: string, url: string): boolean {
   } catch {
     return false;
   }
+  const secure =
+    parsed.protocol === "https:" ||
+    (parsed.protocol === "http:" && isPrivateHostAllowed(parsed.hostname));
   return (
-    parsed.protocol === "https:" &&
-    !parsed.username &&
-    !parsed.password &&
-    provider.apiHosts.includes(parsed.hostname)
+    secure && !parsed.username && !parsed.password && provider.apiHosts.includes(parsed.hostname)
   );
 }
 
@@ -76,7 +80,8 @@ export async function clientFor(
   db: Db,
   secrets: Secrets | null,
   request: ConnectionRequest,
-  network: Fetch = (url, init) => fetch(url, init)
+  // Pinned to the checked addresses; private ones only for CONNECTIONS_PRIVATE_HOSTS (network.ts).
+  network: Fetch = connectionFetch
 ): Promise<ConnectedClient> {
   if (!secrets)
     throw new ConnectionError(
