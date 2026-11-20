@@ -447,6 +447,17 @@ export async function activateKonHot(
   }
 }
 
+/**
+ * Was this kon enabled at runtime (hot-loaded) and switched off since? `konSwitchedOff` (kon-activation.ts)
+ * only judges kons loaded at startup; a hot-loaded one keeps its definition in memory after it is disabled,
+ * so whatever runs on its own clock (lib/kon-schedules.ts) asks here too.
+ */
+export async function hotKonSwitchedOff(konId: string): Promise<boolean> {
+  if (![...definitions.keys()].some((id) => sameKon(id, konId))) return false;
+  for (const key of await activeKons()) if (sameKon(key, konId)) return false;
+  return true;
+}
+
 /** Does this kon have a reserved path that already responds? For the restart warning. */
 export function konRespondsWithoutRestart(konId: string): boolean {
   for (const [id] of routers) if (sameKon(id, konId)) return true;

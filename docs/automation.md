@@ -245,4 +245,13 @@ if (ctx.automation) {
   [kon events](kons/events.md) for what that means when a process stops.
 - There are no branches or loops. A rule is a list; use several rules with
   different conditions, or a `code` action.
-- A cron rule fires in every API process that is running.
+- A cron rule runs once per tick across every API process: each process claims
+  the tick first and only the first one runs it (migration `0091`,
+  [kons/schedules.md](kons/schedules.md)). A tick that falls while no API
+  process is running is not caught up.
+- `core:webhook` makes one attempt when the rule runs. If the target does not
+  answer, or answers 5xx or 429, the step succeeds with `retrying: true` and the
+  retries go to the job queue (`kitsuden-rule-webhooks`): with backoff, up to
+  `retryPolicy.maxRetries` (default 3, at most 10), surviving a restart. The
+  queued job holds no secret: each retry re-reads the rule, so a rule paused or
+  deleted meanwhile sends nothing. A 4xx fails the step at once.

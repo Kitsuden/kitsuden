@@ -17,6 +17,7 @@ export type {
   KonRouterFactory,
   KonDefinition,
   KonRateLimit,
+  KonSchedule,
   // Agents run by a kon (`ctx.agents.run`)
   KonAgentRun,
   KonAgentEvent,

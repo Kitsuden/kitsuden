@@ -736,6 +736,35 @@ export interface KonDefinition {
    * (docs/kons/secrets.md), so a key rotation re-encrypts them.
    */
   secretColumns?: KonSecretColumn[];
+
+  /**
+   * Work the kon does on a clock (docs/kons/schedules.md): a nightly sync, an hourly cleanup. Each tick runs
+   * ONCE across every replica of the API, on the durable job queue.
+   */
+  schedules?: KonSchedule[];
+}
+
+/** A kon's periodic task (`defineKon({ schedules })`). */
+export interface KonSchedule {
+  /** Unique inside the kon: `sync-partners` (lower case letters, digits and `-`). */
+  id: string;
+  /** Cron expression: 5 fields (minute first) or 6 (second first). `0 3 * * *` is 03:00 daily. */
+  cron: string;
+  /** IANA time zone the expression is read in. Default UTC. */
+  timezone?: string;
+  /** What it does, for the panel and agents. */
+  description?: string;
+  /**
+   * Attempts when `run` throws (1 to 5, default 1). Retries back off on the queue; keep them below the
+   * interval, or a retry may meet the next tick.
+   */
+  attempts?: number;
+  /**
+   * The work. `scheduledAt` is the tick's instant, the same on every replica: use it, not `new Date()`,
+   * to decide what "since the last run" means. Runs as the system (no request, no user); must be
+   * idempotent, as every queued job (a lease that expires can run it again).
+   */
+  run(ctx: KonContext, tick: { scheduledAt: Date }): Promise<void>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

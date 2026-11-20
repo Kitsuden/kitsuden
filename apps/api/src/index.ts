@@ -85,6 +85,7 @@ import {
 import { initFunctionDispatcher } from "./lib/function-dispatcher";
 import { defaultStores } from "./lib/idempotency-stores";
 import { canSuggest, konRoutes, suggestRoutes } from "./lib/kon-routes";
+import { startKonSchedules } from "./lib/kon-schedules";
 import { listenHost } from "./lib/listen-host";
 import { logger } from "./lib/logger";
 import { configureModelEmbeddings } from "./lib/model-embeddings";
@@ -1639,6 +1640,9 @@ loadSecretsIntoEnv()
 initCronScheduler().catch((err) => {
   console.warn(`  ⏰ Cron Scheduler init warning: ${messageOf(err)}`);
 });
+// Kons' periodic tasks (`defineKon({ schedules })`): the timers of the kons announced so far, and of those
+// announced later (lib/kon-schedules.ts).
+startKonSchedules();
 
 console.log(`
 ╔══════════════════════════════════════════════════╗
