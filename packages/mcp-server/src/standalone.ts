@@ -343,11 +343,13 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: "kitsuden_toggle_module",
-    description: "Enable or disable a Kitsuden module (kon).",
+    description:
+      "Enable or disable a Kitsuden module (kon). Pass `enabled` to set it; without it the current state is flipped.",
     inputSchema: {
       type: "object",
       properties: {
-        key: { type: "string", description: "Module key (e.g., 'academy', 'booking', 'blog')" },
+        key: { type: "string", description: "Module key (e.g., 'kon-academy-lms', 'kon-blog')" },
+        enabled: { type: "boolean", description: "Target state; omitted = flip the current one" },
       },
       required: ["key"],
     },
@@ -794,8 +796,24 @@ function createStandaloneMcpServer() {
         }
 
         case "kitsuden_toggle_module": {
-          const { key } = args as any;
-          const result = await apiRequest(`/modules/${encodeURIComponent(key)}/toggle`, "POST", {});
+          // The API toggles with PATCH /modules/:key { enabled }. This tool used to POST to
+          // /modules/:key/toggle, a route that never existed: it answered 404 even to an
+          // admin (web app test 2026-11-19).
+          const { key, enabled } = args as { key: string; enabled?: boolean };
+          let target = enabled;
+          if (typeof target !== "boolean") {
+            const list = (await apiRequest("/modules")) as {
+              categories?: Record<string, { modules?: Array<{ key: string; enabled: boolean }> }>;
+            };
+            const current = Object.values(list.categories ?? {})
+              .flatMap((c) => c.modules ?? [])
+              .find((m) => m.key === key);
+            if (!current) throw new Error(`Module '${key}' not found`);
+            target = !current.enabled;
+          }
+          const result = await apiRequest(`/modules/${encodeURIComponent(key)}`, "PATCH", {
+            enabled: target,
+          });
           return {
             content: [
               {

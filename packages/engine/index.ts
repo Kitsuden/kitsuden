@@ -365,6 +365,7 @@ export {
   can,
   authorize,
   policyMap,
+  policyReadsResource,
   resetAuthz,
   requireGate,
   requirePolicy,

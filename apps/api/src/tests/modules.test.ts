@@ -134,7 +134,6 @@ describe("Kon Registry", () => {
       { key: "kon-booking", category: "optional" },
       { key: "kon-directory", category: "optional" },
       { key: "kon-crm", category: "optional" },
-      { key: "ai-memories", category: "optional" },
       { key: "kon-games", category: "grimoire" },
       { key: "kon-esports", category: "grimoire" },
       { key: "kon-streamers", category: "grimoire" },
@@ -244,10 +243,11 @@ describe("Kon Registry Helpers", () => {
 
 describe("Registry Counts", () => {
   it("should have expected number of kons", () => {
-    // The core's (media, datasets, blocks) and ai-memories always; with the
-    // earlier kons installed, at least 13.
+    // The core's (media, datasets, blocks) always; with the earlier kons
+    // installed, at least 12. (`ai-memories` was dropped: it moved to the core's
+    // vector search and could not be enabled.)
     const withThePreviousOnes = ["kon-blog", "kon-crm", "kon-games", "kon-dms"].every(installed);
-    expect(KON_REGISTRY.length).toBeGreaterThanOrEqual(withThePreviousOnes ? 13 : 4);
+    expect(KON_REGISTRY.length).toBeGreaterThanOrEqual(withThePreviousOnes ? 12 : 3);
   });
 
   it("core and grimoire do not overlap", () => {
@@ -266,5 +266,12 @@ describe("Registry Counts", () => {
 
     const inBoth = core.filter((key) => grimoire.has(key));
     expect(inBoth).toEqual([]);
+  });
+});
+
+describe("Cards that cannot be enabled", () => {
+  it("does not list ai-memories, which moved to the core's vector search", () => {
+    // Its card offered «Enable» and the switch always answered 409 «Kon not installed».
+    expect(KON_REGISTRY.some((k) => k.key === "ai-memories")).toBe(false);
   });
 });

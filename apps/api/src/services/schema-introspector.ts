@@ -26,6 +26,12 @@ export interface IntrospectedColumn {
   maxLength: number | null;
   isUnique: boolean;
   isIndexed: boolean;
+  /**
+   * The labels of a Postgres enum column, in their order. `information_schema`
+   * only says `USER-DEFINED`, so forms offered free text and any typo became
+   * a 22P02 (web app test 2026-11-19). Absent for every other type.
+   */
+  enumValues?: string[];
 }
 
 export interface IntrospectedTable {
@@ -107,6 +113,11 @@ export async function introspectTable(
 
     // Get all column info
     const columns = await getColumns(tableName, schema);
+    const enums = await getEnumValues(tableName, schema);
+    for (const col of columns) {
+      const values = enums.get(col.name);
+      if (values?.length) col.enumValues = values;
+    }
     const primaryKey = await getPrimaryKey(tableName, schema);
     const foreignKeys = await getForeignKeys(tableName, schema);
     const indexes = await getIndexes(tableName, schema);
@@ -336,6 +347,35 @@ async function getColumns(tableName: string, schema: string): Promise<Introspect
     isUnique: r.is_unique as boolean,
     isIndexed: r.is_primary_key as boolean, // PKs are always indexed
   }));
+}
+
+/**
+ * The labels of each enum column of the table, by column name. On its own
+ * query and never fatal: pg-mem (the tests) has no `pg_enum`, and a column
+ * without its labels is still a column.
+ */
+async function getEnumValues(tableName: string, schema: string): Promise<Map<string, string[]>> {
+  const byColumn = new Map<string, string[]>();
+  try {
+    const result = await db.execute(sql`
+      SELECT c.column_name, e.enumlabel
+      FROM information_schema.columns c
+      JOIN pg_type t ON t.typname = c.udt_name
+      JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = c.udt_schema
+      JOIN pg_enum e ON e.enumtypid = t.oid
+      WHERE c.table_name = ${tableName}
+        AND c.table_schema = ${schema}
+        AND c.data_type = 'USER-DEFINED'
+      ORDER BY c.column_name, e.enumsortorder
+    `);
+    for (const r of result.rows as QueryRow[]) {
+      const column = String(r.column_name);
+      byColumn.set(column, [...(byColumn.get(column) ?? []), String(r.enumlabel)]);
+    }
+  } catch {
+    // Without labels the form falls back to free text, as before.
+  }
+  return byColumn;
 }
 
 async function getPrimaryKey(tableName: string, schema: string): Promise<string[]> {

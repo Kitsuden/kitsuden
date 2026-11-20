@@ -897,8 +897,8 @@ class ApiClient {
   getContaCounterparties() {
     return this.request<{ data: any[] }>("/conta/counterparties");
   }
-  getContaMatters() {
-    return this.request<{ data: any[] }>("/conta/matters");
+  getContaProjects() {
+    return this.request<{ data: any[] }>("/conta/projects");
   }
   getContaTAccount(accountId: string, params?: { dateFrom?: string; dateTo?: string }) {
     const q = new URLSearchParams();
@@ -908,9 +908,9 @@ class ApiClient {
   }
 
   // ── Disbursements ──
-  getContaDisbursements(params?: { matterId?: string; status?: string; limit?: number }) {
+  getContaDisbursements(params?: { projectId?: string; status?: string; limit?: number }) {
     const q = new URLSearchParams();
-    if (params?.matterId) q.set("matterId", params.matterId);
+    if (params?.projectId) q.set("projectId", params.projectId);
     if (params?.status) q.set("status", params.status);
     if (params?.limit) q.set("limit", String(params.limit));
     return this.request<{ data: any[] }>(`/conta/disbursements?${q}`);

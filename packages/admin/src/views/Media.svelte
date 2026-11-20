@@ -46,6 +46,7 @@
   import { fade } from "$lib/tallao/motion";
 
   import { isAdmin } from "$lib/auth.svelte";
+  import { withFieldDefaults, withoutEmptyFields } from "$lib/media-storage-fields";
   import { grimoireConfigStore } from "$lib/states/grimoire-config.svelte";
   import { mediaStore } from "$lib/states/media.svelte";
   // Inline storage providers config (avoiding import from unbuilt package)
@@ -131,7 +132,7 @@
   let copiedId = $state<string | null>(null);
 
   // Config state
-  let config: any = $state(grimoireConfigStore.getDefaultMediaConfig());
+  let config: any = $state(mediaDefaults());
   let testResult = $state<{ success: boolean; message: string } | null>(null);
   let isTesting = $state(false);
 
@@ -139,7 +140,7 @@
   const canConfigure = isAdmin();
 
   /** The configuration as last loaded or saved: what the SaveBar compares against. */
-  let savedConfig = $state(JSON.stringify(grimoireConfigStore.getDefaultMediaConfig()));
+  let savedConfig = $state(JSON.stringify(mediaDefaults()));
   const configDirty = $derived(JSON.stringify(config) !== savedConfig);
 
   const tabItems = $derived<TabItem[]>([
@@ -158,10 +159,18 @@
     if (canConfigure) loadConfig();
   });
 
+  function mediaDefaults(): any {
+    const base: any = grimoireConfigStore.getDefaultMediaConfig();
+    return { ...base, storage: withFieldDefaults(base.storage, storageProviders) };
+  }
+
   async function loadConfig() {
     const loaded = await grimoireConfigStore.loadConfig(GRIMOIRE_ID);
     if (loaded) {
-      config = loaded as typeof config;
+      config = {
+        ...loaded,
+        storage: withFieldDefaults((loaded as any).storage, storageProviders),
+      } as typeof config;
       savedConfig = JSON.stringify(config);
     }
   }
@@ -208,7 +217,10 @@
 
   // ─── Handlers de Settings ───
   async function handleSaveConfig() {
-    const ok = await grimoireConfigStore.saveConfig(GRIMOIRE_ID, config);
+    const ok = await grimoireConfigStore.saveConfig(GRIMOIRE_ID, {
+      ...config,
+      storage: withoutEmptyFields(config.storage),
+    });
     if (ok) savedConfig = JSON.stringify(config);
   }
 
@@ -236,7 +248,7 @@
       local: { provider: "local", path: "./uploads", publicUrl: "http://localhost:3001/uploads" },
       r2: { provider: "r2", accountId: "", bucket: "" },
     };
-    config.storage = defaultConfigs[providerId];
+    config.storage = withFieldDefaults(defaultConfigs[providerId], storageProviders);
     testResult = null;
   }
 

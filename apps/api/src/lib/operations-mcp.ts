@@ -46,6 +46,7 @@ import {
 } from "@kitsuden/shared";
 import { Hono, type Context, type Next } from "hono";
 
+import { policyReadsResource } from "../../../../packages/engine/src/authz";
 import { readSseEvents } from "../../../../packages/engine/src/flows";
 import {
   grantsOperation,
@@ -134,12 +135,23 @@ function agentUser(a: SessionAgent) {
  * Should this agent SEE the tool? If its `allowedTools` list allows it and
  * if the operation's permission grants it (the SAME check the REST route does:
  * scopes ∪ roles ∪ the kon's policy): advertising those it cannot
- * use only invites failure. Those that depend on the resource
- * (`policy.inHandler`) are advertised: it is decided at execution time.
+ * use only invites failure.
+ *
+ * A policy checked in the handler (`policy.inHandler`) is advertised only when
+ * its rule reads the resource (update, delete of one's own…): that is decided
+ * at execution time. A rule that ignores the resource (create, vote, moderate:
+ * the handlers call `h.can({})`) is checked here like any other. Before, a
+ * read-only agent searching for "comment" was offered `comments__create-comment`
+ * and got 403 when it called it.
  */
 async function visible(agent: SessionAgent, e: Input): Promise<boolean> {
   if (agent.allowedTools.length > 0 && !agent.allowedTools.includes(e.tool.name)) return false;
-  if (!e.op.permission || e.op.permission.policy?.inHandler) return true;
+  const permission = e.op.permission;
+  if (!permission) return true;
+  const policy = permission.policy;
+  if (policy?.inHandler && policyReadsResource(policy.resource, policy.action) !== false) {
+    return true;
+  }
   return grantsOperation(e.konId, e.op, agentUser(agent));
 }
 

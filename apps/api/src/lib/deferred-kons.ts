@@ -47,7 +47,7 @@
  */
 
 import { toErrorEnvelope } from "@kitsuden/engine";
-import type { KonContext } from "@kitsuden/shared";
+import type { KonContext, KonDefinition } from "@kitsuden/shared";
 import type { Hono } from "hono";
 
 import { db } from "../db";
@@ -56,6 +56,7 @@ import { withTransactionalRLS } from "../middleware/transactional-rls";
 
 import { inProduction } from "./environment";
 import { withHostContext, envForTheKon } from "./host-context";
+import { registerKonRouter } from "./kon-routes";
 import { announceKon, bindKonContext } from "./kon-setup";
 
 export interface DeferredKon {
@@ -91,6 +92,18 @@ export interface DeferredKon {
 
 const deferredItems = new Map<string, DeferredKon>();
 const routers = new Map<string, Hono>();
+/**
+ * The definitions of the kons activated after startup. The API docs
+ * (`/api/docs/openapi.json`) read the kons loaded at startup; without these, a
+ * kon enabled from the panel answered on its routes but was missing from the
+ * spec until the API restarted (web app test 2026-11-19).
+ */
+const definitions = new Map<string, KonDefinition>();
+
+/** Kons activated after startup that declare a definition (for the API docs). */
+export function hotLoadedKonDefinitions(): KonDefinition[] {
+  return [...definitions.values()];
+}
 
 /**
  * Gives a kon's router the same error translator as the API.
@@ -248,15 +261,26 @@ async function load(kon: DeferredKon): Promise<Hono | null> {
       // `onStartup` runs here and not at startup: for this kon, THIS is its
       // startup. If it throws, activation fails and nothing is cached.
       if (exported.hooks?.onStartup) await exported.hooks.onStartup(konContext);
+      // Like at startup (module-loader): the route registry tells which kon
+      // serves a path. Without it a kon enabled from the panel was invisible to
+      // `pathKon` until a restart: an agent key's `!<kon>:*` denial did not
+      // cover its legacy routes, and the API docs left its routes out.
+      registerKonRouter(
+        kon.id,
+        exported.mountPath ?? kon.mountRoutes[0] ?? `/api/custom/${kon.id}`,
+        router
+      );
       withErrorTranslator(router, kon.id);
       const wrappedItem = withErrorTranslator(withHostContext(router), kon.id);
       routers.set(kon.id, wrappedItem);
+      definitions.set(kon.id, exported);
       return wrappedItem;
     }
 
     // Legacy kon: exports a bare Hono.
     for (const value of Object.values(mod)) {
       if (isHonoRouter(value)) {
+        registerKonRouter(kon.id, kon.mountRoutes[0] ?? `/api/custom/${kon.id}`, value);
         withErrorTranslator(value, kon.id);
         const wrappedItem = withErrorTranslator(withHostContext(value), kon.id);
         routers.set(kon.id, wrappedItem);

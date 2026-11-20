@@ -223,6 +223,17 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${APP_USER}') THEN
     CREATE ROLE "${APP_USER}" LOGIN PASSWORD '${APP_PASS}' NOSUPERUSER NOCREATEDB NOCREATEROLE;
   END IF;
+  -- The migrations grant their SECURITY DEFINER functions (queue, traces, audit,
+  -- effects, idempotency…) to the literal role kitsuden_app, not to APP_DB_USER.
+  -- With any other name the API got «permission denied for function
+  -- kitsuden_queue_claim»: no background jobs, /api/health 503. So kitsuden_app
+  -- exists as a group role (no login) and the app role is a member of it.
+  IF '${APP_USER}' <> 'kitsuden_app' THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'kitsuden_app') THEN
+      CREATE ROLE kitsuden_app NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE;
+    END IF;
+    GRANT kitsuden_app TO "${APP_USER}";
+  END IF;
 END
 \$\$;
 SQL
@@ -305,6 +316,29 @@ BEGIN
   END LOOP;
   IF to_regclass('public.kitsuden_action_effects') IS NOT NULL THEN
     EXECUTE format('REVOKE ALL ON kitsuden_action_effects FROM %I', '${APP_USER}');
+  END IF;
+  -- The audit chain (0088): the app role writes and reads the log but neither
+  -- edits nor deletes it, and only reads the checkpoints. The migration narrows
+  -- this for kitsuden_app, and the blanket GRANT above had reopened it.
+  IF to_regclass('public.agent_audit_logs') IS NOT NULL THEN
+    EXECUTE format('REVOKE UPDATE, DELETE, TRUNCATE ON agent_audit_logs FROM %I', '${APP_USER}');
+  END IF;
+  IF to_regclass('public.agent_audit_checkpoints') IS NOT NULL THEN
+    EXECUTE format('REVOKE ALL ON agent_audit_checkpoints FROM %I', '${APP_USER}');
+    EXECUTE format('GRANT SELECT ON agent_audit_checkpoints TO %I', '${APP_USER}');
+  END IF;
+  -- Trace partitions (0090): the blanket GRANT reached each daily partition,
+  -- so the app role could read and edit them directly although the parent is
+  -- INSERT only. Only their owner keeps rights; writes go through the parent.
+  IF to_regprocedure('public.kitsuden_traces_private_partition(text)') IS NOT NULL THEN
+    FOR t IN
+      SELECT c.relname FROM pg_inherits i
+        JOIN pg_class c ON c.oid = i.inhrelid
+        JOIN pg_class p ON p.oid = i.inhparent
+       WHERE p.relname = 'kitsuden_request_traces'
+    LOOP
+      PERFORM kitsuden_traces_private_partition(t);
+    END LOOP;
   END IF;
 END
 \$\$;

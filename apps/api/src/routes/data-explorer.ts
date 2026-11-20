@@ -14,7 +14,13 @@
  *   ✅ Smart Views (saved filter presets)
  */
 
-import { DATASET_ENTRY_ENTITY, messageOf, recordChange, tableEntity } from "@kitsuden/engine";
+import {
+  DATASET_ENTRY_ENTITY,
+  messageOf,
+  postgresInputError,
+  recordChange,
+  tableEntity,
+} from "@kitsuden/engine";
 import {
   and,
   count,
@@ -31,7 +37,7 @@ import {
   or,
   type SQL,
 } from "drizzle-orm";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 
 import { db } from "../db";
 import {
@@ -64,6 +70,25 @@ import {
   getAllTables,
   type IntrospectedColumn,
 } from "../services/schema-introspector";
+
+/**
+ * The answer to a failed explorer write or read.
+ *
+ * A Postgres error caused by the INPUT (an enum value that does not exist, text
+ * where a uuid goes, a missing required column, a check, a duplicate…) is the
+ * caller's mistake: 400/409/422 with a message, never the query. Before, the
+ * grid's "New …" form got a 500 carrying the whole INSERT for a typo in a
+ * status (web app test 2026-11-19). Anything else stays a 500, logged with its
+ * code only: the driver's message holds the query and its values.
+ */
+function explorerFailure(c: Context, label: string, error: unknown) {
+  const input = postgresInputError(error);
+  if (input) {
+    return c.json({ error: input.message, code: input.code }, input.status as 400);
+  }
+  console.error(label, error);
+  return c.json({ error: messageOf(error) }, 500);
+}
 
 export const explorerRoutes = new Hono();
 
@@ -383,6 +408,8 @@ explorerRoutes.get("/schema/json/:table", async (c) => {
     if (colType === "email") prop.format = "email";
     if (colType === "url") prop.format = "uri";
     if (colType === "id") prop.format = "uuid";
+    // A Postgres enum: the form offers its labels instead of free text.
+    if (col.enumValues?.length) prop.enum = col.enumValues;
 
     if (colType === "relation" && relatedTable) {
       prop.format = "uuid";
@@ -488,7 +515,7 @@ explorerRoutes.get("/schema/:kon/:table", async (c) => {
       columns,
     });
   } catch (error: unknown) {
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer [${c.req.path}]:`, error);
   }
 });
 
@@ -781,8 +808,7 @@ explorerRoutes.get("/:collection", async (c) => {
       },
     });
   } catch (error: unknown) {
-    console.error(`Explorer Error [${collectionName}]:`, error);
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer Error [${collectionName}]:`, error);
   }
 });
 
@@ -838,8 +864,7 @@ explorerRoutes.patch("/:collection/:id", async (c) => {
 
     return c.json(updated);
   } catch (error: unknown) {
-    console.error(`Explorer Update [${collectionName}]:`, error);
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer Update [${collectionName}]:`, error);
   }
 });
 
@@ -884,8 +909,7 @@ explorerRoutes.post("/:collection", async (c) => {
 
     return c.json(created, 201);
   } catch (error: unknown) {
-    console.error(`Explorer Create [${collectionName}]:`, error);
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer Create [${collectionName}]:`, error);
   }
 });
 
@@ -923,8 +947,7 @@ explorerRoutes.delete("/:collection/:id", async (c) => {
 
     return c.json({ deleted: true, id });
   } catch (error: unknown) {
-    console.error(`Explorer Delete [${collectionName}]:`, error);
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer Delete [${collectionName}]:`, error);
   }
 });
 
@@ -971,7 +994,7 @@ explorerRoutes.get("/:collection/options", async (c) => {
 
     return c.json({ options, displayField, collection: collectionName });
   } catch (error: unknown) {
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer [${c.req.path}]:`, error);
   }
 });
 
@@ -1033,8 +1056,7 @@ async function handleDynamicQuery(c: any, tableName: string, meta: TableMeta) {
       },
     });
   } catch (error: unknown) {
-    console.error(`Explorer Dynamic Query [${tableName}]:`, error);
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer Dynamic Query [${tableName}]:`, error);
   }
 }
 
@@ -1061,8 +1083,7 @@ async function handleDynamicCreate(c: any, tableName: string, meta: TableMeta) {
     });
     return c.json(created, 201);
   } catch (error: unknown) {
-    console.error(`Explorer Dynamic Create [${tableName}]:`, error);
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer Dynamic Create [${tableName}]:`, error);
   }
 }
 
@@ -1096,8 +1117,7 @@ async function handleDynamicUpdate(c: any, tableName: string, meta: TableMeta, i
     });
     return c.json(result.rows[0]);
   } catch (error: unknown) {
-    console.error(`Explorer Dynamic Update [${tableName}]:`, error);
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer Dynamic Update [${tableName}]:`, error);
   }
 }
 
@@ -1115,8 +1135,7 @@ async function handleDynamicDelete(c: any, tableName: string, meta: TableMeta, i
     });
     return c.json({ deleted: true, id });
   } catch (error: unknown) {
-    console.error(`Explorer Dynamic Delete [${tableName}]:`, error);
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer Dynamic Delete [${tableName}]:`, error);
   }
 }
 
@@ -1145,7 +1164,7 @@ async function handleDynamicOptions(c: any, tableName: string, meta: TableMeta) 
     }));
     return c.json({ options, displayField, collection: tableName });
   } catch (error: unknown) {
-    return c.json({ error: messageOf(error) }, 500);
+    return explorerFailure(c, `Explorer [${c.req.path}]:`, error);
   }
 }
 

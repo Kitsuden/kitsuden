@@ -16,6 +16,14 @@
 
   import { customViewLoader } from "$lib/custom-view-loader";
 
+  /**
+   * Origin of the API. Empty in Docker (nginx proxies `/api/` on the admin's own
+   * origin); `http://localhost:3001` in `pnpm dev`, where the admin and the API
+   * are different origins. Without it, the bundle and the view's own calls went to
+   * the admin's origin and answered 404.
+   */
+  const API_ORIGIN = import.meta.env.VITE_API_URL ?? "";
+
   interface Props {
     descriptor: CustomViewDescriptor;
     viewId: string;
@@ -32,7 +40,7 @@
     params = {},
     theme = "dark",
     locale = "es",
-    apiBase = "/api",
+    apiBase = `${API_ORIGIN}/api`,
   }: Props = $props();
 
   let mountPoint: HTMLDivElement | null = $state(null);
@@ -72,7 +80,7 @@
 
     (async () => {
       try {
-        const { tag } = await customViewLoader().load(actual);
+        const { tag } = await customViewLoader().load(actual, API_ORIGIN);
         if (cancelled || !mountPoint) return;
 
         const el = document.createElement(tag);
