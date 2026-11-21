@@ -123,6 +123,12 @@ export interface HandlerOptions {
    * contract unless the handler opens it.
    */
   rules?: QueueRuleEntry;
+  /**
+   * Kons that may queue jobs here besides the one that handles it (docs/kons/queues.md): kon ids
+   * (`kon-koe`), short ids (`koe`) or `"*"` for any kon. Without it only the handling kon does. It
+   * never lets another kon handle the queue, and the core's own queues ignore it.
+   */
+  senders?: string[];
 }
 
 /** What the host puts behind `queue.dispatch()`. */
@@ -226,5 +232,60 @@ export const queue = {
   /** Is an engine connected? */
   configured(): boolean {
     return engine !== null;
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE QUEUE AS KONS SEE IT (docs/kons/queues.md)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * How the host checks what a kon does with the queue (apps/api/src/lib/queue-kon-access.ts). Each
+ * method answers the queue name to use, or throws to refuse.
+ */
+export interface KonQueueGuard {
+  /** A kon registers a handler: the name it is registered under, and the handler to register. */
+  handle(
+    queue: string,
+    fn: QueueHandler,
+    options: HandlerOptions
+  ): { queue: string; fn: QueueHandler };
+  /** A kon queues a job: the name it is queued on. */
+  dispatch(queue: string): string;
+}
+
+let konGuard: KonQueueGuard | null = null;
+
+/** The host plugs in its kon checks (once, when it binds the first kon). */
+export function configureKonQueueGuard(next: KonQueueGuard | null): void {
+  konGuard = next;
+}
+
+/**
+ * The `queue` that `@kitsuden/engine` hands kons. The same API as `queue`, but every name goes
+ * through the host's guard: a kon handles and queues only inside its own namespace, never on a core
+ * queue, and on another kon's queue only when that kon (or the core) allows it. Without a guard
+ * (a kon's own tests, the engine on its own) it is the plain queue. The core's code imports
+ * `queue` from this file, not from the package, and is not checked.
+ */
+export const konQueue = {
+  async dispatch<T>(
+    queueName: string,
+    name: string,
+    payload: T,
+    options: DispatchOptions = {}
+  ): Promise<DispatchResult> {
+    const target = konGuard ? konGuard.dispatch(queueName) : queueName;
+    return queue.dispatch(target, name, payload, options);
+  },
+
+  handle<T>(queueName: string, fn: QueueHandler<T>, options: HandlerOptions = {}): void {
+    if (!konGuard) return queue.handle(queueName, fn, options);
+    const checked = konGuard.handle(queueName, fn as QueueHandler, options);
+    queue.handle(checked.queue, checked.fn, options);
+  },
+
+  configured(): boolean {
+    return queue.configured();
   },
 };

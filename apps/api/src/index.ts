@@ -731,7 +731,13 @@ app.use("/api/auth/sign-up/*", async (c, next) => {
   return next();
 });
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+app.on(["POST", "GET"], "/api/auth/*", (c) => {
+  // better-auth reads the client IP from this header only (lib/auth.ts): the address
+  // clientIp() resolved with TRUSTED_PROXY_HOPS, never a value the client sent.
+  const headers = new Headers(c.req.raw.headers);
+  headers.set("x-kitsuden-client-ip", clientIp(c));
+  return auth.handler(new Request(c.req.raw, { headers }));
+});
 
 // Files uploaded in local mode.
 //

@@ -15,6 +15,119 @@
  * it is declared with the SDK (docs/kons/README.md).
  */
 
+/**
+ * The scope name of each legacy CORE route, so an agent's `!` denial can close it
+ * (hardening 2026-11-21).
+ *
+ * `routeDenial` (middleware/auth-guard.ts) matches a denial against an SDK
+ * operation or against a whole kon. A legacy core route is neither, so before
+ * this no denial could close one: `["admin", "!core:secrets:*"]` still wrote
+ * secrets. Each area below gets the name `core:<area>:<access>`, where
+ * `<access>` is `read` for GET and HEAD and `write` for any other method:
+ *
+ *   `!core:secrets:*`   closes /api/admin/secrets
+ *   `!core:keys:write`  closes POST and DELETE /api/keys, and leaves GET open
+ *   `!core:*:write`     closes every write to a legacy core route
+ *   `!core:*`           closes every legacy core route
+ *
+ * These names only DENY. Granting `core:secrets:read` opens nothing: the
+ * route's own gate (role, `admin`) decides as before. The routes of a mounted
+ * kon are not looked up here; their denial is `!<kon>:*`.
+ *
+ * Above `LEGACY_ROUTES` on purpose: the regeneration in
+ * tests/unit/operation-coverage.test.ts keeps everything before that list.
+ * tests/unit/security-hardening-2026-11-21-legacy-route-denials.test.ts checks
+ * that every route of the list below has a name. The longest prefix wins.
+ *
+ * `/api/mcp` is the exception to read/write: every MCP message is a POST, so
+ * its name is `core:mcp:connect` whatever the method, and `!core:*:write` does
+ * not cut an agent off MCP. `!core:mcp:*` (or `!core:*`) does.
+ */
+export const LEGACY_CORE_SCOPE_AREAS: readonly {
+  prefix: string;
+  area: string;
+  /** A fixed access instead of read/write by method. */
+  access?: string;
+}[] = [
+  { prefix: "/admin/traces", area: "traces" },
+  { prefix: "/admin", area: "observability" },
+  { prefix: "/api/actions", area: "actions" },
+  { prefix: "/api/admin/agents", area: "agents" },
+  { prefix: "/api/admin/data-sources", area: "data-sources" },
+  { prefix: "/api/admin/rate-limits", area: "rate-limits" },
+  { prefix: "/api/admin/registry", area: "registry" },
+  { prefix: "/api/admin/secrets", area: "secrets" },
+  { prefix: "/api/admin/system", area: "users" },
+  { prefix: "/api/admin/vault", area: "vault" },
+  { prefix: "/api/agent/decisions", area: "agent-decisions" },
+  { prefix: "/api/agent/memory", area: "agent-memory" },
+  { prefix: "/api/auth", area: "auth" },
+  { prefix: "/api/brain", area: "brain" },
+  { prefix: "/api/code-graph", area: "code-graph" },
+  { prefix: "/api/data-sets", area: "datasets" },
+  { prefix: "/api/datasets", area: "datasets" },
+  { prefix: "/api/doc", area: "docs" },
+  { prefix: "/api/docs", area: "docs" },
+  { prefix: "/api/docs-legacy", area: "docs" },
+  { prefix: "/api/explorer", area: "explorer" },
+  { prefix: "/api/functions", area: "functions" },
+  { prefix: "/api/generate-code", area: "codegen" },
+  { prefix: "/api/graph", area: "graph" },
+  { prefix: "/api/graphql", area: "graphql" },
+  { prefix: "/api/health", area: "health" },
+  { prefix: "/api/items", area: "items" },
+  { prefix: "/api/keys", area: "keys" },
+  { prefix: "/api/kons", area: "kon-assets" },
+  { prefix: "/api/llms.txt", area: "docs" },
+  { prefix: "/api/mail", area: "mail" },
+  { prefix: "/api/map", area: "map" },
+  { prefix: "/api/mcp", area: "mcp", access: "connect" },
+  { prefix: "/api/media", area: "media" },
+  { prefix: "/api/modules", area: "modules" },
+  { prefix: "/api/relations", area: "relations" },
+  { prefix: "/api/runs", area: "runs" },
+  { prefix: "/api/schema", area: "schema" },
+  { prefix: "/api/search", area: "search" },
+  { prefix: "/api/settings", area: "settings" },
+  { prefix: "/api/swagger", area: "docs" },
+  { prefix: "/api/sync", area: "sync" },
+  { prefix: "/api/system", area: "system" },
+  { prefix: "/api/users", area: "users" },
+  { prefix: "/api/v1/agents", area: "agents" },
+  { prefix: "/api/v1/identities", area: "agents" },
+  { prefix: "/api/v1/traces", area: "traces" },
+  { prefix: "/api/version", area: "health" },
+  { prefix: "/health", area: "health" },
+  { prefix: "/live", area: "health" },
+  { prefix: "/llms.txt", area: "docs" },
+  { prefix: "/media", area: "media" },
+  { prefix: "/metrics", area: "observability" },
+  { prefix: "/ready", area: "health" },
+  { prefix: "/slo", area: "observability" },
+];
+
+/** `read` for GET, HEAD and OPTIONS, `write` for every other method. */
+function accessOf(method: string): "read" | "write" {
+  const m = method.toUpperCase();
+  return m === "GET" || m === "HEAD" || m === "OPTIONS" ? "read" : "write";
+}
+
+/**
+ * The scope name of the legacy core route that serves this request
+ * (`core:<area>:<read|write>`), or `null` when no area covers the path. `/`
+ * alone is `core:health:read`. The caller looks at kon paths first.
+ */
+export function legacyCoreScope(method: string, path: string): string | null {
+  const clean = path.replace(/\/{2,}/g, "/");
+  if (clean === "/") return `core:health:${accessOf(method)}`;
+  let best: (typeof LEGACY_CORE_SCOPE_AREAS)[number] | null = null;
+  for (const a of LEGACY_CORE_SCOPE_AREAS) {
+    if (clean !== a.prefix && !clean.startsWith(`${a.prefix}/`)) continue;
+    if (!best || a.prefix.length > best.prefix.length) best = a;
+  }
+  return best ? `core:${best.area}:${best.access ?? accessOf(method)}` : null;
+}
+
 export const LEGACY_ROUTES: readonly string[] = [
   "DELETE /api/actions/:id",
   "DELETE /api/admin/agents/:id",

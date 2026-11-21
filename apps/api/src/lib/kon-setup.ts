@@ -11,7 +11,9 @@
  *                    authorizer of the kon's own channel namespace only.
  *                    `events` emits only in the kon's namespace and delivers
  *                    another kon's event only when that kon shares it.
- *   announceKon      registers what the kon declared in `defineKon`: its
+ *                    `queue` handles and queues only in the kon's own
+ *                    namespace (lib/queue-kon-access.ts).
+ *   announceKon     registers what the kon declared in `defineKon`: its
  *                    events, automation steps, reports, entities and secret
  *                    columns.
  *
@@ -36,6 +38,8 @@ import type {
   KonContext,
   KonDefinition,
   KonEntities,
+  KonEvents,
+  KonQueue,
   KonSecrets,
 } from "@kitsuden/shared";
 
@@ -46,7 +50,12 @@ import { syncKonEntities } from "./kon-entities";
 import { bindKonEvents } from "./kon-event-access";
 import { registerKonSchedules } from "./kon-schedules";
 import { registerKonSecretColumns } from "./kon-secrets";
+import { bindKonQueue, installKonQueueGuard, runAsKon } from "./queue-kon-access";
 import { konCapability, konMayBroadcast, registerKonChannels } from "./realtime-kon-channels";
+
+// `queue` from `@kitsuden/engine` checks every kon's queue names from now on (lib/queue-kon-access.ts).
+// Here, because every kon the host loads is bound by this module first.
+installKonQueueGuard();
 
 function own(owner: string, given: unknown, what: string): void {
   if (given !== owner) {
@@ -187,8 +196,62 @@ export function bindKonContext(base: KonContext, konId: string): KonContext {
       : {}),
     ...(base.connections ? { connections: bindConnections(konId, base.connections) } : {}),
     // Emits only in its own namespace; hears another kon's events only when that kon shares them
-    // (lib/kon-event-access.ts).
-    ...(base.events ? { events: bindKonEvents(konId, base.events) } : {}),
+    // (lib/kon-event-access.ts). Its handlers run in its kon scope (what they queue is checked as it).
+    ...(base.events ? { events: scopedEvents(konId, bindKonEvents(konId, base.events)) } : {}),
+    // Its own queues: `<short id>:`, a plain name mapped into it (lib/queue-kon-access.ts).
+    queue: bindKonQueue(konId) as KonQueue,
+  };
+}
+
+function scopedEvents(konId: string, events: KonEvents): KonEvents {
+  return {
+    ...events,
+    on: (event, handler) =>
+      events.on(
+        event,
+        typeof handler === "function"
+          ? (data: unknown) => runAsKon(konId, () => handler(data))
+          : handler
+      ),
+  };
+}
+
+/**
+ * The kon's rule steps and schedules, run in its kon scope: the core calls them from a rule or a
+ * queue job, and what they queue through `@kitsuden/engine` must be checked as this kon.
+ */
+function scopedCallbacks<T extends Pick<KonDefinition, "id" | "actionHandlers" | "schedules">>(
+  konDef: T
+): T {
+  const konId = konDef.id;
+  return {
+    ...konDef,
+    ...(konDef.actionHandlers
+      ? {
+          actionHandlers: konDef.actionHandlers.map((h) =>
+            h && typeof h === "object"
+              ? {
+                  ...h,
+                  ...(typeof h.run === "function"
+                    ? { run: (input, ctx) => runAsKon(konId, () => h.run(input, ctx)) }
+                    : {}),
+                  ...(typeof h.preview === "function"
+                    ? { preview: (input, ctx) => runAsKon(konId, () => h.preview!(input, ctx)) }
+                    : {}),
+                }
+              : h
+          ) as KonDefinition["actionHandlers"],
+        }
+      : {}),
+    ...(konDef.schedules
+      ? {
+          schedules: konDef.schedules.map((s) =>
+            s && typeof s === "object" && typeof s.run === "function"
+              ? { ...s, run: (ctx, tick) => runAsKon(konId, () => s.run(ctx, tick)) }
+              : s
+          ) as KonDefinition["schedules"],
+        }
+      : {}),
   };
 }
 
@@ -204,11 +267,13 @@ export async function announceKon(
   context: KonContext,
   warn: (message: string) => void = (message) => console.warn(`  ⚠️  ${konDef.id}: ${message}`)
 ): Promise<void> {
+  // Its steps and schedules run in its kon scope (lib/queue-kon-access.ts).
+  const scoped = scopedCallbacks(konDef);
   // Its events, its automation steps and its reports (lib/kon-contributions.ts).
-  for (const problem of registerKonContributions(konDef, context)) warn(problem);
+  for (const problem of registerKonContributions(scoped, context)) warn(problem);
 
   // Its periodic tasks: one run per tick across every replica (lib/kon-schedules.ts).
-  for (const problem of registerKonSchedules(konDef, context)) warn(problem);
+  for (const problem of registerKonSchedules(scoped, context)) warn(problem);
 
   // The entities it owns: one dataset each, created here with no migration (lib/kon-entities.ts).
   if (konDef.entities) {

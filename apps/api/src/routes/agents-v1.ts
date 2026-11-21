@@ -131,6 +131,8 @@ const agentsV1Router = new Hono<{ Variables: AppVariables }>()
         algorithm,
         // The default expiry (AGENT_KEY_DEFAULT_EXPIRY_DAYS, 90 days)
         expiresAt: agentKeyExpiresAt(undefined),
+        // Who minted it (migration 0094): revoked when they stop being an admin.
+        createdBy: userId(c),
       });
 
       return c.json({ agent, token: plainKey }, 201);
@@ -306,6 +308,7 @@ const agentsV1Router = new Hono<{ Variables: AppVariables }>()
             keyPrefix,
             algorithm,
             expiresAt: agentKeyExpiresAt(undefined),
+            createdBy: by,
           })
           .returning({ id: agentApiKeys.id });
         return { newKeyId: created?.id, revoked: old.map((k) => k.id) };

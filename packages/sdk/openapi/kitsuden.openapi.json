@@ -1918,7 +1918,7 @@
       "post": {
         "operationId": "external-mcp.start-mcp-server-oauth",
         "summary": "Start an OAuth connection to an external MCP server (admin)",
-        "description": "Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. Once authorized, OAuth replaces the auth header.",
+        "description": "Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. The answer also sets an HttpOnly cookie scoped to the callback: the callback is accepted only from this browser or from a browser signed in as the same admin. Once authorized, OAuth replaces the auth header.",
         "tags": [
           "kon-external-mcp",
           "mcp-servers"
@@ -23408,7 +23408,7 @@
       "get": {
         "operationId": "external-mcp-oauth.mcp-server-oauth-callback",
         "summary": "OAuth redirect of an external MCP server",
-        "description": "Where an external MCP server's authorization server sends the administrator's browser back. Exchanges the code and redirects to the panel. Not called by hand.",
+        "description": "Where an external MCP server's authorization server sends the administrator's browser back. The `state` names the round trip (one use, ten minutes), and the request must come from the browser that started it (the binding cookie `oauth/start` sets) or from a session of the same admin; otherwise the state is burnt, nothing is exchanged and the panel gets `oauth=error`. Exchanges the code and redirects to the panel. Not called by hand.",
         "tags": [
           "kon-external-mcp-oauth",
           "mcp-servers"
@@ -23505,11 +23505,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
         "x-kitsuden-operation": {
           "kon": "kon-external-mcp-oauth",
           "id": "mcp-server-oauth-callback",
-          "access": "public",
+          "access": "optional",
           "scope": "kon:external-mcp-oauth:mcp-server-oauth-callback",
           "grantedBy": [],
           "sensitive": false,
@@ -23539,11 +23547,6 @@
           }
         ],
         "x-badges": [
-          {
-            "name": "Public",
-            "label": "Public",
-            "color": "#2563eb"
-          },
           {
             "name": "Not an MCP tool",
             "label": "Not an MCP tool",

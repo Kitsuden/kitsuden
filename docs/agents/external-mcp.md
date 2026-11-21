@@ -139,11 +139,13 @@ tokens, encrypted with the secrets key (`KITSUDEN_SECRETS_KEY`) like the header.
    authorization server (protected-resource metadata, RFC 9728; then
    authorization-server metadata, RFC 8414, or OpenID discovery) and registers
    itself as a client there (dynamic client registration, RFC 7591). The
-   answer is `{ authorizationUrl, redirectUri }`.
-3. Open `authorizationUrl` in a browser and authorize. The authorization
-   server sends the browser to `GET /api/mcp-oauth/callback`, which exchanges
-   the code and redirects to the panel: `/mcp-servers?oauth=connected`, or
-   `oauth=error` with the reason.
+   answer is `{ authorizationUrl, redirectUri }`, and it sets an HttpOnly
+   cookie that only the callback receives.
+3. Open `authorizationUrl` in the same browser, or in a browser signed in to
+   the panel as the same admin, and authorize. The authorization server sends
+   the browser to `GET /api/mcp-oauth/callback`, which exchanges the code and
+   redirects to the panel: `/mcp-servers?oauth=connected`, or `oauth=error`
+   with the reason.
 4. From then on every connection (reading tools, the scheduled refresh, an
    agent's call) sends `Authorization: Bearer <access token>`. A token with
    less than a minute left is refreshed first.
@@ -175,9 +177,16 @@ What is checked:
 - **The token is for this server**: the `resource` parameter (RFC 8707) is
   the server's URL, and the code is exchanged at the endpoints the flow
   started with.
-- **The callback is public**, as an OAuth redirect has to be. What authorizes
-  it is the `state`: 256 random bits given only to the admin who started,
-  stored as a hash, valid once and for ten minutes.
+- **The callback needs no session**, as an OAuth redirect has to arrive
+  without one, but it is bound to whoever started. The `state` (256 random
+  bits, stored as a hash, valid once and for ten minutes) names the round
+  trip, and the request must also come from the browser that made the start
+  call (the HttpOnly `kitsuden_mcp_oauth` cookie, sent only to the callback)
+  or from a session of the same admin. An agent's credential never counts.
+  Anyone else, for example a person the authorization link was sent to,
+  burns the state before any token exchange and lands on the panel with
+  `oauth=error`. Without this, that person's account at the authorization
+  server would end up connected to the admin's server.
 - **Starting and disconnecting are for human admins**, like the rest of this
   API.
 

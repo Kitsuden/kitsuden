@@ -217,29 +217,95 @@ whatever its pattern covers, and it wins over every grant.
 | `!datasets:*:delete`       | no entry can be deleted in any dataset                                                                                                                      |
 | `!user:act`                | the key never counts as a signed-in account, even with `admin` or `user:act`; a route of a kon it holds a scope of still opens                              |
 | `!mail:send`               | `kitsuden_dispatch_worker` and `POST /api/mail/test` are refused, even with `admin`                                                                         |
+| `!core:secrets:*`          | every legacy core route of that area (here `/api/admin/secrets`) is refused, even with `admin`; see [Core route names](#core-route-names)                   |
+| `!core:*:write`            | every write (any method but `GET` and `HEAD`) to a legacy core route is refused; reads and MCP stay open                                                    |
 
 Limits of deny (by design):
 
 - It removes what this **key** can do. Anything public stays public for
   everyone else — a denied agent could still read a public endpoint without
   its key.
-- A deny of one _operation_ cannot close a legacy (non-SDK) route, because
-  there is no operation to match; deny the whole kon instead.
+- A deny of one _operation_ cannot close a legacy (non-SDK) route of a kon,
+  because there is no operation to match; deny the whole kon instead. A legacy
+  **core** route has its own name to deny (below).
 - A deny of a broad scope that a kon checks literally (for example a policy
   that looks for `content:edit`) does not remove that broad scope: simply
   do not grant it.
 
+### Core route names
+
+Routes of the core that are not SDK operations yet (the list in
+`apps/api/src/lib/legacy-routes.ts`) belong to no kon, so neither an operation
+deny nor a kon deny reaches them. Each one has a name of the form
+`core:<area>:<access>`, where `<access>` is `read` for `GET` and `HEAD` and
+`write` for every other method. A deny of that name refuses the route with
+`403` for this key, `admin` included:
+
+| Area              | Routes                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| `actions`         | `/api/actions`                                                                            |
+| `agents`          | `/api/admin/agents`, `/api/v1/agents`, `/api/v1/identities`                               |
+| `agent-decisions` | `/api/agent/decisions`                                                                    |
+| `agent-memory`    | `/api/agent/memory`                                                                       |
+| `auth`            | `/api/auth`                                                                               |
+| `brain`           | `/api/brain` (not the SDK operations under it)                                            |
+| `code-graph`      | `/api/code-graph`                                                                         |
+| `codegen`         | `/api/generate-code`                                                                      |
+| `data-sources`    | `/api/admin/data-sources`                                                                 |
+| `datasets`        | `/api/data-sets`, `/api/datasets` (the legacy ones)                                       |
+| `docs`            | `/api/docs`, `/api/doc`, `/api/docs-legacy`, `/api/swagger`, `/llms.txt`, `/api/llms.txt` |
+| `explorer`        | `/api/explorer`                                                                           |
+| `functions`       | `/api/functions`                                                                          |
+| `graph`           | `/api/graph`                                                                              |
+| `graphql`         | `/api/graphql`                                                                            |
+| `health`          | `/`, `/health`, `/live`, `/ready`, `/api/health`, `/api/version`                          |
+| `items`           | `/api/items`                                                                              |
+| `keys`            | `/api/keys`                                                                               |
+| `kon-assets`      | `/api/kons/:konId/admin-asset`, `/api/kons/:konId/graphics`                               |
+| `mail`            | `/api/mail`                                                                               |
+| `map`             | `/api/map`                                                                                |
+| `mcp`             | `/api/mcp` (always `core:mcp:connect`, whatever the method)                               |
+| `media`           | `/media`, `/api/media` (the legacy ones)                                                  |
+| `modules`         | `/api/modules`                                                                            |
+| `observability`   | `/admin` (except traces), `/metrics`, `/slo`                                              |
+| `rate-limits`     | `/api/admin/rate-limits`                                                                  |
+| `registry`        | `/api/admin/registry`                                                                     |
+| `relations`       | `/api/relations`                                                                          |
+| `runs`            | `/api/runs`                                                                               |
+| `schema`          | `/api/schema`                                                                             |
+| `search`          | `/api/search`                                                                             |
+| `secrets`         | `/api/admin/secrets`                                                                      |
+| `settings`        | `/api/settings`                                                                           |
+| `sync`            | `/api/sync`                                                                               |
+| `system`          | `/api/system`                                                                             |
+| `traces`          | `/admin/traces`, `/api/v1/traces`                                                         |
+| `users`           | `/api/admin/system`, `/api/users`                                                         |
+| `vault`           | `/api/admin/vault`                                                                        |
+
+Examples: `!core:secrets:*` keeps an `admin` key out of the secrets manager;
+`!core:keys:write` lets it list `/api/keys` but not mint or delete; `!core:*`
+closes every legacy core route, MCP included. The access comes from the HTTP
+method, so a `POST` that only reads (`POST /api/items/:collection/query`,
+`POST /api/graphql`) counts as `write`.
+
+These names only deny. Granting `core:secrets:read` opens nothing: the route's
+own gate (a role, `admin`) still decides who gets in. They close HTTP routes;
+an MCP tool that reaches the same data is limited by its own scopes and the
+agent's `allowedTools`. A route of a mounted kon keeps the kon rule
+(`!<kon>:*`). When a route moves to the SDK it takes an operation name
+(`kon:<kon>:<op>`) and leaves this list.
+
 ## Where each check happens
 
-| Layer                                               | What it checks                                                     |
-| --------------------------------------------------- | ------------------------------------------------------------------ |
-| Authentication (`services/agent-auth.ts`)           | key format, hash, **revoked**, **expired**, agent active           |
-| Quotas (`lib/agent-quotas.ts`)                      | requests per minute, writes and budget units per day               |
-| Denies (`middleware/auth-guard.ts`, `agentDenials`) | an SDK operation, or a whole legacy kon, denied for this key → 403 |
-| Prefix gates (`adminGate`)                          | role or broad scope — or the operation's fine scope                |
-| The operation (`packages/engine/src/operations.ts`) | deny, then fine/broad/resource scopes ∪ roles ∪ policy             |
-| Datasets (`packages/core/datasets`)                 | dataset scopes, then `policyJson`                                  |
-| Postgres RLS (`rls-policies.sql`)                   | owner, admin, dataset policy — and the agent's dataset scopes      |
+| Layer                                               | What it checks                                                                               |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Authentication (`services/agent-auth.ts`)           | key format, hash, **revoked**, **expired**, creator still admin, agent active                |
+| Quotas (`lib/agent-quotas.ts`)                      | requests per minute, writes and budget units per day                                         |
+| Denies (`middleware/auth-guard.ts`, `agentDenials`) | an SDK operation, a whole legacy kon, or a legacy core route name, denied for this key → 403 |
+| Prefix gates (`adminGate`)                          | role or broad scope — or the operation's fine scope                                          |
+| The operation (`packages/engine/src/operations.ts`) | deny, then fine/broad/resource scopes ∪ roles ∪ policy                                       |
+| Datasets (`packages/core/datasets`)                 | dataset scopes, then `policyJson`                                                            |
+| Postgres RLS (`rls-policies.sql`)                   | owner, admin, dataset policy — and the agent's dataset scopes                                |
 
 The MCP server runs SDK tools through the same gates, denies, idempotency and
 RLS as REST, plus the agent's `allowedTools` list.
@@ -255,6 +321,34 @@ RLS as REST, plus the agent's `allowedTools` list.
 
 The secret is returned **once**, when the key is created or rotated, and is
 stored only as an Argon2id hash.
+
+### Who minted a key
+
+Every static key records the person who minted it in `created_by` (migration
+`0094`): `POST /api/admin/agents`, `POST /api/admin/agents/:id/keys`,
+`POST /api/v1/agents`, `POST /api/v1/agents/:id/token`, `POST /api/keys`, and
+the key and rotation routes under `/api/v1/agents/:id/keys`. Only an admin can
+mint a static key, and only an admin keeps one alive:
+
+- When a person loses the `admin` role through
+  `PATCH /api/admin/system/users/:id/role`, every live static key they minted
+  is revoked at once: `revoked_at` is set, `revoked_by` is `system:demotion`,
+  and each key gets an audit entry (`config_change`, `reason: creator_demoted`,
+  with who made the change). The response says how many (`revokedKeys`).
+- If the role changes any other way (the data explorer, `psql`) or the account
+  is deleted, authentication notices on the key's next use: the request
+  answers `401` (`KEY_REVOKED`) and all of that person's live static keys are
+  revoked the same way (`reason: creator_demoted` or `creator_deleted`). Their
+  short-lived tokens (`kitsuden_ast_*`) and approved proposals stop as well.
+  Kitsuden has no ban today; a ban added later must call
+  `revokeKeysOfFormerAdmin(userId, "banned")`.
+- Promoting the person back does not bring the keys back: mint new ones.
+- OAuth connections are not touched here: their grant is checked against the
+  person's role on every request already. `created_by` on an OAuth row only
+  records who consented.
+
+Keys minted before `0094` have no `created_by` and **keep working**: nobody
+knows who minted them. To bind one to a person, rotate it.
 
 Every change of scopes, keys or quotas is written to the agent audit log
 (`agent_audit_logs`, action `config_change`) with who made it.
@@ -356,5 +450,15 @@ curl -X PUT "$API/api/v1/agents/$AGENT/quotas" -H "Authorization: Bearer $ADMIN_
   fine scopes are kept and invalid ones are rejected with the reason.
 - Revoking a key through the old `DELETE /api/admin/agents/:id/keys/:keyId`
   now marks it revoked instead of deleting the row.
+- Migration `0094_agent_api_keys_created_by.sql` adds `created_by` (no foreign
+  key) and a partial index. It is idempotent. Existing keys keep `NULL` and
+  keep working; rotate the ones that matter so they are tied to an admin. From
+  then on, demoting or deleting that admin revokes them (see
+  [Who minted a key](#who-minted-a-key)).
+- Legacy core routes now have deny names (`core:<area>:<access>`, see
+  [Core route names](#core-route-names)). No existing key changes unless it
+  already carries a deny with a leading wildcard, such as `!*:write` or
+  `!*:read`: that deny now also covers the matching legacy core routes, as it
+  reads.
 - The per-minute limit used to answer `401` and was counted twice per MCP
   message; it now answers `429` and is counted once.

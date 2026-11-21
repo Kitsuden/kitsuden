@@ -57,7 +57,7 @@ class ExternalMcpOauthApi(KonApi):
     def mcp_server_oauth_callback(self, *, state: Optional[Union[str, int]] = None, code: Optional[Union[str, int]] = None, error: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[McpServerOauthCallbackResult]:
         """OAuth redirect of an external MCP server
 
-        Where an external MCP server's authorization server sends the administrator's browser back. Exchanges the code and redirects to the panel. Not called by hand.
+        Where an external MCP server's authorization server sends the administrator's browser back. The `state` names the round trip (one use, ten minutes), and the request must come from the browser that started it (the binding cookie `oauth/start` sets) or from a session of the same admin; otherwise the state is burnt, nothing is exchanged and the panel gets `oauth=error`. Exchanges the code and redirects to the panel. Not called by hand.
 
         REST: `GET /api/mcp-oauth/callback` · scope `kon:external-mcp-oauth:mcp-server-oauth-callback`
         idempotent (safe to retry)
@@ -77,7 +77,7 @@ class AsyncExternalMcpOauthApi(AsyncKonApi):
     async def mcp_server_oauth_callback(self, *, state: Optional[Union[str, int]] = None, code: Optional[Union[str, int]] = None, error: Optional[Union[str, int]] = None, request_options: Optional[RequestOptions] = None) -> Outcome[McpServerOauthCallbackResult]:
         """OAuth redirect of an external MCP server
 
-        Where an external MCP server's authorization server sends the administrator's browser back. Exchanges the code and redirects to the panel. Not called by hand.
+        Where an external MCP server's authorization server sends the administrator's browser back. The `state` names the round trip (one use, ten minutes), and the request must come from the browser that started it (the binding cookie `oauth/start` sets) or from a session of the same admin; otherwise the state is burnt, nothing is exchanged and the panel gets `oauth=error`. Exchanges the code and redirects to the panel. Not called by hand.
 
         REST: `GET /api/mcp-oauth/callback` · scope `kon:external-mcp-oauth:mcp-server-oauth-callback`
         idempotent (safe to retry)

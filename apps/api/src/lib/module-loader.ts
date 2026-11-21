@@ -97,6 +97,7 @@ import { konSecrets } from "./kon-secrets";
 import { announceKon, bindKonContext, konAgentRunOptions } from "./kon-setup";
 import { logger } from "./logger";
 import { registerKonToolsets } from "./mcp-settings";
+import { runAsKon } from "./queue-kon-access";
 import { limiterEnabled, rateLimit } from "./rate-limiter";
 import { realtimeManager } from "./realtime";
 import { sitePublicUrl } from "./site-settings";
@@ -138,10 +139,15 @@ interface AppWithMiddleware {
  * With `konId` (a kon loaded by `loadKons`), an activation guard goes first:
  * once the kon is disabled or uninstalled it answers 404 "Kon not activated"
  * instead of serving until the next restart (`lib/kon-activation.ts`).
+ * The request then runs in the kon's scope: what its code queues or handles
+ * through `@kitsuden/engine` is checked as this kon (`lib/queue-kon-access.ts`).
  */
 export function mountKonRls(app: AppWithMiddleware, route: string, konId?: string): void {
   const base = route.replace(/\/+$/, "");
   if (konId) {
+    const asKon: MiddlewareHandler = (_c, next) => runAsKon(konId, () => next());
+    app.use(base, asKon);
+    app.use(`${base}/*`, asKon);
     app.use(base, konActivationGuard(konId));
     app.use(`${base}/*`, konActivationGuard(konId));
   }
@@ -1238,7 +1244,8 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
       for (const importPath of tryImports) {
         if (existsSync(importPath)) {
           try {
-            mod = await import(pathToFileURL(importPath).href);
+            // In its kon scope: a queue it registers at import is checked as this kon.
+            mod = await runAsKon(kon.id, () => import(pathToFileURL(importPath).href));
             break;
           } catch (err) {
             console.log(`    ⚠️  Failed to import from ${importPath}: ${(err as Error).message}`);
@@ -1304,7 +1311,8 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
         const konContext = bindKonContext(context, konDef.id);
 
         // Create router with injected context
-        const router = konDef.createRouter(konContext);
+        // Its code runs in its kon scope from here on (lib/queue-kon-access.ts).
+        const router = runAsKon(konDef.id, () => konDef.createRouter(konContext));
 
         // Rate limits declared by the kon. They are mounted BEFORE the router
         // because in Hono middleware only runs if it was registered before the
@@ -1332,7 +1340,7 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
           registerMountedOperations(
             kon.id,
             finalMountPath,
-            operationsOf(konDef, konContext),
+            runAsKon(konDef.id, () => operationsOf(konDef, konContext)),
             router as never
           );
         }
@@ -1350,7 +1358,8 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
 
         // Execute lifecycle hooks
         if (konDef.hooks?.onStartup) {
-          await konDef.hooks.onStartup(konContext);
+          const onStartup = konDef.hooks.onStartup;
+          await runAsKon(konDef.id, () => onStartup(konContext));
           initExecuted = true;
         }
 
@@ -1388,7 +1397,7 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
       // ═══════════════════════════════════════════════════════════════════════
       for (const [exportName, exportValue] of Object.entries(mod)) {
         if (exportName.startsWith("init") && typeof exportValue === "function") {
-          await (exportValue as () => Promise<void>)();
+          await runAsKon(kon.id, () => (exportValue as () => Promise<void>)());
           initExecuted = true;
         }
       }

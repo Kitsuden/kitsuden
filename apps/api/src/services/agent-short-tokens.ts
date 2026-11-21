@@ -40,7 +40,7 @@ import { concedeScope, isDenial, splitScopes } from "@kitsuden/shared";
 import { and, eq, isNull, sql } from "drizzle-orm";
 
 import { db } from "../db";
-import { agentApiKeys, agentIdentities, agentShortTokens } from "../db/schema-core";
+import { agentApiKeys, agentIdentities, agentShortTokens, authUsers } from "../db/schema-core";
 import { effectiveScopes, keyGrant } from "../lib/oauth/tokens";
 
 export const SHORT_TOKEN_PREFIX = "kitsuden_ast_";
@@ -162,6 +162,21 @@ async function parentAlive(
     return { ok: false, code: "KEY_REVOKED", error: "The key this token came from was revoked" };
   if (key.expiresAt && key.expiresAt.getTime() <= Date.now())
     return { ok: false, code: "INVALID_KEY", error: "The key this token came from expired" };
+  // Its creator stopped being an admin (migration 0094). Logging in with the key
+  // revokes it (services/agent-auth.ts); its tokens stop here meanwhile.
+  if (key.createdBy && key.algorithm !== "oauth") {
+    const [u] = await db
+      .select({ role: authUsers.role })
+      .from(authUsers)
+      .where(eq(authUsers.id, key.createdBy))
+      .limit(1);
+    if (u?.role !== "admin")
+      return {
+        ok: false,
+        code: "KEY_REVOKED",
+        error: "The key this token came from was revoked: its creator is no longer an admin",
+      };
+  }
   let scopes = (agent.scopes as string[] | null) ?? [];
   if (key.algorithm === "oauth") {
     const grant = await keyGrant(key.id);

@@ -20,7 +20,8 @@ from here is reference.
 - What a kon can build on: [events](kons/events.md) between kons,
   [links](kons/links.md) and their relation names, [entities](kons/entities.md)
   (records with fields and no migration), [sealed secrets](kons/secrets.md) and
-  [periodic tasks](kons/schedules.md) that run once across replicas
+  [periodic tasks](kons/schedules.md) that run once across replicas, and
+  [queues](kons/queues.md) scoped to each kon
 - [Automation rules](automation.md): when an event meets conditions, run steps;
   dry run and run history
 - [Reports](reports.md): aggregate queries, saved reports and dashboards

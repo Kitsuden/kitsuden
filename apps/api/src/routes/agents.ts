@@ -145,6 +145,8 @@ agentsRouter.post("/", async (c) => {
       keyPrefix,
       algorithm,
       expiresAt,
+      // Who minted it (migration 0094): revoked when they stop being an admin.
+      createdBy: sessionUserId(c),
     });
 
     logger.info(
@@ -502,6 +504,7 @@ agentsRouter.post("/:id/keys", async (c) => {
         keyPrefix,
         algorithm,
         expiresAt,
+        createdBy: sessionUserId(c),
       })
       .returning();
 

@@ -14,7 +14,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 
 import { concedeScope, canSign, type AgentSigner } from "@kitsuden/shared";
 import { verify as argon2Verify } from "@node-rs/argon2";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 
 import { db } from "../db";
 import { agentIdentities, agentApiKeys, authUsers } from "../db/schema";
@@ -29,7 +29,7 @@ import {
 } from "../lib/oauth/tokens";
 import { generateAgentApiKey as generateTypedAgentApiKey } from "../utils/id-generator";
 
-import { logAuthSuccess, logAuthFailure } from "./agent-audit";
+import { logAuthSuccess, logAuthFailure, registerAgentAction } from "./agent-audit";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -639,6 +639,26 @@ export async function authenticateAgent(
 
     const key = keyRow;
 
+    // 3b. Its creator is still an admin (migration 0094). The role change route
+    // revokes these keys already; this catches a change made anywhere else (a
+    // deleted account, an UPDATE in psql) and revokes the creator's keys then.
+    const creatorGone = await creatorRefusal(key);
+    if (creatorGone) {
+      await revokeKeysOfFormerAdmin(key.createdBy!, creatorGone);
+      logAuthFailure(
+        agent.id,
+        "API key revoked: its creator is no longer an admin",
+        metadata?.ipAddress,
+        metadata?.userAgent,
+        attempt
+      );
+      return {
+        success: false,
+        error: "API key revoked",
+        code: "KEY_REVOKED",
+      };
+    }
+
     // 4. Check that the agent is active
     if (!agent.isActive) {
       logAuthFailure(agent.id, "Agent is deactivated", metadata?.ipAddress, metadata?.userAgent);
@@ -859,6 +879,12 @@ export async function agentContextForApproval(
       if (key.agentId !== agentId) return { ok: false, reason: "key_not_found" };
       if (key.revokedAt) return { ok: false, reason: "key_revoked" };
       if (key.expiresAt && key.expiresAt < new Date()) return { ok: false, reason: "key_expired" };
+      // Its creator stopped being an admin (migration 0094): revoked, as on login.
+      const creatorGone = await creatorRefusal(key);
+      if (creatorGone) {
+        await revokeKeysOfFormerAdmin(key.createdBy!, creatorGone);
+        return { ok: false, reason: "key_revoked" };
+      }
       // Proposal made by an OAuth connection: it runs with what that
       // connection allows TODAY (narrowed by the grant), not with the whole agent.
       if (key.algorithm === "oauth") {
@@ -992,6 +1018,12 @@ export async function createAgent(params: {
   rateLimit?: number;
   /** Omitted: `AGENT_KEY_DEFAULT_EXPIRY_DAYS` (90). `null`: the key never expires. */
   expiresInDays?: number | null;
+  /**
+   * The person minting the key (`agent_api_keys.created_by`, migration 0094).
+   * When they stop being an admin the key is revoked. Omitted: a key with no
+   * known creator (scripts, seeds), which keeps working as before.
+   */
+  createdBy?: string | null;
 }): Promise<{
   agent: typeof agentIdentities.$inferSelect;
   plainApiKey: string;
@@ -1006,6 +1038,7 @@ export async function createAgent(params: {
     scopes = [],
     rateLimit = 60,
     expiresInDays,
+    createdBy = null,
   } = params;
 
   // Generate API key with the type included (Argon2id)
@@ -1036,6 +1069,7 @@ export async function createAgent(params: {
     keyPrefix,
     algorithm,
     expiresAt,
+    createdBy,
   });
 
   return { agent, plainApiKey: plainKey };
@@ -1050,6 +1084,88 @@ export async function revokeApiKey(keyId: string, revokedBy?: string): Promise<v
     .update(agentApiKeys)
     .set({ revokedAt: new Date(), revokedBy: revokedBy ?? null })
     .where(eq(agentApiKeys.id, keyId));
+}
+
+/** `revoked_by` of a key revoked because its creator stopped being an admin. */
+export const DEMOTION_REVOKER = "system:demotion";
+
+/**
+ * Does a key minted by someone with this role (`null`: the account no longer
+ * exists) stay valid? Only an admin mints static keys (/api/admin/agents,
+ * /api/v1/agents, /api/keys are admin-only), so only an admin keeps them.
+ */
+export function creatorKeepsKeys(role: string | null | undefined): boolean {
+  return role === "admin";
+}
+
+/**
+ * Revokes the LIVE STATIC keys a person minted, because they stopped being an
+ * admin (`demoted`), their account was deleted (`deleted`) or banned (`banned`).
+ * Sets `revoked_at` and `revoked_by = 'system:demotion'` and writes one audit
+ * entry per key. OAuth keys are left alone: their grant is re-checked against
+ * the person's role on every request (lib/oauth/tokens.ts). Keys with no
+ * `created_by` (minted before migration 0094) are not touched.
+ *
+ * Returns the ids of the revoked keys. Never throws for the audit: the
+ * revocation is what must hold, and a failed audit write is logged.
+ */
+export async function revokeKeysOfFormerAdmin(
+  userId: string,
+  reason: "demoted" | "deleted" | "banned",
+  by?: string | null
+): Promise<string[]> {
+  if (!userId) return [];
+  const revoked = await db
+    .update(agentApiKeys)
+    .set({ revokedAt: new Date(), revokedBy: DEMOTION_REVOKER })
+    .where(
+      and(
+        eq(agentApiKeys.createdBy, userId),
+        isNull(agentApiKeys.revokedAt),
+        ne(agentApiKeys.algorithm, "oauth")
+      )
+    )
+    .returning({ id: agentApiKeys.id, agentId: agentApiKeys.agentId });
+  const results = await Promise.allSettled(
+    revoked.map((k) =>
+      registerAgentAction({
+        agentId: k.agentId,
+        keyId: k.id,
+        action: "config_change",
+        resource: "agent_key",
+        resourceId: k.id,
+        details: {
+          revoked: true,
+          revokedBy: DEMOTION_REVOKER,
+          reason: `creator_${reason}`,
+          createdBy: userId,
+          ...(by ? { by } : {}),
+        },
+        success: true,
+      })
+    )
+  );
+  if (results.some((r) => r.status === "rejected")) {
+    console.error("[AgentAuth] could not audit every key revoked on demotion");
+  }
+  return revoked.map((k) => k.id);
+}
+
+/**
+ * The creator of a static key, checked NOW: `null` when the key may be used,
+ * or why not. A key with no `created_by` (before migration 0094) passes.
+ */
+async function creatorRefusal(
+  key: typeof agentApiKeys.$inferSelect
+): Promise<"demoted" | "deleted" | null> {
+  if (!key.createdBy || key.algorithm === "oauth") return null;
+  const [u] = await db
+    .select({ role: authUsers.role })
+    .from(authUsers)
+    .where(eq(authUsers.id, key.createdBy))
+    .limit(1);
+  if (!u) return "deleted";
+  return creatorKeepsKeys(u.role) ? null : "demoted";
 }
 
 /**

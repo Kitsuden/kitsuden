@@ -828,6 +828,9 @@ export async function decideConsent(
         keyPrefix: "kitsuden_oat_",
         algorithm: "oauth",
         name: `OAuth · ${c.clientName}`.slice(0, 100),
+        // Who consented (migration 0094). A record only: the grant is re-checked
+        // against their role on every request, and the demotion sweep skips OAuth.
+        createdBy: h.id,
       })
       .returning();
     const grantId = randomUUID();

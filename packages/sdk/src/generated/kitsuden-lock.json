@@ -7,7 +7,7 @@
   },
   "contract": {
     "apiVersion": "0.9.0-beta",
-    "sha256": "0aa59991f9246177898f1e045af03d106d54b91e4eb1fed1ce8b0dbbf656a70f"
+    "sha256": "7a12fdf38f78d0938110fcea4097485e6bdcf7e92623c274ebb5c173d55dbaf1"
   },
   "filters": {
     "includeKons": [],

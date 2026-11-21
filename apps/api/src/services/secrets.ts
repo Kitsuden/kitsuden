@@ -103,6 +103,9 @@ const RESERVED_KEYS = new Set([
   "ALLOWED_ORIGINS",
   "PORT",
   "HOST",
+  // Which X-Forwarded-For entry is the client (lib/client-ip.ts, security audit H7):
+  // a larger number lets clients choose the IP the rate limiter sees.
+  "TRUSTED_PROXY_HOPS",
   // Security knobs and endpoints read at runtime (hardening 2026-11-20): the
   // metrics bearer token, the prompt-injection classifier, and the AI
   // providers' base URLs (a new one would receive the provider key from `.env`).

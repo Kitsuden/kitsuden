@@ -452,6 +452,30 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is written only by the system and `admin` (migration 0093); the RLS helper functions run as their
   caller with a fixed `search_path`.
 - Fix: `kitsuden_rls_owned` works with a uuid owner column.
+- Security: the client IP counts `TRUSTED_PROXY_HOPS` proxies from the right of `X-Forwarded-For`
+  (0 = the socket only) instead of skipping private entries, which let a client plant the IP the
+  rate limiter saw. Unset means one proxy; the TLS overlay sets 2. Upgrade: with one proxy of your
+  own in front of the API nothing changes; with two, set `TRUSTED_PROXY_HOPS=2`
+  (docs/install/variables.md). better-auth's own sign-in limiter now reads the same resolved IP.
+- Startup: in production outside public mode, an unset or localhost `BETTER_AUTH_URL`, `ADMIN_URL`,
+  `WEB_URL` or `ALLOWED_ORIGINS` prints a warning naming each variable. It does not stop the start
+  (a LAN or laptop install may mean it); public mode still refuses.
+- Security: the external MCP OAuth callback only completes for the admin who started it (same
+  session) or the browser holding the HttpOnly binding cookie the start sets; anyone else burns the
+  state before any token exchange. Upgrade: open the authorization URL in the browser that started
+  it, or one signed in as the same admin.
+- Security: static agent keys record who minted them (`created_by`, migration 0094); when that
+  person loses `admin` or their account is deleted, their live static keys are revoked
+  (`revoked_by = system:demotion`) with an audit entry. Upgrade: keys minted before 0094 have no
+  creator and keep working; rotate them to tie them to an admin (docs/agents/permissions.md).
+- Security: an agent's `!` deny can now close a legacy core route by its `core:<area>:<access>`
+  name (`!core:secrets:*`, `!core:*:write`), `admin` included. Upgrade: a deny with a leading
+  wildcard such as `!*:write` now also covers legacy core routes (docs/agents/permissions.md).
+- Security: kon queue names are scoped per kon (`<short id>:`), so a kon cannot handle another
+  kon's queue or a core one (`kitsuden-*`), and it queues jobs elsewhere only when the owner opens
+  the queue (`senders`) or the core allows it; kons also get `ctx.queue`. Upgrade: koe, chat and
+  ingest keep their names; another kon's plain name (`sync`) becomes `<short>:sync`, and jobs
+  already queued under `sync` still drain (docs/kons/queues.md).
 
 ## [0.9.0-beta]
 

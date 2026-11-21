@@ -83,6 +83,7 @@ import type { AgentLimits } from "./agent-quotas";
 import "./effects";
 import { logger } from "./logger";
 import { listen } from "./postgres-listen";
+import { outsideKonScope } from "./queue-kon-access";
 
 const CHANNEL = "kitsuden_queue";
 export const EMAIL_QUEUE = "kitsuden-email";
@@ -404,7 +405,9 @@ class Worker {
 
   private launch(queue: string, row: JobRow): void {
     this.inProgress.set(queue, (this.inProgress.get(queue) ?? 0) + 1);
-    const task = this.run(queue, row).finally(() => {
+    // No kon scope: a round woken by a kon's dispatch must not run other jobs as that kon. A kon's
+    // handler enters its own (lib/queue-kon-access.ts).
+    const task = outsideKonScope(() => this.run(queue, row)).finally(() => {
       this.inProgress.set(queue, (this.inProgress.get(queue) ?? 1) - 1);
       this.active.delete(task);
       this.wakeUp();

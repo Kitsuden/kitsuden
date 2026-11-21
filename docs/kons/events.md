@@ -86,7 +86,8 @@ table in the same transaction and treat the event as a prompt to look.
 
 For work that must survive a restart, dispatch a job on the transactional queue
 (`queue.dispatch`, see [the queue](../install/queue.md)); it is written in the
-request's transaction and retried.
+request's transaction and retried. Queue names are scoped per kon like event
+names: see [kon queues](queues.md).
 
 ## Listening from a kon
 

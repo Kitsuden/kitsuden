@@ -71,7 +71,8 @@ export { realtimeManager } from "../../apps/api/src/lib/realtime";
 export { z } from "./zod";
 
 // ── Queue (Postgres, transactional outbox) ──
-export { queue, PermanentError } from "./src/queue";
+// Kons get the checked queue: their names stay in their own namespace (docs/kons/queues.md).
+export { konQueue as queue, PermanentError } from "./src/queue";
 export {
   configureEffects,
   runEffect,

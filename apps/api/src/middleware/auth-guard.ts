@@ -11,6 +11,7 @@ import { createMiddleware } from "hono/factory";
 import { routeOperation } from "../../../../packages/engine/src/operations";
 import { auth } from "../lib/auth";
 import { pathKon } from "../lib/kon-routes";
+import { legacyCoreScope } from "../lib/legacy-routes";
 
 import { agentCanActAsUser, AGENT_WITHOUT_ACCOUNT_MESSAGE } from "./agent-as-user";
 
@@ -523,7 +524,10 @@ export function adminGate(rules: readonly GateRule[]) {
  *     body and covers the routes the operation does not reach);
  *   · a LEGACY route of a kon whose whole kon is denied (`!kon:crm:*`,
  *     `!crm:*`) → 403. A denial of ONE operation cannot close a
- *     legacy route: it is not known which operation it corresponds to.
+ *     legacy route: it is not known which operation it corresponds to;
+ *   · a LEGACY CORE route whose `core:<area>:<access>` name is denied
+ *     (`!core:secrets:*`, `!core:keys:write`, `!core:*`) → 403. The names
+ *     are in lib/legacy-routes.ts (hardening 2026-11-21).
  *
  * The rest (datasets, MCP tools) is decided by their own
  * checkpoints with the same rule from shared.
@@ -547,11 +551,17 @@ export function routeDenial(
   if (!scopes?.some((s) => s.startsWith("!"))) return null;
   const ofRoute = routeOperation(method, path);
   if (ofRoute) return operationDenial(scopes, ofRoute.konId, ofRoute.op);
-  const kon = pathKon(path);
-  if (!kon) return null;
-  const shortOne = konShortName(kon);
-  // The operation wildcard "*" is only covered by a denial of the WHOLE kon.
-  return denialThatCovers(scopes, [`kon:${shortOne}:*`, `${shortOne}:*`]);
+  const clean = path.replace(/\/{2,}/g, "/");
+  const kon = pathKon(clean);
+  if (kon) {
+    const shortOne = konShortName(kon);
+    // The operation wildcard "*" is only covered by a denial of the WHOLE kon.
+    return denialThatCovers(scopes, [`kon:${shortOne}:*`, `${shortOne}:*`]);
+  }
+  // A legacy CORE route: its `core:<area>:<access>` name (lib/legacy-routes.ts),
+  // so `!core:secrets:*` closes /api/admin/secrets even with `admin`.
+  const core = legacyCoreScope(method, clean);
+  return core ? denialThatCovers(scopes, [core]) : null;
 }
 
 function denialResponse(c: Context, reason: string): Response {

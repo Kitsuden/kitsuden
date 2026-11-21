@@ -21,6 +21,7 @@
 
 import { defineOperation } from "@kitsuden/shared";
 import type { Context, MiddlewareHandler } from "hono";
+import { getCookie } from "hono/cookie";
 import { z } from "zod";
 
 import { operationsRouter, type AnyOperation } from "../../../../packages/engine/src/operations";
@@ -40,8 +41,11 @@ import {
 } from "../lib/external-mcp";
 import { externalNaming, loadExternalCatalog, serverSlugTakenBy } from "../lib/external-mcp-bridge";
 import {
+  bindingCookie,
+  clearedBindingCookie,
   completeOAuth,
   disconnectOAuth,
+  OAUTH_BINDING_COOKIE,
   OAUTH_CALLBACK_PATH,
   OAuthProblem,
   startOAuth,
@@ -268,7 +272,7 @@ export const externalMcpOperations: AnyOperation[] = [
     route: "/:id/oauth/start",
     summary: "Start an OAuth connection to an external MCP server (admin)",
     description:
-      "Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. Once authorized, OAuth replaces the auth header.",
+      "Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. The answer also sets an HttpOnly cookie scoped to the callback: the callback is accepted only from this browser or from a browser signed in as the same admin. Once authorized, OAuth replaces the auth header.",
     input: {
       params: ParamId,
       body: z
@@ -285,7 +289,14 @@ export const externalMcpOperations: AnyOperation[] = [
       const server = await getServer((params as { id: string }).id);
       if (!server) return notFound(c);
       try {
-        return await startOAuth(server, (body ?? {}) as Record<string, string>, who(c));
+        const { browserBinding, ...data } = await startOAuth(
+          server,
+          (body ?? {}) as Record<string, string>,
+          who(c)
+        );
+        // The callback must come back to THIS browser (or this admin): see finishedByStarter.
+        c.header("Set-Cookie", bindingCookie(browserBinding), { append: true });
+        return data;
       } catch (err) {
         if (err instanceof OAuthProblem) return badRequest(c, err.message);
         throw err;
@@ -312,9 +323,11 @@ export const externalMcpOperations: AnyOperation[] = [
 ];
 
 /**
- * The OAuth redirect. PUBLIC, outside /api/admin: the browser arrives from the
- * authorization server, and what authorizes the request is the single-use
- * `state` only the admin who started holds (lib/external-mcp-oauth.ts). It
+ * The OAuth redirect, outside /api/admin: the browser arrives from the
+ * authorization server, so no session is required (`optional`). The single-use
+ * `state` names the round trip, and the request must also come from whoever
+ * started it: a session of the same admin (never an agent) or the binding
+ * cookie the start set (lib/external-mcp-oauth.ts, `finishedByStarter`). It
  * always ends in the panel, with `oauth=connected` or `oauth=error`.
  */
 export const EXTERNAL_MCP_OAUTH_ROUTE = OAUTH_CALLBACK_PATH.replace(/\/callback$/, "");
@@ -327,12 +340,13 @@ function panelUrl(outcome: Record<string, string>): string {
 export const externalMcpOAuthOperations: AnyOperation[] = [
   defineOperation({
     id: "mcp-server-oauth-callback",
-    access: "public" as const,
+    // `optional`: no session is required, but when there is one it may be what proves the starter came back.
+    access: "optional" as const,
     method: "GET",
     route: "/callback",
     summary: "OAuth redirect of an external MCP server",
     description:
-      "Where an external MCP server's authorization server sends the administrator's browser back. Exchanges the code and redirects to the panel. Not called by hand.",
+      "Where an external MCP server's authorization server sends the administrator's browser back. The `state` names the round trip (one use, ten minutes), and the request must come from the browser that started it (the binding cookie `oauth/start` sets) or from a session of the same admin; otherwise the state is burnt, nothing is exchanged and the panel gets `oauth=error`. Exchanges the code and redirects to the panel. Not called by hand.",
     mcp: { exclude: "A browser redirect of the OAuth flow, not something an agent calls." },
     tags: ["mcp-servers"],
     input: {
@@ -343,15 +357,23 @@ export const externalMcpOAuthOperations: AnyOperation[] = [
       }),
     },
     output: { status: 302 },
-    handle: async ({ query }, { c }) => {
+    handle: async ({ query }, { c, user }) => {
       const q = (query ?? {}) as { state?: string; code?: string; error?: string };
+      // The binding is spent whatever happens next.
+      c.header("Set-Cookie", clearedBindingCookie(), { append: true });
       if (!q.state || !q.code) {
         // The server's own `error` code only: its description is free text from outside.
         const reason = q.error ? q.error.replace(/[^\w.-]/g, "").slice(0, 60) : "missing_code";
         return c.redirect(panelUrl({ oauth: "error", reason }), 302);
       }
+      // A person's session counts; an agent's credential never does.
+      const person = user as { id?: string; role?: string } | null;
+      const isAgent = person?.role === "agent" || Boolean(c.get("agent" as never));
       try {
-        const server = await completeOAuth(q.state, q.code);
+        const server = await completeOAuth(q.state, q.code, {
+          userId: person?.id && !isAgent ? person.id : null,
+          browserBinding: getCookie(c, OAUTH_BINDING_COOKIE) ?? null,
+        });
         return c.redirect(panelUrl({ oauth: "connected", server }), 302);
       } catch (err) {
         if (!(err instanceof OAuthProblem)) throw err;

@@ -58,6 +58,7 @@ import { inProduction } from "./environment";
 import { withHostContext, envForTheKon } from "./host-context";
 import { registerKonRouter } from "./kon-routes";
 import { announceKon, bindKonContext } from "./kon-setup";
+import { runAsKon } from "./queue-kon-access";
 
 export interface DeferredKon {
   /** The kon's id, as in its manifest (`kon-booking`). */
@@ -235,7 +236,11 @@ async function load(kon: DeferredKon): Promise<Hono | null> {
     let mod: Record<string, unknown> | null = null;
     for (const candidate of candidates) {
       if (!existsSync(candidate)) continue;
-      mod = (await import(pathToFileURL(candidate).href)) as Record<string, unknown>;
+      // In its kon scope, like at startup (lib/queue-kon-access.ts).
+      mod = (await runAsKon(kon.id, () => import(pathToFileURL(candidate).href))) as Record<
+        string,
+        unknown
+      >;
       break;
     }
     if (!mod) throw new Error(`could not import ${kon.id} from ${kon.path}`);
@@ -256,7 +261,7 @@ async function load(kon: DeferredKon): Promise<Hono | null> {
         { ...exported, events: mergeKonEventDeclarations(exported.events, kon.manifestEvents) },
         konContext
       );
-      const router = exported.createRouter(konContext);
+      const router = runAsKon(exported.id, () => exported.createRouter(konContext));
       // Kon SDK: its operations, for MCP (the path is the one declared
       // by the kon or the first of the reserved candidates).
       if (exported.operations) {
@@ -265,13 +270,14 @@ async function load(kon: DeferredKon): Promise<Hono | null> {
         registerMountedOperations(
           kon.id,
           exported.mountPath ?? kon.mountRoutes[0] ?? `/api/custom/${kon.id}`,
-          operationsOf(exported, konContext),
+          runAsKon(exported.id, () => operationsOf(exported, konContext)),
           router as never
         );
       }
       // `onStartup` runs here and not at startup: for this kon, THIS is its
       // startup. If it throws, activation fails and nothing is cached.
-      if (exported.hooks?.onStartup) await exported.hooks.onStartup(konContext);
+      const onStartup = exported.hooks?.onStartup;
+      if (onStartup) await runAsKon(exported.id, () => onStartup(konContext));
       // Like at startup (module-loader): the route registry tells which kon
       // serves a path. Without it a kon enabled from the panel was invisible to
       // `pathKon` until a restart: an agent key's `!<kon>:*` denial did not
@@ -405,9 +411,12 @@ export function registerDeferredKons(
       const prefix =
         validRoutes.find((r) => url.pathname === r || url.pathname.startsWith(`${r}/`)) ?? "";
       url.pathname = url.pathname.slice(prefix.length) || "/";
-      return router.fetch(
-        new Request(url.toString(), c.req.raw),
-        envForTheKon(c.env, (k) => c.get(k))
+      // In the kon's scope, as a kon mounted at startup (lib/queue-kon-access.ts).
+      return runAsKon(kon.id, () =>
+        router.fetch(
+          new Request(url.toString(), c.req.raw),
+          envForTheKon(c.env, (k) => c.get(k))
+        )
       );
     };
 

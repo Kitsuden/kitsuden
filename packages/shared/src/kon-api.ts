@@ -479,6 +479,59 @@ export interface KonContext<TDb = any> {
    * Optional: absent when the datasets battery is not installed.
    */
   entities?: KonEntities;
+
+  /**
+   * The job queue, tied to this kon (docs/kons/queues.md): names live in the kon's namespace
+   * (`<short id>:`), a plain name is mapped into it (`handle("sync")` and `add("sync", …)` both use
+   * `crm:sync`), and a core queue or another kon's is refused unless the core or that kon allows it.
+   * Optional: a host or test without a queue leaves it undefined.
+   */
+  queue?: KonQueue;
+}
+
+/** A job as `ctx.queue` hands it to a handler. */
+export interface KonQueueJob<T = unknown> {
+  id: string;
+  /** The full name it was queued on (`crm:sync`). */
+  queue: string;
+  name: string;
+  payload: T;
+  attempt: number;
+  maxAttempts: number;
+  /** Who queued it, re-read when it runs; `null` = the system. */
+  actor: { id: string; role: string; scopes?: string[] } | null;
+  requestId: string | null;
+}
+
+/** `ctx.queue` (docs/kons/queues.md). */
+export interface KonQueue {
+  /** Queues a job; inside a request it is written in the request's transaction. */
+  add<T = unknown>(
+    queue: string,
+    job: string,
+    payload: T,
+    options?: {
+      reason?: string;
+      attempts?: number;
+      delayMs?: number;
+      cost?: number;
+      onBudgetExhausted?: "postpone" | "fail";
+      dedupeKey?: string;
+    }
+  ): Promise<{ id: string; deduplicated?: boolean }>;
+  /** Registers this kon's handler for one of its queues. */
+  handle<T = unknown>(
+    queue: string,
+    fn: (job: KonQueueJob<T>) => Promise<unknown>,
+    options?: {
+      concurrency?: number;
+      rules?: { label: string; description: string; payload?: Record<string, string> };
+      /** Other kons that may queue jobs here: kon ids, short ids or `"*"`. */
+      senders?: string[];
+    }
+  ): void;
+  /** The full name a queue of this kon resolves to (`sync` → `crm:sync`), e.g. to tell another kon where to reply. */
+  name(queue: string): string;
 }
 
 export interface KonAgentRun {

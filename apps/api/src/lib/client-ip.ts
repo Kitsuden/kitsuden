@@ -10,27 +10,35 @@
  * an `Authorization: Bearer <garbage>` that is not an agent's carries on
  * as an anonymous request.
  *
- * ── THE RULE ──────────────────────────────────────────────────────────────
+ * ── THE RULE: COUNT THE PROXIES, DO NOT GUESS THEM ─────────────────────────
  *
- * The proxies we have in front (Caddy, the panel's nginx, the Docker
- * network) live at PRIVATE addresses; visitors arrive from
- * PUBLIC addresses. So:
+ * Each proxy APPENDS the address it received the request from to
+ * `x-forwarded-for`, so the trustworthy part of the header is its right end:
+ * one entry per proxy we run. Everything to the left of that is text the
+ * client wrote. `TRUSTED_PROXY_HOPS` says how many proxies stand in front of
+ * the API (docs/install/variables.md):
  *
- *   1. If whoever opens the socket is a public IP, there is no proxy in front: that is
- *      the IP, and `x-forwarded-for` is client text → it is ignored.
- *   2. If it is private (or unknown), `x-forwarded-for` is walked from RIGHT
- *      to left skipping private ones: the first public one was added by our
- *      first proxy. What the client wrote stays to its left and does not
- *      count.
- *   3. If everything is private (requests from the machine itself or the internal
- *      network), the rightmost entry, or the socket.
+ *   · `0`: no proxy. The socket address is the client; `x-forwarded-for` is
+ *     ignored.
+ *   · `N` ≥ 1: the client is the N-th entry from the RIGHT. With fewer
+ *     entries than N, the leftmost one (a request that crossed fewer of our
+ *     proxies, e.g. Caddy → API for `/media/*` when `/api/*` goes Caddy →
+ *     nginx → API: Caddy replaces what the client sent, so its entry is the
+ *     whole header). No header at all: the socket.
+ *   · unset: one proxy, except that a PUBLIC socket means nothing is in
+ *     front (the API published straight to the internet) and the header is
+ *     ignored, as before.
  *
- * There is no need to know how many hops there are (Caddy → API, or Caddy → nginx → API):
- * it works for both setups.
+ * Security audit 2026-11-19 (H7): before, the header was walked from the right
+ * SKIPPING private entries, to work with one or two proxies without being
+ * told. Whenever the real client looks private (IPv6 behind `docker-proxy`
+ * gets the bridge gateway; a visitor on the LAN or a VPN), the walk went on
+ * into the client's own entries: a planted public-looking address set the IP
+ * the limiter and the audit log saw. A fixed count cannot be walked past.
  *
  * ── WHEN THE ADDRESS COMES OUT PRIVATE ─────────────────────────────────────
  *
- * Case 3 is not proof of anything. Without ip6tables, Docker's `docker-proxy`
+ * A private result is not proof of anything. Without ip6tables, Docker's `docker-proxy`
  * hands Caddy every IPv6 visitor with ONE private address (the bridge gateway),
  * and anyone who reaches the API port from inside (the host, a container) can
  * write a different private `x-forwarded-for` on every request. Security review
@@ -51,7 +59,10 @@ interface MinimalContext {
   req: { header(name: string): string | undefined };
 }
 
-/** Ranges treated as "our proxies" (and passed to better-auth). */
+/**
+ * Private ranges, passed to better-auth as its trusted proxies (lib/auth.ts).
+ * `clientIp` no longer uses them to pick the client: it counts hops.
+ */
 export const PROXY_RANGES = [
   "127.0.0.0/8",
   "10.0.0.0/8",
@@ -115,20 +126,54 @@ function socketIp(c: MinimalContext): string | null {
   return ip ? clean(ip) : null;
 }
 
+/** More than this is a typing mistake, not a deployment. */
+const MAX_HOPS = 10;
+
+let warnedInvalid = "";
+
+/**
+ * How many proxies stand in front of the API (`TRUSTED_PROXY_HOPS`), and
+ * whether it was said. Unset or empty: one, not stated. A value that is not a
+ * whole number from 0 to 10 trusts nothing (0) and warns once: a typo must
+ * not open the header to the client.
+ */
+export function trustedProxyHops(env: NodeJS.ProcessEnv = process.env): {
+  hops: number;
+  stated: boolean;
+} {
+  const raw = (env.TRUSTED_PROXY_HOPS ?? "").trim();
+  if (raw === "") return { hops: 1, stated: false };
+  if (/^\d+$/.test(raw) && Number(raw) <= MAX_HOPS) return { hops: Number(raw), stated: true };
+  if (warnedInvalid !== raw) {
+    warnedInvalid = raw;
+    console.warn(
+      `[client-ip] TRUSTED_PROXY_HOPS must be a whole number from 0 to ${MAX_HOPS}; ignoring x-forwarded-for until it is fixed`
+    );
+  }
+  return { hops: 0, stated: true };
+}
+
 export function clientIp(c: MinimalContext): string {
   const socket = socketIp(c);
-  if (socket && isIp(socket) && !isPrivate(socket)) return socket;
+  const socketValid = socket !== null && isIp(socket);
+  const { hops, stated } = trustedProxyHops();
 
-  const string = (c.req.header("x-forwarded-for") ?? "").split(",").map(clean).filter(isIp);
+  if (hops === 0) return socketValid ? socket! : "unknown";
+  // Not stated: a public socket means nothing is in front of the API.
+  if (!stated && socketValid && !isPrivate(socket!)) return socket!;
 
-  for (let i = string.length - 1; i >= 0; i--) {
-    if (!isPrivate(string[i]!)) return string[i]!;
-  }
+  // The entries in the order the proxies appended them. Empty ones are the
+  // client's (a proxy always appends an address), so they are dropped.
+  const chain = (c.req.header("x-forwarded-for") ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+  if (chain.length === 0) return socketValid ? socket! : "unknown";
 
-  const real = clean(c.req.header("x-real-ip") ?? "");
-  if (real && isIp(real) && !isPrivate(real)) return real;
-
-  return string[string.length - 1] ?? socket ?? "unknown";
+  const picked = clean(chain[Math.max(0, chain.length - hops)]!);
+  if (isIp(picked)) return picked;
+  // Garbage where a proxy's entry should be: the socket, never the client's text.
+  return socketValid ? socket! : "unknown";
 }
 
 /** The headers a proxy adds when it forwards a request. */

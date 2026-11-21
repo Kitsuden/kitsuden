@@ -141,6 +141,10 @@ services:
       # The API's interactive documentation, off in public unless
       # requested (in the base it is fixed to true)
       - ENABLE_SWAGGER=${ENABLE_SWAGGER:-false}
+      # Two proxies in front of /api/*: Caddy, then the panel's nginx. The client
+      # IP is the second X-Forwarded-For entry from the right (lib/client-ip.ts).
+      # Change it only if you change that chain (docs/install/variables.md).
+      - TRUSTED_PROXY_HOPS=${TRUSTED_PROXY_HOPS:-2}
       # No TZ on purpose: the API, the database and the backups work in UTC (as
       # today locally); the dates the visitor sees are rendered by the web, which does
       # have TZ.
