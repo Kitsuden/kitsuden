@@ -35,11 +35,10 @@
     type ToggleOption,
   } from "$lib/tallao";
   import { t, localeFormat } from "$lib/i18n";
+  import BrandIcon from "$lib/components/icons/BrandIcon.svelte";
+  import type { BrandIconName } from "$lib/components/icons/brand-icons";
   import {
     MessageCircle,
-    Facebook,
-    Twitter,
-    Linkedin,
     Send,
     AlertCircle,
     CheckCircle,
@@ -132,13 +131,15 @@
     { id: "twitter", label: t("socialPreview.xTwitter") },
     { id: "linkedin", label: t("socialPreview.linkedin") },
   ]);
-  const tabIcons = {
+  // lucide 1.0 dropped its brand icons: a network with a logo names it, and the admin draws it
+  // (components/icons); the others keep a lucide icon.
+  const tabIcons: Record<TabType, typeof MessageCircle | BrandIconName> = {
     whatsapp: MessageCircle,
     telegram: Send,
-    facebook: Facebook,
-    twitter: Twitter,
-    linkedin: Linkedin,
-  } as const;
+    facebook: "facebook",
+    twitter: "x",
+    linkedin: "linkedin",
+  };
   let isRefreshing = $state(false);
   let showDebug = $state(false);
   let copied = $state(false);
@@ -361,7 +362,11 @@
     {#snippet tab(item: TabItem)}
       {@const TabIcon = tabIcons[item.id as TabType]}
       <span class="preview-tab">
-        <TabIcon size={16} aria-hidden="true" />
+        {#if typeof TabIcon === "string"}
+          <BrandIcon name={TabIcon} size={16} />
+        {:else}
+          <TabIcon size={16} aria-hidden="true" />
+        {/if}
         <span>{item.label}</span>
         {#if item.id === "whatsapp" && hasWhatsAppIssues}
           <Badge variant="error" tone="solid">!</Badge>
@@ -592,7 +597,7 @@
         <div class="twitter-card">
           <div class="twitter-header">
             <div class="twitter-avatar">
-              <Twitter size={20} />
+              <BrandIcon name="x" size={20} />
             </div>
             <div class="twitter-user">
               <div class="twitter-name">{t("socialPreview.yourAccount")}</div>
