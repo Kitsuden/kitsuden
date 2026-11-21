@@ -88,9 +88,11 @@ beforeAll(async () => {
       rls: ctx?.uid ?? null,
     });
   });
-  // No automatic wake-ups: the tests drive it with processPending().
-  await setupWorkers();
+  // No automatic wake-ups: the tests drive it with processPending(). Paused BEFORE it
+  // starts: start() ends with a claim round that walks every queue, and in CI it reached
+  // this file's queue after the first dispatch and ran the job behind the test's back.
   pauseWorker(true);
+  await setupWorkers();
 });
 
 beforeEach(async () => {

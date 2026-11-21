@@ -51,8 +51,9 @@ beforeAll(async () => {
   await db.execute(
     sql`INSERT INTO agent_identities (id, name) VALUES (${AGENT}, 'clas') ON CONFLICT DO NOTHING`
   );
-  await setupWorkers();
+  // Paused before it starts: start() ends with a claim round (see queue-postgres.test.ts).
   pauseWorker(true);
+  await setupWorkers();
   setRereadActor(async () => ({ ok: true, actor: null }));
 });
 

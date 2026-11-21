@@ -685,6 +685,9 @@ export async function setupWorkers(): Promise<void> {
       () => pool.end()
     );
   }
+  // A pause asked for before the worker existed holds from its first moment: `start()`
+  // ends with a claim round, which otherwise ran before the test could pause it.
+  worker.paused = pausedForTests;
   await worker.start();
   logger.info(
     { worker: worker.id, queues: [...queueHandlers().keys()] },
@@ -697,13 +700,21 @@ export async function shutdownQueues(): Promise<void> {
   worker = null;
   // It can be started again (tests in the same process do so).
   workersInitialized = false;
+  pausedForTests = false;
   await t?.stop();
   const { closeListener } = await import("./postgres-listen");
   await closeListener();
 }
 
-/** Tests only: the worker stops waking itself (NOTIFY, polling, on dispatch). */
+let pausedForTests = false;
+
+/**
+ * Tests only: the worker stops waking itself (NOTIFY, polling, on dispatch). Call it
+ * before `setupWorkers()` for a worker that never claims on its own; the pause lasts
+ * until `pauseWorker(false)` or `shutdownQueues()`.
+ */
 export function pauseWorker(paused: boolean): void {
+  pausedForTests = paused;
   if (worker) worker.paused = paused;
 }
 
