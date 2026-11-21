@@ -8,6 +8,9 @@
  *
  * The password is stored encrypted with the secrets manager's `encryptSecret`
  * (AES-256-GCM) and never returned: responses carry `hasPassword` instead.
+ * Header values (often an `Authorization` token) are never returned either:
+ * responses show each header name with the value `HEADER_MASK`, and a `PUT` that
+ * sends `HEADER_MASK` back for a header keeps the stored value.
  *
  * There is no sync: nothing reads from a data source yet, so `POST /:id/sync`
  * answers 501 instead of pretending.
@@ -45,6 +48,41 @@ const publicColumns = {
   hasPassword: sql<boolean>`${dataSources.encryptedPassword} IS NOT NULL`,
 };
 
+/** What a response shows in place of a header value. */
+export const HEADER_MASK = "********";
+
+/** Header names with their values hidden (security hardening 2026-11-20). */
+export function maskHeaders(headers: unknown): Record<string, string> | null {
+  if (!headers || typeof headers !== "object" || Array.isArray(headers)) return null;
+  return Object.fromEntries(Object.keys(headers).map((name) => [name, HEADER_MASK]));
+}
+
+/**
+ * The headers to store from a `PUT`: a value equal to `HEADER_MASK` keeps the
+ * stored value of that header, so a form that sends back what it read does not
+ * overwrite the token with the mask.
+ */
+export function mergeHeaders(incoming: unknown, stored: unknown): unknown {
+  if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return incoming;
+  const old =
+    stored && typeof stored === "object" && !Array.isArray(stored)
+      ? (stored as Record<string, unknown>)
+      : {};
+  const out: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(incoming as Record<string, unknown>)) {
+    if (value === HEADER_MASK) {
+      if (Object.prototype.hasOwnProperty.call(old, name)) out[name] = old[name];
+    } else {
+      out[name] = value;
+    }
+  }
+  return out;
+}
+
+function withMaskedHeaders<T extends { headers?: unknown }>(row: T): T {
+  return { ...row, headers: maskHeaders(row.headers) };
+}
+
 /** Fields `PUT /:id` may change. `password` is handled apart, encrypted. */
 const UPDATABLE = [
   "name",
@@ -75,7 +113,7 @@ dataSourcesRouter.get("/", async (c) => {
 
     return c.json({
       success: true,
-      data: sources,
+      data: sources.map(withMaskedHeaders),
     });
   } catch (error) {
     logger.error({ error }, "Failed to list data sources");
@@ -125,7 +163,7 @@ dataSourcesRouter.post("/", async (c) => {
 
     logger.info({ sourceId: source.id, name, type }, "Data source created");
 
-    return c.json({ success: true, data: source }, 201);
+    return c.json({ success: true, data: withMaskedHeaders(source) }, 201);
   } catch (error) {
     logger.error({ error }, "Failed to create data source");
     return c.json({ success: false, error: "Failed to create data source" }, 500);
@@ -214,7 +252,7 @@ dataSourcesRouter.get("/:id", async (c) => {
 
     return c.json({
       success: true,
-      data: source,
+      data: withMaskedHeaders(source),
     });
   } catch (error) {
     logger.error({ error, sourceId: c.req.param("id") }, "Failed to get data source");
@@ -243,6 +281,9 @@ dataSourcesRouter.put("/:id", async (c) => {
     for (const field of UPDATABLE) {
       if (body[field] !== undefined) (changes as Record<string, unknown>)[field] = body[field];
     }
+    if (changes.headers !== undefined) {
+      changes.headers = mergeHeaders(changes.headers, existing.headers) as typeof changes.headers;
+    }
     // Absent keeps the stored password; null or "" removes it.
     if (body.password !== undefined) {
       changes.encryptedPassword = body.password ? encryptSecret(String(body.password)) : null;
@@ -258,7 +299,7 @@ dataSourcesRouter.put("/:id", async (c) => {
 
     return c.json({
       success: true,
-      data: updated,
+      data: withMaskedHeaders(updated),
     });
   } catch (error) {
     logger.error({ error, sourceId: c.req.param("id") }, "Failed to update data source");

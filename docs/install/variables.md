@@ -92,7 +92,9 @@ environment, so it refuses keys that change how the process starts or is
 protected: `PATH`, `HOME`, `DATABASE_URL`, `BETTER_AUTH_SECRET`, `ALLOWED_ORIGINS`,
 `PORT` and similar, keys starting with `NODE_`, `LD_`, `BUN_`, `PG`, `POSTGRES_`,
 `KITSUDEN_`, `ENABLE_` or `VALKEY_`, and the limits on agents and the API
-(`QUEUE_*`, `RATE_LIMIT_*`, `AGENT_KEY_*`). Set those in `.env`. Only a person
+(`QUEUE_*`, `RATE_LIMIT_*`, `AGENT_KEY_*`, `APPROVALS_*`, `IDEMPOTENCY_*`,
+`OAUTH_*`), plus `METRICS_TOKEN`, `INJECTION_CLASSIFIER_URL` and the AI providers'
+base URLs (`OPENAI_BASE_URL`, `ANTHROPIC_BASE_URL`, `OLLAMA_BASE_URL`). Set those in `.env`. Only a person
 writes secrets: an agent key gets a 403 on every write route, even with `admin`.
 
 ## What `docker-compose.yml` sets in the API (not written by hand)

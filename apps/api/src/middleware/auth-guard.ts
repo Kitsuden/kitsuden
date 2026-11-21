@@ -81,8 +81,11 @@ export const requireAdmin = createMiddleware(async (c, next) => {
     return;
   }
 
-  // Agent with admin scope
+  // Agent with admin scope. `admin` does not erase the agent's `!pattern`
+  // denials: one that covers this route still closes it (hardening 2026-11-20).
   if (agent && agent.scopes.includes("admin")) {
+    const reason = routeDenial(agent.scopes, c.req.method, c.req.path);
+    if (reason) return denialResponse(c, reason);
     await next();
     return;
   }
@@ -95,6 +98,20 @@ export const requireAdmin = createMiddleware(async (c, next) => {
     403
   );
 });
+
+/**
+ * 403 when the calling agent carries a `!pattern` denial that covers `scope`,
+ * whatever it is granted (`admin` included). People pass: denials are an
+ * agent-key setting. For core routes that map to one core scope, such as
+ * `POST /api/mail/test` and `mail:send`, which `routeDenial` cannot see.
+ */
+export const refuseDeniedScope = (scope: string) =>
+  createMiddleware(async (c, next) => {
+    const agent = c.get("agent") as { scopes?: string[] } | undefined;
+    const reason = denialThatCovers(agent?.scopes, [scope]);
+    if (reason) return denialResponse(c, reason);
+    await next();
+  });
 
 /**
  * Require Scope Middleware (for agent-specific routes)
@@ -112,6 +129,10 @@ export const requireScope = (scope: string) =>
         403
       );
     }
+
+    // A denial that covers the scope wins over `scope` and `admin`.
+    const reason = denialThatCovers(agent.scopes, [scope]);
+    if (reason) return denialResponse(c, reason);
 
     if (!agent.scopes.includes(scope) && !agent.scopes.includes("admin")) {
       return c.json(
@@ -302,6 +323,11 @@ export const ADMIN_ONLY_ROUTES: GateRule[] = [
   // scopes of each operation (promotion:propose / kon:promotion:<op>). The
   // ACTIVATION, moreover, only from an approved proposal (routes/promotion.ts).
   { prefix: "/api/promotion" },
+  // Mail catalog, preview and test send; the run inspector (payloads and logs of
+  // the whole system). Their routers ask for admin too; the gate adds the fresh
+  // role from the database and the agent's denials (hardening 2026-11-20).
+  { prefix: "/api/mail" },
+  { prefix: "/api/runs" },
 
   // ── Site content (active kons): written by the team ──
   { prefix: "/api/blog", methods: WRITE, role: "staff" },

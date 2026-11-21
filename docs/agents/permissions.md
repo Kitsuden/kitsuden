@@ -66,8 +66,8 @@ deny needs at least two segments.
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `admin`                                  | Everything (except what a deny removes), apart from what only a person does: managing agents and approvals, writing secrets, and writing dataset definitions (`data_sets`) outside `/api/data-sets`.                                                               |
 | `mcp:connect`                            | Open an MCP session. Every MCP client needs it.                                                                                                                                                                                                                    |
-| `mcp:read`                               | The core's read-only MCP tools (query datasets and tables, describe, status).                                                                                                                                                                                      |
-| `mcp:write`                              | The core's MCP tools that write records.                                                                                                                                                                                                                           |
+| `mcp:read`                               | The core's read-only MCP tools (query datasets and tables, describe, status), and kon tool actions declared `meta.readOnly`.                                                                                                                                       |
+| `mcp:write`                              | The core's MCP tools that write records, and kon tool actions (`agent.tool:…`) unless they declare `meta.readOnly`.                                                                                                                                                |
 | `mcp:admin`                              | The core's MCP tools that change the system (create datasets, install kons, define actions).                                                                                                                                                                       |
 | `content:edit`                           | Pages, blocks and the editorial layer of games (visual page editing).                                                                                                                                                                                              |
 | `memory:read`, `memory:write`            | The agent's own memory.                                                                                                                                                                                                                                            |
@@ -215,6 +215,8 @@ whatever its pattern covers, and it wins over every grant.
 | `!kon:blog:*` or `!blog:*` | every operation of the blog kon is refused — **including public ones**, for this key — and, for kons not on the SDK, every route under the kon's mount path |
 | `!datasets:payroll:*`      | the dataset `payroll` is closed for this key (REST, MCP and RLS), export included: `POST /api/datasets/export` naming it answers 403                        |
 | `!datasets:*:delete`       | no entry can be deleted in any dataset                                                                                                                      |
+| `!user:act`                | the key never counts as a signed-in account, even with `admin` or `user:act`; a route of a kon it holds a scope of still opens                              |
+| `!mail:send`               | `kitsuden_dispatch_worker` and `POST /api/mail/test` are refused, even with `admin`                                                                         |
 
 Limits of deny (by design):
 
@@ -281,6 +283,9 @@ with `retry_after` (and a `Retry-After` header):
 Over MCP, the HTTP request that carries the JSON-RPC message counts for the
 per-minute limit, and each `tools/call` spends its own write and units; a tool
 call over quota returns a tool error with the same problem.
+A tool call made by an agent run in the engine (chat, actions, rules, kons'
+`ctx.agents.run`) spends the same write and unit, and over quota the tool is
+not run: the model gets the quota error as the tool's result.
 
 Counters live in **Valkey** (shared by every API replica). If Valkey is
 unavailable, the per-minute counter falls back to process memory and the daily

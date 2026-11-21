@@ -13,7 +13,7 @@
  */
 
 import { normalizeScopes } from "@kitsuden/shared";
-import { desc, eq, sql, and } from "drizzle-orm";
+import { desc, eq, sql, and, isNull, ne } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 
 import { db } from "../db";
@@ -27,6 +27,7 @@ import {
 import { logger } from "../lib/logger";
 import { requireAuth } from "../middleware/auth";
 import { noAgentsInAgentManagement } from "../middleware/auth-guard";
+import { logAgentAction } from "../services/agent-audit";
 import type { AppVariables } from "../types/hono";
 
 // CHAINED (Hono RPC): a single expression so that typeof agentsV1Router
@@ -200,6 +201,19 @@ const agentsV1Router = new Hono<{ Variables: AppVariables }>()
         .returning();
       // A new version only if the definition changed (lib/agent-versions.ts).
       await snapshotAgent(id, { createdBy: userId(c), source: "update" });
+      logAgentAction({
+        agentId: id,
+        action: "config_change",
+        resource: "agent",
+        resourceId: id,
+        details: {
+          by: userId(c),
+          fields: Object.keys(changes),
+          scopesBefore: existing.scopes,
+          scopesAfter: updated?.scopes ?? existing.scopes,
+        },
+        success: true,
+      });
 
       return c.json(updated);
     } catch (error) {
@@ -227,6 +241,15 @@ const agentsV1Router = new Hono<{ Variables: AppVariables }>()
       }
 
       await db.delete(agentIdentities).where(eq(agentIdentities.id, id));
+      // The audit log has no foreign key: this row outlives the agent (hardening 2026-11-20).
+      logAgentAction({
+        agentId: id,
+        action: "config_change",
+        resource: "agent",
+        resourceId: id,
+        details: { by: userId(c), deleted: true, name: existing.name, scopes: existing.scopes },
+        success: true,
+      });
 
       return c.json({ success: true });
     } catch (error) {
@@ -258,13 +281,42 @@ const agentsV1Router = new Hono<{ Variables: AppVariables }>()
         agent.type || "custom"
       );
 
-      await db.insert(agentApiKeys).values({
+      // REGENERATE replaces: the agent's earlier static keys stop working now
+      // (OAuth keys belong to their grants and are left alone). It used to only
+      // add a key, so a leaked one stayed valid (hardening 2026-11-20).
+      const by = userId(c);
+      const { newKeyId, revoked } = await db.transaction(async (tx) => {
+        const old = await tx
+          .update(agentApiKeys)
+          .set({ revokedAt: new Date(), revokedBy: by })
+          .where(
+            and(
+              eq(agentApiKeys.agentId, id),
+              isNull(agentApiKeys.revokedAt),
+              ne(agentApiKeys.algorithm, "oauth")
+            )
+          )
+          .returning({ id: agentApiKeys.id });
+        const [created] = await tx
+          .insert(agentApiKeys)
+          .values({
+            agentId: id,
+            keyId,
+            keyHash,
+            keyPrefix,
+            algorithm,
+            expiresAt: agentKeyExpiresAt(undefined),
+          })
+          .returning({ id: agentApiKeys.id });
+        return { newKeyId: created?.id, revoked: old.map((k) => k.id) };
+      });
+      logAgentAction({
         agentId: id,
-        keyId,
-        keyHash,
-        keyPrefix,
-        algorithm,
-        expiresAt: agentKeyExpiresAt(undefined),
+        action: "config_change",
+        resource: "agent_key",
+        resourceId: newKeyId,
+        details: { by, regenerated: true, revokedKeys: revoked },
+        success: true,
       });
 
       return c.json({ token: plainKey });
@@ -546,6 +598,15 @@ const agentsV1Router = new Hono<{ Variables: AppVariables }>()
       }
 
       await db.delete(agentIdentities).where(eq(agentIdentities.id, id));
+      // The audit log has no foreign key: this row outlives the agent (hardening 2026-11-20).
+      logAgentAction({
+        agentId: id,
+        action: "config_change",
+        resource: "agent",
+        resourceId: id,
+        details: { by: userId(c), deleted: true, name: existing.name, scopes: existing.scopes },
+        success: true,
+      });
 
       return c.json({ success: true });
     } catch (error) {

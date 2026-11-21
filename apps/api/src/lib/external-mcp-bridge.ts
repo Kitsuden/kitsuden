@@ -103,6 +103,22 @@ export function slugPart(text: string, max: number): string {
 export const serverSlugOf = (serverName: string) => slugPart(serverName, MAX_SERVER_SLUG);
 export const toolSlugOf = (toolName: string) => slugPart(toolName, MAX_TOOL_SLUG);
 
+/**
+ * The other server whose name gives the same slug as `name`, if any. Tool names
+ * (`ext_<server>_<tool>`), scopes (`mcp-external:<server>:…`) and held proposals
+ * all go by the slug: a second server with the same slug could take them over
+ * when the first is renamed or disabled, so the registry refuses it (security
+ * audit 2026-11-19).
+ */
+export function serverSlugTakenBy(
+  name: string,
+  servers: ReadonlyArray<{ id: string; name: string }>,
+  exceptId?: string
+): { id: string; name: string } | null {
+  const slug = serverSlugOf(name);
+  return servers.find((s) => s.id !== exceptId && serverSlugOf(s.name) === slug) ?? null;
+}
+
 /** `ext_<server>_<tool>`, at most 64 characters. */
 export function exposedToolName(serverSlug: string, toolSlug: string): string {
   const full = `${EXTERNAL_TOOL_PREFIX}${serverSlug}_${toolSlug}`;

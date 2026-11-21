@@ -463,6 +463,7 @@ const PROMPT_PLACEHOLDER = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
  */
 function fillStepConfig(step: RuleStep, scope: Record<string, unknown>): Record<string, unknown> {
   const raw = step.config ?? {};
+  if (step.handler === "core:send-mail") return fillMailConfig(raw, scope);
   if (step.handler !== "core:run-agent" || !Object.hasOwn(raw, "promptTemplate")) {
     return fillTemplate(raw, scope);
   }
@@ -478,6 +479,35 @@ function fillStepConfig(step: RuleStep, scope: Record<string, unknown>): Record<
         : match
     ),
   };
+}
+
+/** Keys of a `core:send-mail` step's `data` that hold recipients. */
+const MAIL_RECIPIENT_KEYS = ["to", "cc", "bcc", "replyTo"] as const;
+
+/**
+ * `core:send-mail`: a placeholder in a recipient key is always filled as TEXT
+ * (hardening 2026-11-20). As a whole placeholder it kept the type of the event
+ * value, so `"to": "{{event.email}}"` with an event carrying a list sent the mail
+ * to every address in it. As text, a list becomes its JSON form, which the
+ * mailer refuses as an address.
+ */
+function fillMailConfig(
+  raw: Record<string, unknown>,
+  scope: Record<string, unknown>
+): Record<string, unknown> {
+  const filled = fillTemplate(raw, scope);
+  const rawData = raw.data;
+  const data = filled.data;
+  if (!rawData || typeof rawData !== "object" || !data || typeof data !== "object") return filled;
+  const out = { ...(data as Record<string, unknown>) };
+  for (const key of MAIL_RECIPIENT_KEYS) {
+    const template = (rawData as Record<string, unknown>)[key];
+    if (typeof template === "string" && template.includes("{{")) {
+      // Wrapped so fillTemplate gives the text form, as in fillStepConfig.
+      out[key] = fillTemplate(`(${template})`, scope).slice(1, -1);
+    }
+  }
+  return { ...filled, data: out };
 }
 
 function stepInput(action: Action, context: ActionContext, step: RuleStep): AutomationHandlerInput {
@@ -517,8 +547,17 @@ export async function executeRuleAction(
     const handler = handlerById(step.handler);
     try {
       if (!handler) throw new StepFailed(`no handler "${step.handler}": is its kon installed?`);
+      const input = stepInput(action, context, step);
+      // A kon's handler validated the stored config, placeholders and all; what it runs with is
+      // that config filled from the event, which nobody had checked (H67). The core's handlers
+      // check their filled values themselves (recipients, agent ids).
+      if (handler.source !== "core" && !step.handler.startsWith("core:")) {
+        const problem = await handler.validate?.(input.config);
+        if (problem)
+          throw new StepFailed(`the config filled from the event is refused: ${problem}`);
+      }
       const result = await handler.run({
-        input: stepInput(action, context, step),
+        input,
         action,
         context,
         stepIndex: steps.indexOf(step),

@@ -53,16 +53,19 @@ import { TABLES_ONLY_VIA_THEIR_ROUTE } from "../lib/actions-code";
 import { invalidateSensitivityCatalog } from "../lib/customer-data-catalog";
 import {
   agentWriteNeedsOwnRoute,
+  isSecretColumn,
   writeRequiresAdmin,
   withoutSecretColumns,
   tableIsExplorable,
 } from "../lib/explorable-tables";
 import {
   ExplorerQueryError,
+  checkSortField,
   isTextualPgType,
   likePattern,
   parseExplorerQuery,
   searchableColumns,
+  writableFields,
   type ExplorerCondition,
   type ExplorerQuery,
 } from "../lib/explorer-query";
@@ -277,6 +280,18 @@ function denySensitiveWrite(
 function sqlNameOf(meta: TableMeta | undefined): string | undefined {
   const name = meta?.table?.[Symbol.for("drizzle:Name")];
   return typeof name === "string" ? name : undefined;
+}
+
+/**
+ * The first field of a write that is a secret column, by its key or by the SQL name of the
+ * registry column it maps to (`apiToken` → `api_token`). The explorer never returns them, so
+ * it does not write them either: a token is changed through its own route.
+ */
+function secretFieldOf(meta: TableMeta, body: Record<string, unknown>): string | undefined {
+  return Object.keys(body).find((key) => {
+    const name: unknown = meta.table?.[key]?.name;
+    return isSecretColumn(key) || (typeof name === "string" && isSecretColumn(name));
+  });
 }
 
 /** A write to `data_sets` can change the customer-data marks: refresh the catalog now. */
@@ -778,6 +793,13 @@ explorerRoutes.get("/:collection", async (c) => {
   // Filters and search: the syntax is in lib/explorer-query.ts.
   const listQuery = readListQuery(c);
   if (listQuery instanceof Response) return listQuery;
+  try {
+    // By the key and by the column's SQL name (`apiToken` → `api_token`).
+    if (sortField) checkSortField(sortField, meta.table[sortField]?.name);
+  } catch (error) {
+    if (error instanceof ExplorerQueryError) return badQuery(c, error);
+    throw error;
+  }
 
   try {
     /**
@@ -872,6 +894,8 @@ explorerRoutes.patch("/:collection/:id", async (c) => {
     if (Object.keys(body).length === 0) {
       return c.json({ error: "No editable fields provided" }, 400);
     }
+    const secret = secretFieldOf(meta, body);
+    if (secret) return c.json({ error: `"${secret}" holds a secret and is not written here` }, 400);
 
     // Add updated_at if the table has it
     if (meta.table.updated_at || meta.table.updatedAt) {
@@ -928,6 +952,8 @@ explorerRoutes.post("/:collection", async (c) => {
     if (Object.keys(body).length === 0) {
       return c.json({ error: "No fields provided" }, 400);
     }
+    const secret = secretFieldOf(meta, body);
+    if (secret) return c.json({ error: `"${secret}" holds a secret and is not written here` }, 400);
 
     const result = await db.insert(meta.table).values(body).returning();
 
@@ -1047,6 +1073,12 @@ async function handleDynamicQuery(c: any, tableName: string, meta: TableMeta) {
 
   try {
     const safeSort = sortField.replace(/[^a-zA-Z0-9_]/g, "");
+    try {
+      checkSortField(sortField, safeSort);
+    } catch (error) {
+      if (error instanceof ExplorerQueryError) return badQuery(c, error);
+      throw error;
+    }
     const table = sql.raw(`"${tableName}"`);
 
     let where: SQL | undefined;
@@ -1096,8 +1128,14 @@ async function handleDynamicQuery(c: any, tableName: string, meta: TableMeta) {
 
 async function handleDynamicCreate(c: any, tableName: string, meta: TableMeta) {
   try {
-    const body = await c.req.json();
-    for (const field of meta.readonlyFields) delete body[field];
+    let body: Record<string, unknown>;
+    try {
+      // Keys checked as they will be written (see `writableFields`).
+      body = writableFields(await c.req.json(), meta.readonlyFields);
+    } catch (error) {
+      if (error instanceof ExplorerQueryError) return badQuery(c, error);
+      throw error;
+    }
     if (Object.keys(body).length === 0) return c.json({ error: "No fields provided" }, 400);
 
     const keys = Object.keys(body);
@@ -1123,8 +1161,14 @@ async function handleDynamicCreate(c: any, tableName: string, meta: TableMeta) {
 
 async function handleDynamicUpdate(c: any, tableName: string, meta: TableMeta, id: string) {
   try {
-    const body = await c.req.json();
-    for (const field of meta.readonlyFields) delete body[field];
+    let body: Record<string, unknown>;
+    try {
+      // Keys checked as they will be written (see `writableFields`).
+      body = writableFields(await c.req.json(), meta.readonlyFields);
+    } catch (error) {
+      if (error instanceof ExplorerQueryError) return badQuery(c, error);
+      throw error;
+    }
     if (Object.keys(body).length === 0)
       return c.json({ error: "No editable fields provided" }, 400);
 

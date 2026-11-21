@@ -15,6 +15,7 @@ import { db } from "../db";
 import { authSessions, authUsers, dataSets } from "../db/schema-core";
 
 import { events } from "./events";
+import { konSwitchedOff } from "./kon-activation";
 import {
   setSessionValidator,
   setSubscriptionAuthorizer,
@@ -30,7 +31,7 @@ import {
   type ChangeEvent,
   type ResourcePolicy,
 } from "./realtime-changes";
-import { authorizeKonChannel, isKonChannel } from "./realtime-kon-channels";
+import { authorizeKonChannel, isKonChannel, setKonChannelGate } from "./realtime-kon-channels";
 import type { PolicyJson, RLSUser } from "./rls-builder";
 
 /**
@@ -171,6 +172,10 @@ export function wireRealtimeAuthorization(): void {
 
     return filterForClient(event, policyUser(user), policy);
   });
+
+  // A kon disabled from the panel stops authorizing its channels at once, and at the next sweep
+  // for sockets already in (H18); it does not wait for the restart that unloads it.
+  setKonChannelGate(async (konId) => !(await konSwitchedOff(konId)));
 
   // Sockets re-read their session on subscribe and every minute (lib/realtime.ts).
   setSessionValidator(readCurrentSession);

@@ -301,6 +301,8 @@ export interface FieldChange {
   after?: unknown;
   /** `add` (no value before), `update`, `remove` (the PATCH of an entry drops the key). */
   change: "add" | "update" | "remove";
+  /** Set in an approver's view when `before` was dropped (see `fieldDiffForViewer`). */
+  beforeHidden?: true;
 }
 
 export interface FieldDiff {
@@ -364,6 +366,49 @@ export function checkEvidenceFields(target: RecordTarget, body: unknown, ev: Evi
         `${EVIDENCE_KEY}: "${e.field}" is not a field of this request (fields: ${[...names].join(", ") || "none"})`
       );
   }
+}
+
+/** Same comparison as `trim()` stored it (a long value is kept as its summary). */
+function sameStored(stored: unknown, value: unknown): boolean {
+  return value !== undefined && equal(stored, trim(value));
+}
+
+/**
+ * The diff as one approver may see it. `before` values were read AS THE AGENT,
+ * which may see fields the approver's own access hides (security audit
+ * 2026-11-19). A `before` stays only when `viewer` (the row as the APPROVER reads
+ * it; `null` = they could not read it) shows that same value, or the value the
+ * field ended up with once applied (`after` or an edited value). Otherwise it is
+ * dropped and the field says `beforeHidden: true`.
+ */
+export function fieldDiffForViewer(
+  diff: FieldDiff,
+  viewer: Record<string, unknown> | null,
+  decisions: FieldDecision[] | null = null
+): FieldDiff {
+  const edited = new Map(
+    (decisions ?? []).filter((d) => d.edited).map((d) => [d.field, d.value] as const)
+  );
+  return {
+    ...diff,
+    fields: diff.fields.map((f) => {
+      if (!("before" in f)) return f;
+      const seen = viewer ? currentValue(viewer, f.field) : undefined;
+      const confirmed =
+        seen !== undefined &&
+        (sameStored(f.before, seen) ||
+          ("after" in f && sameStored(f.after, seen)) ||
+          (edited.has(f.field) && sameStored(trim(edited.get(f.field)), seen)));
+      if (confirmed) return f;
+      const { before: _hidden, ...rest } = f;
+      return { ...rest, beforeHidden: true as const };
+    }),
+  };
+}
+
+/** Does any field of this diff carry a value read before the change? */
+export function diffHasBefore(diff: FieldDiff): boolean {
+  return diff.fields.some((f) => "before" in f);
 }
 
 export function readFieldDiff(p: Pick<Proposal, "fieldDiff">): FieldDiff | null {
@@ -459,6 +504,14 @@ export function applyDecisions(
   if (t.shape === "mcp-record") {
     const args = clone(plain(body) ? body : {}) as Record<string, unknown>;
     const data = plain(args.data) ? args.data : {};
+    // A field the diff left out was unchanged when the agent proposed: it is not
+    // sent, so a change made to it since is not overwritten with the stale value
+    // (security audit 2026-11-19). `kitsuden_update_record` merges `data`.
+    if (t.kind === "update") {
+      const inDiff = new Set(diff.fields.map((f) => f.field));
+      for (const k of Object.keys(data)) if (!inDiff.has(`data.${k}`)) delete data[k];
+      if (args.status !== undefined && !inDiff.has("status")) delete args.status;
+    }
     for (const k of Object.keys(data)) if (rejected.has(`data.${k}`)) delete data[k];
     for (const [f, v] of editedValue) if (f.startsWith("data.")) data[f.slice(5)] = v;
     args.data = data;

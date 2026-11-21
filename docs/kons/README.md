@@ -388,7 +388,8 @@ migration:
 -- `invoice:view` (read) or `invoice:update` (read and write) within the kon.
 SELECT kitsuden_rls_team('invoices', 'billing', 'invoice:view', 'invoice:update');
 
--- The same, plus: a signed-in user reads and writes the rows whose owner column is their id.
+-- The same, plus: a signed-in user reads and writes the rows whose owner column is their id
+-- (compared as text, so a text or uuid owner column both work).
 SELECT kitsuden_rls_owned('bookings', 'user_id', 'booking', 'booking:view', 'booking:update');
 
 -- On top of either: anyone (anonymous too) reads the rows that meet a condition.

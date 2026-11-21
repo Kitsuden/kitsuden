@@ -86,6 +86,8 @@ export interface PinnedFetchInit {
   timeoutMs?: number;
   /** Opt-in for internal targets (each caller has its own variable). */
   allowInternal?: boolean;
+  /** Aborts the request (and its body) when it fires, like `fetch`'s `signal`. */
+  signal?: AbortSignal;
   /**
    * Called with the checked addresses and the TCP port, after resolution and
    * before connecting. The connection goes only to these addresses, so a
@@ -196,6 +198,13 @@ export async function pinnedFetch(
     const timer = setTimeout(() => {
       req.destroy(new Error(`The request timed out after ${init.timeoutMs} ms`));
     }, init.timeoutMs ?? 30_000);
+    const onAbort = () => {
+      clearTimeout(timer);
+      req.destroy(init.signal?.reason instanceof Error ? init.signal.reason : new Error("Aborted"));
+    };
+    if (init.signal?.aborted) onAbort();
+    else init.signal?.addEventListener("abort", onAbort, { once: true });
+    req.on("close", () => init.signal?.removeEventListener("abort", onAbort));
     req.on("error", (err) => {
       clearTimeout(timer);
       reject(err);

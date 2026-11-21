@@ -52,6 +52,7 @@ import {
   grantsOperation,
   mountedOperations,
   mountedOperationsVersion,
+  routeOperation,
   type AnyOperation,
 } from "../../../../packages/engine/src/operations";
 import { db } from "../db";
@@ -101,6 +102,24 @@ interface Input {
 }
 
 let index: { version: number; byName: Map<string, Input> } | null = null;
+
+/**
+ * Builds the request of a tool and refuses it when its path parameters land on
+ * ANOTHER operation's route (an `id` equal to a sibling's static segment, such
+ * as `/items/export` next to `/items/:id`): the call would run that operation
+ * under this tool's name, past the agent's `allowedTools` (security audit
+ * 2026-11-19). Throws with a message for the model.
+ */
+export function toolHttpRequest(e: Pick<Input, "mountPath" | "op">, args: Record<string, unknown>) {
+  const request = requestFromArguments(e.mountPath, e.op, args);
+  const served = routeOperation(e.op.method, new URL(request.url).pathname);
+  if (served && served.op !== e.op) {
+    throw new Error(
+      "the path parameters reach a different operation than this tool's; use that operation's own tool"
+    );
+  }
+  return request;
+}
 
 function tools(): Map<string, Input> {
   const version = mountedOperationsVersion();
@@ -199,7 +218,7 @@ export function toolRequest(
   if (Object.keys(argsObject).some((k) => !valid.includes(k)))
     return { error: "unknown arguments" };
   try {
-    const request = requestFromArguments(e.mountPath, e.op, argsObject);
+    const request = toolHttpRequest(e, argsObject);
     const url = new URL(request.url);
     return {
       konId: e.konId,
@@ -232,7 +251,7 @@ export async function isToolRepetition(
   const key = argsObject[ARG_IDEMPOTENCY];
   if (typeof key !== "string" || !VALID_IDEMPOTENCY_KEY.test(key)) return false;
   try {
-    const request = requestFromArguments(e.mountPath, e.op, argsObject);
+    const request = toolHttpRequest(e, argsObject);
     const url = new URL(request.url);
     const headers = (request.init.headers ?? {}) as Record<string, string>;
     const body =
@@ -504,7 +523,7 @@ export async function runOperationTool(
   }
   let request;
   try {
-    request = requestFromArguments(e.mountPath, e.op, argsObject);
+    request = toolHttpRequest(e, argsObject);
   } catch (err) {
     return errorResult(argumentsProblem(name, (err as Error).message));
   }

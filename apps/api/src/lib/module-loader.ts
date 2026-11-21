@@ -63,7 +63,7 @@ import {
   background,
 } from "../../../../packages/engine/src/rls-request";
 
-import { KONS_SDK_VERSION } from "@kitsuden/shared";
+import { KONS_SDK_VERSION, mergeKonEventDeclarations } from "@kitsuden/shared";
 import { eq, inArray, sql as sqlTag } from "drizzle-orm";
 
 import { db } from "../db";
@@ -82,13 +82,19 @@ import { rawNodeEnv } from "./environment";
 import { events } from "./events";
 import { file } from "./file";
 import { readGrimoireKons, readKonJsonManifest } from "./grimoire-manifest";
-import { konIdOf, installedKon, listInstalledKons, incompatibleSdkReason } from "./installed-kons";
+import {
+  konIdOf,
+  installedKon,
+  listInstalledKons,
+  incompatibleSdkReason,
+  konMountPathProblem,
+} from "./installed-kons";
 import { checkKonCompatibility } from "./kitsuden-compat";
 import { konActivationGuard, trackStartupKon } from "./kon-activation";
 import { konEntities } from "./kon-entities";
 import { registerKonRouter } from "./kon-routes";
 import { konSecrets } from "./kon-secrets";
-import { announceKon, bindKonContext } from "./kon-setup";
+import { announceKon, bindKonContext, konAgentRunOptions } from "./kon-setup";
 import { logger } from "./logger";
 import { registerKonToolsets } from "./mcp-settings";
 import { limiterEnabled, rateLimit } from "./rate-limiter";
@@ -434,13 +440,9 @@ export function createKonContext(): KonContext {
     agents: {
       run: async (options) => {
         const { runAgent } = await import("../services/agent-engine");
-        // A kon serves many people with one agent: memory and brain notes are shared by every session of
-        // that agent, so one visitor would read what another said. Off, whatever the agent is set to.
-        const result = await runAgent({
-          ...options,
-          enableMemory: false,
-          enableBrainSearch: false,
-        });
+        // Only the KonAgentRun fields, never a spread: a kon in plain JS could pass engine-only options
+        // (H70). Memory and brain notes off: one agent serves every visitor (lib/kon-setup.ts).
+        const result = await runAgent(konAgentRunOptions(options));
         return {
           response: result.response,
           sessionId: result.sessionId,
@@ -1291,15 +1293,18 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
           throw new Error(codeSdkReason);
         }
 
+        // Apply custom mount path: kon definition > kon.json > default. Checked before any of the
+        // kon's code runs: `/`, `/api` or a wildcard would sit in front of the whole API (H46).
+        const finalMountPath = konDef.mountPath || customMountPath || mountPath;
+        const mountProblem = konMountPathProblem(kon.id, finalMountPath);
+        if (mountProblem) throw new Error(mountProblem);
+
         // The context this kon receives: the shared one, with its kon-scoped services tied to its id
         // (lib/kon-setup.ts), so it cannot act as another kon.
         const konContext = bindKonContext(context, konDef.id);
 
         // Create router with injected context
         const router = konDef.createRouter(konContext);
-
-        // Apply custom mount path: kon definition > kon.json > default
-        const finalMountPath = konDef.mountPath || customMountPath || mountPath;
 
         // Rate limits declared by the kon. They are mounted BEFORE the router
         // because in Hono middleware only runs if it was registered before the
@@ -1308,7 +1313,11 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
         applyKonRateLimits(app, konDef, finalMountPath);
         // Its tool groups for agents (`kon:<id>/<set>`), before any MCP session reads them.
         registerKonToolsets(konDef.id, konDef.mcpToolsets);
-        await announceKon(konDef, konContext);
+        // kon.json may declare its events too (`events.public`, `events.subscribers`): merged here.
+        await announceKon(
+          { ...konDef, events: mergeKonEventDeclarations(konDef.events, kon.manifest?.events) },
+          konContext
+        );
 
         // Every request to the kon, in its RLS transaction (see `theRequestDb`),
         // behind the activation guard: disabling it from the panel takes effect now.
@@ -1363,6 +1372,8 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
       // ═══════════════════════════════════════════════════════════════════════
       for (const [, exportValue] of Object.entries(mod)) {
         if (isHonoRouter(exportValue)) {
+          const legacyMountProblem = konMountPathProblem(kon.id, mountPath);
+          if (legacyMountProblem) throw new Error(legacyMountProblem);
           trackStartupKon(kon.id, hadModulesRow(kon.id));
           mountKonRls(app, mountPath, kon.id);
           app.route(mountPath, exportValue as Hono);
@@ -1500,6 +1511,7 @@ async function reserveDisabledKonPaths(
         mountRoutes: await candidateMountRoutes(kon.path, manifest, isFromGrimoire),
         path: kon.path,
         hasRateLimits: !!(manifest as { rateLimits?: unknown }).rateLimits,
+        manifestEvents: (manifest as { events?: unknown }).events,
       });
     }
 

@@ -246,6 +246,11 @@ export interface ActionDefinition<TPayload = unknown, TResult = unknown> {
     requireAuth?: boolean;
     /** Required scopes (for http and agent) */
     requiredScopes?: string[];
+    /**
+     * Agent tools only: the tool only reads. An agent then needs `mcp:read` for it
+     * instead of `mcp:write` (`toolActionBaseScope`). Without it the tool is a write.
+     */
+    readOnly?: boolean;
     /** Concurrency for event workers */
     concurrency?: number;
   };
@@ -552,6 +557,11 @@ class MCPAdapter implements ActionAdapter {
 
   isReady(): boolean {
     return this.server !== null;
+  }
+
+  /** The tool action's definition, if one has this name. */
+  definitionOf(name: string): ActionDefinition<unknown, unknown> | undefined {
+    return this.tools.get(name);
   }
 
   register<TPayload, TResult>(
@@ -1165,6 +1175,13 @@ class ActionRegistry {
   async executeMCPTool(name: string, args: any, extra: any): Promise<any> {
     return this.mcpAdapter.executeTool(name, args, extra);
   }
+
+  /** See `toolActionBaseScope`. */
+  toolActionBaseScope(name: string): "mcp:read" | "mcp:write" | null {
+    const definition = this.mcpAdapter.definitionOf(name);
+    if (!definition) return null;
+    return definition.meta?.readOnly === true ? "mcp:read" : "mcp:write";
+  }
 }
 
 // Global registry instance
@@ -1276,6 +1293,19 @@ export function listMCPTools(): Array<{
  */
 export async function executeMCPTool(name: string, args: any, extra: any): Promise<any> {
   return globalRegistry.executeMCPTool(name, args, extra);
+}
+
+/**
+ * The base MCP scope a tool action (`agent.tool:<name>`) needs before its own
+ * `requiredScopes`: `mcp:write`, or `mcp:read` when it declares
+ * `meta.readOnly: true`. `null` when no tool action has that name.
+ *
+ * A tool action can do anything its code does, and the MCP route and the
+ * approvals already count every one as a write; its scope used to default to
+ * `mcp:read`, so a read-only agent could run it (security audit 2026-11-19).
+ */
+export function toolActionBaseScope(name: string): "mcp:read" | "mcp:write" | null {
+  return globalRegistry.toolActionBaseScope(name);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

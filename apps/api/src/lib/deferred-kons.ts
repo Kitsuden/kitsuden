@@ -88,6 +88,8 @@ export interface DeferredKon {
   path: string;
   /** Does it declare request limits that cannot be applied on the fly? */
   hasRateLimits: boolean;
+  /** `events` of its kon.json, merged with the code's declaration when it is activated. */
+  manifestEvents?: unknown;
 }
 
 const deferredItems = new Map<string, DeferredKon>();
@@ -242,9 +244,18 @@ async function load(kon: DeferredKon): Promise<Hono | null> {
     const exported = mod.kon ?? mod.default;
 
     if (isKonDefinition(exported)) {
+      // The id in the code is the one its context is bound to (secrets, events, channels): it must be
+      // the installed kon, and the SDK it declares gets the check startup gives it (H47, H49).
+      const { deferredKonCodeProblem } = await import("./installed-kons");
+      const problem = deferredKonCodeProblem(kon.id, exported.id, exported.sdk);
+      if (problem) throw new Error(problem);
+      const { mergeKonEventDeclarations } = await import("@kitsuden/shared");
       // Tied to this kon, like at startup (lib/kon-setup.ts).
       const konContext = bindKonContext(context, exported.id);
-      await announceKon(exported, konContext);
+      await announceKon(
+        { ...exported, events: mergeKonEventDeclarations(exported.events, kon.manifestEvents) },
+        konContext
+      );
       const router = exported.createRouter(konContext);
       // Kon SDK: its operations, for MCP (the path is the one declared
       // by the kon or the first of the reserved candidates).

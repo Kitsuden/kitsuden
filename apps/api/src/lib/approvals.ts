@@ -120,6 +120,7 @@ import {
   type FieldDecisionInput,
 } from "./ledger";
 import { logger } from "./logger";
+import { effectiveScopes } from "./oauth/tokens";
 import {
   approvalMac,
   decisionsHash,
@@ -190,6 +191,24 @@ async function readAgentUnattended(): Promise<Map<string, AgentUnattended>> {
   return out;
 }
 
+/**
+ * Postgres `undefined_table` (42P01) or `undefined_column` (42703): a database
+ * without migration 0048. Not a connection error or a timeout.
+ */
+export function missingTable(err: unknown): boolean {
+  for (let e = err, depth = 0; e && typeof e === "object" && depth < 5; depth++) {
+    const o = e as { code?: unknown; message?: unknown; cause?: unknown };
+    if (o.code === "42P01" || o.code === "42703") return true;
+    if (
+      typeof o.message === "string" &&
+      /(relation|column) "[^"]+" (of relation "[^"]+" )?does not exist/i.test(o.message)
+    )
+      return true;
+    e = o.cause;
+  }
+  return false;
+}
+
 let cache: ApprovalsSnapshot | null = null;
 let inFlight: Promise<ApprovalsSnapshot> | null = null;
 let notifiedWithoutTable = false;
@@ -218,8 +237,14 @@ async function readFromDb(): Promise<ApprovalsSnapshot> {
     };
     return cache;
   } catch (err) {
-    // Without migration 0048 (or without a database): the last known one; with none, the
-    // default (off), which is exactly the previous behavior.
+    // Without migration 0048: the last known one; with none, the default (off), which is
+    // exactly the previous behavior. Any other error (the database did not answer) keeps
+    // the last known one, and with none it THROWS: the request fails instead of running
+    // past a gate whose settings could not be read (security audit 2026-11-19).
+    if (!cache && !missingTable(err)) {
+      logger.error({ err }, "[approvals] could not read the configuration; refusing to guess");
+      throw err;
+    }
     if (!notifiedWithoutTable) {
       notifiedWithoutTable = true;
       logger.warn(
@@ -1038,6 +1063,88 @@ async function readAsAgent(
   } catch (err) {
     return { current: null, status: err instanceof Error ? err.message : "error" };
   }
+}
+
+/** The credentials of the human looking at a proposal (their own request's). */
+export interface ViewerCredentials {
+  cookie?: string | null;
+  authorization?: string | null;
+}
+
+/**
+ * Reads a resource as the HUMAN viewing a proposal: the app is re-entered with
+ * their own cookie or Authorization header (no internal identity), so every
+ * check of the route applies to them as to any request of theirs. `null` when
+ * there are no credentials or the read fails: a `before` value it cannot
+ * confirm is then not shown (security audit 2026-11-19, `before` values are
+ * read as the agent).
+ */
+export async function readAsViewer(
+  who: ViewerCredentials | null | undefined,
+  path: string
+): Promise<Record<string, unknown> | null> {
+  if (!appFetch || !who || (!who.cookie && !who.authorization)) return null;
+  const clean = path.split("?")[0]!;
+  if (!clean.startsWith("/api/") || ambiguousPath(clean)) return null;
+  const headers: Record<string, string> = { accept: "application/json" };
+  if (who.cookie) headers.cookie = who.cookie;
+  if (who.authorization) headers.authorization = who.authorization;
+  try {
+    const res = await Promise.race([
+      appFetch(new Request(`http://localhost${clean}`, { method: "GET", headers }), {}),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
+    ]);
+    if (res.ok && (res.headers.get("content-type") ?? "").includes("json")) {
+      return unwrap(await res.json());
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The CHEAP diff (`computeDiff`) as one approver may see it: a `before` (or a
+ * field of the `current` row of a delete) stays only when `viewer`, the row as
+ * the approver reads it, shows that same value (or, once executed, the value
+ * written). Everything else is dropped and marked `beforeHidden` / `currentHidden`.
+ */
+export function diffForViewer(diff: unknown, viewer: Record<string, unknown> | null): unknown {
+  if (!diff || typeof diff !== "object" || Array.isArray(diff)) return diff;
+  const d = diff as Record<string, unknown>;
+  const seen = (k: string, ...stored: unknown[]) => {
+    const v = viewer?.[k];
+    if (v === undefined) return false;
+    return stored.some((s) => equal(s, trim(v, 8 * 1024)) || equal(s, v));
+  };
+  if (Array.isArray(d.changes)) {
+    return {
+      ...d,
+      changes: (d.changes as Array<Record<string, unknown>>).map((ch) => {
+        if (!ch || typeof ch !== "object" || !("before" in ch)) return ch;
+        const field = String(ch.field);
+        if (seen(field, ch.before, ch.after)) return ch;
+        const { before: _hidden, ...rest } = ch;
+        return { ...rest, beforeHidden: true };
+      }),
+    };
+  }
+  if (d.kind === "delete" && d.current && typeof d.current === "object") {
+    const current = d.current as Record<string, unknown>;
+    if (!viewer || current.truncated === true) {
+      return equal(trim(viewer, 64 * 1024), current)
+        ? d
+        : { ...d, current: null, currentHidden: true };
+    }
+    const shown: Record<string, unknown> = {};
+    let hidden = false;
+    for (const [k, v] of Object.entries(current)) {
+      if (seen(k, v)) shown[k] = v;
+      else hidden = true;
+    }
+    return hidden ? { ...d, current: shown, currentHidden: true } : d;
+  }
+  return diff;
 }
 
 /**
@@ -2228,6 +2335,23 @@ async function keepEvidence(p: Proposal, human: Human): Promise<void> {
   }
 }
 
+/**
+ * A proposal made WITHOUT a key (an in-process caller, such as an action's
+ * sandbox, whose identity carried narrower scopes than its agent) replays with
+ * the scopes it had when it proposed, never the agent's full set: the agent's
+ * scopes today, narrowed by those stored on the proposal, plus the denials of
+ * both (security audit 2026-11-19). With a key, the key already narrows them.
+ */
+export function narrowToProposal<
+  T extends { ok: true; context: AgentAuthContext } | { ok: false; reason: string },
+>(r: T, p: Pick<Proposal, "keyId" | "scopes">): T {
+  if (!r.ok || p.keyId || !Array.isArray(p.scopes)) return r;
+  const stored = (p.scopes as unknown[]).filter((s): s is string => typeof s === "string");
+  const storedDenials = stored.filter((s) => s.startsWith("!"));
+  const scopes = [...new Set([...effectiveScopes(r.context.scopes, stored), ...storedDenials])];
+  return { ...r, context: { ...r.context, scopes } };
+}
+
 async function runReserved(reservedRow: Proposal, human: Human): Promise<Proposal> {
   const approval = { proposalId: reservedRow.id, approvedBy: human.id };
   let p = reservedRow;
@@ -2239,7 +2363,9 @@ async function runReserved(reservedRow: Proposal, human: Human): Promise<Proposa
     p = (await proposalById(p.id)) ?? p;
     const broken = p.status === "executing" ? await integrityOf(p) : "approval_unbound";
     // 1. The agent, re-read from the database (scopes as of NOW).
-    const ctx = broken ? null : await agentContextForApproval(p.agentId, p.keyId);
+    const ctx = broken
+      ? null
+      : narrowToProposal(await agentContextForApproval(p.agentId, p.keyId), p);
     if (broken || !ctx) {
       final = await saveResult(p.id, "failed", {
         status: null,

@@ -39,7 +39,7 @@ import { sql } from "drizzle-orm";
 import { db } from "../db";
 import { decryptSecret, encryptSecret, type EncryptedValue } from "../services/secrets";
 
-import { serverTargetProblem } from "./external-mcp-target";
+import { externalMcpFetch, serverTargetProblem } from "./external-mcp-target";
 import { logger } from "./logger";
 import { issuer } from "./oauth/config";
 
@@ -88,7 +88,8 @@ async function request(
   await checked(url, what);
   let res: Response;
   try {
-    res = await fetch(url, {
+    // Connects to the addresses it checks, not to a second DNS answer (no redirects).
+    res = await externalMcpFetch(url, {
       method: init.method ?? "GET",
       headers: {
         Accept: "application/json",
@@ -96,8 +97,7 @@ async function request(
         ...init.headers,
       },
       body: init.body,
-      redirect: "manual",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      timeoutMs: TIMEOUT_MS,
     });
   } catch (err) {
     throw new OAuthProblem(`${what}: ${err instanceof Error ? err.message : "request failed"}`);
@@ -131,6 +131,41 @@ async function request(
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 
+/**
+ * A value from the server's answer that may be shown in the panel: a short
+ * token of letters, digits and `_.-`. Anything else is the server's free text
+ * and is not reflected (`token_type`, `error`).
+ */
+export function shownCode(v: unknown): string | null {
+  const t = str(v);
+  return t && /^[A-Za-z0-9_.-]{1,64}$/.test(t) ? t : null;
+}
+
+const withoutSlash = (u: string) => u.replace(/\/+$/, "");
+
+/**
+ * Does a protected-resource document (RFC 9728) describe THIS server? Its
+ * `resource` must be the server's URL or, for the document at the origin's
+ * root, the origin. A missing `resource` is tolerated (older servers).
+ */
+export function resourceMatches(resource: unknown, serverUrl: string): boolean {
+  if (resource === undefined || resource === null) return true;
+  if (typeof resource !== "string") return false;
+  const r = withoutSlash(resource.trim());
+  return r === withoutSlash(serverUrl) || r === new URL(serverUrl).origin;
+}
+
+/**
+ * Is the `issuer` an authorization server's metadata announces the one it was
+ * fetched for (RFC 8414 §3.3)? A missing issuer is tolerated; another one is
+ * not: the metadata would speak for a different server (mix-up).
+ */
+export function issuerMatches(announced: unknown, authServer: string): boolean {
+  if (announced === undefined || announced === null) return true;
+  if (typeof announced !== "string") return false;
+  return withoutSlash(announced.trim()) === withoutSlash(authServer);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Discovery
 // ═══════════════════════════════════════════════════════════════
@@ -161,6 +196,11 @@ export async function discoverAuthorizationServer(serverUrl: string): Promise<Au
   for (const url of wellKnown(serverUrl, "oauth-protected-resource")) {
     const { status, json } = await request(url, {}, "Protected-resource metadata");
     if (status !== 200 || !json) continue;
+    if (!resourceMatches(json.resource, serverUrl)) {
+      throw new OAuthProblem(
+        "The protected-resource metadata describes another resource than this server's URL"
+      );
+    }
     const list = Array.isArray(json.authorization_servers) ? json.authorization_servers : [];
     authServer = str(list[0]);
     if (authServer) break;
@@ -175,6 +215,11 @@ export async function discoverAuthorizationServer(serverUrl: string): Promise<Au
       const authorizationEndpoint = str(json.authorization_endpoint);
       const tokenEndpoint = str(json.token_endpoint);
       if (!authorizationEndpoint || !tokenEndpoint) continue;
+      if (!issuerMatches(json.issuer, authServer)) {
+        throw new OAuthProblem(
+          "The authorization-server metadata names another issuer than the server it was read from"
+        );
+      }
       const methods = Array.isArray(json.code_challenge_methods_supported)
         ? json.code_challenge_methods_supported
         : [];
@@ -354,13 +399,15 @@ async function tokenRequest(
   if (status !== 200 || !accessToken) {
     // The server's `error` code is safe to show; its description may echo input, so it is not.
     throw new OAuthProblem(
-      `${what} was refused (${status}${str(json?.error) ? `: ${str(json?.error)}` : ""})`
+      `${what} was refused (${status}${shownCode(json?.error) ? `: ${shownCode(json?.error)}` : ""})`
     );
   }
   const type = str(json?.token_type);
   if (type && type.toLowerCase() !== "bearer") {
+    // The type is the server's text: shown only when it is a plain token.
+    const shown = shownCode(type);
     throw new OAuthProblem(
-      `${what}: the server issued a "${type}" token; only Bearer is supported`
+      `${what}: the server issued ${shown ? `a "${shown}"` : "another kind of"} token; only Bearer is supported`
     );
   }
   const seconds = Number(json?.expires_in);

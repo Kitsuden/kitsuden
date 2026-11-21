@@ -103,6 +103,16 @@ When the proposal is created Kitsuden reads the current row **as the agent**
   out would be deleted. It is shown, and can be rejected.
 - If the row cannot be read, every proposed field counts as changed and
   `currentUnavailable` says why.
+- The agent may see fields that a person reviewing it cannot (a CRM's sensitive
+  notes, say). When someone opens the proposal, the row is read again **with their
+  own session**, and a `before` value their access does not show (neither that
+  value nor, once applied, the value written) is left out and the field carries
+  `beforeHidden: true`. The same goes for the `before` values of the general
+  `diff`, and for the fields of the row a held delete would remove
+  (`currentHidden: true`).
+- Someone who cannot approve the proposal sees neither the diffs nor the agent's
+  evidence (`evidence: []`, `evidenceRedacted: true`), and cannot schedule or close
+  its later reviews (`403`).
 
 ## Deciding field by field
 
@@ -134,6 +144,8 @@ When the proposal is created Kitsuden reads the current row **as the agent**
   decided is not overwritten. If the row cannot be read then, the proposal ends
   `failed` with `not_executed: current_unavailable`.
 - For MCP `kitsuden_update_record` (which merges), only the accepted keys are sent.
+  A key that was left out of the diff because it did not change is not sent
+  either, so a change made to it after the proposal is not overwritten.
 - The decision is stored on the proposal (`fieldDecisions`) and in the audit
   (`proposal_approved` / `proposal_rejected` with `fields: { accepted, rejected,
 edited }`). The agent sees, in `GET /api/proposals/{id}`, which fields went in:

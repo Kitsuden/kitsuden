@@ -29,6 +29,8 @@ import {
   type ReportDefinition,
 } from "@kitsuden/shared";
 
+import { forgetKonEventSharing, setKonEventSharing } from "./kon-event-access";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Events
 // ─────────────────────────────────────────────────────────────────────────────
@@ -142,6 +144,7 @@ export function listKonReports(): KonReport[] {
 /** Removes everything a kon contributed: before re-registering it, or when it is turned off. */
 export function forgetKonContributions(konId: string): void {
   eventDeclarations.delete(konId);
+  forgetKonEventSharing(konId);
   for (const [id, handler] of konRuleHandlers) {
     if (handler.konId === konId) konRuleHandlers.delete(id);
   }
@@ -165,7 +168,11 @@ export function registerKonContributions(
   if (konDef.events) {
     const problem = konEventsProblem(konDef.events);
     if (problem) problems.push(`events: ${problem}`);
-    else eventDeclarations.set(konDef.id, konDef.events);
+    else {
+      eventDeclarations.set(konDef.id, konDef.events);
+      // Who may hear its events besides itself (lib/kon-event-access.ts).
+      for (const p of setKonEventSharing(konDef.id, konDef.events)) problems.push(p);
+    }
   }
 
   const seenHandlers = new Set<string>();

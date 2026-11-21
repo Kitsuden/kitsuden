@@ -10,6 +10,7 @@
 
 export {
   formatAddress,
+  isValidAddress,
   addressEmail,
   type Address,
   type Attachment,

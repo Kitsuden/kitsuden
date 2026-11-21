@@ -80,12 +80,10 @@ async function konDirectory(konId: string): Promise<string | null> {
   // it can live in packages/kons, in node_modules or be linked from another repo.
   // The id is only used to LOOK UP in that list, never to build the path.
   const installed = konRoute(konId);
-  const candidates = [
-    ...(installed ? [installed] : []),
-    join(root, "packages", "kons", konId),
-    // Core kons live outside packages/kons and their id has a prefix.
-    join(root, "packages", "core", konId.replace(/^kon-/, "")),
-  ];
+  // Core kons (packages/core/* with a kon.json) are in that list already. There
+  // used to be a fallback to `packages/core/<id without kon->` as well, which
+  // served any folder there (scripts, node_modules…) as if it were a kon.
+  const candidates = [...(installed ? [installed] : []), join(root, "packages", "kons", konId)];
 
   for (const dir of candidates) {
     try {

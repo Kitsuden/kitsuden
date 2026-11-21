@@ -21,6 +21,7 @@ import { htmlToText } from "./templates";
 import {
   addressEmail,
   formatAddress,
+  isValidAddress,
   type Address,
   type MailContext,
   type MailDriver,
@@ -186,6 +187,19 @@ export class Mailer {
 
     if (message.to.length === 0) {
       return { ok: false, error: "No recipients", message };
+    }
+    // One address per entry (hardening 2026-11-20): a value with a comma, a line
+    // break or a second `<…>` would reach the driver as extra recipients.
+    const addresses = [
+      ...message.to,
+      ...message.cc,
+      ...message.bcc,
+      message.from,
+      ...(message.replyTo ? [message.replyTo] : []),
+    ];
+    const bad = addresses.find((a) => !isValidAddress(a));
+    if (bad !== undefined) {
+      return { ok: false, error: `Invalid email address: ${JSON.stringify(bad)}`, message };
     }
 
     try {

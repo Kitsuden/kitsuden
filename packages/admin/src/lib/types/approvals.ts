@@ -50,8 +50,10 @@ export interface Proposal {
 
 export interface DiffChange {
   field: string;
-  before: unknown;
+  before?: unknown;
   after: unknown;
+  /** The value before was read as the agent and your own access does not show it. */
+  beforeHidden?: boolean;
 }
 
 export interface ProposalDiff {
@@ -85,6 +87,8 @@ export interface FieldChange {
   before?: unknown;
   after?: unknown;
   change: "add" | "update" | "remove";
+  /** The value before was read as the agent and your own access does not show it. */
+  beforeHidden?: boolean;
 }
 
 export interface FieldDiff {
@@ -136,6 +140,8 @@ export interface ProposalDetail extends Proposal {
   /** Agent data ledger (docs/agents/ledger.md). */
   fieldDiff?: FieldDiff | null;
   evidence?: FieldEvidence[];
+  /** The agent attached evidence that only someone who can approve the proposal sees. */
+  evidenceRedacted?: boolean;
   fieldDecisions?: FieldDecision[] | null;
   reviews?: LedgerReview[];
   /** The images of a held upload; empty if it is not one or if they were already deleted. */

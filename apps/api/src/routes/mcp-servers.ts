@@ -38,7 +38,7 @@ import {
   serverUrlProblem,
   updateServer,
 } from "../lib/external-mcp";
-import { externalNaming, loadExternalCatalog } from "../lib/external-mcp-bridge";
+import { externalNaming, loadExternalCatalog, serverSlugTakenBy } from "../lib/external-mcp-bridge";
 import {
   completeOAuth,
   disconnectOAuth,
@@ -81,6 +81,15 @@ const notFound = (c: Context) =>
 const badRequest = (c: Context, error: string) =>
   c.json({ error, code: "KITSUDEN_E_BAD_REQUEST" }, 400);
 
+/** A name whose slug another server already has (see `serverSlugTakenBy`). */
+async function nameProblem(name: string | undefined, exceptId?: string): Promise<string | null> {
+  if (name === undefined) return null;
+  const other = serverSlugTakenBy(name, await listServers(), exceptId);
+  return other
+    ? `Another MCP server ("${other.name}") already gives the same tool names; choose a different name`
+    : null;
+}
+
 function who(c: Context): string {
   return ((c.get("user" as never) as { id?: string } | null)?.id ?? "admin").slice(0, 200);
 }
@@ -120,7 +129,8 @@ export const externalMcpOperations: AnyOperation[] = [
     handle: async ({ body }, { c }) => {
       const b = (body ?? {}) as ServerBodyT;
       if (!b.name?.trim() || !b.url) return badRequest(c, "name and url are required");
-      const problem = serverUrlProblem(b.url) ?? authProblem(b);
+      const problem =
+        serverUrlProblem(b.url) ?? authProblem(b) ?? (await nameProblem(b.name.trim()));
       if (problem) return badRequest(c, problem);
       const server = await createServer({ ...b, name: b.name.trim(), url: b.url }, who(c));
       logger.info(
@@ -144,9 +154,13 @@ export const externalMcpOperations: AnyOperation[] = [
     handle: async ({ params, body }, { c }) => {
       const b = (body ?? {}) as ServerBodyT;
       if (b.name !== undefined && !b.name.trim()) return badRequest(c, "name cannot be empty");
-      const problem = (b.url !== undefined ? serverUrlProblem(b.url) : null) ?? authProblem(b);
+      const id = (params as { id: string }).id;
+      const problem =
+        (b.url !== undefined ? serverUrlProblem(b.url) : null) ??
+        authProblem(b) ??
+        (await nameProblem(b.name?.trim(), id));
       if (problem) return badRequest(c, problem);
-      const server = await updateServer((params as { id: string }).id, b, who(c));
+      const server = await updateServer(id, b, who(c));
       return server ?? notFound(c);
     },
   }),

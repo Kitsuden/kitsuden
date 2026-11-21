@@ -86,7 +86,10 @@ payload. `{{eventName}}`, `{{rule.id}}` and `{{rule.name}}` are also available.
   choose where the payload is sent. The literal part passes the same target check
   as any webhook URL.
 - A string that is only a placeholder keeps the type it points to:
-  `"{{event.amount}}"` becomes the number `500`.
+  `"{{event.amount}}"` becomes the number `500`. The exception is the recipient
+  keys of a `core:send-mail` step's `data` (`to`, `cc`, `bcc`, `replyTo`): they
+  are always filled as text, so an event value that is a list becomes its JSON
+  form, which the mailer refuses, instead of one recipient per item.
 - A placeholder inside other text becomes text; one that points nowhere becomes
   an empty string, or `null` when it stands alone.
 - **`core:run-agent` keeps event data marked as untrusted.** The rule does not

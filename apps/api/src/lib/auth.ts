@@ -153,6 +153,20 @@ export const auth = betterAuth({
    * session and no cookie.
    */
   databaseHooks: {
+    /**
+     * No account is created through better-auth while there is no admin: the
+     * `/api/auth/sign-up/*` gate in index.ts does not see a social sign-in
+     * callback, which creates the user itself. The first admin is written by
+     * `/api/system/setup` directly (first-run.ts), not through here.
+     * Returning `false` refuses the creation (hardening 2026-11-20).
+     */
+    user: {
+      create: {
+        before: async () => {
+          if (await firstRunRefuses()) return false;
+        },
+      },
+    },
     session: {
       create: {
         before: async (session, context) => {

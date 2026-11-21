@@ -237,7 +237,9 @@ export async function emitChange(
 
   try {
     const { publish } = await import("./valkey");
-    await publish(channelFor(resource), JSON.stringify(event));
+    // `publish` serializes; stringifying here too sent subscribers a JSON string, which the row
+    // filter could not read, so no change ever reached them (H16).
+    await publish(channelFor(resource), event);
   } catch {
     // Valkey down → no realtime, but the data operation has already completed.
   }

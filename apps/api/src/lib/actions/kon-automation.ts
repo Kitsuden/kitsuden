@@ -33,7 +33,12 @@ import { konRuleHandler } from "../kon-contributions";
 
 import { createAction, deleteAction, updateAction } from "./engine";
 
-const KON_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+/**
+ * A kon id with no `--` and no trailing `-`: the slug prefix `<kon id>--` must
+ * name one kon. With `kon-crm--x` allowed, that kon's rule `y` and kon-crm's
+ * rule `x--y` were one row, and kon-crm's `listRules` listed its rules (H65).
+ */
+const KON_ID = /^(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /** The core's own events, as an action names them: `entry.created`. */
 const CORE_EVENT = /^[a-z]+\.[a-z]+$/;
 

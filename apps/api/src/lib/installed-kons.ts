@@ -405,3 +405,47 @@ export function incompatibleSdkReason(
   }
   return null;
 }
+
+/**
+ * Why a switched-off kon's CODE must not be activated hot, or `null` (H47, H49).
+ *
+ * The manifest was checked when its path was reserved; the code is only read
+ * when it is activated. Its id is the one its context is bound to (secrets,
+ * events, channels), so it must be the installed kon; and the SDK it declares
+ * gets the check startup gives it.
+ */
+export function deferredKonCodeProblem(
+  installedId: string,
+  codeId: unknown,
+  codeSdk: unknown,
+  coreVersion: number = KONS_SDK_VERSION
+): string | null {
+  if (typeof codeId !== "string" || !sameKon(codeId, installedId)) {
+    return `${installedId}: its code declares the id ${JSON.stringify(codeId)}, not the installed one; not activated`;
+  }
+  return incompatibleSdkReason(installedId, codeSdk, coreVersion);
+}
+
+/**
+ * Why a kon must not be mounted at `path`, or `null` (H46). Startup took any
+ * path a kon declared: `/` or `/api` put the kon's router and its RLS
+ * middleware in front of the whole API, and `/api/*` or `/api/:x` matched
+ * routes it did not name. Deferred kons were already held to this shape.
+ */
+export function konMountPathProblem(id: string, path: unknown): string | null {
+  if (typeof path !== "string" || path.length > 200) {
+    return `${id}: its mount path is not a string of at most 200 characters`;
+  }
+  const segments = path.replace(/\/$/, "").split("/");
+  const shapeOk =
+    segments[0] === "" &&
+    segments[1] === "api" &&
+    segments.length >= 3 &&
+    segments
+      .slice(2)
+      .every((s) => /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(s) && !s.includes(".."));
+  if (!shapeOk) {
+    return `${id}: mount path ${JSON.stringify(path)} must be /api/<segment>[/<segment>…] (letters, digits, . _ -); not mounted`;
+  }
+  return null;
+}

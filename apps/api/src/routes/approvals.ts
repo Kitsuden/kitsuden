@@ -87,14 +87,19 @@ import {
   rejectProposal,
   operationSensitivity,
   agentView,
+  diffForViewer,
+  readAsViewer,
   type Human,
   type Proposal,
+  type ViewerCredentials,
 } from "../lib/approvals";
 import { registerCoreOperations } from "../lib/core-operations";
 import {
   LedgerInputError,
   closeReview,
+  diffHasBefore,
   evidenceForRows,
+  fieldDiffForViewer,
   listReviews,
   readDecisions,
   readFieldDiff,
@@ -144,6 +149,13 @@ async function humanOf(c: Context): Promise<Human | null> {
   return u?.id ? freshHuman(u.id) : null;
 }
 
+/** The viewer's own credentials, to read the current row with THEIR access. */
+function viewerOf(c: Context): ViewerCredentials {
+  const header = (k: string) =>
+    (c.req as { header?: (k: string) => string | undefined } | undefined)?.header?.(k);
+  return { cookie: header("cookie") ?? null, authorization: header("authorization") ?? null };
+}
+
 // ── Views ───────────────────────────────────────────────────────────────────
 
 /**
@@ -153,13 +165,62 @@ async function humanOf(c: Context): Promise<Human | null> {
  */
 export const REDACTED_CONTENT = { redacted: true, reason: "viewer_cannot_approve" } as const;
 
+/** The answer to a review action on a proposal this human cannot see. */
+const CANNOT_SEE = {
+  error: "Forbidden",
+  message: "Only someone who could approve this proposal can schedule or close its reviews",
+} as const;
+
 /** May this human see the content? Only someone who could approve it (in any state). */
 async function canSeeContent(human: Human | null | undefined, p: Proposal): Promise<boolean> {
   if (!human) return false;
   return (await reasonNotToApprove(human, p)) === null;
 }
 
-async function teamView(p: Proposal & { agentName?: string | null }, human?: Human | null) {
+/**
+ * The diffs as this approver may see them. Their `before` values were read AS THE
+ * AGENT (security audit 2026-11-19, owner's request): the row is read again with
+ * the approver's own credentials and a `before` they cannot see is dropped.
+ */
+async function diffsForViewer(
+  p: Proposal,
+  fieldDiff: ReturnType<typeof readFieldDiff>,
+  viewer: ViewerCredentials | null | undefined
+): Promise<{ diff: unknown; fieldDiff: ReturnType<typeof readFieldDiff> }> {
+  const reads = new Map<string, Promise<Record<string, unknown> | null>>();
+  const read = (path: string) => {
+    const clean = path.split("?")[0]!;
+    if (!reads.has(clean)) reads.set(clean, readAsViewer(viewer, clean));
+    return reads.get(clean)!;
+  };
+  let shownFieldDiff = fieldDiff;
+  if (fieldDiff && diffHasBefore(fieldDiff)) {
+    const path = fieldDiff.target.readPath;
+    shownFieldDiff = fieldDiffForViewer(
+      fieldDiff,
+      path ? await read(path) : null,
+      readDecisions(p)
+    );
+  }
+  let diff = p.diff;
+  const d = diff as { kind?: unknown; changes?: unknown; current?: unknown } | null;
+  const readAsAgentBefore =
+    !!d &&
+    typeof d === "object" &&
+    ((Array.isArray(d.changes) &&
+      d.changes.some((ch) => !!ch && typeof ch === "object" && "before" in ch)) ||
+      (d.kind === "delete" && !!d.current));
+  if (readAsAgentBefore) {
+    diff = diffForViewer(diff, p.path.startsWith("/api/") ? await read(p.path) : null);
+  }
+  return { diff, fieldDiff: shownFieldDiff };
+}
+
+async function teamView(
+  p: Proposal & { agentName?: string | null },
+  human?: Human | null,
+  viewer?: ViewerCredentials | null
+) {
   const names = await userNames([p.decidedBy, p.sponsorUserId]);
   // After deciding, the row arrives from the UPDATE without the agent's name: it is looked up.
   if (p.agentName === undefined) {
@@ -173,7 +234,11 @@ async function teamView(p: Proposal & { agentName?: string | null }, human?: Hum
   const seeContent = await canSeeContent(human, p);
   const cannotDecide = human && p.status === "pending" ? await reasonNotToApprove(human, p) : null;
   const decisions = readDecisions(p);
-  const fieldDiff = readFieldDiff(p);
+  const shown = seeContent
+    ? await diffsForViewer(p, readFieldDiff(p), viewer)
+    : { diff: p.diff, fieldDiff: readFieldDiff(p) };
+  const fieldDiff = shown.fieldDiff;
+  const evidence = Array.isArray(p.evidence) ? p.evidence : [];
   return {
     ...agentView(p),
     agentId: p.agentId,
@@ -187,7 +252,7 @@ async function teamView(p: Proposal & { agentName?: string | null }, human?: Hum
     contentType: p.contentType,
     idempotencyKey: p.idempotencyKey,
     scopes: p.scopes,
-    diff: seeContent || p.diff === null ? p.diff : REDACTED_CONTENT,
+    diff: seeContent || p.diff === null ? shown.diff : REDACTED_CONTENT,
     injectionCheck: p.injectionCheck ?? null,
     konId: p.konId,
     operationId: p.operationId,
@@ -200,7 +265,9 @@ async function teamView(p: Proposal & { agentName?: string | null }, human?: Hum
     files: await proposalFiles(p.id),
     // Agent data ledger: the per-field diff, the agent's evidence and the decision per field.
     fieldDiff: seeContent || fieldDiff === null ? fieldDiff : REDACTED_CONTENT,
-    evidence: Array.isArray(p.evidence) ? p.evidence : [],
+    // The agent's quotes and sources carry the values themselves: only for whoever sees the content.
+    evidence: seeContent ? evidence : [],
+    evidenceRedacted: !seeContent && evidence.length > 0,
     // Without the content: which fields were accepted or rejected, not their edited values.
     fieldDecisions:
       seeContent || !decisions
@@ -280,7 +347,9 @@ async function detail(c: Context, id: string) {
     .from(agentIdentities)
     .where(eq(agentIdentities.id, p.agentId))
     .limit(1);
-  return c.json(await teamView({ ...p, agentName: a?.name ?? null }, await humanOf(c)));
+  return c.json(
+    await teamView({ ...p, agentName: a?.name ?? null }, await humanOf(c), viewerOf(c))
+  );
 }
 
 const FieldDecisionInput = z
@@ -383,7 +452,7 @@ async function decide(c: Context, id: string, body: DecisionBody | undefined, ap
         error: errorName(r.status),
         message: r.reason,
         ...(r.code ? { code: r.code } : {}),
-        ...(r.proposal ? { proposal: await teamView(r.proposal, human) } : {}),
+        ...(r.proposal ? { proposal: await teamView(r.proposal, human, viewerOf(c)) } : {}),
       },
       r.status
     );
@@ -399,7 +468,7 @@ async function decide(c: Context, id: string, body: DecisionBody | undefined, ap
       logger.error({ err, proposalId: r.proposal.id }, "[ledger] could not schedule the review")
     );
   }
-  return c.json({ proposal: await teamView(r.proposal, human) });
+  return c.json({ proposal: await teamView(r.proposal, human, viewerOf(c)) });
 }
 
 // ── Later reviews and evidence (agent data ledger) ──────────────────────────
@@ -417,6 +486,9 @@ async function scheduleLater(c: Context, id: string, body: z.infer<typeof Review
   if (!human) return c.json({ error: "Unauthorized" }, 401);
   const p = await proposalById(id);
   if (!p) return c.json({ error: "Proposal not found" }, 404);
+  // Only someone who sees the proposal's content (security audit 2026-11-19): the
+  // field names it validates would otherwise answer for a proposal they cannot see.
+  if (!(await canSeeContent(human, p))) return c.json(CANNOT_SEE, 403);
   try {
     const review = await scheduleReview({
       proposal: p,
@@ -461,11 +533,15 @@ const ReviewClose = z
 async function reviewDone(c: Context, id: string, body: z.infer<typeof ReviewClose> | undefined) {
   const human = await humanOf(c);
   if (!human) return c.json({ error: "Unauthorized" }, 401);
+  const existing = await reviewById(id);
+  if (!existing) return c.json({ error: "Review not found" }, 404);
+  const ofProposal = await proposalById(existing.proposalId);
+  if (!ofProposal || !(await canSeeContent(human, ofProposal))) return c.json(CANNOT_SEE, 403);
   const r = await closeReview(id, human.id, body?.comment, body?.cancel ? "cancelled" : "done");
   if (!r) {
-    const existing = await reviewById(id);
-    if (!existing) return c.json({ error: "Review not found" }, 404);
-    return c.json({ error: "Conflict", message: `Review is ${existing.status}` }, 409);
+    const now = await reviewById(id);
+    if (!now) return c.json({ error: "Review not found" }, 404);
+    return c.json({ error: "Conflict", message: `Review is ${now.status}` }, 409);
   }
   return c.json({ review: reviewView(r) });
 }

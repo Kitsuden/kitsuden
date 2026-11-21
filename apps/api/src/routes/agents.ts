@@ -23,6 +23,7 @@ import {
 } from "@/db/schema";
 import { snapshotAgent } from "@/lib/agent-versions";
 import { logger } from "@/lib/logger";
+import { logAgentAction } from "@/services/agent-audit";
 import { agentKeyExpiresAt, generateAgentApiKey } from "@/services/agent-auth";
 
 import { requireAuth } from "../middleware/auth";
@@ -400,6 +401,21 @@ agentsRouter.put("/:id", async (c) => {
     await snapshotAgent(id, { createdBy: sessionUserId(c), source: "update" });
 
     logger.info({ agentId: id }, "Agent updated with Persona fields");
+    // Who changed the agent, and its scopes before and after (hardening 2026-11-20).
+    logAgentAction({
+      agentId: id,
+      action: "config_change",
+      resource: "agent",
+      resourceId: id,
+      details: {
+        by: sessionUserId(c),
+        fields: Object.keys(body ?? {}),
+        scopesBefore: agent.scopes,
+        scopesAfter: updated?.scopes ?? agent.scopes,
+        isActiveAfter: updated?.isActive ?? agent.isActive,
+      },
+      success: true,
+    });
 
     return c.json({ success: true, data: updated });
   } catch (error) {
@@ -430,6 +446,15 @@ agentsRouter.delete("/:id", async (c) => {
     await db.delete(agentIdentities).where(eq(agentIdentities.id, id));
 
     logger.info({ agentId: id, name: agent.name }, "Agent deleted");
+    // The audit log has no foreign key: this row outlives the agent.
+    logAgentAction({
+      agentId: id,
+      action: "config_change",
+      resource: "agent",
+      resourceId: id,
+      details: { by: sessionUserId(c), deleted: true, name: agent.name, scopes: agent.scopes },
+      success: true,
+    });
 
     return c.json({ success: true });
   } catch (error) {

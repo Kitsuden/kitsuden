@@ -453,6 +453,9 @@ deactivated, the key it used was revoked or has expired, or its permission for
 the operation was removed (or a deny added), the proposal ends as `failed`
 with `result.error` saying why (`not_executed: key_revoked`, …) and nothing
 runs. The scopes used are the agent's current ones, not the stored snapshot.
+A proposal made without a key (an in-process caller, such as an action's
+sandbox, whose identity was narrower than its agent) runs with the agent's
+current scopes narrowed to the ones stored on the proposal, never with more.
 
 The approver is recorded on the proposal (`decidedBy`) and in the audit;
 the operation itself runs as the agent (rows it creates belong to the agent,
@@ -513,6 +516,15 @@ nothing for humans and one in-memory check for agents; the configuration is
 read from Postgres at most once every `APPROVALS_CACHE_SECONDS`, and only when
 an agent makes a request. When approval applies to a request, creating the
 proposal costs a few queries (and one internal `GET` for the diff).
+Opening a proposal whose diff holds `before` values reads the row once more,
+as the person viewing it, so they only see values their own access shows
+([ledger.md](ledger.md#the-per-field-diff)).
+
+If the settings cannot be read, the last ones read are used. If none was read
+yet (the API just started and the database does not answer), an agent's request
+fails with an error instead of running as if approvals were off. One invalid
+value in the stored settings (an older version reading a newer row, say) falls
+back to its default on its own; the rest, and the global switch, still apply.
 
 ## What is not covered
 

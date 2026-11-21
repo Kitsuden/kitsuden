@@ -413,11 +413,16 @@ const mediaHeaders = secureHeaders({ crossOriginResourcePolicy: "cross-origin" }
  * fetched the script and refused to run it. They carry no data, only code anyone may read.
  */
 const PUBLIC_KON_SCRIPT = /^\/api\/[a-z0-9-]+\/public\/[A-Za-z0-9_/.-]*\.js$/;
-app.use("*", (c, next) =>
-  (c.req.path.startsWith(`${BASE_URL_LOCAL}/`) || PUBLIC_KON_SCRIPT.test(c.req.path)
-    ? mediaHeaders
-    : safeHeaders)(c, next)
-);
+app.use("*", async (c, next) => {
+  if (c.req.path.startsWith(`${BASE_URL_LOCAL}/`)) return mediaHeaders(c, next);
+  if (!PUBLIC_KON_SCRIPT.test(c.req.path)) return safeHeaders(c, next);
+  await mediaHeaders(c, next);
+  // Only real JavaScript is relaxed: a kon's public route that answers JSON or HTML at a `.js`
+  // path keeps `same-origin`.
+  if (!/javascript/i.test(c.res.headers.get("content-type") ?? "")) {
+    c.res.headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  }
+});
 app.use("/api/*", toonMiddleware());
 app.use("/api/*", toonProtocolMiddleware());
 // NOTE: CORS is mounted ABOVE (before rate limiter) to handle OPTIONS preflight correctly
@@ -456,9 +461,16 @@ app.post("/api/system/setup", async (c) => {
      * Marking it widens nothing: whoever gets here has the token from the log and there is
      * no administrator, so they are the one setting up the installation.
      */
-    const outcome = await createFirstAdmin(body, async (tx, userId) => {
-      await tx.update(user).set({ role: "admin", emailVerified: true }).where(eq(user.id, userId));
-    });
+    const outcome = await createFirstAdmin(
+      body,
+      async (tx, userId) => {
+        await tx
+          .update(user)
+          .set({ role: "admin", emailVerified: true })
+          .where(eq(user.id, userId));
+      },
+      c.req.raw
+    );
     if (!outcome.ok) return c.json({ error: outcome.error, code: outcome.code }, outcome.status);
     const { name, email } = outcome.user;
     console.log(`[setup] User ${email} promoted to admin`);
@@ -745,7 +757,8 @@ if (!usesS3) {
     try {
       // `localPathOf` rejects any key that escapes the directory: without
       // that, `/uploads/../../etc/passwd` would be a valid path for `join`.
-      const route = localPathOf(key);
+      // The decoded key is the one the signature covers (signedUrlOf percent-encodes it).
+      const route = localPathOf(decoded);
       const medium = file(route);
       if (!(await medium.exists())) return c.notFound();
       // Under Bun, the BunFile (type and zero-copy send); under Node, a stream (G4).

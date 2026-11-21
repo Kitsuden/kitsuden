@@ -1730,11 +1730,10 @@ export function datasetOperations(ctx: KonContext): AnyOperation[] {
         if (!isUuid(dataSetId)) return c.json({ error: "Dataset not found" }, 404);
 
         try {
-          const [dataset] = await ctx.db.instance
-            .select()
-            .from(dataSets)
-            .where(eq(dataSets.id, dataSetId))
-            .limit(1);
+          // `datasetVisible`, not a bare lookup: an agent that holds `dataset:update` but denies
+          // itself this dataset (`!datasets:<slug>:read`) gets the same 404 as everywhere else,
+          // not the dataset's field names.
+          const dataset = await datasetVisible(c, dataSetId);
 
           if (!dataset) {
             return c.json({ error: "Dataset not found" }, 404);
