@@ -514,13 +514,35 @@ export function invalidStyle(fields: Record<string, unknown>): string | null {
  * `customCss` of a page: CSS, not a way to close the `<style>` and open
  * a `<script>` (`</style><script>…`), nor to load outside stylesheets
  * or behaviors.
+ *
+ * The checks run on the CSS with comments removed and escapes decoded
+ * (hardening 2026-11-20), so `@\69mport` or a comment inside `[value]` cannot
+ * slip past them.
+ * An attribute selector on `value` is refused: with `url()` it reads a form
+ * field one character at a time (`input[value^="a"] { background: url(…) }`).
  */
 export function invalidCss(css: unknown): string | null {
   if (css === undefined || css === null) return null;
   if (typeof css !== "string") return "`customCss` must be text";
   if (css.length > 50_000) return "`customCss` is too long";
-  if (/<|@import|javascript:|expression\s*\(|behavior\s*:|-moz-binding/i.test(css)) {
-    return "`customCss` contains something that is not presentation CSS (`<`, `@import`, `javascript:`…)";
+  const plain = decodeCssEscapes(css.replace(/\/\*[\s\S]*?(?:\*\/|$)/g, ""));
+  for (const text of [css, plain]) {
+    if (/<|@import|javascript:|expression\s*\(|behavior\s*:|-moz-binding/i.test(text)) {
+      return "`customCss` contains something that is not presentation CSS (`<`, `@import`, `javascript:`…)";
+    }
+  }
+  if (/\[\s*(?:[\w*-]*\|)?value\s*[\]~|^$*=]/i.test(plain)) {
+    return "`customCss` cannot select on the `value` attribute";
   }
   return null;
+}
+
+/** CSS escapes (`\69`, `\i`) → the characters they stand for. */
+function decodeCssEscapes(css: string): string {
+  return css
+    .replace(/\\([0-9a-fA-F]{1,6})[ \t\n\r\f]?/g, (_, hex: string) => {
+      const code = parseInt(hex, 16);
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : "�";
+    })
+    .replace(/\\([^\n\r\f0-9a-fA-F])/g, "$1");
 }

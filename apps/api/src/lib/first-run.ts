@@ -18,6 +18,12 @@
  *
  * The token lives in the memory of this process: a restart generates another
  * one, and with several replicas each one prints and accepts its own.
+ *
+ * Without a token (development API on loopback) any web page the developer has
+ * open could still reach 127.0.0.1: a `text/plain` POST needs no CORS preflight,
+ * and DNS rebinding sends the request under the attacker's host name. So the
+ * tokenless path also needs a JSON body and loopback `Host` and `Origin`
+ * headers (`tokenlessSetupRefusal`, hardening 2026-11-20).
  */
 
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
@@ -28,7 +34,7 @@ import { db } from "../db";
 import { authAccounts, authUsers } from "../db/schema-core";
 
 import { auth } from "./auth";
-import { listensBeyondLoopback } from "./listen-host";
+import { isLoopbackHost, listensBeyondLoopback } from "./listen-host";
 import { publicOrProduction } from "./placeholder-secrets";
 
 type Env = Record<string, string | undefined>;
@@ -80,6 +86,39 @@ export function ensureSetupToken(): string | null {
       ` A restart generates a new one.\n${line}\n`
   );
   return token;
+}
+
+/** The host name of a `Host` header value or an origin URL, without port. */
+function hostnameOf(value: string, isUrl: boolean): string | null {
+  try {
+    return new URL(isUrl ? value : `http://${value}`).hostname;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Why a setup request WITHOUT a token is refused, or `null` when it may go on:
+ * a JSON body (a cross-site page cannot send one without a CORS preflight) and
+ * `Host` and `Origin` (when sent) on loopback (DNS rebinding keeps the
+ * attacker's host name in both).
+ */
+export function tokenlessSetupRefusal(request: Request): string | null {
+  const headers = request.headers;
+  const type = (headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase();
+  if (type !== "application/json") return "the body must be sent as application/json";
+  // The Node server always has `Host`; an in-process `app.request` only has the URL.
+  const host = headers.get("host");
+  const hostName = host ? hostnameOf(host, false) : hostnameOf(request.url, true);
+  if (!hostName || !isLoopbackHost(hostName))
+    return "the request must be addressed to a loopback host";
+  const origin = headers.get("origin");
+  if (origin !== null) {
+    const originName = hostnameOf(origin, true);
+    if (!originName || !isLoopbackHost(originName))
+      return "the request must come from a loopback origin";
+  }
+  return null;
 }
 
 export function setupTokenMatches(candidate: unknown): boolean {
@@ -165,7 +204,9 @@ const failure = (status: 400 | 403 | 409, error: string, code: string): SetupOut
  */
 export async function createFirstAdmin(
   body: { name?: unknown; email?: unknown; password?: unknown; setupToken?: unknown } | null,
-  promote: (tx: Transaction, userId: string) => Promise<void>
+  promote: (tx: Transaction, userId: string) => Promise<void>,
+  /** The HTTP request: its headers decide whether the tokenless path may be used. */
+  request: Request
 ): Promise<SetupOutcome> {
   const outcome = await db.transaction(async (tx): Promise<SetupOutcome> => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${SETUP_LOCK_KEY})`);
@@ -181,6 +222,15 @@ export async function createFirstAdmin(
           403,
           "Invalid or missing setup token: read it in the API log",
           "INVALID_SETUP_TOKEN"
+        );
+      }
+    } else {
+      const refusal = tokenlessSetupRefusal(request);
+      if (refusal) {
+        return failure(
+          403,
+          `Setup without a token: ${refusal}. Or send the setup token from the API log`,
+          "SETUP_REQUEST_REFUSED"
         );
       }
     }

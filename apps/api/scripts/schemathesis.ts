@@ -30,7 +30,7 @@
  *
  *   --baseline-update   accepts this run's failures into the baseline
  *   --baseline-prune    removes from the baseline what this run tested and did not reproduce
- *   --only=<regex>      only the operations whose path matches
+ *   --only=<regex>      only the operations whose path matches (`--solo=` is the old name)
  *   --only-installed   only those of the installed kons (not core or API): what
  *                       a kons repository's CI uses
  *   --baseline=<path>   another baseline file (that repository's)
@@ -42,12 +42,17 @@
  * removes it from the file. Some failures depend on the generated data and on the
  * state of the database: the baseline is built on NEW databases (like CI),
  * with several `--baseline-update` runs.
+ *
+ * Two passes: every operation with all phases, then those whose input is a
+ * recursive schema with `examples,fuzzing` only. The coverage phase never ends
+ * on a body that contains itself (lib/recursive-inputs.ts says why).
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { newlineSafeSpec } from "./lib/newline-safe-patterns";
+import { operationCount, splitRecursiveInputs } from "./lib/recursive-inputs";
 
 /** PINNED version (two weeks old when it was pinned). */
 export const VERSION_SCHEMATHESIS = "4.30.1";
@@ -77,7 +82,9 @@ if (process.env.NODE_ENV !== "test" || process.env.KITSUDEN_TEST_DB !== "postgre
 const args = process.argv.slice(2);
 const arg = (n: string) => args.find((a) => a.startsWith(`--${n}=`))?.slice(n.length + 3);
 const specOnly = args.includes("--spec-only");
-const filter = arg("solo");
+// `--only` is what the header documented; `--solo` is what this read until
+// 2026-11-20, and kons CI passes it: both work.
+const filter = arg("only") ?? arg("solo");
 const examples = Number(arg("examples") ?? 25);
 // A kons repository (kitsuden-kons) tests ITS OWN with its own baseline.
 const onlyInstalled = args.includes("--only-installed");
@@ -187,10 +194,18 @@ const specPath = join(OUTPUT, "openapi.json");
 // `$` → `$(?!\n)` in every pattern: the same for the API, and Hypothesis no longer makes values
 // ending in "\n" only to throw them away (lib/newline-safe-patterns.ts says why).
 const safePatterns = { count: 0 };
-writeFileSync(specPath, JSON.stringify(newlineSafeSpec(doc, safePatterns), null, 2));
-const total = Object.values(doc.paths).reduce((n, p) => n + Object.keys(p).length, 0);
+// Operations whose input is a recursive schema go to a second pass without
+// the coverage phase, which never ends on them (lib/recursive-inputs.ts).
+const split = splitRecursiveInputs(newlineSafeSpec(doc, safePatterns), "/api");
+const recursiveSpecPath = join(OUTPUT, "openapi.recursive.json");
+writeFileSync(specPath, JSON.stringify(split.flat, null, 2));
+writeFileSync(recursiveSpecPath, JSON.stringify(split.recursive, null, 2));
+const total = operationCount(doc);
 console.log(
   `[schemathesis] ${total} operations in ${specPath}; ${safePatterns.count} patterns made newline-safe; excluded: ${excludedOnes.join(", ") || "none"}`
+);
+console.log(
+  `[schemathesis] recursive input, tested without the coverage phase (${recursiveSpecPath}): ${split.recursiveKeys.join(", ") || "none"}`
 );
 if (specOnly) process.exit(0);
 
@@ -237,44 +252,62 @@ const baselineArgs = ["--baseline-update", "--baseline-prune"].filter((a) => arg
 // Asynchronous ON PURPOSE: the app lives in this same process, and a `spawnSync`
 // blocks the event loop: the server answers nothing and each request
 // from Schemathesis ends in «Read timed out» (it happened on the first run).
-const child = Bun.spawn(
-  [
-    ...command,
-    "run",
-    specPath,
-    "--url",
-    `${origin}/api`,
-    "--header",
-    `Cookie: ${cookie}`,
-    // Without Origin, better-auth's CSRF protection rejects writes with a session.
-    "--header",
-    `Origin: ${process.env.ADMIN_URL || "http://localhost:5173"}`,
-    "--phases",
-    "examples,coverage,fuzzing",
-    "--checks",
-    "not_a_server_error,status_code_conformance,content_type_conformance,response_schema_conformance",
-    "--max-examples",
-    String(examples),
-    "--seed",
-    "20261025",
-    "--request-timeout",
-    "30",
-    "--continue-on-failure",
-    "--baseline",
-    BASELINE,
-    ...baselineArgs,
-    "--report",
-    "junit,ndjson",
-    "--report-dir",
-    OUTPUT,
-  ],
-  {
-    stdio: ["inherit", "inherit", "inherit"],
-    // On Windows the console inherits `utf-8:surrogateescape`, which Schemathesis's `click`
-    // does not understand and makes it crash before the first request.
-    env: { ...process.env, NO_COLOR: "1", PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
-  }
-);
-const status = await child.exited;
+async function runSchemathesis(spec: string, phases: string, reportDir: string): Promise<number> {
+  const child = Bun.spawn(
+    [
+      ...command,
+      "run",
+      spec,
+      "--url",
+      `${origin}/api`,
+      "--header",
+      `Cookie: ${cookie}`,
+      // Without Origin, better-auth's CSRF protection rejects writes with a session.
+      "--header",
+      `Origin: ${process.env.ADMIN_URL || "http://localhost:5173"}`,
+      "--phases",
+      phases,
+      "--checks",
+      "not_a_server_error,status_code_conformance,content_type_conformance,response_schema_conformance",
+      "--max-examples",
+      String(examples),
+      "--seed",
+      "20261025",
+      "--request-timeout",
+      "30",
+      "--continue-on-failure",
+      "--baseline",
+      BASELINE,
+      ...baselineArgs,
+      "--report",
+      "junit,ndjson",
+      "--report-dir",
+      reportDir,
+    ],
+    {
+      stdio: ["inherit", "inherit", "inherit"],
+      // On Windows the console inherits `utf-8:surrogateescape`, which Schemathesis's `click`
+      // does not understand and makes it crash before the first request.
+      env: { ...process.env, NO_COLOR: "1", PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
+    }
+  );
+  return child.exited;
+}
+
+// Pass 1: every operation without a recursive input, all phases.
+let status = await runSchemathesis(specPath, "examples,coverage,fuzzing", OUTPUT);
+// Pass 2: recursive inputs, without coverage (fuzzing is bounded by --max-examples).
+// Its reports go to a folder of their own so they do not replace pass 1's.
+if (split.recursiveKeys.length) {
+  console.log(
+    `[schemathesis] pass 2: ${split.recursiveKeys.length} operation(s) with a recursive input`
+  );
+  const second = await runSchemathesis(
+    recursiveSpecPath,
+    "examples,fuzzing",
+    join(OUTPUT, "recursive")
+  );
+  if (status === 0) status = second;
+}
 serverValue.stop(true);
 process.exit(status);

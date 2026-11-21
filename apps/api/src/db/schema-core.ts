@@ -653,6 +653,13 @@ export const agentApiKeys = pgTable(
      * proof signed by that key. NULL: a bearer key, as before.
      */
     dpopJkt: text("dpop_jkt"),
+    /**
+     * The person who minted the key (migration 0094). No FK on purpose: a deleted
+     * creator must not turn into "no creator". When they stop being an admin,
+     * their live static keys are revoked (`revokeKeysOfFormerAdmin`,
+     * services/agent-auth.ts). NULL: a key minted before 0094; it keeps working.
+     */
+    createdBy: text("created_by"),
   },
   (t) => [
     index("agent_api_keys_agent_id_idx").on(t.agentId),

@@ -8,6 +8,7 @@
 import { z } from "zod";
 
 import { rawNodeEnv } from "./environment";
+import { localhostDefaultWarnings } from "./localhost-defaults";
 import { placeholderSecrets, publicOrProduction } from "./placeholder-secrets";
 import { secretsKeyStatus } from "./secrets-key";
 
@@ -163,6 +164,22 @@ function checkSecretsKey(): void {
 }
 
 checkSecretsKey();
+
+/**
+ * Production outside public mode on localhost URLs: warned, not refused, because a
+ * production build on a LAN or a laptop may mean it (lib/localhost-defaults.ts).
+ */
+function warnLocalhostDefaults(): void {
+  const warnings = localhostDefaultWarnings(process.env);
+  if (warnings.length === 0) return;
+  console.warn(
+    `\n⚠️  PRODUCTION ON LOCALHOST ADDRESSES:\n${warnings.map((w) => `   · ${w}`).join("\n")}\n` +
+      "⚠️  The panel, sign-in callbacks and email links will only work on this machine. Set the real\n" +
+      "   addresses in .env, or KITSUDEN_PUBLIC=true to have startup refuse this state.\n"
+  );
+}
+
+warnLocalhostDefaults();
 
 export const config = loadConfig();
 

@@ -440,7 +440,8 @@ None of these run user code; they were checked for this page:
 - **Accounting templates** (`kon-conta`): a `Decimal` evaluator for `+ - * /`
   and parentheses, no `eval` or `new Function`.
 - **Webhooks**: `webhook_in` validates HMAC/bearer and stores the request
-  (`authType: "hmac"` without a secret refuses every request);
+  (`authType: "hmac"` or `"bearer"` without a secret refuses every request,
+  and an HMAC signature is checked only against the raw body sent as a string);
   `webhook_out` posts a fixed payload. No transformation code. It only posts
   to public addresses (no `localhost`, private ranges or the cloud metadata
   service), connects only to the addresses it checked (no second DNS lookup),

@@ -261,18 +261,6 @@ const CURATED_KONS: KonDef[] = [
     dependsOn: ["kon-media"],
     referencedBy: [],
   },
-  {
-    key: "ai-memories",
-    name: "AI Memories",
-    description:
-      "Vector-based semantic memory storage with pgvector. Supports OpenAI embeddings, document chunking, and similarity search for RAG applications.",
-    icon: "🧠",
-    color: "#9C27B0",
-    category: "optional",
-    tables: ["ai_memories", "ai_memory_chunks"],
-    dependsOn: [],
-    referencedBy: [],
-  },
 
   // ═══════════════════════════════════════════════════════════════
   // GRIMOIRE KONS — Bundled with Kitsuden CMS Grimoire (Consolidated)
@@ -479,7 +467,9 @@ export const KON_REGISTRY: KonDef[] = (() => {
   // would offer to turn on something that does not exist. The core ones (media, datasets,
   // blocks) are always there.
   const installed = new Set(listInstalledKons().map((k) => k.id));
-  // (Those that are not kons —`ai-memories`, a legacy API module— stay.)
+  // `ai-memories` is no longer listed: its tables moved to the core's vector
+  // search (packages/core/vector-search) and nothing can enable it, so its card
+  // offered a switch that always answered 409 «Kon not installed».
   const curated = CURATED_KONS.filter(
     (k) => !k.key.startsWith("kon-") || installed.has(konIdOf(k.key))
   );

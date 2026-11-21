@@ -314,7 +314,9 @@ export function agentGuideResponse(
   }
 
   const etag = guideEtag(body);
-  const headers = { etag, "cache-control": "public, max-age=300" };
+  // The base URL comes from the request's Host: a shared cache must key on it,
+  // or one Host could serve its links to every caller (hardening 2026-11-20).
+  const headers = { etag, "cache-control": "public, max-age=300", vary: "Origin, Host" };
   if (etagMatches(options.ifNoneMatch, etag)) return { status: 304, body: null, headers };
   return { status: 200, body, headers: { ...headers, "content-type": contentType } };
 }

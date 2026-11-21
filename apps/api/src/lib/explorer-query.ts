@@ -132,6 +132,47 @@ export function parseExplorerQuery(queries: Record<string, string[]>): ExplorerQ
   return { conditions, search: rawSearch || null, searchFields };
 }
 
+/**
+ * Refuses sorting a list by a secret column (`?sort=`). The order of the rows answers
+ * "is this token before or after ab?" just as a filter does. Anything else is left to the
+ * route, which ignores an unknown column as before.
+ */
+export function checkSortField(...names: Array<string | null | undefined>): void {
+  for (const name of names) {
+    if (name && isSecretColumn(name)) {
+      throw new ExplorerQueryError(`Cannot sort by "${name}"`);
+    }
+  }
+}
+
+/**
+ * The body of a create or update on a table read by introspection, checked before its keys
+ * become SQL identifiers. Each key must already be a plain identifier: the route used to strip
+ * the read-only fields by the key as sent and then write the key with its odd characters
+ * removed, so `"i-d"` wrote `id` past the read-only list. A secret column is refused, as
+ * everywhere in the explorer. Returns the body without its read-only fields.
+ */
+export function writableFields(
+  body: unknown,
+  readonlyFields: readonly string[]
+): Record<string, unknown> {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new ExplorerQueryError("The body must be a JSON object");
+  }
+  // No prototype: a `__proto__` key stays a key (and fails as a column), not a setter.
+  const fields = Object.create(null) as Record<string, unknown>;
+  for (const [key, value] of Object.entries(body)) {
+    if (!IDENTIFIER.test(key)) throw new ExplorerQueryError(`Malformed field name: "${key}"`);
+    if (isSecretColumn(key)) {
+      throw new ExplorerQueryError(
+        `"${key}" holds a secret and is not written through the explorer`
+      );
+    }
+    if (!readonlyFields.includes(key)) fields[key] = value;
+  }
+  return fields;
+}
+
 /** `%text%` for ILIKE, with the user's own `%`, `_` and `\` taken literally. */
 export function likePattern(text: string): string {
   return `%${text.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;

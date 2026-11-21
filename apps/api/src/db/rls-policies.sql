@@ -104,46 +104,6 @@ CREATE POLICY data_entries_public_read ON data_entries
         AND (data->>'isPublic' = 'true' OR data->>'visibility' = 'public')
     );
 
--- Policy: what the DATASET declares readable, is readable (2026-10-23)
---
--- A dataset's visibility lives in `data_sets.policy_json` (`readAccess`:
--- public | authenticated | admin), and the application checks it with
--- `checkReadAccess()`. The database did not look at it: for a logged-in user who
--- was not admin, the entries of a PUBLIC dataset without an owner (all those of
--- the games) matched no policy and ZERO rows came out. And the
--- anonymous saw them only because it went through the system hatch.
---
--- With this, the database says the same as the application: `public` is readable by
--- anyone, `authenticated` by whoever has a session. Only for datasets WITHOUT
--- `rlsRules`: those that have them are per-owner and are filtered by
--- `data_entries_owner_isolation` (and `buildDatasetWhere` in the application).
---
--- The subquery does not depend on the row: Postgres evaluates it once per
--- query (hashed subplan), not once per entry.
-DROP POLICY IF EXISTS data_entries_lectura_por_dataset ON data_entries;
-DROP POLICY IF EXISTS data_entries_dataset_read ON data_entries;
-
-CREATE POLICY data_entries_dataset_read ON data_entries
-    FOR SELECT
-    TO PUBLIC
-    USING (
-        data_set_id IN (
-            SELECT ds.id FROM data_sets ds
-            WHERE (
-                ds.policy_json->>'readAccess' = 'public'
-                OR (
-                    ds.policy_json->>'readAccess' = 'authenticated'
-                    AND COALESCE(current_setting('app.current_user_id', true), '') <> ''
-                )
-            )
-            AND COALESCE(
-                jsonb_array_length(
-                    CASE WHEN jsonb_typeof(ds.policy_json->'rlsRules') = 'array'
-                         THEN ds.policy_json->'rlsRules' END
-                ), 0) = 0
-        )
-    );
-
 -- Datasets opened by an agent's SCOPES (`datasets:<slug>:read|write|delete`).
 -- The API sets the agent's scopes in app.agent_scopes (comma-separated,
 -- local to the transaction: engine/src/rls-request.ts). These functions are the
@@ -289,6 +249,53 @@ BEGIN
 END
 $FN$;
 
+-- Policy: what the DATASET declares readable, is readable (2026-10-23)
+--
+-- A dataset's visibility lives in `data_sets.policy_json` (`readAccess`:
+-- public | authenticated | admin), and the application checks it with
+-- `checkReadAccess()`. The database did not look at it: for a logged-in user who
+-- was not admin, the entries of a PUBLIC dataset without an owner (all those of
+-- the games) matched no policy and ZERO rows came out. And the
+-- anonymous saw them only because it went through the system hatch.
+--
+-- With this, the database says the same as the application: `public` is readable by
+-- anyone, `authenticated` by whoever has a session. Only for datasets WITHOUT
+-- `rlsRules`: those that have them are per-owner and are filtered by
+-- `data_entries_owner_isolation` (and `buildDatasetWhere` in the application).
+--
+-- The subquery does not depend on the row: Postgres evaluates it once per
+-- query (hashed subplan), not once per entry.
+--
+-- An agent's per-dataset denial (`!datasets:<slug>:read`, or broader) closes
+-- even a public dataset, as canViewDataset does in the application (2026-11-20,
+-- migration 0092). kitsuden_agent_denied returns false without app.agent_scopes,
+-- so humans, the anonymous and the system see no change. This block sits AFTER
+-- kitsuden_agent_denied so the file also applies on its own (scripts/apply-rls.ts).
+DROP POLICY IF EXISTS data_entries_lectura_por_dataset ON data_entries;
+DROP POLICY IF EXISTS data_entries_dataset_read ON data_entries;
+
+CREATE POLICY data_entries_dataset_read ON data_entries
+    FOR SELECT
+    TO PUBLIC
+    USING (
+        data_set_id IN (
+            SELECT ds.id FROM data_sets ds
+            WHERE (
+                ds.policy_json->>'readAccess' = 'public'
+                OR (
+                    ds.policy_json->>'readAccess' = 'authenticated'
+                    AND COALESCE(current_setting('app.current_user_id', true), '') <> ''
+                )
+            )
+            AND COALESCE(
+                jsonb_array_length(
+                    CASE WHEN jsonb_typeof(ds.policy_json->'rlsRules') = 'array'
+                         THEN ds.policy_json->'rlsRules' END
+                ), 0) = 0
+            AND NOT kitsuden_agent_denied('datasets:' || ds.slug || ':read')
+        )
+    );
+
 CREATE OR REPLACE FUNCTION kitsuden_agent_opens_by_policy(p_data_set_id uuid, p_action text)
 RETURNS boolean LANGUAGE plpgsql STABLE AS $FN$
 DECLARE
@@ -359,13 +366,22 @@ END $$;
 -- 4. HELPER FUNCTIONS FOR RLS
 -- ═══════════════════════════════════════════════════════════════════════════
 
+-- These four run as the CALLER (SECURITY INVOKER) with a fixed search_path
+-- (2026-11-20, migration 0093). They were SECURITY DEFINER with no search_path:
+-- reading or setting an `app.*` setting needs no privilege, so running as the
+-- owner gave nothing, and a definer function with an open search_path is the
+-- shape that lets a schema the caller controls swap what it calls.
+-- set_rls_context/clear_rls_context set the context for the whole SESSION:
+-- the API never calls them (it sets it per transaction, engine/src/rls-request.ts);
+-- they are for scripts and tests on a connection of their own.
+
 -- Function: Check whether RLS is active for the current user
 CREATE OR REPLACE FUNCTION is_rls_active()
 RETURNS boolean AS $$
 BEGIN
     RETURN COALESCE(current_setting('app.current_user_id', true), '') != '';
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = pg_catalog, pg_temp;
 
 -- Function: Get the user_id from the RLS context
 CREATE OR REPLACE FUNCTION current_rls_user_id()
@@ -373,25 +389,25 @@ RETURNS text AS $$
 BEGIN
     RETURN current_setting('app.current_user_id', true);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = pg_catalog, pg_temp;
 
--- Function: Set the RLS context (useful for testing and scripts)
+-- Function: Set the RLS context for the session (scripts and tests only)
 CREATE OR REPLACE FUNCTION set_rls_context(user_id text, user_role text DEFAULT 'user')
 RETURNS void AS $$
 BEGIN
     PERFORM set_config('app.current_user_id', user_id, false);
     PERFORM set_config('app.current_user_role', user_role, false);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = pg_catalog, pg_temp;
 
--- Function: Clear the RLS context
+-- Function: Clear the session's RLS context (scripts and tests only)
 CREATE OR REPLACE FUNCTION clear_rls_context()
 RETURNS void AS $$
 BEGIN
     PERFORM set_config('app.current_user_id', '', false);
     PERFORM set_config('app.current_user_role', '', false);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = pg_catalog, pg_temp;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 5. INDEXES OPTIMIZED FOR RLS

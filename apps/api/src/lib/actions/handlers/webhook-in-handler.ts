@@ -14,11 +14,32 @@ export interface WebhookInRequest {
   path: string;
   headers: Record<string, string>;
   body: unknown;
+  /**
+   * The body exactly as it arrived. The HMAC is computed over these bytes: re-serializing a parsed body
+   * changes key order, spacing and escapes, so a sender's valid signature failed, and two different
+   * bodies could share one serialization.
+   */
+  rawBody?: string;
 }
 
 interface WebhookInConfig {
   authType?: "none" | "hmac" | "bearer";
   secret?: string;
+}
+
+/**
+ * `config` of a `webhook_in` action: the authentication is chosen on purpose, and a signature or a token
+ * has something to be checked against. Without this an action could be saved that accepts anyone.
+ */
+export function webhookInConfigProblem(config: unknown): string | null {
+  const c = (config ?? {}) as { authType?: unknown; secret?: unknown };
+  if (c.authType !== "none" && c.authType !== "hmac" && c.authType !== "bearer") {
+    return 'config.authType is required for webhook_in actions: "hmac", "bearer" or "none"';
+  }
+  if (c.authType !== "none" && (typeof c.secret !== "string" || c.secret.length < 16)) {
+    return `config.secret (16 characters or more) is required with authType "${c.authType}"`;
+  }
+  return null;
 }
 
 export async function executeWebhookInAction(
@@ -31,7 +52,17 @@ export async function executeWebhookInAction(
 
   const config = action.config as WebhookInConfig;
 
-  // Validate authentication if configured
+  // Authentication is not optional by omission: an action without `authType` used to accept any
+  // request. Only an explicit `authType: "none"` takes unauthenticated requests.
+  if (config.authType !== "none" && config.authType !== "hmac" && config.authType !== "bearer") {
+    return {
+      success: false,
+      error:
+        'The webhook has no authentication: set authType to "hmac" or "bearer" (or "none" on purpose)',
+      durationMs: Date.now() - startTime,
+    };
+  }
+
   if (config.authType === "hmac") {
     const isValid = validateHmacSignature(_webhookRequest, { secret: config.secret });
     if (!isValid) {
@@ -80,7 +111,14 @@ function validateHmacSignature(request: WebhookInRequest, config: { secret?: str
 
   if (!signatureHeader) return false;
 
-  const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body);
+  // The raw bytes, never a re-serialization of the parsed body (see `rawBody`).
+  const body =
+    typeof request.rawBody === "string"
+      ? request.rawBody
+      : typeof request.body === "string"
+        ? request.body
+        : null;
+  if (body === null) return false;
 
   const expectedSignature = createHmac("sha256", config.secret).update(body).digest("hex");
 
@@ -107,7 +145,8 @@ export function validateBearerToken(
   request: WebhookInRequest,
   config: { secret?: string }
 ): boolean {
-  if (!config.secret) return true;
+  // No secret to compare against: refused, like an HMAC action without one (it used to accept anyone).
+  if (!config.secret) return false;
 
   const authHeader = request.headers["authorization"] || "";
   const token = authHeader.replace("Bearer ", "").trim();

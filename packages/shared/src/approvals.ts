@@ -357,8 +357,56 @@ export function readApprovalsConfig(saved: unknown): ApprovalsConfig {
       saved as Partial<Record<keyof ApprovalsConfig, unknown>>
     );
   } catch {
-    return { ...DEFAULT_APPROVALS_CONFIG };
+    // One invalid field (an older version reading a newer row, say) must not
+    // switch approvals off: only that field falls back to its default; in a map
+    // or a list, only that entry (security audit 2026-11-19).
+    let output: ApprovalsConfig = { ...DEFAULT_APPROVALS_CONFIG };
+    for (const [key, value] of Object.entries(saved as Record<string, unknown>)) {
+      const field = key as keyof ApprovalsConfig;
+      try {
+        output = mergeApprovalsConfig(output, { [field]: value });
+      } catch {
+        output = mergeValidEntries(output, field, value);
+      }
+    }
+    return output;
   }
+}
+
+/** The valid entries of a map or list field whose whole value did not validate. */
+function mergeValidEntries(
+  base: ApprovalsConfig,
+  field: keyof ApprovalsConfig,
+  value: unknown
+): ApprovalsConfig {
+  let output = base;
+  if (field === "legacyRules" && Array.isArray(value)) {
+    const kept = value.filter((rule) => {
+      try {
+        mergeApprovalsConfig(base, { legacyRules: [rule] });
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    if (kept.length === 0) return output; // the default rules stay
+    try {
+      output = mergeApprovalsConfig(output, { legacyRules: kept.slice(0, 100) });
+    } catch {
+      /* the default stays */
+    }
+    return output;
+  }
+  if ((field === "operations" || field === "alternatives") && value && typeof value === "object") {
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      try {
+        output = mergeApprovalsConfig(output, { [field]: { [k]: v } });
+      } catch {
+        /* this entry stays at its default */
+      }
+    }
+  }
+  return output;
 }
 
 /** Configuration key of an MCP tool that is not an SDK one. */

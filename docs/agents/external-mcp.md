@@ -27,7 +27,9 @@ tool and flags any change until a person approves it again.
    in another order is not a change).
 4. A tool is **needs review** when it is new, when its fingerprint differs
    from the one approved, or when the server stopped announcing it. A changed
-   URL sends every tool back to review.
+   URL sends every tool back to review. A URL on another origin also forgets
+   the stored auth header, unless the same change sets a new one: the header
+   was a credential for the old host.
 5. A person approves a tool **as they saw it**: the approve call carries the
    fingerprint shown. If the server changed the tool in between, the call
    answers `409` and nothing is approved. Approving a removed tool forgets it;
@@ -72,7 +74,9 @@ for the agents a person grants it to.
   one `_`. At most 64 characters; a longer name is cut and ends in `_` plus 6
   hex characters of a hash. Two tools that end up with the same name or scope:
   the first one (servers by name, then tools by name) is offered, the other is
-  logged and is not.
+  logged and is not. Registering or renaming a server to a name whose slug
+  another server already has is refused, so a second server cannot take over
+  the first one's tool names, scopes or held proposals.
 - **Scope.** `mcp-external:<server>:<tool>`, with the same slugs; wildcards as
   for other scopes (docs/agents/permissions.md): `mcp-external:github:*` (every
   approved tool of that server), `mcp-external:*` (all of them). The grant must
@@ -135,11 +139,13 @@ tokens, encrypted with the secrets key (`KITSUDEN_SECRETS_KEY`) like the header.
    authorization server (protected-resource metadata, RFC 9728; then
    authorization-server metadata, RFC 8414, or OpenID discovery) and registers
    itself as a client there (dynamic client registration, RFC 7591). The
-   answer is `{ authorizationUrl, redirectUri }`.
-3. Open `authorizationUrl` in a browser and authorize. The authorization
-   server sends the browser to `GET /api/mcp-oauth/callback`, which exchanges
-   the code and redirects to the panel: `/mcp-servers?oauth=connected`, or
-   `oauth=error` with the reason.
+   answer is `{ authorizationUrl, redirectUri }`, and it sets an HttpOnly
+   cookie that only the callback receives.
+3. Open `authorizationUrl` in the same browser, or in a browser signed in to
+   the panel as the same admin, and authorize. The authorization server sends
+   the browser to `GET /api/mcp-oauth/callback`, which exchanges the code and
+   redirects to the panel: `/mcp-servers?oauth=connected`, or `oauth=error`
+   with the reason.
 4. From then on every connection (reading tools, the scheduled refresh, an
    agent's call) sends `Authorization: Bearer <access token>`. A token with
    less than a minute left is refreshed first.
@@ -160,14 +166,27 @@ What is checked:
   registration endpoints) passes the same check as the server's own URL:
   `https://` and public addresses. A server cannot point the API at an
   internal address by announcing it as its token endpoint.
+- **The metadata describes this server.** The protected-resource document's
+  `resource` must be the server's URL (or its origin, for the document at the
+  root), and the authorization-server metadata's `issuer` must be the server
+  it was read from. A missing value is accepted; a different one is refused.
+- **What the panel shows** of a refused exchange is the server's `error` code
+  or `token_type` only when it is a plain code, never its free text.
 - **PKCE with S256 is required.** A server that does not announce it is
   refused.
 - **The token is for this server**: the `resource` parameter (RFC 8707) is
   the server's URL, and the code is exchanged at the endpoints the flow
   started with.
-- **The callback is public**, as an OAuth redirect has to be. What authorizes
-  it is the `state`: 256 random bits given only to the admin who started,
-  stored as a hash, valid once and for ten minutes.
+- **The callback needs no session**, as an OAuth redirect has to arrive
+  without one, but it is bound to whoever started. The `state` (256 random
+  bits, stored as a hash, valid once and for ten minutes) names the round
+  trip, and the request must also come from the browser that made the start
+  call (the HttpOnly `kitsuden_mcp_oauth` cookie, sent only to the callback)
+  or from a session of the same admin. An agent's credential never counts.
+  Anyone else, for example a person the authorization link was sent to,
+  burns the state before any token exchange and lands on the panel with
+  `oauth=error`. Without this, that person's account at the authorization
+  server would end up connected to the admin's server.
 - **Starting and disconnecting are for human admins**, like the rest of this
   API.
 
@@ -228,8 +247,9 @@ refresh is about finding out early, so the first sign of a rewritten tool is a
 - **Scheduled refresh.** Every enabled server is read again every
   `KITSUDEN_EXTERNAL_MCP_REFRESH_MINUTES` (default 360; `0` switches it off;
   the floor is 5). See [Scheduled refresh](#scheduled-refresh).
-- **DNS rebinding**: the address is checked before connecting and resolved
-  again by the connection, as for other outbound calls (see the roadmap).
+- **DNS rebinding**: the transport and every OAuth request resolve the host
+  once, check every address, and connect only to those (`pinnedFetch`,
+  `apps/api/src/lib/safe-fetch.ts`).
 
 ## Files and tests
 

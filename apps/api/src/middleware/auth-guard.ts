@@ -11,6 +11,7 @@ import { createMiddleware } from "hono/factory";
 import { routeOperation } from "../../../../packages/engine/src/operations";
 import { auth } from "../lib/auth";
 import { pathKon } from "../lib/kon-routes";
+import { legacyCoreScope } from "../lib/legacy-routes";
 
 import { agentCanActAsUser, AGENT_WITHOUT_ACCOUNT_MESSAGE } from "./agent-as-user";
 
@@ -81,8 +82,11 @@ export const requireAdmin = createMiddleware(async (c, next) => {
     return;
   }
 
-  // Agent with admin scope
+  // Agent with admin scope. `admin` does not erase the agent's `!pattern`
+  // denials: one that covers this route still closes it (hardening 2026-11-20).
   if (agent && agent.scopes.includes("admin")) {
+    const reason = routeDenial(agent.scopes, c.req.method, c.req.path);
+    if (reason) return denialResponse(c, reason);
     await next();
     return;
   }
@@ -95,6 +99,20 @@ export const requireAdmin = createMiddleware(async (c, next) => {
     403
   );
 });
+
+/**
+ * 403 when the calling agent carries a `!pattern` denial that covers `scope`,
+ * whatever it is granted (`admin` included). People pass: denials are an
+ * agent-key setting. For core routes that map to one core scope, such as
+ * `POST /api/mail/test` and `mail:send`, which `routeDenial` cannot see.
+ */
+export const refuseDeniedScope = (scope: string) =>
+  createMiddleware(async (c, next) => {
+    const agent = c.get("agent") as { scopes?: string[] } | undefined;
+    const reason = denialThatCovers(agent?.scopes, [scope]);
+    if (reason) return denialResponse(c, reason);
+    await next();
+  });
 
 /**
  * Require Scope Middleware (for agent-specific routes)
@@ -112,6 +130,10 @@ export const requireScope = (scope: string) =>
         403
       );
     }
+
+    // A denial that covers the scope wins over `scope` and `admin`.
+    const reason = denialThatCovers(agent.scopes, [scope]);
+    if (reason) return denialResponse(c, reason);
 
     if (!agent.scopes.includes(scope) && !agent.scopes.includes("admin")) {
       return c.json(
@@ -302,6 +324,11 @@ export const ADMIN_ONLY_ROUTES: GateRule[] = [
   // scopes of each operation (promotion:propose / kon:promotion:<op>). The
   // ACTIVATION, moreover, only from an approved proposal (routes/promotion.ts).
   { prefix: "/api/promotion" },
+  // Mail catalog, preview and test send; the run inspector (payloads and logs of
+  // the whole system). Their routers ask for admin too; the gate adds the fresh
+  // role from the database and the agent's denials (hardening 2026-11-20).
+  { prefix: "/api/mail" },
+  { prefix: "/api/runs" },
 
   // ── Site content (active kons): written by the team ──
   { prefix: "/api/blog", methods: WRITE, role: "staff" },
@@ -497,7 +524,10 @@ export function adminGate(rules: readonly GateRule[]) {
  *     body and covers the routes the operation does not reach);
  *   · a LEGACY route of a kon whose whole kon is denied (`!kon:crm:*`,
  *     `!crm:*`) → 403. A denial of ONE operation cannot close a
- *     legacy route: it is not known which operation it corresponds to.
+ *     legacy route: it is not known which operation it corresponds to;
+ *   · a LEGACY CORE route whose `core:<area>:<access>` name is denied
+ *     (`!core:secrets:*`, `!core:keys:write`, `!core:*`) → 403. The names
+ *     are in lib/legacy-routes.ts (hardening 2026-11-21).
  *
  * The rest (datasets, MCP tools) is decided by their own
  * checkpoints with the same rule from shared.
@@ -521,11 +551,17 @@ export function routeDenial(
   if (!scopes?.some((s) => s.startsWith("!"))) return null;
   const ofRoute = routeOperation(method, path);
   if (ofRoute) return operationDenial(scopes, ofRoute.konId, ofRoute.op);
-  const kon = pathKon(path);
-  if (!kon) return null;
-  const shortOne = konShortName(kon);
-  // The operation wildcard "*" is only covered by a denial of the WHOLE kon.
-  return denialThatCovers(scopes, [`kon:${shortOne}:*`, `${shortOne}:*`]);
+  const clean = path.replace(/\/{2,}/g, "/");
+  const kon = pathKon(clean);
+  if (kon) {
+    const shortOne = konShortName(kon);
+    // The operation wildcard "*" is only covered by a denial of the WHOLE kon.
+    return denialThatCovers(scopes, [`kon:${shortOne}:*`, `${shortOne}:*`]);
+  }
+  // A legacy CORE route: its `core:<area>:<access>` name (lib/legacy-routes.ts),
+  // so `!core:secrets:*` closes /api/admin/secrets even with `admin`.
+  const core = legacyCoreScope(method, clean);
+  return core ? denialThatCovers(scopes, [core]) : null;
 }
 
 function denialResponse(c: Context, reason: string): Response {

@@ -59,6 +59,70 @@ export interface KonEventsDeclaration {
    * A name that nobody emits is fine: the other kon may not be installed.
    */
   listens?: string[];
+  /**
+   * This kon's own events that ANY other kon may listen to: full names
+   * (`blog:post.published`) or a prefix ending in `*` (`blog:post.*`).
+   * Everything else this kon emits reaches only itself, the core and the
+   * kons named in `subscribers` (docs/kons/events.md, "Who may listen").
+   * A pattern outside the kon's own namespace has no effect.
+   */
+  public?: string[];
+  /**
+   * Other kons that may listen to some of this kon's events, by kon id:
+   * `{ "kon-crm": ["shop:order.paid"], "kon-dc": ["shop:order.*"] }`.
+   */
+  subscribers?: Record<string, string[]>;
+}
+
+/**
+ * An event name, or a prefix of one ending in `*`, as `public` and
+ * `subscribers` take them. The namespace (before the first `:`) is always
+ * spelled out: `*` alone, or `shop*`, would reach past the kon's own events.
+ */
+export const KON_EVENT_PATTERN =
+  /^[a-z0-9][a-z0-9-]{0,63}:(?:[a-z0-9:._-]{1,200}|[a-z0-9:._-]{0,200}\*)$/;
+
+/** The namespace of an event (`shop` for `shop:order.paid`), or `null` when it has none. */
+export function konEventNamespace(name: string): string | null {
+  const at = name.indexOf(":");
+  return at > 0 ? name.slice(0, at) : null;
+}
+
+/** Whether `name` is `pattern`, or starts with it when the pattern ends in `*`. */
+export function matchesKonEventPattern(pattern: string, name: string): boolean {
+  return pattern.endsWith("*") ? name.startsWith(pattern.slice(0, -1)) : pattern === name;
+}
+
+/**
+ * The declaration in code (`defineKon({ events })`) with the one in kon.json
+ * (`"events": { ... }`) laid over it: lists are joined, `emits` and
+ * `subscribers` merged by key. Either may be missing.
+ */
+export function mergeKonEventDeclarations(
+  fromCode: KonEventsDeclaration | undefined,
+  fromManifest: unknown
+): KonEventsDeclaration | undefined {
+  if (!fromManifest || typeof fromManifest !== "object" || Array.isArray(fromManifest)) {
+    return fromCode;
+  }
+  const m = fromManifest as KonEventsDeclaration;
+  if (!fromCode) return m;
+  const join = (a?: string[], b?: string[]) =>
+    a || b ? [...new Set([...(a ?? []), ...(Array.isArray(b) ? b : [])])] : undefined;
+  const subscribers: Record<string, string[]> = { ...(fromCode.subscribers ?? {}) };
+  for (const [kon, list] of Object.entries(m.subscribers ?? {})) {
+    subscribers[kon] = join(subscribers[kon], list) ?? [];
+  }
+  const merged: KonEventsDeclaration = {
+    ...fromCode,
+    emits: { ...(fromCode.emits ?? {}), ...(m.emits ?? {}) },
+  };
+  const listens = join(fromCode.listens, m.listens);
+  const pub = join(fromCode.public, m.public);
+  if (listens) merged.listens = listens;
+  if (pub) merged.public = pub;
+  if (Object.keys(subscribers).length) merged.subscribers = subscribers;
+  return merged;
 }
 
 /** A row of the catalog the host builds from every loaded kon. */
@@ -90,6 +154,31 @@ export function konEventsProblem(declaration: KonEventsDeclaration | undefined):
   for (const name of declaration.listens ?? []) {
     if (!isKonEventName(name)) {
       return `listened event name "${name}" must look like "<source>:<entity>.<what-happened>"`;
+    }
+  }
+  if (declaration.public !== undefined && !Array.isArray(declaration.public)) {
+    return `"public" must be a list of event names`;
+  }
+  for (const pattern of declaration.public ?? []) {
+    if (typeof pattern !== "string" || !KON_EVENT_PATTERN.test(pattern)) {
+      return `public event "${String(pattern)}" must be an event name, or a prefix of one ending in "*"`;
+    }
+  }
+  const subscribers = declaration.subscribers;
+  if (subscribers !== undefined) {
+    if (!subscribers || typeof subscribers !== "object" || Array.isArray(subscribers)) {
+      return `"subscribers" must map kon ids to lists of event names`;
+    }
+    for (const [konId, list] of Object.entries(subscribers)) {
+      if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(konId)) {
+        return `subscriber "${konId}" must be a kon id`;
+      }
+      if (!Array.isArray(list)) return `subscriber "${konId}" needs a list of event names`;
+      for (const pattern of list) {
+        if (typeof pattern !== "string" || !KON_EVENT_PATTERN.test(pattern)) {
+          return `event "${String(pattern)}" for subscriber "${konId}" must be an event name, or a prefix of one ending in "*"`;
+        }
+      }
     }
   }
   return null;

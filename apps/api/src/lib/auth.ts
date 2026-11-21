@@ -18,7 +18,6 @@ import {
   authTwoFactors,
 } from "../db/schema";
 
-import { PROXY_RANGES } from "./client-ip";
 import { inProduction } from "./environment";
 import { setLinkTarget } from "./link-target";
 import { magicLinkRefusal } from "./magic-link-policy";
@@ -153,6 +152,20 @@ export const auth = betterAuth({
    * session and no cookie.
    */
   databaseHooks: {
+    /**
+     * No account is created through better-auth while there is no admin: the
+     * `/api/auth/sign-up/*` gate in index.ts does not see a social sign-in
+     * callback, which creates the user itself. The first admin is written by
+     * `/api/system/setup` directly (first-run.ts), not through here.
+     * Returning `false` refuses the creation (hardening 2026-11-20).
+     */
+    user: {
+      create: {
+        before: async () => {
+          if (await firstRunRefuses()) return false;
+        },
+      },
+    },
     session: {
       create: {
         before: async (session, context) => {
@@ -342,18 +355,15 @@ export const auth = betterAuth({
    * Where better-auth gets the IP for its attempt limit (3 every 10 s on
    * `/sign-in`, `/sign-up`…; active in production only).
    *
-   * Without `trustedProxies`, better-auth only accepts an `x-forwarded-for` with ONE
-   * entry and, if it carries more, it ends up with no IP and does NOT limit. Behind Caddy →
-   * the panel's nginx → API the header arrives with two (client, Caddy): the login
-   * brute-force limit was off exactly in production. With
-   * the private ranges as trusted proxies it walks the chain from right
-   * to left and takes the first public IP: the visitor's, not whatever
-   * the client wrote in front. Same rule as `client-ip.ts`.
+   * Only `x-kitsuden-client-ip`, which the `/api/auth/*` mount in index.ts sets
+   * (overwriting whatever the client sent) to the address `clientIp()` resolved
+   * with TRUSTED_PROXY_HOPS. Reading the forwarded-for chain here walked it
+   * skipping private entries, so a client could plant one and pick the IP the
+   * login limit counts (security audit H7).
    */
   advanced: {
     ipAddress: {
-      ipAddressHeaders: ["x-forwarded-for", "x-real-ip"],
-      trustedProxies: PROXY_RANGES,
+      ipAddressHeaders: ["x-kitsuden-client-ip"],
     },
   },
 

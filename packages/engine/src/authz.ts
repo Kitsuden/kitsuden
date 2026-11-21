@@ -64,6 +64,21 @@ export function definePolicy<R = unknown>(
   policies.set(resourceType, existing);
 }
 
+/**
+ * Does the rule for `action` on `resourceType` read the resource?
+ *
+ * `true` for `(user, item) => …`, `false` for `(user) => …`, `undefined` if no
+ * rule exists. Used to decide what an agent can call BEFORE a resource
+ * exists: a rule that ignores the resource gives the same answer with `{}`
+ * (that is what the kons' handlers pass to `h.can({})` for create, vote or
+ * moderate). Based on the rule's declared parameters, so a rule that reads the
+ * resource through a default parameter or `arguments` counts as not reading it.
+ */
+export function policyReadsResource(resourceType: string, action: string): boolean | undefined {
+  const rule = policies.get(resourceType)?.get(action);
+  return rule ? rule.length >= 2 : undefined;
+}
+
 /** Defines a global gate (permission not tied to a resource). */
 export function defineGate(name: string, rule: GateRule): void {
   gates.set(name, rule);

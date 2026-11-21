@@ -19,12 +19,12 @@
   }
   const { disbursementId = null, onBack, onSave }: Props = $props();
 
-  let matters = $state<any[]>([]);
+  let projects = $state<any[]>([]);
   let accounts = $state<any[]>([]);
   let loading = $state(true);
   let saving = $state(false);
 
-  let matterId = $state("");
+  let projectId = $state("");
   let description = $state("");
   let amount = $state("");
   let paidFromAccountId = $state("");
@@ -33,16 +33,16 @@
   async function load() {
     try {
       const [mRes, aRes] = await Promise.all([
-        api.getContaMatters(),
+        api.getContaProjects(),
         api.getContaAccounts({ type: "asset", limit: 500 }),
       ]);
-      matters = mRes.data || [];
+      projects = mRes.data || [];
       accounts = aRes.data || [];
 
       if (disbursementId) {
         const dRes = await api.getContaDisbursement(disbursementId);
         disbursement = dRes.data;
-        matterId = disbursement.matterId;
+        projectId = disbursement.projectId;
         description = disbursement.description;
         amount = disbursement.amount;
         paidFromAccountId = disbursement.paidFromAccountId || "";
@@ -55,14 +55,14 @@
   }
 
   async function save() {
-    if (!matterId || !description || !amount || !paidFromAccountId) {
+    if (!projectId || !description || !amount || !paidFromAccountId) {
       toast.error(t("disbursementForm.allFieldsAreRequired"));
       return;
     }
     saving = true;
     try {
       await api.createContaDisbursement({
-        matterId,
+        projectId,
         description,
         amount: String(amount),
         paidFromAccountId,
@@ -70,7 +70,7 @@
       toast.success(t("disbursementForm.disbursementCreated"));
       if (onSave) onSave();
       else {
-        matterId = "";
+        projectId = "";
         description = "";
         amount = "";
         paidFromAccountId = "";
@@ -133,19 +133,19 @@
       <div class="flex flex-wrap items-center gap-3">
         <Badge variant={sb.variant}>{sb.label}</Badge>
         <span class="text-sm text-kitsuden-text-dim"
-          >{disbursement.matterNumber ||
-            matters.find((m) => m.id === disbursement.matterId)?.matterNumber ||
-            disbursement.matterId}</span
+          >{disbursement.projectNumber ||
+            projects.find((m) => m.id === disbursement.projectId)?.number ||
+            disbursement.projectId}</span
         >
       </div>
     {/if}
 
     <div class="grid gap-4 md:grid-cols-2">
       <Field label={t("disbursementForm.matter")}>
-        <Select bind:value={matterId} disabled={!!disbursement}>
+        <Select bind:value={projectId} disabled={!!disbursement}>
           <option value="">{t("common.select")}</option>
-          {#each matters as m}
-            <option value={m.id}>{m.matterNumber} - {m.name}</option>
+          {#each projects as m}
+            <option value={m.id}>{m.number} - {m.name}</option>
           {/each}
         </Select>
       </Field>

@@ -86,6 +86,32 @@ export interface SmtpOptions {
   secure?: boolean;
 }
 
+/** The nodemailer message options for a sent message. */
+export function smtpMessage(message: SentMessage): Record<string, unknown> {
+  return {
+    from: message.from,
+    to: message.to,
+    cc: message.cc.length ? message.cc : undefined,
+    bcc: message.bcc.length ? message.bcc : undefined,
+    replyTo: message.replyTo,
+    subject: message.subject,
+    html: message.html,
+    text: message.text,
+    headers: message.headers,
+    // An attachment `path` is a file on disk, never a URL the API server
+    // fetches (hardening 2026-11-20): nodemailer would otherwise download an
+    // `http(s)://` path from inside the network.
+    disableUrlAccess: true,
+    attachments: message.attachments.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      path: a.path,
+      contentType: a.contentType,
+      cid: a.cid,
+    })),
+  };
+}
+
 /** Sends over SMTP with nodemailer (lazy loading). */
 export function smtpDriver(options: SmtpOptions): MailDriver {
   let transporter: any = null;
@@ -119,26 +145,7 @@ export function smtpDriver(options: SmtpOptions): MailDriver {
       }
     },
     async send(message: SentMessage) {
-      const info = await (
-        await getTransporter()
-      ).sendMail({
-        from: message.from,
-        to: message.to,
-        cc: message.cc.length ? message.cc : undefined,
-        bcc: message.bcc.length ? message.bcc : undefined,
-        replyTo: message.replyTo,
-        subject: message.subject,
-        html: message.html,
-        text: message.text,
-        headers: message.headers,
-        attachments: message.attachments.map((a) => ({
-          filename: a.filename,
-          content: a.content,
-          path: a.path,
-          contentType: a.contentType,
-          cid: a.cid,
-        })),
-      });
+      const info = await (await getTransporter()).sendMail(smtpMessage(message));
       return { messageId: info?.messageId };
     },
   };

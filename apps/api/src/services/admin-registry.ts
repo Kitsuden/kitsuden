@@ -16,6 +16,7 @@ import { join } from "node:path";
 import { file } from "../lib/file";
 import { readGrimoireManifest } from "../lib/grimoire-manifest";
 import { logger } from "../lib/logger";
+import { createSharedRefresh } from "../lib/shared-refresh";
 
 import { scanPackages, KitsudenManifest } from "./scanner";
 import { introspectTable, type IntrospectedColumn } from "./schema-introspector";
@@ -180,8 +181,6 @@ interface CoreModuleWithView {
 }
 
 // Cache to avoid frequent disk reads
-let registryCache: KonAdminConfig[] | null = null;
-let cacheTimestamp = 0;
 const CACHE_TTL = 60_000; // 1 minute in development
 
 /**
@@ -528,12 +527,21 @@ function applyGrimoireOverrides(
   return patched;
 }
 
-export async function buildAdminRegistry(): Promise<KonAdminConfig[]> {
-  // Check cache
-  if (registryCache && Date.now() - cacheTimestamp < CACHE_TTL) {
-    return registryCache;
-  }
+/**
+ * One build at a time, served stale while the next is built (see
+ * `createSharedRefresh`): a cold build with every kon on took 18–120 s, each
+ * request that arrived meanwhile started its own, and Bun cut them at 10 s.
+ */
+const sharedRegistry = createSharedRefresh(() => rebuildAdminRegistry(), {
+  ttlMs: CACHE_TTL,
+  onBackgroundError: (err) => console.error("[admin-registry] background rebuild failed:", err),
+});
 
+export function buildAdminRegistry(): Promise<KonAdminConfig[]> {
+  return sharedRegistry.get();
+}
+
+async function rebuildAdminRegistry(): Promise<KonAdminConfig[]> {
   const kons = await scanPackages("kons");
   const grimoires = await scanGrimoires();
   const activeGrimoireManifest = await loadActiveGrimoireManifest();
@@ -642,8 +650,6 @@ export async function buildAdminRegistry(): Promise<KonAdminConfig[]> {
     return a.name.localeCompare(b.name);
   });
 
-  registryCache = configs;
-  cacheTimestamp = Date.now();
   return configs;
 }
 
@@ -829,10 +835,20 @@ async function detectTables(
   if (kon.tables && Array.isArray(kon.tables)) {
     const configs: AdminTableConfig[] = [];
 
+    // The tables are introspected together, not one after another: six queries
+    // each, in series, made a kon with many tables cost seconds on its own.
+    const introspectedByName = new Map(
+      await Promise.all(
+        kon.tables
+          .filter((t): t is string => typeof t === "string")
+          .map(async (t) => [t, await introspectTable(t)] as const)
+      )
+    );
+
     for (const t of kon.tables) {
       if (typeof t === "string") {
         // Try to introspect from DB for extra metadata
-        const introspected = await introspectTable(t);
+        const introspected = introspectedByName.get(t);
 
         configs.push({
           name: t,
@@ -1120,8 +1136,7 @@ function pascalCase(str: string): string {
  * Clear registry cache (useful after kon installation)
  */
 export function clearAdminRegistryCache() {
-  registryCache = null;
-  cacheTimestamp = 0;
+  sharedRegistry.clear();
 }
 
 /**

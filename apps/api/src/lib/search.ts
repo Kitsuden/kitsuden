@@ -21,6 +21,7 @@ import {
 import type { AppVariables } from "../types/hono";
 
 import { inProduction } from "./environment";
+import { konSwitchedOff } from "./kon-activation";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -130,6 +131,80 @@ export async function searchFullText(options: SearchOptions): Promise<SearchResu
     score: row.score,
     highlights: row.fragment ? [row.fragment] : undefined,
     createdAt: row.created_at,
+  }));
+}
+
+/** A page-builder page that matches a search. */
+export interface PageSearchResult {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  /** Words around the match, from the title, description, meta or the visible blocks' text. */
+  content: string;
+  type: "page";
+  score: number;
+  updatedAt: string;
+}
+
+/**
+ * Pages of the page builder (kon-blocks) that match `query`. Only what anyone may see: published, not
+ * session-only, and only the text of blocks visible now (`is_visible` and its window). Only the string
+ * values of a block's content count (`jsonb_to_tsvector`), not its keys or settings.
+ *
+ * Computed at query time, without a stored vector: a site has hundreds of pages, not millions of rows.
+ */
+export async function searchPages(
+  query: string,
+  limit = 10,
+  executor: Pick<typeof db, "execute"> = db
+): Promise<PageSearchResult[]> {
+  const result = await executor.execute<{
+    id: string;
+    title: string;
+    slug: string;
+    description: string | null;
+    fragment: string;
+    score: number;
+    updated_at: string;
+  }>(sql`
+    SELECT m.id, m.title, m.slug, m.description, m.updated_at,
+           ts_rank_cd(m.doc, m.query) AS score,
+           ts_headline('english', m.body, m.query,
+             'MaxFragments=2,MaxWords=40,MinWords=8,StartSel="",StopSel=""') AS fragment
+    FROM (
+      SELECT p.id, p.title, p.slug, p.description, p.updated_at, q.query,
+             concat_ws(' ', p.title, p.description, p.meta_title, p.meta_description, b.body) AS body,
+             setweight(to_tsvector('english', concat_ws(' ', p.title, p.meta_title)), 'A')
+               || setweight(to_tsvector('english', concat_ws(' ', p.description, p.meta_description)), 'B')
+               || setweight(to_tsvector('english', coalesce(b.body, '')), 'C') AS doc
+      FROM block_pages p
+      CROSS JOIN plainto_tsquery('english', ${query}) AS q(query)
+      LEFT JOIN LATERAL (
+        SELECT string_agg(j.item #>> '{}', ' ') AS body
+        FROM block_contents c
+        CROSS JOIN LATERAL jsonb_path_query(c.content, 'strict $.**') AS j(item)
+        WHERE c.page_id = p.id
+          AND c.is_visible
+          AND (c.visible_from IS NULL OR c.visible_from <= now())
+          AND (c.visible_until IS NULL OR c.visible_until >= now())
+          AND jsonb_typeof(j.item) = 'string'
+      ) b ON true
+      WHERE p.status = 'published' AND NOT p.require_auth
+    ) m
+    WHERE m.doc @@ m.query
+    ORDER BY score DESC, m.id
+    LIMIT ${Math.min(Math.max(limit, 1), 50)}
+  `);
+  return result.rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    description: row.description,
+    content: row.fragment,
+    type: "page" as const,
+    score: Number(row.score),
+    updatedAt: new Date(row.updated_at).toISOString(),
   }));
 }
 
@@ -482,11 +557,26 @@ searchRoutes.post("/", async (c) => {
     return c.json({ error: "Query must be at least 2 characters" }, 400);
   }
 
+  // Pages of the page builder answer in their own list: their scores do not compare with the entries'
+  // (another ranking, and the vector one for hybrid), and mixing them would break `results` paging.
+  // Only on the first page, without a dataset filter, and while kon-blocks is on.
+  const wantsPages =
+    offset === 0 &&
+    !options.datasetId &&
+    body.pages !== false &&
+    !(await konSwitchedOff("kon-blocks").catch(() => false));
+
   try {
-    const results = publicResultsOnly(await search(options), await publicDatasets());
+    const [found, datasets, pages] = await Promise.all([
+      search(options),
+      publicDatasets(),
+      wantsPages ? searchPages(options.query, 10).catch(() => []) : Promise.resolve([]),
+    ]);
+    const results = publicResultsOnly(found, datasets);
     return c.json({
       results,
       total: results.length,
+      pages,
       query: options.query,
       type: options.type,
     });

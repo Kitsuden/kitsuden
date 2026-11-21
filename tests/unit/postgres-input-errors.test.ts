@@ -8,6 +8,9 @@
  *   · the SDK rejects U+0000 in the input, before the handler;
  *   · `toErrorEnvelope` translates the SQLSTATE of an error that escapes.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { postgresInputError, sqlstateOf, toErrorEnvelope } from "../../packages/engine/src/errors";
@@ -60,5 +63,46 @@ describe("the null character is rejected in the input", () => {
     expect(pathWithNullCharacter({ data: { "cla\u0000ve": 1 } })).toBe("data.cla\u0000ve");
     expect(pathWithNullCharacter("stray\u0000")).toBe("_");
     expect(pathWithNullCharacter(null)).toBeNull();
+  });
+});
+
+describe("foreign keys in both directions (23503)", () => {
+  const withDetail = (detail: string) => {
+    const pg = Object.assign(new Error("violates foreign key constraint"), {
+      code: "23503",
+      detail,
+    });
+    return Object.assign(new Error("Failed query: delete from …"), { cause: pg });
+  };
+
+  it("deleting a row others still use says so", () => {
+    const e = postgresInputError(
+      withDetail('Key (id)=(1) is still referenced from table "conta_invoices".')
+    );
+    expect(e?.status).toBe(409);
+    expect(e?.message).toMatch(/still use it/);
+  });
+
+  it("pointing at a row that does not exist keeps its message", () => {
+    const e = postgresInputError(
+      withDetail('Key (client_id)=(1) is not present in table "conta_counterparties".')
+    );
+    expect(e?.message).toMatch(/nonexistent/);
+  });
+});
+
+describe("the data explorer maps input errors instead of answering 500", () => {
+  const explorer = readFileSync(
+    join(__dirname, "..", "..", "apps", "api", "src", "routes", "data-explorer.ts"),
+    "utf8"
+  );
+
+  it("every failure goes through explorerFailure, which uses postgresInputError", () => {
+    expect(explorer).not.toMatch(
+      /return c\.json\(\{ error: messageOf\(error\) \}, 500\);\n\s*\}\n\}\);/
+    );
+    const helper = explorer.slice(explorer.indexOf("function explorerFailure"));
+    expect(helper).toContain("postgresInputError(error)");
+    expect((explorer.match(/explorerFailure\(c,/g) ?? []).length).toBeGreaterThanOrEqual(11);
   });
 });

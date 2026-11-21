@@ -35,6 +35,7 @@ import {
   type CustomerDataGuard,
 } from "@/lib/customer-data";
 import { logger } from "@/lib/logger";
+import { readMcpSettings } from "@/lib/mcp-settings";
 import { END_UNTRUSTED, START_UNTRUSTED, wrapText } from "@/lib/provenance";
 import { cacheGet, cacheSet, isValkeyAvailable, valkeyConfigured } from "@/lib/valkey";
 
@@ -181,6 +182,33 @@ export function runHoldsWrites(
   return options.holdWrites === true || (options.unattended === true && foreignNote);
 }
 
+/**
+ * May this run's answer be read from, and stored in, the response caches? Only a
+ * bare question: no narrowed tools, no per-call context, no earlier turns (passed
+ * by the caller or loaded by `sessionId`) and no event data. The caches key on the
+ * last message, so anything else in the prompt would be answered for someone else.
+ */
+export function runIsCacheable(run: {
+  narrowed: boolean;
+  context?: string;
+  historyTurns: number;
+  event?: unknown;
+}): boolean {
+  return !run.narrowed && !run.context && run.historyTurns <= 0 && run.event === undefined;
+}
+
+/**
+ * Which trace a run continues: `traceId` only when that trace belongs to the same
+ * agent. A caller (a kon, the playground) that passes another agent's trace id
+ * starts a new trace instead of writing into someone else's.
+ */
+export function traceToReuse(
+  trace: { id: string; agentId: string | null } | undefined,
+  agentId: string
+): string | null {
+  return trace && trace.agentId === agentId ? trace.id : null;
+}
+
 const CACHE_TTL_SECONDS = 60 * 60; // 1 hour
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_MEMORY_ITEMS = 5;
@@ -305,7 +333,15 @@ async function runAgentWithCredential(
 
   // A cached answer is keyed by the last message only. With per-call context, history or narrowed tools, two
   // callers asking the same words are asking different things (two visitors: "what do I owe?").
-  const cacheable = !narrowed && !options.context && !options.history?.length;
+  // Nor when the turn carries the session's earlier turns (loaded by `sessionId`), or
+  // an event's data: the semantic cache matches on the last message only, so another
+  // session's or another event's answer would come back (security audit 2026-11-19).
+  const cacheable = runIsCacheable({
+    narrowed,
+    context: options.context,
+    historyTurns: messages.length - 2,
+    event: options.customerData?.event,
+  });
 
   // 7. Check cache
   //
@@ -509,6 +545,10 @@ async function runAgentWithCredential(
           holdWrites,
           customerData: prompt.guard,
           runCredentialId,
+          // The same daily quotas and untrusted-content wrapper as over /api/mcp.
+          writesPerDay: agent.writesPerDay ?? null,
+          budgetUnitsPerDay: agent.budgetUnitsPerDay ?? null,
+          untrustedWrap: readMcpSettings(agent.mcpSettings).untrustedWrap,
         });
       } catch (err: unknown) {
         ok = false;
@@ -748,9 +788,8 @@ async function createOrUpdateTrace(
       .from(agentTraces)
       .where(eq(agentTraces.id, options.traceId))
       .limit(1);
-    if (trace) {
-      return { id: trace.id };
-    }
+    const reused = traceToReuse(trace, agentId);
+    if (reused) return { id: reused };
   }
 
   const [trace] = await db
@@ -791,7 +830,7 @@ async function buildMessages(
         role: h.role === "assistant" ? "assistant" : "user",
         content: h.content,
       }))
-    : await loadSessionHistory(sessionId);
+    : await loadSessionHistory(sessionId, agentId);
   messages.push(...sessionHistory.slice(-MAX_HISTORY_MESSAGES));
 
   // Current message, with memories and notes before it as reference material
@@ -917,13 +956,15 @@ export function knowledgeSection(
 }
 
 /**
- * Loads a session's history from agentTraces/agentTraceSteps.
+ * Loads a session's history from agentTraces/agentTraceSteps: only this agent's
+ * traces. A session id is just a string the caller passes; another agent's
+ * session must not put that agent's conversation into this run's prompt.
  */
-async function loadSessionHistory(sessionId: string): Promise<LLMMessage[]> {
+async function loadSessionHistory(sessionId: string, agentId: string): Promise<LLMMessage[]> {
   const traces = await db
     .select()
     .from(agentTraces)
-    .where(eq(agentTraces.sessionId, sessionId))
+    .where(and(eq(agentTraces.sessionId, sessionId), eq(agentTraces.agentId, agentId)))
     .orderBy(agentTraces.createdAt);
 
   const messages: LLMMessage[] = [];

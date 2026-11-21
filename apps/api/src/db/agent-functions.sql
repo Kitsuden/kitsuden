@@ -225,9 +225,11 @@ DECLARE
   own text;
 BEGIN
   PERFORM kitsuden_rls_team(p_table, p_kon, p_view, p_change);
+  -- `::text`: an owner column of type uuid (or integer) has no `=` with text, so
+  -- the policy could not be created and the kon's migration failed (2026-11-20).
   own := format(
     '(COALESCE(current_setting(''app.current_user_id'', true), '''') <> '''' '
-    || 'AND %I = current_setting(''app.current_user_id'', true))', p_owner_column);
+    || 'AND %I::text = current_setting(''app.current_user_id'', true))', p_owner_column);
   EXECUTE format('DROP POLICY IF EXISTS %I ON %I', p_table || '_owner', p_table);
   EXECUTE format('CREATE POLICY %I ON %I FOR ALL TO PUBLIC USING (%s) WITH CHECK (%s)',
     p_table || '_owner', p_table, own, own);

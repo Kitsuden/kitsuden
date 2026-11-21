@@ -12,13 +12,13 @@
  * at the start of the handler, with the same 401/403 responses.
  */
 
-import { createHash } from "node:crypto";
-
 import {
   can,
   defineOperation,
   eqEnum,
+  etagMatches,
   operationsRouter,
+  weakEtag,
   type AuthzUser,
   type AnyOperation,
 } from "@kitsuden/engine";
@@ -249,16 +249,26 @@ function expectedVersion(header: string | undefined, bodyValue: unknown): Date |
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** The `ETag` of a GET body: weak, because the JSON is re-serialized on every request. */
-function etagOf(body: unknown): string {
-  return `W/"${createHash("sha1").update(JSON.stringify(body)).digest("base64url")}"`;
+/** Postgres's text of a `timestamptz` (`2026-11-20 12:00:00.123456+00`). */
+const PG_TIMESTAMPTZ =
+  /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:[+-]\d{2}(?::?\d{2})?|Z)?$/;
+
+/** The opaque cursor of the page list: base64url of `[updatedAt as Postgres text, id]`. */
+function encodePageCursor(at: string, id: string): string {
+  return Buffer.from(JSON.stringify([at, id]), "utf8").toString("base64url");
 }
 
-/** Does `If-None-Match` name this ETag (weak comparison, as RFC 9110 asks for GET)? */
-function notModified(ifNoneMatch: string | undefined, etag: string): boolean {
-  if (!ifNoneMatch) return false;
-  const bare = (t: string) => t.trim().replace(/^W\//, "");
-  return ifNoneMatch.split(",").some((t) => t.trim() === "*" || bare(t) === bare(etag));
+function decodePageCursor(cursor: string): { at: string; id: string } | null {
+  try {
+    const value = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as unknown;
+    if (!Array.isArray(value) || value.length !== 2) return null;
+    const [at, id] = value as [unknown, unknown];
+    if (typeof at !== "string" || typeof id !== "string") return null;
+    if (!IS_UUID.test(id) || !PG_TIMESTAMPTZ.test(at)) return null;
+    return { at, id };
+  } catch {
+    return null;
+  }
 }
 
 /** The latest `updatedAt` of a page and its blocks, for `Last-Modified`. */
@@ -458,7 +468,23 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
         const layout = typeof query.layout === "string" ? query.layout : "";
         const search = typeof query.search === "string" ? query.search.slice(0, 200) : "";
 
-        const key = `pages:list:${status}:${limit}:${offset}:${layout}:${search}:${priv ? "priv" : "pub"}`;
+        /**
+         * ── CURSOR PAGING ──────────────────────────────────────────────────────
+         *
+         * A site that walks every page (a sitemap, a static build, Inti's page picker) paid a
+         * `count(*)` per batch, and an OFFSET that grows: each batch re-read the ones before it, and a
+         * page edited meanwhile moved and was skipped or repeated. With `?cursor=` (or `?paging=cursor`
+         * for the first batch) the list is keyset-paged on (updatedAt, id), counts nothing, and answers
+         * `nextCursor` (`null` on the last batch). The cursor is opaque: pass back what came.
+         */
+        const cursorMode = typeof query.cursor === "string" || query.paging === "cursor";
+        let after: { at: string; id: string } | null = null;
+        if (typeof query.cursor === "string" && query.cursor !== "") {
+          after = decodePageCursor(query.cursor);
+          if (!after) return c.json({ error: "Invalid cursor" }, 400);
+        }
+
+        const key = `pages:list:${status}:${limit}:${cursorMode ? `c:${query.cursor ?? ""}` : offset}:${layout}:${search}:${priv ? "priv" : "pub"}`;
         const result = await cachedQuery(key, 60, async () => {
           const whereConditions = [eqEnum(pages.status, status)!];
           if (!priv) whereConditions.push(eq(pages.requireAuth, false));
@@ -473,21 +499,50 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
             whereConditions.push(sql`${pages.title} ILIKE ${`%${search}%`}`);
           }
 
+          if (after) {
+            // Full precision: the cursor carries Postgres's own text of the timestamp (microseconds),
+            // which a JavaScript Date would round to milliseconds and so skip or repeat rows.
+            whereConditions.push(
+              sql`(${pages.updatedAt}, ${pages.id}) < (${after.at}::timestamptz, ${after.id}::uuid)`
+            );
+          }
+
+          const columns = {
+            id: pages.id,
+            title: pages.title,
+            slug: pages.slug,
+            description: pages.description,
+            status: pages.status,
+            layout: pages.layout,
+            isHomepage: pages.isHomepage,
+            publishedAt: pages.publishedAt,
+            updatedAt: pages.updatedAt,
+          };
+
+          if (cursorMode) {
+            const rows = await dbInstance
+              .select({ ...columns, cursorAt: sql<string>`${pages.updatedAt}::text` })
+              .from(pages)
+              .where(and(...whereConditions))
+              .orderBy(desc(pages.updatedAt), desc(pages.id))
+              .limit(limit + 1);
+            const more = rows.length > limit;
+            const batch = more ? rows.slice(0, limit) : rows;
+            const last = batch[batch.length - 1];
+            return {
+              docs: batch.map(({ cursorAt: _cursorAt, ...doc }: Record<string, unknown>) => doc),
+              limit,
+              nextCursor:
+                more && last ? encodePageCursor(String(last.cursorAt), String(last.id)) : null,
+            };
+          }
+
           const pageList = await dbInstance
-            .select({
-              id: pages.id,
-              title: pages.title,
-              slug: pages.slug,
-              description: pages.description,
-              status: pages.status,
-              layout: pages.layout,
-              isHomepage: pages.isHomepage,
-              publishedAt: pages.publishedAt,
-              updatedAt: pages.updatedAt,
-            })
+            .select(columns)
             .from(pages)
             .where(and(...whereConditions))
-            .orderBy(desc(pages.updatedAt))
+            // `id` breaks ties: two pages saved in the same instant kept no stable order between batches.
+            .orderBy(desc(pages.updatedAt), desc(pages.id))
             .limit(limit)
             .offset(offset);
 
@@ -574,7 +629,7 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
          * client may keep the copy but must revalidate it; drafts and session pages stay
          * `private` so a shared cache never holds them.
          */
-        const etag = etagOf(body);
+        const etag = weakEtag(body);
         const lastModified = lastModifiedOf(pageData, pageData.blocks ?? []);
         c.header("ETag", etag);
         if (lastModified) c.header("Last-Modified", lastModified.toUTCString());
@@ -584,7 +639,7 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
             ? "no-cache"
             : "private, no-cache"
         );
-        if (notModified(c.req.header("if-none-match"), etag)) {
+        if (etagMatches(c.req.header("if-none-match"), etag)) {
           return c.body(null, 304);
         }
 
@@ -910,8 +965,17 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
         if (body.customCss !== undefined) updates.customCss = body.customCss;
         if (body.requireAuth !== undefined) updates.requireAuth = body.requireAuth === true;
 
+        // The slug before the change: a site keeps its page under the OLD address in its cache and
+        // must purge it too, so `page:updated` carries it (`previousSlug`) when the page is renamed.
+        let previousSlug: string | null = null;
         // Handle slug update with duplicate check
         if (body.slug !== undefined) {
+          const [current] = await dbInstance
+            .select({ slug: pages.slug })
+            .from(pages)
+            .where(eq(pages.id, id))
+            .limit(1);
+          previousSlug = current?.slug ?? null;
           const [existing] = await dbInstance
             .select({ id: pages.id })
             .from(pages)
@@ -945,11 +1009,17 @@ export function blockOperations(ctx: KonContext): AnyOperation[] {
           return c.json({ error: "Page not found" }, 404);
         }
 
+        const renamed = previousSlug !== null && previousSlug !== updated.slug;
         await invalidateCache(`page:${id}:*`);
         await invalidateCache(`page:${updated.slug}:*`);
+        if (renamed) await invalidateCache(`page:${previousSlug}:*`);
         await invalidateCache("pages:*");
         await invalidateCache("render:*");
-        ctx.events?.emit("page:updated", { id: updated.id, slug: updated.slug });
+        ctx.events?.emit("page:updated", {
+          id: updated.id,
+          slug: updated.slug,
+          ...(renamed ? { previousSlug } : {}),
+        });
         return c.json(updated);
       },
     })

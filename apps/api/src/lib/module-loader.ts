@@ -63,7 +63,7 @@ import {
   background,
 } from "../../../../packages/engine/src/rls-request";
 
-import { KONS_SDK_VERSION } from "@kitsuden/shared";
+import { KONS_SDK_VERSION, mergeKonEventDeclarations } from "@kitsuden/shared";
 import { eq, inArray, sql as sqlTag } from "drizzle-orm";
 
 import { db } from "../db";
@@ -75,22 +75,29 @@ import { KON_REGISTRY } from "../services/module-registry";
 
 import { absorbedReason } from "./absorbed-kons";
 import { auth } from "./auth";
-import { invalidateCache } from "./cache";
+import { invalidateCache, invalidateTags } from "./cache";
 import { konConnections } from "./connections";
 import type { DeferredKon } from "./deferred-kons";
 import { rawNodeEnv } from "./environment";
 import { events } from "./events";
 import { file } from "./file";
 import { readGrimoireKons, readKonJsonManifest } from "./grimoire-manifest";
-import { konIdOf, installedKon, listInstalledKons, incompatibleSdkReason } from "./installed-kons";
+import {
+  konIdOf,
+  installedKon,
+  listInstalledKons,
+  incompatibleSdkReason,
+  konMountPathProblem,
+} from "./installed-kons";
 import { checkKonCompatibility } from "./kitsuden-compat";
 import { konActivationGuard, trackStartupKon } from "./kon-activation";
 import { konEntities } from "./kon-entities";
 import { registerKonRouter } from "./kon-routes";
 import { konSecrets } from "./kon-secrets";
-import { announceKon, bindKonContext } from "./kon-setup";
+import { announceKon, bindKonContext, konAgentRunOptions } from "./kon-setup";
 import { logger } from "./logger";
 import { registerKonToolsets } from "./mcp-settings";
+import { runAsKon } from "./queue-kon-access";
 import { limiterEnabled, rateLimit } from "./rate-limiter";
 import { realtimeManager } from "./realtime";
 import { sitePublicUrl } from "./site-settings";
@@ -132,10 +139,15 @@ interface AppWithMiddleware {
  * With `konId` (a kon loaded by `loadKons`), an activation guard goes first:
  * once the kon is disabled or uninstalled it answers 404 "Kon not activated"
  * instead of serving until the next restart (`lib/kon-activation.ts`).
+ * The request then runs in the kon's scope: what its code queues or handles
+ * through `@kitsuden/engine` is checked as this kon (`lib/queue-kon-access.ts`).
  */
 export function mountKonRls(app: AppWithMiddleware, route: string, konId?: string): void {
   const base = route.replace(/\/+$/, "");
   if (konId) {
+    const asKon: MiddlewareHandler = (_c, next) => runAsKon(konId, () => next());
+    app.use(base, asKon);
+    app.use(`${base}/*`, asKon);
     app.use(base, konActivationGuard(konId));
     app.use(`${base}/*`, konActivationGuard(konId));
   }
@@ -412,6 +424,9 @@ export function createKonContext(): KonContext {
       invalidate: async (pattern: string) => {
         await invalidateCache(pattern);
       },
+      invalidateTags: async (...tags: string[]) => {
+        await invalidateTags(...tags);
+      },
     },
 
     // Events
@@ -431,13 +446,9 @@ export function createKonContext(): KonContext {
     agents: {
       run: async (options) => {
         const { runAgent } = await import("../services/agent-engine");
-        // A kon serves many people with one agent: memory and brain notes are shared by every session of
-        // that agent, so one visitor would read what another said. Off, whatever the agent is set to.
-        const result = await runAgent({
-          ...options,
-          enableMemory: false,
-          enableBrainSearch: false,
-        });
+        // Only the KonAgentRun fields, never a spread: a kon in plain JS could pass engine-only options
+        // (H70). Memory and brain notes off: one agent serves every visitor (lib/kon-setup.ts).
+        const result = await runAgent(konAgentRunOptions(options));
         return {
           response: result.response,
           sessionId: result.sessionId,
@@ -1233,7 +1244,8 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
       for (const importPath of tryImports) {
         if (existsSync(importPath)) {
           try {
-            mod = await import(pathToFileURL(importPath).href);
+            // In its kon scope: a queue it registers at import is checked as this kon.
+            mod = await runAsKon(kon.id, () => import(pathToFileURL(importPath).href));
             break;
           } catch (err) {
             console.log(`    ⚠️  Failed to import from ${importPath}: ${(err as Error).message}`);
@@ -1288,15 +1300,19 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
           throw new Error(codeSdkReason);
         }
 
+        // Apply custom mount path: kon definition > kon.json > default. Checked before any of the
+        // kon's code runs: `/`, `/api` or a wildcard would sit in front of the whole API (H46).
+        const finalMountPath = konDef.mountPath || customMountPath || mountPath;
+        const mountProblem = konMountPathProblem(kon.id, finalMountPath);
+        if (mountProblem) throw new Error(mountProblem);
+
         // The context this kon receives: the shared one, with its kon-scoped services tied to its id
         // (lib/kon-setup.ts), so it cannot act as another kon.
         const konContext = bindKonContext(context, konDef.id);
 
         // Create router with injected context
-        const router = konDef.createRouter(konContext);
-
-        // Apply custom mount path: kon definition > kon.json > default
-        const finalMountPath = konDef.mountPath || customMountPath || mountPath;
+        // Its code runs in its kon scope from here on (lib/queue-kon-access.ts).
+        const router = runAsKon(konDef.id, () => konDef.createRouter(konContext));
 
         // Rate limits declared by the kon. They are mounted BEFORE the router
         // because in Hono middleware only runs if it was registered before the
@@ -1305,7 +1321,11 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
         applyKonRateLimits(app, konDef, finalMountPath);
         // Its tool groups for agents (`kon:<id>/<set>`), before any MCP session reads them.
         registerKonToolsets(konDef.id, konDef.mcpToolsets);
-        await announceKon(konDef, konContext);
+        // kon.json may declare its events too (`events.public`, `events.subscribers`): merged here.
+        await announceKon(
+          { ...konDef, events: mergeKonEventDeclarations(konDef.events, kon.manifest?.events) },
+          konContext
+        );
 
         // Every request to the kon, in its RLS transaction (see `theRequestDb`),
         // behind the activation guard: disabling it from the panel takes effect now.
@@ -1320,7 +1340,7 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
           registerMountedOperations(
             kon.id,
             finalMountPath,
-            operationsOf(konDef, konContext),
+            runAsKon(konDef.id, () => operationsOf(konDef, konContext)),
             router as never
           );
         }
@@ -1338,7 +1358,8 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
 
         // Execute lifecycle hooks
         if (konDef.hooks?.onStartup) {
-          await konDef.hooks.onStartup(konContext);
+          const onStartup = konDef.hooks.onStartup;
+          await runAsKon(konDef.id, () => onStartup(konContext));
           initExecuted = true;
         }
 
@@ -1360,6 +1381,8 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
       // ═══════════════════════════════════════════════════════════════════════
       for (const [, exportValue] of Object.entries(mod)) {
         if (isHonoRouter(exportValue)) {
+          const legacyMountProblem = konMountPathProblem(kon.id, mountPath);
+          if (legacyMountProblem) throw new Error(legacyMountProblem);
           trackStartupKon(kon.id, hadModulesRow(kon.id));
           mountKonRls(app, mountPath, kon.id);
           app.route(mountPath, exportValue as Hono);
@@ -1374,7 +1397,7 @@ export async function loadKons(app: Hono<any>, existingContext?: KonContext): Pr
       // ═══════════════════════════════════════════════════════════════════════
       for (const [exportName, exportValue] of Object.entries(mod)) {
         if (exportName.startsWith("init") && typeof exportValue === "function") {
-          await (exportValue as () => Promise<void>)();
+          await runAsKon(kon.id, () => (exportValue as () => Promise<void>)());
           initExecuted = true;
         }
       }
@@ -1497,6 +1520,7 @@ async function reserveDisabledKonPaths(
         mountRoutes: await candidateMountRoutes(kon.path, manifest, isFromGrimoire),
         path: kon.path,
         hasRateLimits: !!(manifest as { rateLimits?: unknown }).rateLimits,
+        manifestEvents: (manifest as { events?: unknown }).events,
       });
     }
 

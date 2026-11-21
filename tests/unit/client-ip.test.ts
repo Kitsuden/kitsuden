@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   isPrivate,
@@ -23,6 +23,14 @@ const ctx = (headers: Record<string, string>, socket?: string) =>
     req: { header: (n: string) => headers[n.toLowerCase()] },
   }) as never;
 
+// TRUSTED_PROXY_HOPS unset (one proxy, a public socket means none) unless a test sets it.
+const hopsBefore = process.env.TRUSTED_PROXY_HOPS;
+afterEach(() => {
+  if (hopsBefore === undefined) delete process.env.TRUSTED_PROXY_HOPS;
+  else process.env.TRUSTED_PROXY_HOPS = hopsBefore;
+});
+delete process.env.TRUSTED_PROXY_HOPS;
+
 describe("clientIp", () => {
   it("with no proxy in front (public socket), it ignores what the client writes in x-forwarded-for", () => {
     expect(clientIp(ctx({ "x-forwarded-for": "1.1.1.1" }, "203.0.113.9"))).toBe("203.0.113.9");
@@ -35,13 +43,15 @@ describe("clientIp", () => {
     expect(clientIp(ctx({ "x-forwarded-for": "203.0.113.7" }, "172.18.0.5"))).toBe("203.0.113.7");
   });
 
-  it("behind Caddy → nginx (two hops): the first public one starting from the right", () => {
+  it("behind Caddy → nginx (TRUSTED_PROXY_HOPS=2): the second entry from the right", () => {
+    process.env.TRUSTED_PROXY_HOPS = "2";
     expect(clientIp(ctx({ "x-forwarded-for": "203.0.113.7, 172.18.0.4" }, "172.18.0.6"))).toBe(
       "203.0.113.7"
     );
   });
 
   it("what the client puts in front does not change its bucket", () => {
+    process.env.TRUSTED_PROXY_HOPS = "2";
     const a = clientIp(
       ctx({ "x-forwarded-for": "1.2.3.4, 203.0.113.7, 172.18.0.4" }, "172.18.0.6")
     );
@@ -148,9 +158,12 @@ describe("rate-limiter.ts", () => {
     expect(source).not.toContain('"/api/auth/login"');
   });
 
-  it("better-auth receives the trusted proxies (otherwise it does not limit with two hops)", () => {
+  it("better-auth reads only the client IP the core resolved (never a header the client sent)", () => {
     const auth = readFileSync(resolve(__dirname, "../../apps/api/src/lib/auth.ts"), "utf8");
-    expect(auth).toMatch(/trustedProxies:\s*PROXY_RANGES/);
+    expect(auth).toMatch(/ipAddressHeaders:\s*\["x-kitsuden-client-ip"\]/);
+    expect(auth).not.toMatch(/x-forwarded-for/);
+    const index = readFileSync(resolve(__dirname, "../../apps/api/src/index.ts"), "utf8");
+    expect(index).toMatch(/headers\.set\("x-kitsuden-client-ip", clientIp\(c\)\)/);
   });
 
   it("there is no second rateLimit() per route counting each request twice", () => {

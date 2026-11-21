@@ -103,6 +103,17 @@ const RESERVED_KEYS = new Set([
   "ALLOWED_ORIGINS",
   "PORT",
   "HOST",
+  // Which X-Forwarded-For entry is the client (lib/client-ip.ts, security audit H7):
+  // a larger number lets clients choose the IP the rate limiter sees.
+  "TRUSTED_PROXY_HOPS",
+  // Security knobs and endpoints read at runtime (hardening 2026-11-20): the
+  // metrics bearer token, the prompt-injection classifier, and the AI
+  // providers' base URLs (a new one would receive the provider key from `.env`).
+  "METRICS_TOKEN",
+  "INJECTION_CLASSIFIER_URL",
+  "OPENAI_BASE_URL",
+  "ANTHROPIC_BASE_URL",
+  "OLLAMA_BASE_URL",
 ]);
 const RESERVED_PREFIXES = [
   "LD_",
@@ -121,6 +132,11 @@ const RESERVED_PREFIXES = [
   "QUEUE_",
   "RATE_LIMIT_",
   "AGENT_KEY_",
+  // Approval cache lifetime, idempotency fail mode, OAuth token lifetimes and
+  // limits (hardening 2026-11-20).
+  "APPROVALS_",
+  "IDEMPOTENCY_",
+  "OAUTH_",
 ];
 
 export function reservedSecretKey(key: string): boolean {

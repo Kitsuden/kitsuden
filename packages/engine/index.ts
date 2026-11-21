@@ -71,7 +71,8 @@ export { realtimeManager } from "../../apps/api/src/lib/realtime";
 export { z } from "./zod";
 
 // ── Queue (Postgres, transactional outbox) ──
-export { queue, PermanentError } from "./src/queue";
+// Kons get the checked queue: their names stay in their own namespace (docs/kons/queues.md).
+export { konQueue as queue, PermanentError } from "./src/queue";
 export {
   configureEffects,
   runEffect,
@@ -89,7 +90,8 @@ export type {
 export { emailQueue, setupWorkers } from "../../apps/api/src/lib/queue";
 
 // ── Cache ──
-export { cachedQuery, invalidateCache } from "../../apps/api/src/lib/cache";
+export { cachedQuery, invalidateCache, invalidateTags } from "../../apps/api/src/lib/cache";
+export { conditionalJson, etagMatches, weakEtag, type ConditionalOptions } from "./src/http-cache";
 
 // ── Valkey Connection ──
 export {
@@ -365,6 +367,7 @@ export {
   can,
   authorize,
   policyMap,
+  policyReadsResource,
   resetAuthz,
   requireGate,
   requirePolicy,

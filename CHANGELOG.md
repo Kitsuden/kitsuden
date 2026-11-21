@@ -365,6 +365,117 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `RATE_LIMIT_*` and `AGENT_KEY_*` are reserved keys, so an agent can no longer turn off job budgets.
 - Security: `reports_aggregate` and running reports need, for an agent, a scope of the kon that owns
   the table, and refuse the columns a kon lists in `kon.json` `reportAccess.restricted`.
+- Security: the secrets manager also reserves `APPROVALS_*`, `IDEMPOTENCY_*`, `OAUTH_*`, `METRICS_TOKEN`,
+  `INJECTION_CLASSIFIER_URL` and the AI providers' base URLs; set them in `.env`.
+- Security: data source responses show header names with a masked value instead of the stored token;
+  a `PUT` that sends the mask back keeps the stored value.
+- Security: the mailer quotes display names that hold special characters and refuses a recipient that
+  is not one well-formed address, so a name or value with a comma cannot add recipients.
+- Security: a `core:send-mail` rule step fills `{{…}}` in `to`, `cc`, `bcc` and `replyTo` as text, so
+  an event value that is a list no longer sends the mail to every address in it.
+- Security: `requireAdmin` and `requireScope` honour an agent key's `!pattern` denials, `admin`
+  included, and `POST /api/mail/test` refuses a key that denies `mail:send`.
+- Security: `!user:act` now stops an agent key with `admin` or `user:act` from counting as a
+  signed-in account.
+- Security: `/api/mail` and `/api/runs` sit behind the admin prefix gate, which re-reads the role from
+  the database and applies the agent's denials.
+- Security: first-run setup without a token (development API on loopback) needs a JSON body and a
+  loopback `Host` and `Origin`, so a web page or DNS rebinding cannot claim the first administrator.
+- Security: while no administrator exists, better-auth creates no account at all, so a first social
+  sign-in is refused like a sign-up.
+- Security: an incoming webhook with `authType: "bearer"` and no secret refuses every request, and an
+  HMAC signature is checked only against the raw string body.
+- Security: regenerating an agent's token (`POST /api/v1/agents/:id/token`) revokes its earlier static
+  keys, and editing or deleting an agent over REST writes an audit entry.
+- Security: `/llms.txt` sends `Vary: Origin, Host`, since its links come from the request's Host, and
+  `GET /api/system/active-theme-config` no longer returns the error message on a 500.
+- Security: a proposal's `before` values were read as the agent; an approver now sees only those their
+  own access shows (the row is read again with their session), others are marked `beforeHidden`.
+- Security: the agent's evidence on a proposal is hidden, like its body and diff, from someone who
+  cannot approve it, and only such a person can schedule or close the proposal's later reviews.
+- Security: an approved MCP record update no longer resends fields that were unchanged when proposed,
+  so it cannot overwrite a newer value with a stale one.
+- Security: approvals settings no longer fall back to "off" when the database does not answer at
+  start-up or one stored value is invalid; only a database without the table keeps the old default.
+- Security: a proposal made without a key replays with the scopes stored on it, never the agent's
+  full set.
+- Security: an MCP tool whose path parameters land on a sibling operation's route (an `id` equal to a
+  static segment) is refused, so it cannot run that operation past the agent's `allowedTools`.
+- Security: the SMTP driver never downloads an attachment `path` that is a URL; a path is a file on
+  disk set by code.
+- Security: a page's `customCss` cannot select on the `value` attribute (a way to read form fields
+  through `url()`), and CSS escapes or comments no longer hide `@import` from the check.
+- Security: a kon tool action (`agent.tool:…`) needs `mcp:write`, not `mcp:read`, unless it
+  declares `meta.readOnly: true`.
+- Security: tool calls made by agent runs in the engine spend the agent's daily write and budget
+  quotas, and use the agent's untrusted-content wrapper (a kon tool action's result included).
+- Security: an engine run with event data or earlier session turns skips the response caches; a
+  session's history and a `traceId` are only reused for the agent they belong to.
+- Security: external MCP servers and their OAuth endpoints are called through `pinnedFetch`, so the
+  connection uses the addresses that were checked (no DNS rebinding).
+- Security: changing an external MCP server's URL to another origin forgets its auth header, unless
+  the same change sets a new one; a server name whose slug another server has is refused.
+- Security: external MCP OAuth refuses metadata whose `resource` or `issuer` names another server,
+  and the panel shows the token endpoint's `error` and `token_type` only when they are plain codes.
+- Security: a kon hears another kon's events only when that kon shares them, in `events.public` or
+  `events.subscribers` (in `defineKon` or `kon.json`); built-in lists keep the current cross-kon
+  subscriptions working. kon-dc no longer receives `koe:message.received`. See docs/kons/events.md.
+- Security: a kon emits only in its own namespace; an event under the core's or another kon's name is
+  dropped and logged.
+- Security: activating a switched-off kon without a restart checks the SDK its code declares, and
+  refuses code whose kon id is not the installed one.
+- Security: a kon is mounted only at `/api/<segment>…`; a kon declaring `/`, `/api` or a wildcard is
+  not loaded.
+- Fix: table changes reach realtime subscribers again; they were encoded twice and the row filter
+  dropped them.
+- Security: a kon switched off from the panel stops authorizing its realtime channels at once, and a
+  second loaded kon with the same short id cannot take over its channels.
+- Security: `ctx.realtime.broadcast` sends only on the kon's own channels (`kon:<short>:` or
+  `<short>:`), not on `table:`, `entry:`, `content:`, `user:` or another kon's.
+- Security: a kon id with `--` or a trailing `-` cannot keep automation rules, so its rule slugs cannot
+  collide with another kon's.
+- Security: a kon's rule step is validated again with the config filled from the event; a refused
+  step fails without running.
+- Security: `ctx.agents.run` passes the engine only the documented `KonAgentRun` fields.
+- Security: kon assets no longer fall back to `packages/core/<id>`, so a folder there that is not a
+  kon (or `packages/core` itself, for the id `kon-`) is never served.
+- Security: signed `/media` addresses of private files percent-encode the key, so a `?`, `#` or `%`
+  in a key no longer cuts the path short.
+- Security: an rlsRule with an operator the builder does not know matches no row instead of being
+  dropped, which opened the whole dataset.
+- Security: the database policy that opens public datasets honours an agent's
+  `!datasets:<slug>:read` denial (migration 0092), as the application already did.
+- Security: the data explorer refuses to sort by, or write, a secret column, and a write to a table
+  read by introspection refuses a field name that is not a plain identifier instead of rewriting it.
+- Security: `GET /api/data-sets/:id/indexes/suggest` answers 404 for a dataset the caller cannot see.
+- Security: `kitsuden_links` treats only an empty id and role as the system, and a row without owner
+  is written only by the system and `admin` (migration 0093); the RLS helper functions run as their
+  caller with a fixed `search_path`.
+- Fix: `kitsuden_rls_owned` works with a uuid owner column.
+- Security: the client IP counts `TRUSTED_PROXY_HOPS` proxies from the right of `X-Forwarded-For`
+  (0 = the socket only) instead of skipping private entries, which let a client plant the IP the
+  rate limiter saw. Unset means one proxy; the TLS overlay sets 2. Upgrade: with one proxy of your
+  own in front of the API nothing changes; with two, set `TRUSTED_PROXY_HOPS=2`
+  (docs/install/variables.md). better-auth's own sign-in limiter now reads the same resolved IP.
+- Startup: in production outside public mode, an unset or localhost `BETTER_AUTH_URL`, `ADMIN_URL`,
+  `WEB_URL` or `ALLOWED_ORIGINS` prints a warning naming each variable. It does not stop the start
+  (a LAN or laptop install may mean it); public mode still refuses.
+- Security: the external MCP OAuth callback only completes for the admin who started it (same
+  session) or the browser holding the HttpOnly binding cookie the start sets; anyone else burns the
+  state before any token exchange. Upgrade: open the authorization URL in the browser that started
+  it, or one signed in as the same admin.
+- Security: static agent keys record who minted them (`created_by`, migration 0094); when that
+  person loses `admin` or their account is deleted, their live static keys are revoked
+  (`revoked_by = system:demotion`) with an audit entry. Upgrade: keys minted before 0094 have no
+  creator and keep working; rotate them to tie them to an admin (docs/agents/permissions.md).
+- Security: an agent's `!` deny can now close a legacy core route by its `core:<area>:<access>`
+  name (`!core:secrets:*`, `!core:*:write`), `admin` included. Upgrade: a deny with a leading
+  wildcard such as `!*:write` now also covers legacy core routes (docs/agents/permissions.md).
+- Security: kon queue names are scoped per kon (`<short id>:`), so a kon cannot handle another
+  kon's queue or a core one (`kitsuden-*`), and it queues jobs elsewhere only when the owner opens
+  the queue (`senders`) or the core allows it; kons also get `ctx.queue`. Upgrade: koe, chat and
+  ingest keep their names; another kon's plain name (`sync`) becomes `<short>:sync`, and jobs
+  already queued under `sync` still drain (docs/kons/queues.md).
 
 ## [0.9.0-beta]
 

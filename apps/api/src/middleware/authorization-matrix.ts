@@ -753,7 +753,8 @@ const CORE_MATRIX: Record<string, Level> = {
   "POST /api/admin/mcp-servers/:id/oauth/start": "admin",
   "DELETE /api/admin/mcp-servers/:id/oauth": "admin",
   // The OAuth redirect: the browser returns from the authorization server; the
-  // single-use state authorizes it (lib/external-mcp-oauth.ts).
+  // single-use state names it, and it must come from the admin who started or the
+  // browser holding the binding cookie (lib/external-mcp-oauth.ts, finishedByStarter).
   "GET /api/mcp-oauth/callback": "public",
   "GET /api/admin/rate-limits": "admin",
   "GET /api/admin/requests": "admin",

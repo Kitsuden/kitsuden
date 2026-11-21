@@ -1666,7 +1666,7 @@ const es = {
     paid: "Pagado",
     billed: "Facturado",
     pending: "Pendiente",
-    matter: "Expediente",
+    matter: "Proyecto",
     paidFromAccount: "Pagado desde la cuenta",
     amount: "Importe",
     whatWasPaidFor: "¿Qué se pagó?",

@@ -29,6 +29,8 @@ import {
   type ReportDefinition,
 } from "@kitsuden/shared";
 
+import { forgetKonEventSharing, setKonEventSharing } from "./kon-event-access";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Events
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,6 +65,25 @@ const CORE_EVENTS: KonEventCatalogEntry[] = [
     source: "core",
     description: "A blog post was published.",
     payload: { post: "the post as stored" },
+    listeners: [],
+  },
+  {
+    name: "page:updated",
+    source: "core",
+    description:
+      "A page-builder page or one of its blocks changed (after commit). What a site's cache purge listens to (docs/install/inti.md).",
+    payload: {
+      id: "uuid of the page",
+      slug: "the page's slug now",
+      previousSlug: "only when the page was renamed: the slug it had, which a site must purge too",
+    },
+    listeners: [],
+  },
+  {
+    name: "page:deleted",
+    source: "core",
+    description: "A page-builder page was deleted (after commit).",
+    payload: { id: "uuid of the page", slug: "the slug it had" },
     listeners: [],
   },
 ];
@@ -123,6 +144,7 @@ export function listKonReports(): KonReport[] {
 /** Removes everything a kon contributed: before re-registering it, or when it is turned off. */
 export function forgetKonContributions(konId: string): void {
   eventDeclarations.delete(konId);
+  forgetKonEventSharing(konId);
   for (const [id, handler] of konRuleHandlers) {
     if (handler.konId === konId) konRuleHandlers.delete(id);
   }
@@ -146,7 +168,11 @@ export function registerKonContributions(
   if (konDef.events) {
     const problem = konEventsProblem(konDef.events);
     if (problem) problems.push(`events: ${problem}`);
-    else eventDeclarations.set(konDef.id, konDef.events);
+    else {
+      eventDeclarations.set(konDef.id, konDef.events);
+      // Who may hear its events besides itself (lib/kon-event-access.ts).
+      for (const p of setKonEventSharing(konDef.id, konDef.events)) problems.push(p);
+    }
   }
 
   const seenHandlers = new Set<string>();

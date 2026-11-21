@@ -9,7 +9,11 @@
  *                    kon: they take the kon's own id as their first argument
  *                    and refuse any other. `realtime.channels` registers the
  *                    authorizer of the kon's own channel namespace only.
- *   announceKon      registers what the kon declared in `defineKon`: its
+ *                    `events` emits only in the kon's namespace and delivers
+ *                    another kon's event only when that kon shares it.
+ *                    `queue` handles and queues only in the kon's own
+ *                    namespace (lib/queue-kon-access.ts).
+ *   announceKon     registers what the kon declared in `defineKon`: its
  *                    events, automation steps, reports, entities and secret
  *                    columns.
  *
@@ -28,11 +32,14 @@
  */
 
 import type {
+  KonAgentRun,
   KonAutomation,
   KonConnections,
   KonContext,
   KonDefinition,
   KonEntities,
+  KonEvents,
+  KonQueue,
   KonSecrets,
 } from "@kitsuden/shared";
 
@@ -40,8 +47,15 @@ import { messageOf } from "../../../../packages/engine/src/errors";
 
 import { registerKonContributions } from "./kon-contributions";
 import { syncKonEntities } from "./kon-entities";
+import { bindKonEvents } from "./kon-event-access";
+import { registerKonSchedules } from "./kon-schedules";
 import { registerKonSecretColumns } from "./kon-secrets";
-import { konCapability, registerKonChannels } from "./realtime-kon-channels";
+import { bindKonQueue, installKonQueueGuard, runAsKon } from "./queue-kon-access";
+import { konCapability, konMayBroadcast, registerKonChannels } from "./realtime-kon-channels";
+
+// `queue` from `@kitsuden/engine` checks every kon's queue names from now on (lib/queue-kon-access.ts).
+// Here, because every kon the host loads is bound by this module first.
+installKonQueueGuard();
 
 function own(owner: string, given: unknown, what: string): void {
   if (given !== owner) {
@@ -115,8 +129,43 @@ function bindAutomation(owner: string, base: KonAutomation): KonAutomation {
   };
 }
 
+/**
+ * What a kon's `ctx.agents.run` hands the engine: the `KonAgentRun` fields and
+ * nothing else (H70). Spreading the kon's options let a kon in plain JS pass
+ * engine-only ones (`holdWrites`, `enableMemory`, a user to act as). Memory and
+ * brain notes stay off: one agent serves every visitor of a kon, and they are
+ * shared by all its sessions.
+ */
+export function konAgentRunOptions(options: KonAgentRun) {
+  const { agentId, message, sessionId, history, context, allowedTools, toolset, onEvent } =
+    options ?? ({} as KonAgentRun);
+  return {
+    agentId,
+    message,
+    sessionId,
+    history,
+    context,
+    allowedTools,
+    toolset,
+    onEvent,
+    enableMemory: false,
+    enableBrainSearch: false,
+  };
+}
+
+const warned = new Set<string>();
+
+/** One console line per kon and refusal: a kon that broadcasts in a loop does not flood the log. */
+function warnOnce(key: string, message: string): void {
+  if (warned.has(key)) return;
+  warned.add(key);
+  console.warn(`  ⚠️  ${message}`);
+}
+
 /** The context one kon receives: the shared one, with the kon-scoped services tied to `konId`. */
 export function bindKonContext(base: KonContext, konId: string): KonContext {
+  // This binding: what tells one loaded kon from another with the same id (realtime channels).
+  const binding = {};
   return {
     ...base,
     ...(base.secrets ? { secrets: bindSecrets(konId, base.secrets) } : {}),
@@ -127,7 +176,18 @@ export function bindKonContext(base: KonContext, konId: string): KonContext {
       ? {
           realtime: {
             ...base.realtime,
-            channels: (authorize) => registerKonChannels(konId, authorize),
+            channels: (authorize) => registerKonChannels(konId, authorize, binding),
+            // Only on its own channels: not `table:`/`entry:` (forged change events) nor another kon's (H19).
+            broadcast: (channel: string, message: unknown) => {
+              if (!konMayBroadcast(konId, channel)) {
+                warnOnce(
+                  `broadcast:${konId}:${String(channel).split(":")[0]}`,
+                  `${konId} broadcast on "${String(channel)}", outside kon:${konId.replace(/^kon-/, "")}:; dropped`
+                );
+                return;
+              }
+              base.realtime!.broadcast(channel, message);
+            },
             // Keyed by the installation's secret and this kon's id: a value read from the kon's tables
             // does not give the channel (lib/realtime-kon-channels.ts).
             capability: (material: string) => konCapability(konId, material),
@@ -135,6 +195,63 @@ export function bindKonContext(base: KonContext, konId: string): KonContext {
         }
       : {}),
     ...(base.connections ? { connections: bindConnections(konId, base.connections) } : {}),
+    // Emits only in its own namespace; hears another kon's events only when that kon shares them
+    // (lib/kon-event-access.ts). Its handlers run in its kon scope (what they queue is checked as it).
+    ...(base.events ? { events: scopedEvents(konId, bindKonEvents(konId, base.events)) } : {}),
+    // Its own queues: `<short id>:`, a plain name mapped into it (lib/queue-kon-access.ts).
+    queue: bindKonQueue(konId) as KonQueue,
+  };
+}
+
+function scopedEvents(konId: string, events: KonEvents): KonEvents {
+  return {
+    ...events,
+    on: (event, handler) =>
+      events.on(
+        event,
+        typeof handler === "function"
+          ? (data: unknown) => runAsKon(konId, () => handler(data))
+          : handler
+      ),
+  };
+}
+
+/**
+ * The kon's rule steps and schedules, run in its kon scope: the core calls them from a rule or a
+ * queue job, and what they queue through `@kitsuden/engine` must be checked as this kon.
+ */
+function scopedCallbacks<T extends Pick<KonDefinition, "id" | "actionHandlers" | "schedules">>(
+  konDef: T
+): T {
+  const konId = konDef.id;
+  return {
+    ...konDef,
+    ...(konDef.actionHandlers
+      ? {
+          actionHandlers: konDef.actionHandlers.map((h) =>
+            h && typeof h === "object"
+              ? {
+                  ...h,
+                  ...(typeof h.run === "function"
+                    ? { run: (input, ctx) => runAsKon(konId, () => h.run(input, ctx)) }
+                    : {}),
+                  ...(typeof h.preview === "function"
+                    ? { preview: (input, ctx) => runAsKon(konId, () => h.preview!(input, ctx)) }
+                    : {}),
+                }
+              : h
+          ) as KonDefinition["actionHandlers"],
+        }
+      : {}),
+    ...(konDef.schedules
+      ? {
+          schedules: konDef.schedules.map((s) =>
+            s && typeof s === "object" && typeof s.run === "function"
+              ? { ...s, run: (ctx, tick) => runAsKon(konId, () => s.run(ctx, tick)) }
+              : s
+          ) as KonDefinition["schedules"],
+        }
+      : {}),
   };
 }
 
@@ -145,13 +262,18 @@ export function bindKonContext(base: KonContext, konId: string): KonContext {
 export async function announceKon(
   konDef: Pick<
     KonDefinition,
-    "id" | "events" | "actionHandlers" | "reports" | "entities" | "secretColumns"
+    "id" | "events" | "actionHandlers" | "reports" | "entities" | "secretColumns" | "schedules"
   >,
   context: KonContext,
   warn: (message: string) => void = (message) => console.warn(`  ⚠️  ${konDef.id}: ${message}`)
 ): Promise<void> {
+  // Its steps and schedules run in its kon scope (lib/queue-kon-access.ts).
+  const scoped = scopedCallbacks(konDef);
   // Its events, its automation steps and its reports (lib/kon-contributions.ts).
-  for (const problem of registerKonContributions(konDef, context)) warn(problem);
+  for (const problem of registerKonContributions(scoped, context)) warn(problem);
+
+  // Its periodic tasks: one run per tick across every replica (lib/kon-schedules.ts).
+  for (const problem of registerKonSchedules(scoped, context)) warn(problem);
 
   // The entities it owns: one dataset each, created here with no migration (lib/kon-entities.ts).
   if (konDef.entities) {

@@ -24,6 +24,10 @@ queue.handle(
 `defineAction({ trigger: "event:reports", run })` registers the same kind of
 handler, and `ctx.queue.add("reports", "monthly", payload)` dispatches to it.
 
+In a kon, queue names live in the kon's own namespace: `"reports"` in `kon-crm`
+becomes `crm:reports`, and a kon cannot handle or queue jobs on a core queue or
+another kon's queue unless it is allowed. See [kon queues](../kons/queues.md).
+
 ### Not twice: `dedupeKey`
 
 ```ts
@@ -127,6 +131,16 @@ instead, on the same table, with keys scoped to the action (`action:<id>`); see
 | **Not twice, if asked.**                                                                                                    | `dedupeKey`: one job per key and queue while it is pending or running (a partial unique index; migration `0084`).                                                                                                                                                                                                                                              |
 | **A reason per job.**                                                                                                       | `queue.dispatch(queue, name, payload, { reason })` stores why it was queued; the dead letter shows it.                                                                                                                                                                                                                                                         |
 | **Retries and a dead letter.**                                                                                              | A handler that throws is retried with exponential backoff (2 s, 4 s, 8 s … up to 10 min) until `attempts` (default 3, set per `dispatch`). Then, or on `PermanentError`, the job is `dead`.                                                                                                                                                                    |
+
+### The system's own queues
+
+`kitsuden-*` queues belong to the core and are never charged to an agent:
+`kitsuden-email`, `kitsuden-webhooks` (agents' proposal notifications),
+`kitsuden-rule-webhooks` (retries of the `core:webhook` step of automation
+rules), `kitsuden-kon-schedules` (kons' [periodic tasks](../kons/schedules.md))
+and the classifier, embedding and ledger queues. No kon may handle them, and a
+kon queues jobs on them only through the core's APIs
+([kon queues](../kons/queues.md)).
 
 ### What happens to a dead job
 

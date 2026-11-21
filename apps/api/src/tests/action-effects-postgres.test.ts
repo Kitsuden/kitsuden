@@ -94,8 +94,9 @@ beforeAll(async () => {
       return receipt;
     },
   });
-  await setupWorkers();
+  // Paused before it starts: start() ends with a claim round (see queue-postgres.test.ts).
   pauseWorker(true);
+  await setupWorkers();
 });
 
 beforeEach(async () => {

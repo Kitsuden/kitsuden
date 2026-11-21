@@ -34,6 +34,7 @@ import { Hono, type Context } from "hono";
 import { db } from "../db";
 import { authSessions, authUsers, installedKons, modules } from "../db/schema";
 import { requireRole } from "../middleware/auth";
+import { revokeKeysOfFormerAdmin } from "../services/agent-auth";
 
 export const systemAdminRoutes = new Hono();
 
@@ -146,8 +147,16 @@ async function changeRole(c: Context) {
     await db.delete(authSessions).where(eq(authSessions.userId, id));
   }
 
+  // Losing `admin` also revokes the static agent keys this person minted
+  // (agent_api_keys.created_by, migration 0094): `revoked_by = 'system:demotion'`
+  // and an audit entry per key. Their OAuth grants already die on their own.
+  let revokedKeys = 0;
+  if (target.role === "admin" && role !== "admin") {
+    revokedKeys = (await revokeKeysOfFormerAdmin(id, "demoted", me?.id ?? null)).length;
+  }
+
   console.log(`[System] ${me?.id ?? "?"} changed the role of ${id} to ${role}`);
-  return c.json({ success: true, id, role });
+  return c.json({ success: true, id, role, revokedKeys });
 }
 systemAdminRoutes.patch("/users/:id/role", changeRole);
 

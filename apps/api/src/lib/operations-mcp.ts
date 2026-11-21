@@ -46,11 +46,13 @@ import {
 } from "@kitsuden/shared";
 import { Hono, type Context, type Next } from "hono";
 
+import { policyReadsResource } from "../../../../packages/engine/src/authz";
 import { readSseEvents } from "../../../../packages/engine/src/flows";
 import {
   grantsOperation,
   mountedOperations,
   mountedOperationsVersion,
+  routeOperation,
   type AnyOperation,
 } from "../../../../packages/engine/src/operations";
 import { db } from "../db";
@@ -101,6 +103,24 @@ interface Input {
 
 let index: { version: number; byName: Map<string, Input> } | null = null;
 
+/**
+ * Builds the request of a tool and refuses it when its path parameters land on
+ * ANOTHER operation's route (an `id` equal to a sibling's static segment, such
+ * as `/items/export` next to `/items/:id`): the call would run that operation
+ * under this tool's name, past the agent's `allowedTools` (security audit
+ * 2026-11-19). Throws with a message for the model.
+ */
+export function toolHttpRequest(e: Pick<Input, "mountPath" | "op">, args: Record<string, unknown>) {
+  const request = requestFromArguments(e.mountPath, e.op, args);
+  const served = routeOperation(e.op.method, new URL(request.url).pathname);
+  if (served && served.op !== e.op) {
+    throw new Error(
+      "the path parameters reach a different operation than this tool's; use that operation's own tool"
+    );
+  }
+  return request;
+}
+
 function tools(): Map<string, Input> {
   const version = mountedOperationsVersion();
   if (index?.version === version) return index.byName;
@@ -135,15 +155,26 @@ function agentUser(a: SessionAgent) {
  * Should this agent SEE the tool? If its `allowedTools` list allows it and
  * if the operation's permission grants it (the SAME check the REST route does:
  * scopes ∪ roles ∪ the kon's policy): advertising those it cannot
- * use only invites failure. Those that depend on the resource
- * (`policy.inHandler`) are advertised: it is decided at execution time.
+ * use only invites failure.
+ *
+ * A policy checked in the handler (`policy.inHandler`) is advertised only when
+ * its rule reads the resource (update, delete of one's own…): that is decided
+ * at execution time. A rule that ignores the resource (create, vote, moderate:
+ * the handlers call `h.can({})`) is checked here like any other. Before, a
+ * read-only agent searching for "comment" was offered `comments__create-comment`
+ * and got 403 when it called it.
  */
 async function visible(agent: SessionAgent, e: Input): Promise<boolean> {
   if (agent.allowedTools.length > 0 && !agent.allowedTools.includes(e.tool.name)) return false;
   // A kon disabled or uninstalled since startup: its tools are no longer advertised
   // (and the pipeline's guard refuses the call).
   if (await konSwitchedOff(e.konId)) return false;
-  if (!e.op.permission || e.op.permission.policy?.inHandler) return true;
+  const permission = e.op.permission;
+  if (!permission) return true;
+  const policy = permission.policy;
+  if (policy?.inHandler && policyReadsResource(policy.resource, policy.action) !== false) {
+    return true;
+  }
   return grantsOperation(e.konId, e.op, agentUser(agent));
 }
 
@@ -187,7 +218,7 @@ export function toolRequest(
   if (Object.keys(argsObject).some((k) => !valid.includes(k)))
     return { error: "unknown arguments" };
   try {
-    const request = requestFromArguments(e.mountPath, e.op, argsObject);
+    const request = toolHttpRequest(e, argsObject);
     const url = new URL(request.url);
     return {
       konId: e.konId,
@@ -220,7 +251,7 @@ export async function isToolRepetition(
   const key = argsObject[ARG_IDEMPOTENCY];
   if (typeof key !== "string" || !VALID_IDEMPOTENCY_KEY.test(key)) return false;
   try {
-    const request = requestFromArguments(e.mountPath, e.op, argsObject);
+    const request = toolHttpRequest(e, argsObject);
     const url = new URL(request.url);
     const headers = (request.init.headers ?? {}) as Record<string, string>;
     const body =
@@ -492,7 +523,7 @@ export async function runOperationTool(
   }
   let request;
   try {
-    request = requestFromArguments(e.mountPath, e.op, argsObject);
+    request = toolHttpRequest(e, argsObject);
   } catch (err) {
     return errorResult(argumentsProblem(name, (err as Error).message));
   }

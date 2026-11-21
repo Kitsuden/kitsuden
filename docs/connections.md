@@ -31,6 +31,29 @@ const res = await google.fetch("https://gmail.googleapis.com/gmail/v1/users/me/m
 - `ctx.connections` is bound to the kon's id, like `ctx.secrets`: a kon that passes another id is
   refused. It is absent on a host without the battery; a kon checks for it.
 
+### Where a credential may travel
+
+`apiHosts` decides the **name** a credential may be sent to; the network
+decides the **address**. Every call a connected client makes (and every token
+refresh) resolves the name once, checks every address and connects only to
+those: a provider host whose DNS answers a private or loopback address is
+refused, so a changed DNS record cannot carry a token to the metadata service
+or another container.
+
+A self-hosted service on a private network (an Odoo in the office, an ERP in
+the same Docker network) is allowed host by host: the operator lists it in
+`CONNECTIONS_PRIVATE_HOSTS` (comma-separated host names or IP literals, no
+ports, no wildcards):
+
+```bash
+CONNECTIONS_PRIVATE_HOSTS=odoo.internal,10.0.4.12
+```
+
+A host on that list may resolve to a private address, may be a single-label
+name (`odoo`) or an IP literal in a provider's `apiHosts`, and may be called
+over `http:`. The list only widens what a provider already lists; nothing in a
+request, a kon or the database can extend it.
+
 ## Events
 
 | Event                            | Payload                                        |
@@ -81,3 +104,4 @@ in `kitsuden_secret_columns`, so an offline key rotation re-encrypts them.
 | `CONNECTIONS_MICROSOFT_CLIENT_ID`, `CONNECTIONS_MICROSOFT_CLIENT_SECRET`, `CONNECTIONS_MICROSOFT_TENANT` | The Microsoft Entra app (tenant default `common`).                                                            |
 | `CONNECTIONS_CALLBACK_URL`                                                                               | The redirect URI registered at the providers (default `BETTER_AUTH_URL` + `/api/connections/oauth/callback`). |
 | `CONNECTIONS_RETURN_ORIGINS`                                                                             | Origins a person may be sent back to (default `ALLOWED_ORIGINS`).                                             |
+| `CONNECTIONS_PRIVATE_HOSTS`                                                                              | Hosts a provider may list that live on a private network (below). Empty: public addresses only.               |

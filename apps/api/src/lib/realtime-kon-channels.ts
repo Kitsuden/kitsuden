@@ -49,7 +49,23 @@ export type KonChannelAuthorizer = (
 /** `kon:<short>:<rest>`: the short id of a kon, then the kon's own part. */
 export const KON_CHANNEL = /^kon:([a-z0-9][a-z0-9-]{0,39}):([a-zA-Z0-9_.:-]{1,200})$/;
 
-const authorizers = new Map<string, KonChannelAuthorizer>();
+/** Short id → the kon that registered it, the context it came from, and its authorizer. */
+const authorizers = new Map<
+  string,
+  { konId: string; owner: object | undefined; authorize: KonChannelAuthorizer }
+>();
+
+/**
+ * Whether a kon is switched on right now (lib/realtime-wiring.ts plugs in
+ * `konSwitchedOff`). A kon disabled from the panel keeps its authorizer in
+ * memory until the restart; without this gate its channels stayed open (H18).
+ */
+export type KonChannelGate = (konId: string) => boolean | Promise<boolean>;
+let gate: KonChannelGate | null = null;
+
+export function setKonChannelGate(next: KonChannelGate | null): void {
+  gate = next;
+}
 
 /** The namespace of a kon: `kon-koe` and `koe` are both `koe`. */
 export function konChannelShortId(konId: string): string {
@@ -61,14 +77,51 @@ export function konChannel(konId: string, rest: string): string {
   return `kon:${konChannelShortId(konId)}:${rest}`;
 }
 
-/** Registers (or replaces) the authorizer of a kon's namespace. */
-export function registerKonChannels(konId: string, authorize: KonChannelAuthorizer): void {
-  authorizers.set(konChannelShortId(konId), authorize);
+/**
+ * Registers (or replaces) the authorizer of a kon's namespace. `owner` is the
+ * bound context the call came through (lib/kon-setup.ts): the same kon may
+ * register again, but a second kon loaded with the same short id (`koe` from
+ * a grimoire and `kon-koe` from npm) throws instead of silently taking over
+ * the first one's channels (H18).
+ */
+export function registerKonChannels(
+  konId: string,
+  authorize: KonChannelAuthorizer,
+  owner?: object
+): void {
+  const short = konChannelShortId(konId);
+  const holder = authorizers.get(short);
+  if (holder && owner && holder.owner && holder.owner !== owner) {
+    throw new Error(
+      `${konId} cannot register realtime channels kon:${short}:, which another loaded ${holder.konId} already holds`
+    );
+  }
+  authorizers.set(short, { konId, owner, authorize });
 }
 
 /** Forgets a kon's authorizer (the kon was disabled; tests). */
 export function unregisterKonChannels(konId: string): void {
   authorizers.delete(konChannelShortId(konId));
+}
+
+/** Namespaces the core broadcasts in, or that reach users directly: never a kon's. */
+const CORE_CHANNEL_NAMESPACES = new Set(["table", "entry", "content", "kon", "user", "presence"]);
+
+/**
+ * Whether a kon may broadcast on `channel` through its context (H19): its own
+ * `kon:<short>:` channels, or the older `<short>:` ones (kon-blog's
+ * `blog:post:<id>`). A kon broadcasting on `table:` or `entry:` forged change
+ * events that subscribers' row filters took for the core's; on another kon's
+ * `kon:` channel it spoke to that kon's clients as that kon.
+ */
+export function konMayBroadcast(konId: string, channel: unknown): boolean {
+  if (typeof channel !== "string" || channel.length > 300) return false;
+  const short = konChannelShortId(konId);
+  if (channel.startsWith(`kon:${short}:`)) return isKonChannel(channel);
+  const at = channel.indexOf(":");
+  if (at <= 0) return false;
+  const namespace = channel.slice(0, at);
+  return namespace === short && !CORE_CHANNEL_NAMESPACES.has(namespace);
 }
 
 export function isKonChannel(channel: string): boolean {
@@ -82,10 +135,12 @@ export function isKonChannel(channel: string): boolean {
 export async function authorizeKonChannel(channel: string, user: KonChannelUser): Promise<boolean> {
   const match = KON_CHANNEL.exec(channel);
   if (!match) return false;
-  const authorize = authorizers.get(match[1]!);
-  if (!authorize) return false;
+  const holder = authorizers.get(match[1]!);
+  if (!holder) return false;
   try {
-    return (await authorize(match[2]!, user)) === true;
+    // A kon switched off since startup answers for nothing, as its routes answer 404.
+    if (gate && (await gate(holder.konId)) !== true) return false;
+    return (await holder.authorize(match[2]!, user)) === true;
   } catch (err: unknown) {
     console.warn(
       `  🔒 [WS] the authorizer of kon:${match[1]} failed: ${err instanceof Error ? err.message : String(err)}`

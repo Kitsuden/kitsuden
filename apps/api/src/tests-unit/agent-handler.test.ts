@@ -31,7 +31,8 @@ beforeAll(async () => {
 
   const mod = await import("../lib/actions/handlers/agent-handler");
   executeAgentAction = mod.executeAgentAction;
-});
+  // A cold import of the agent engine passes bun's 5 s default when files run in parallel.
+}, 30_000);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const baseAction = (config: any): Action =>

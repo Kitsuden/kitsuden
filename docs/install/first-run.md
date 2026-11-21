@@ -53,7 +53,13 @@ With **no administrator**, the panel (`http://localhost:3001`, or
 administrator, which calls `POST /api/system/setup`. That route only works
 while there is no admin (afterwards it answers `403 System already initialized`)
 and creates the account as `admin` with the email already verified (a new
-installation cannot send mail yet). Public sign-up is refused until then.
+installation cannot send mail yet). Public sign-up is refused until then, and
+so is any other way to create an account (a first social sign-in included).
+
+Without a token, setup also needs a JSON body and must be addressed to a
+loopback host (`Host`, and `Origin` when the browser sends one). That stops a
+web page you have open, or a DNS rebinding attack, from claiming the first
+administrator of a development API on 127.0.0.1.
 
 With `NODE_ENV=production`, `KITSUDEN_PUBLIC=true`, or an API that listens
 beyond loopback (`HOST=0.0.0.0`, `::` or a LAN address) it also needs the one-time

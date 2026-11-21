@@ -219,7 +219,7 @@ export interface ExternalMcpApi {
   /**
    * Start an OAuth connection to an external MCP server (admin)
    *
-   * Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. Once authorized, OAuth replaces the auth header.
+   * Discovers the server's authorization server, registers a client there (or uses `clientId`) and answers `authorizationUrl`: open it in a browser to authorize. Valid for ten minutes. The answer also sets an HttpOnly cookie scoped to the callback: the callback is accepted only from this browser or from a browser signed in as the same admin. Once authorized, OAuth replaces the auth header.
    *
    * REST: `POST /api/admin/mcp-servers/{id}/oauth/start` · scope `kon:external-mcp:start-mcp-server-oauth`
    * not idempotent (an Idempotency-Key is sent automatically)

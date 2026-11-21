@@ -16,7 +16,7 @@
 import { mail } from "@kitsuden/engine";
 import { Hono } from "hono";
 
-import { protectRoute, requireAdmin } from "../middleware/auth-guard";
+import { protectRoute, refuseDeniedScope, requireAdmin } from "../middleware/auth-guard";
 
 export const mailRoutes = new Hono();
 
@@ -90,7 +90,8 @@ mailRoutes.post("/preview", async (c) => {
 });
 
 /** Sends a real test email (useful to validate SMTP/Resend). */
-mailRoutes.post("/test", async (c) => {
+// A real send: an agent key with `!mail:send` is refused even with `admin`.
+mailRoutes.post("/test", refuseDeniedScope("mail:send"), async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     name?: string;
     to?: string;

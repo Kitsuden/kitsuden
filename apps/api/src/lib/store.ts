@@ -355,7 +355,11 @@ export async function signedUrlOf(key: string, expiresIn = 3600): Promise<string
   const seconds = Math.max(30, Math.min(7 * 86_400, Math.floor(expiresIn)));
   if (usesS3) return (await s3()).generateSignedDownloadUrl(clean, seconds);
   const exp = Math.floor(Date.now() / 1000) + seconds;
-  return `${URL_LOCAL}/${clean}?exp=${exp}&sig=${signatureOf(clean, exp)}`;
+  // Each segment percent-encoded: a `?`, `#` or `%` in a key used to end the path early, so the
+  // address opened a different key (or none) and the signature never matched. `/media` decodes the
+  // path back to the key the signature covers.
+  const path = clean.split("/").map(encodeURIComponent).join("/");
+  return `${URL_LOCAL}/${path}?exp=${exp}&sig=${signatureOf(clean, exp)}`;
 }
 
 /** Whether `/media/<key>?exp=…&sig=…` may be served now. */

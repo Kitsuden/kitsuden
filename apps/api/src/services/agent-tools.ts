@@ -23,10 +23,17 @@ import {
   recordDecision,
 } from "../lib/agent-decisions";
 import type { CustomerDataGuard } from "../lib/customer-data";
+import type { WrapperMode } from "../lib/mcp-settings";
+import { wrapText } from "../lib/provenance";
 
 import { logToolCall } from "./agent-audit";
 import type { LLMTool, LLMToolParameter } from "./llm/types";
-import { listHardcodedMCPTools, executeHardcodedTool, assertToolScope } from "./mcp-tools";
+import {
+  listHardcodedMCPTools,
+  executeHardcodedTool,
+  assertToolScope,
+  writingTool,
+} from "./mcp-tools";
 
 export interface AgentToolContext {
   agentId: string;
@@ -52,6 +59,26 @@ export interface AgentToolContext {
    * NOW narrowed by the credential's.
    */
   runCredentialId?: string;
+  /**
+   * The agent's daily quotas (`agent_identities.writes_per_day` and
+   * `budget_units_per_day`, lib/agent-quotas.ts). Each tool call spends them as
+   * a `tools/call` over /api/mcp does. `null` or absent: no limit.
+   */
+  writesPerDay?: number | null;
+  budgetUnitsPerDay?: number | null;
+  /** The agent's wrapper for untrusted content (`mcpSettings.untrustedWrap`), as over MCP. */
+  untrustedWrap?: WrapperMode;
+}
+
+/**
+ * A kon tool action's result as the model reads it. The action may return text
+ * someone else wrote (a customer's message, a page it fetched): with a wrapper
+ * set, it is wrapped like the rows of a core tool. `none` leaves it as it is.
+ */
+export function wrapToolActionResult(text: string, mode: WrapperMode | undefined): string {
+  if (!mode || mode === "none") return text;
+  const wrapped = wrapText(text, mode);
+  return typeof wrapped === "string" ? wrapped : JSON.stringify(wrapped);
 }
 
 /**
@@ -188,6 +215,23 @@ export async function executeAgentTool(
       }
     }
   }
+  // Daily quota, as for a `tools/call` over /api/mcp: each call spends one unit,
+  // and a write (a kon tool action, an external tool, a core tool that writes)
+  // one write. Before, a run in the engine spent nothing (security audit 2026-11-19).
+  const { consumeQuota, quotaProblem } = await import("../lib/agent-quotas");
+  const quota = await consumeQuota(
+    {
+      agentId: context.agentId,
+      rateLimit: null,
+      writesPerDay: context.writesPerDay ?? null,
+      budgetUnitsPerDay: context.budgetUnitsPerDay ?? null,
+    },
+    { request: false, write: isDynamicTool || external !== null || writingTool(name), units: 1 }
+  );
+  if (!quota.allowed) {
+    throw new Error(String(quotaProblem(quota, "agent-engine").detail ?? "Agent quota exceeded."));
+  }
+
   // Deferred import: approvals-mcp pulls in the engine facade, and this
   // file cannot import it at the top (see the comment on the imports).
   const { holdToolIfNeeded } = await import("../lib/approvals-mcp");
@@ -209,6 +253,8 @@ export async function executeAgentTool(
       keyId: context.keyId,
       origin: "engine",
       customerData: context.customerData,
+      // The agent's wrapper; the bridge always wraps (delimiters at least).
+      wrap: context.untrustedWrap,
     });
     const text = result.content.map((c) => c.text).join("\n");
     if (result.isError) throw new Error(text);
@@ -219,7 +265,7 @@ export async function executeAgentTool(
   const isDynamic = dynamicTools.find((t) => t.name === name);
 
   if (isDynamic) {
-    // Dynamic tools inherit the base scope mcp:read or mcp:write depending on the kon.
+    // Tool actions need `mcp:write` (`mcp:read` with `meta.readOnly`), then their requiredScopes.
     assertToolScope(name, context.scopes);
     const toolStart = Date.now();
     let success = true;
@@ -232,7 +278,7 @@ export async function executeAgentTool(
         preferToon: false,
         traceId: context.traceId,
       });
-      return JSON.stringify(result);
+      return wrapToolActionResult(JSON.stringify(result), context.untrustedWrap);
     } catch (err: unknown) {
       success = false;
       error = messageOf(err, String(err));
@@ -260,5 +306,7 @@ export async function executeAgentTool(
     apiKeyId: context.keyId,
     // What the tool returns is tracked; the email tool checks what it sends.
     customerData: context.customerData,
+    // Rows written by others are wrapped as the agent asked, as over /api/mcp.
+    untrustedWrap: context.untrustedWrap,
   });
 }

@@ -203,7 +203,9 @@ The costs, and how they are paid:
 - **RLS cannot follow the edge.** The links table is isolated by `owner_id`
   like the rest, and resolving the target always goes through the normal RLS
   of its table: you can see that an edge exists, but following it gives you
-  nothing you could not already see.
+  nothing you could not already see. An edge without owner is read by anyone
+  signed in and written only by the system and `admin`; an anonymous request
+  is not the system.
 - `resolveNeighbors` takes **one loader per type**, supplied by the caller. A
   type without a loader is skipped silently: it is a kon that is not
   installed.

@@ -10,7 +10,6 @@
 
 import { join } from "node:path";
 
-import { messageOf } from "@kitsuden/engine";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -19,6 +18,7 @@ import { db } from "../db";
 import { siteSettings, modules } from "../db/schema";
 import { adminMfaMode } from "../lib/admin-mfa";
 import { fileBody, file } from "../lib/file";
+import { logger } from "../lib/logger";
 import { protectRoute } from "../middleware/auth-guard";
 import { CORE_MODULES, CORE_MODULE_KEYS } from "../services/module-registry";
 import { scanPackages, scanPackages as scanGrimoires } from "../services/scanner";
@@ -843,7 +843,10 @@ export async function getActiveThemeConfigHandler(c: any) {
       branding: settings?.branding || null,
     });
   } catch (err: unknown) {
-    return c.json({ theme: null, branding: null, error: messageOf(err) }, 500);
+    // A public route: the detail (a query failure carries its SQL) goes to the
+    // log, in every environment (hardening 2026-11-20).
+    logger.error({ err }, "[system] failed reading the active theme config");
+    return c.json({ theme: null, branding: null, error: "Could not read the theme config" }, 500);
   }
 }
 systemRoutes.get("/active-theme-config", getActiveThemeConfigHandler);

@@ -1660,7 +1660,7 @@ const en = {
     paid: "Paid",
     billed: "Billed",
     pending: "Pending",
-    matter: "Matter",
+    matter: "Project",
     paidFromAccount: "Paid from account",
     amount: "Amount",
     whatWasPaidFor: "What was paid for?",

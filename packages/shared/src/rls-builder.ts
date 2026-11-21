@@ -254,7 +254,7 @@ export function checkWriteAccess(policy: PolicyJson | null, user: RLSUser): bool
  * - `data->>'fieldName'` for text values
  * - Numeric casting for gt/lt operators
  */
-function buildRuleCondition(rule: RLSRule, user: RLSUser): SQL | null {
+function buildRuleCondition(rule: RLSRule, user: RLSUser): SQL {
   // Replace the __USER_ID__ placeholder with the user's real ID
   const compareValue = rule.value === USER_ID_PLACEHOLDER ? user?.id : rule.value;
 
@@ -288,8 +288,11 @@ function buildRuleCondition(rule: RLSRule, user: RLSUser): SQL | null {
       return sql`(${fieldPath})::numeric < ${Number(compareValue)}`;
 
     default:
-      console.warn(`[RLS Builder] Unknown operator: ${rule.operator}`);
-      return null;
+      // An operator this builder does not know is a rule nobody can meet. It
+      // used to be dropped, so a typo or a newer operator opened the whole
+      // dataset (fail open). Realtime's `meetsRule` already refused it.
+      console.warn(`[RLS Builder] Unknown operator: ${String(rule.operator)}`);
+      return sql`1 = 0`;
   }
 }
 
@@ -332,7 +335,8 @@ export function createRLSFilter(
         case "lt":
           return Number(value) < Number(compareValue);
         default:
-          return true;
+          // Unknown operator: nobody meets it, as in `buildDrizzleWhere`.
+          return false;
       }
     });
   };

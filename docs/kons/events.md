@@ -86,7 +86,8 @@ table in the same transaction and treat the event as a prompt to look.
 
 For work that must survive a restart, dispatch a job on the transactional queue
 (`queue.dispatch`, see [the queue](../install/queue.md)); it is written in the
-request's transaction and retried.
+request's transaction and retried. Queue names are scoped per kon like event
+names: see [kon queues](queues.md).
 
 ## Listening from a kon
 
@@ -104,6 +105,65 @@ hooks: {
 
 Keep a listener idempotent, and never let it depend on the emitter being
 installed.
+
+## Who may emit
+
+A kon emits only in its own namespace: its id without `kon-` (`kon-crm` emits
+`crm:…`). Four kons keep the names they had before this rule: `kon-ecommerce`
+emits `shop:`, `kon-payments` emits `payment:`, `kon-datasets` (the core's
+datasets module) emits `dataset:` and `entry:`, and `kon-blocks` (the core's
+page builder) emits `page:`. Those namespaces belong to them, so a kon named
+`kon-shop` does not get `shop:`. No other kon emits in the core's namespaces
+(`auth`, `connections`, `dataset`, `entry`, `page`, `post`, and the reserved
+`core`, `kitsuden`, `kon`, `system`).
+
+An event outside the kon's namespaces is dropped and logged once; the request
+that emitted it does not fail.
+
+## Who may listen
+
+A kon always hears its own events and the core's (the namespaces above, and the
+old dotted names with no namespace, such as `entry.created`). Another kon's event
+reaches it only when the emitting kon shares it:
+
+```ts
+defineKon({
+  id: "kon-ecommerce",
+  events: {
+    emits: { "shop:order.paid": { description: "An order was paid." } },
+    // Any kon may hear these.
+    public: ["shop:product.published"],
+    // Only the kons named here, by id.
+    subscribers: {
+      "kon-crm": ["shop:order.paid"],
+      "kon-dc": ["shop:order.*"],
+    },
+  },
+});
+```
+
+The same `events` object may go in `kon.json`; the two are merged. A pattern is
+a full name or a prefix ending in `*`, and its namespace is always spelled out
+(`*` or `shop*` alone is refused). A pattern outside the emitter's own
+namespace has no effect and is reported when the kon loads.
+
+The check runs each time an event is delivered, not only when the listener
+subscribes, because the emitting kon may load later or be switched off. A
+refused event is not delivered, and the console says once, for each listener
+and event, which declaration is missing.
+
+Two built-in lists keep what worked before this rule:
+
+- `DEFAULT_PUBLIC_EVENTS`: `blog:post:published`, which is public content.
+- `LEGACY_EVENT_GRANTS`: the cross-kon subscriptions the published kons
+  already made (kon-crm, kon-ecommerce, kon-members, kon-newsletter). An entry
+  goes once its emitter declares it; new subscriptions belong in the emitter's
+  `public` or `subscribers`.
+
+Both lists live in `apps/api/src/lib/kon-event-access.ts`. This is not a
+sandbox: a kon is code in the API process. The rule stops one kon reading or
+forging another's events through the context the core gives it, and makes a
+refusal visible.
 
 ## Testing
 

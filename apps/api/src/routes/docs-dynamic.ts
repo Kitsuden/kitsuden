@@ -25,8 +25,9 @@ import {
   viewersInstalled,
   type DocSource,
 } from "../lib/docs-viewers";
+import { hotLoadedKonDefinitions } from "../lib/deferred-kons";
 import { logger } from "../lib/logger";
-import { getLoadedKons } from "../lib/module-loader";
+import { getLoadedKons as getStartupKons } from "../lib/module-loader";
 import {
   generateOpenAPISpec,
   generateKonSpec,
@@ -36,6 +37,16 @@ import {
 import { operationFilter } from "../lib/operation-filter";
 import type { RLSUser } from "../lib/rls-builder";
 import type { AppVariables } from "../types/hono";
+
+/**
+ * The kons loaded at startup plus those enabled afterwards from the panel: both
+ * answer on their routes, so both belong in the docs.
+ */
+async function getLoadedKons() {
+  const startup = await getStartupKons();
+  const seen = new Set(startup.map((k) => k.id));
+  return [...startup, ...hotLoadedKonDefinitions().filter((k) => !seen.has(k.id))];
+}
 
 export const dynamicDocsRouter = new Hono<{ Variables: AppVariables }>();
 

@@ -15,7 +15,10 @@
  *     to end is refreshed first, once even when two callers arrive together;
  *   · a new URL, a static header or a disconnect forgets the tokens;
  *   · a server without S256, an unknown or expired state, and an agent (even
- *     with `admin`) are refused.
+ *     with `admin`) are refused;
+ *   · the callback is accepted only from the admin who started (their session)
+ *     or the browser holding the binding cookie the start set; anyone else
+ *     burns the state and nothing is exchanged (security hardening 2026-11-21).
  */
 
 import { createHash } from "node:crypto";
@@ -95,17 +98,29 @@ async function rows<T>(query: ReturnType<typeof sql>): Promise<T[]> {
 }
 
 /** Starts an authorization and plays the authorization server's part of the redirect. */
-async function start(body?: unknown): Promise<{ url: URL; state: string }> {
+async function start(
+  body?: unknown
+): Promise<{ url: URL; state: string; bindingCookie: string; setCookie: string }> {
   const r = await request({ cookie }, "POST", `${BASE}/${serverId}/oauth/start`, body ?? {});
   expect(r.status).toBe(200);
-  const { authorizationUrl } = (await r.json()) as { authorizationUrl: string };
-  const url = new URL(authorizationUrl);
+  const json = (await r.json()) as Record<string, unknown>;
+  // The binding travels only in the HttpOnly cookie, never in the body.
+  expect(json).not.toHaveProperty("browserBinding");
+  const url = new URL(json.authorizationUrl as string);
   as.challenge = url.searchParams.get("code_challenge") ?? "";
-  return { url, state: url.searchParams.get("state") ?? "" };
+  const setCookie = r.headers.get("set-cookie") ?? "";
+  const binding = /kitsuden_mcp_oauth=([^;]+)/.exec(setCookie)?.[1] ?? "";
+  return {
+    url,
+    state: url.searchParams.get("state") ?? "",
+    bindingCookie: `kitsuden_mcp_oauth=${binding}`,
+    setCookie,
+  };
 }
 
-const callback = (query: Record<string, string>) =>
-  request({}, "GET", `/api/mcp-oauth/callback?${new URLSearchParams(query).toString()}`);
+/** The callback as the browser brings it; by default the admin who started, signed in. */
+const callback = (query: Record<string, string>, auth: { cookie?: string } = { cookie }) =>
+  request(auth, "GET", `/api/mcp-oauth/callback?${new URLSearchParams(query).toString()}`);
 
 const serverRow = async () =>
   (
@@ -465,6 +480,75 @@ describe("external MCP: OAuth", () => {
     } finally {
       process.env.KITSUDEN_EXTERNAL_MCP_ALLOW_INTERNAL = "true";
     }
+  });
+
+  it("the start sets an HttpOnly binding cookie scoped to the callback", async () => {
+    if (!dbAvailable) return;
+    const { setCookie, bindingCookie } = await start();
+    expect(setCookie).toContain("Path=/api/mcp-oauth/callback");
+    expect(setCookie).toContain("HttpOnly");
+    expect(setCookie).toContain("SameSite=Lax");
+    expect(bindingCookie).toMatch(/^kitsuden_mcp_oauth=[\w-]{43}$/);
+  });
+
+  it("a callback brought by someone else burns the state before any token exchange", async () => {
+    if (!dbAvailable) return;
+    // The test before connected a client registered by hand: start from nothing.
+    await request({ cookie }, "DELETE", `${BASE}/${serverId}/oauth`);
+    const { state, bindingCookie } = await start();
+    const before = as.tokenCalls.length;
+    // No session and no binding cookie: another person who got the link.
+    const stranger = await callback({ state, code: "good-code" }, {});
+    const location = new URL(stranger.headers.get("location")!);
+    expect(location.pathname).toBe("/mcp-servers");
+    expect(location.searchParams.get("oauth")).toBe("error");
+    expect(location.searchParams.get("message")).toContain("another browser");
+    expect(as.tokenCalls.length).toBe(before);
+    expect((await serverRow()).oauth_config).toBeNull();
+    // Burnt: not even the starter's own browser can finish it now.
+    const late = await callback({ state, code: "good-code" }, { cookie: bindingCookie });
+    expect(new URL(late.headers.get("location")!).searchParams.get("oauth")).toBe("error");
+    expect(as.tokenCalls.length).toBe(before);
+
+    // A wrong binding value is refused too.
+    const second = await start();
+    const forged = await callback(
+      { state: second.state, code: "good-code" },
+      { cookie: "kitsuden_mcp_oauth=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }
+    );
+    expect(new URL(forged.headers.get("location")!).searchParams.get("oauth")).toBe("error");
+    expect(as.tokenCalls.length).toBe(before);
+  });
+
+  it("an agent's credential does not count as the admin who started", async () => {
+    if (!dbAvailable) return;
+    const { state } = await start();
+    const before = as.tokenCalls.length;
+    const r = await request(
+      { token: agentToken },
+      "GET",
+      `/api/mcp-oauth/callback?${new URLSearchParams({ state, code: "good-code" }).toString()}`
+    );
+    // Either refused outright or sent to the panel with an error; never connected.
+    if (r.status === 302) {
+      expect(new URL(r.headers.get("location")!).searchParams.get("oauth")).toBe("error");
+    } else {
+      expect([401, 403]).toContain(r.status);
+    }
+    expect(as.tokenCalls.length).toBe(before);
+    expect((await serverRow()).oauth_config).toBeNull();
+  });
+
+  it("the browser that started connects with its binding cookie alone, without a session", async () => {
+    if (!dbAvailable) return;
+    const { state, bindingCookie } = await start();
+    const r = await callback({ state, code: "good-code" }, { cookie: bindingCookie });
+    const location = new URL(r.headers.get("location")!);
+    expect(location.searchParams.get("oauth")).toBe("connected");
+    // The binding is cleared once used.
+    expect(r.headers.get("set-cookie") ?? "").toContain("kitsuden_mcp_oauth=;");
+    expect((await serverRow()).oauth_config).not.toBeNull();
+    await request({ cookie }, "DELETE", `${BASE}/${serverId}/oauth`);
   });
 
   it("an agent, even with admin, and an anonymous caller cannot start or disconnect", async () => {

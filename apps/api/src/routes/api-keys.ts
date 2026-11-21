@@ -98,6 +98,8 @@ apiKeysRoutes.post("/", zValidator("json", createKeySchema), async (c) => {
     // something else is requested, it expires after 90 days. An explicit
     // `null` still requests one with no expiry.
     expiresInDays: body.expiresInDays === undefined ? 90 : (body.expiresInDays ?? undefined),
+    // Who minted it (migration 0094): revoked when they stop being an admin.
+    createdBy: c.get("user")?.id ?? null,
   });
 
   c.header("Deprecation", "kitsuden_sk_*; kitsuden_agent_*");

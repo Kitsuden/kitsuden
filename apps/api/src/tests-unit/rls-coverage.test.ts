@@ -40,6 +40,10 @@ const COLLABORATIVE = new Map<string, string>([
   // the orders they have to fulfill.
   ["shop_products", "catalog shared by the store team"],
   ["shop_orders", "orders are served by the team, not only by whoever registered them"],
+  // `created_by` records which admin minted the key, so the key dies when that admin
+  // is demoted (security audit H59). Keys are managed by admins as a team through
+  // admin-only routes; the row is not the creator's personal data.
+  ["agent_api_keys", "admin-managed agent keys; created_by is audit, not ownership"],
 
   // CRM: deals and contacts belong to the sales TEAM, not to whoever typed them in.
   ["crm_companies", "portfolio shared by the sales team"],

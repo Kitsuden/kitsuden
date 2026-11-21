@@ -17,6 +17,10 @@ export type {
   KonRouterFactory,
   KonDefinition,
   KonRateLimit,
+  KonSchedule,
+  // The job queue tied to a kon (`ctx.queue`)
+  KonQueue,
+  KonQueueJob,
   // Agents run by a kon (`ctx.agents.run`)
   KonAgentRun,
   KonAgentEvent,

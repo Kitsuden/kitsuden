@@ -23,6 +23,7 @@ import { operationsRouter, type AnyOperation } from "../../../../packages/engine
 import { resolveExecutor } from "../../../../packages/engine/src/request-scope";
 import { db } from "../db";
 import { announceConnection } from "../lib/connections";
+import { connectionFetch } from "../lib/connections/network";
 import { describeProvider, providers } from "../lib/connections/providers";
 import { connConnections, publicConnection, type ConnectionRow } from "../lib/connections/schema";
 import {
@@ -182,7 +183,7 @@ const ParamId = z.object({ id: z.string().uuid().describe("The connection") });
 const session = { access: "session" as const };
 
 /** `network` lets a test answer for the providers. */
-export function connectionsOperations(network: Fetch = (u, i) => fetch(u, i)): AnyOperation[] {
+export function connectionsOperations(network: Fetch = connectionFetch): AnyOperation[] {
   return [
     defineOperation({
       ...session,

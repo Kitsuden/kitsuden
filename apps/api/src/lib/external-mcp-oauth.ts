@@ -11,10 +11,16 @@
  *      protected-resource metadata (RFC 9728), then authorization-server
  *      metadata (RFC 8414, or OpenID discovery). Register a client there
  *      (RFC 7591) unless the admin brings a client id. Answer the URL to open.
- *   2. CALLBACK (the admin's browser comes back). The route is public, as an
- *      OAuth redirect has to be: what authorizes it is the `state`, 256 random
- *      bits handed only to the admin who started, stored hashed, single use,
- *      ten minutes. Exchange the code with the PKCE verifier, store the tokens.
+ *   2. CALLBACK (the admin's browser comes back). No session is required, as
+ *      an OAuth redirect has to arrive without one: the `state` (256 random
+ *      bits, stored hashed, single use, ten minutes) names the round trip, and
+ *      the request must ALSO come from whoever started it: the same signed-in
+ *      admin (an agent never counts), or the browser that holds the HttpOnly
+ *      binding cookie the start set (`finishedByStarter`). Otherwise the state
+ *      is burnt and nothing is exchanged. Without that check an admin's
+ *      authorization link, sent to another person, would connect the server
+ *      to that person's account at the authorization server.
+ *      Then exchange the code with the PKCE verifier and store the tokens.
  *   3. USE. Every connection sends `Authorization: Bearer <access token>`; a
  *      token about to end is refreshed first, one process at a time.
  *
@@ -32,14 +38,14 @@
  *   · Tokens are never returned by the API and never logged.
  */
 
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { sql } from "drizzle-orm";
 
 import { db } from "../db";
 import { decryptSecret, encryptSecret, type EncryptedValue } from "../services/secrets";
 
-import { serverTargetProblem } from "./external-mcp-target";
+import { externalMcpFetch, serverTargetProblem } from "./external-mcp-target";
 import { logger } from "./logger";
 import { issuer } from "./oauth/config";
 
@@ -54,6 +60,53 @@ export const OAUTH_CALLBACK_PATH = "/api/mcp-oauth/callback";
 /** Where the authorization server sends the admin's browser back. */
 export function oauthRedirectUri(): string {
   return `${issuer()}${OAUTH_CALLBACK_PATH}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Binding the callback to whoever started it
+// ═══════════════════════════════════════════════════════════════
+
+/** The cookie that ties a round trip to the browser that started it. */
+export const OAUTH_BINDING_COOKIE = "kitsuden_mcp_oauth";
+
+/**
+ * The binding cookie's value. Derived from the state, so nothing more is
+ * stored; knowing the state (it travels in the authorization URL) does not
+ * help, because nobody can plant a cookie in someone else's browser.
+ */
+export function browserBindingOf(state: string): string {
+  return createHash("sha256").update(`kitsuden-external-mcp:browser:${state}`).digest("base64url");
+}
+
+/** Who brings the callback: the signed-in person (never an agent) and this browser's cookie. */
+export interface CallbackBringer {
+  userId: string | null;
+  browserBinding: string | null;
+}
+
+/** Whether whoever brings the callback started the round trip: the same admin, or the same browser. */
+export function finishedByStarter(
+  state: string,
+  startedBy: string | null,
+  completedBy: CallbackBringer
+): boolean {
+  if (startedBy && completedBy.userId && completedBy.userId === startedBy) return true;
+  if (!completedBy.browserBinding) return false;
+  const expected = Buffer.from(browserBindingOf(state));
+  const got = Buffer.from(completedBy.browserBinding);
+  return got.length === expected.length && timingSafeEqual(got, expected);
+}
+
+/** `Set-Cookie` for the binding: HttpOnly, sent only to the callback, gone with the state. */
+export function bindingCookie(value: string): string {
+  const secure = oauthRedirectUri().startsWith("https:") ? "; Secure" : "";
+  return `${OAUTH_BINDING_COOKIE}=${value}; Path=${OAUTH_CALLBACK_PATH}; Max-Age=${STATE_MINUTES * 60}; HttpOnly; SameSite=Lax${secure}`;
+}
+
+/** `Set-Cookie` that removes the binding once the callback has used it. */
+export function clearedBindingCookie(): string {
+  const secure = oauthRedirectUri().startsWith("https:") ? "; Secure" : "";
+  return `${OAUTH_BINDING_COOKIE}=; Path=${OAUTH_CALLBACK_PATH}; Max-Age=0; HttpOnly; SameSite=Lax${secure}`;
 }
 
 /** A problem the admin can act on: a 400 with this message. */
@@ -88,7 +141,8 @@ async function request(
   await checked(url, what);
   let res: Response;
   try {
-    res = await fetch(url, {
+    // Connects to the addresses it checks, not to a second DNS answer (no redirects).
+    res = await externalMcpFetch(url, {
       method: init.method ?? "GET",
       headers: {
         Accept: "application/json",
@@ -96,8 +150,7 @@ async function request(
         ...init.headers,
       },
       body: init.body,
-      redirect: "manual",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      timeoutMs: TIMEOUT_MS,
     });
   } catch (err) {
     throw new OAuthProblem(`${what}: ${err instanceof Error ? err.message : "request failed"}`);
@@ -131,6 +184,41 @@ async function request(
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 
+/**
+ * A value from the server's answer that may be shown in the panel: a short
+ * token of letters, digits and `_.-`. Anything else is the server's free text
+ * and is not reflected (`token_type`, `error`).
+ */
+export function shownCode(v: unknown): string | null {
+  const t = str(v);
+  return t && /^[A-Za-z0-9_.-]{1,64}$/.test(t) ? t : null;
+}
+
+const withoutSlash = (u: string) => u.replace(/\/+$/, "");
+
+/**
+ * Does a protected-resource document (RFC 9728) describe THIS server? Its
+ * `resource` must be the server's URL or, for the document at the origin's
+ * root, the origin. A missing `resource` is tolerated (older servers).
+ */
+export function resourceMatches(resource: unknown, serverUrl: string): boolean {
+  if (resource === undefined || resource === null) return true;
+  if (typeof resource !== "string") return false;
+  const r = withoutSlash(resource.trim());
+  return r === withoutSlash(serverUrl) || r === new URL(serverUrl).origin;
+}
+
+/**
+ * Is the `issuer` an authorization server's metadata announces the one it was
+ * fetched for (RFC 8414 §3.3)? A missing issuer is tolerated; another one is
+ * not: the metadata would speak for a different server (mix-up).
+ */
+export function issuerMatches(announced: unknown, authServer: string): boolean {
+  if (announced === undefined || announced === null) return true;
+  if (typeof announced !== "string") return false;
+  return withoutSlash(announced.trim()) === withoutSlash(authServer);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Discovery
 // ═══════════════════════════════════════════════════════════════
@@ -161,6 +249,11 @@ export async function discoverAuthorizationServer(serverUrl: string): Promise<Au
   for (const url of wellKnown(serverUrl, "oauth-protected-resource")) {
     const { status, json } = await request(url, {}, "Protected-resource metadata");
     if (status !== 200 || !json) continue;
+    if (!resourceMatches(json.resource, serverUrl)) {
+      throw new OAuthProblem(
+        "The protected-resource metadata describes another resource than this server's URL"
+      );
+    }
     const list = Array.isArray(json.authorization_servers) ? json.authorization_servers : [];
     authServer = str(list[0]);
     if (authServer) break;
@@ -175,6 +268,11 @@ export async function discoverAuthorizationServer(serverUrl: string): Promise<Au
       const authorizationEndpoint = str(json.authorization_endpoint);
       const tokenEndpoint = str(json.token_endpoint);
       if (!authorizationEndpoint || !tokenEndpoint) continue;
+      if (!issuerMatches(json.issuer, authServer)) {
+        throw new OAuthProblem(
+          "The authorization-server metadata names another issuer than the server it was read from"
+        );
+      }
       const methods = Array.isArray(json.code_challenge_methods_supported)
         ? json.code_challenge_methods_supported
         : [];
@@ -254,14 +352,15 @@ async function registerClient(
 }
 
 /**
- * Starts an authorization for a server and answers the URL the admin opens.
+ * Starts an authorization for a server and answers the URL the admin opens,
+ * with the value of the binding cookie the route sets (`bindingCookie`).
  * Nothing changes on the server row until the callback succeeds.
  */
 export async function startOAuth(
   server: { id: string; url: string },
   input: StartInput,
   startedBy: string
-): Promise<{ authorizationUrl: string; redirectUri: string }> {
+): Promise<{ authorizationUrl: string; redirectUri: string; browserBinding: string }> {
   const as = await discoverAuthorizationServer(server.url);
   const redirectUri = oauthRedirectUri();
 
@@ -304,7 +403,7 @@ export async function startOAuth(
   url.searchParams.set("code_challenge_method", "S256");
   url.searchParams.set("resource", server.url);
   if (pending.scopes) url.searchParams.set("scope", pending.scopes);
-  return { authorizationUrl: url.toString(), redirectUri };
+  return { authorizationUrl: url.toString(), redirectUri, browserBinding: browserBindingOf(state) };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -354,13 +453,15 @@ async function tokenRequest(
   if (status !== 200 || !accessToken) {
     // The server's `error` code is safe to show; its description may echo input, so it is not.
     throw new OAuthProblem(
-      `${what} was refused (${status}${str(json?.error) ? `: ${str(json?.error)}` : ""})`
+      `${what} was refused (${status}${shownCode(json?.error) ? `: ${shownCode(json?.error)}` : ""})`
     );
   }
   const type = str(json?.token_type);
   if (type && type.toLowerCase() !== "bearer") {
+    // The type is the server's text: shown only when it is a plain token.
+    const shown = shownCode(type);
     throw new OAuthProblem(
-      `${what}: the server issued a "${type}" token; only Bearer is supported`
+      `${what}: the server issued ${shown ? `a "${shown}"` : "another kind of"} token; only Bearer is supported`
     );
   }
   const seconds = Number(json?.expires_in);
@@ -376,11 +477,18 @@ async function tokenRequest(
 }
 
 /**
- * Finishes an authorization: the `state` must exist and be unexpired. It is
- * deleted before anything else, so it cannot be used twice. The connection is
- * recorded as made by whoever started it. Returns the server's id.
+ * Finishes an authorization: the `state` must exist and be unexpired, and the
+ * callback must come from whoever started it (`completedBy`: the same admin,
+ * or the browser holding the binding cookie). The state is deleted before
+ * anything else, so it cannot be used twice, and a refused callback burns it
+ * before any token exchange. The connection is recorded as made by whoever
+ * started it. Returns the server's id.
  */
-export async function completeOAuth(state: string, code: string): Promise<string> {
+export async function completeOAuth(
+  state: string,
+  code: string,
+  completedBy: CallbackBringer
+): Promise<string> {
   const [row] = rows(
     await db.execute(sql`
       DELETE FROM external_mcp_oauth_states WHERE state_hash = ${hashOf(state)}
@@ -388,6 +496,16 @@ export async function completeOAuth(state: string, code: string): Promise<string
   );
   if (!row || row.live !== true) {
     throw new OAuthProblem("This authorization is unknown or has expired; start it again");
+  }
+  const startedBy = typeof row.started_by === "string" ? row.started_by : null;
+  if (!finishedByStarter(state, startedBy, completedBy)) {
+    logger.warn(
+      { serverId: String(row.server_id) },
+      "[external-mcp] OAuth callback not brought by the admin who started it"
+    );
+    throw new OAuthProblem(
+      "This authorization was started in another browser or by another person; start it again from the panel"
+    );
   }
   const user = String(row.started_by);
   const pending = row.pending as Pending;

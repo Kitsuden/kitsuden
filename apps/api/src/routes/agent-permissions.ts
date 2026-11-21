@@ -388,7 +388,13 @@ const NewKey = z
 
 async function issueKey(
   a: Agent,
-  options: { name?: string | null; expiresInDays?: number | null; rotatedFrom?: string | null }
+  options: {
+    name?: string | null;
+    expiresInDays?: number | null;
+    rotatedFrom?: string | null;
+    /** Who mints it (`created_by`, migration 0094): revoked when they stop being an admin. */
+    createdBy: string | null;
+  }
 ) {
   const { plainKey, keyHash, keyPrefix, keyId, algorithm } = await generateAgentApiKey(
     a.type ?? undefined
@@ -406,6 +412,7 @@ async function issueKey(
       expiresAt,
       name: options.name || null,
       rotatedFrom: options.rotatedFrom ?? null,
+      createdBy: options.createdBy,
     })
     .returning();
   return { row: row!, plainKey };
@@ -416,7 +423,7 @@ async function createKey(c: Context): Promise<Response> {
   if (!a) return c.json({ error: "Agent not found" }, 404);
   const r = NewKey.safeParse(await c.req.json().catch(() => ({})));
   if (!r.success) return c.json({ error: "Validation failed", issues: r.error.issues }, 422);
-  const { row: row, plainKey } = await issueKey(a, r.data);
+  const { row: row, plainKey } = await issueKey(a, { ...r.data, createdBy: who(c) });
   audit(c, a.id, "key_created", { keyId: row.id, expiresAt: row.expiresAt });
   // The secret comes out ONCE, here. It is never stored in plain text.
   return c.json({ key: keyView(row), apiKey: plainKey }, 201);
@@ -465,6 +472,7 @@ async function rotateKey(c: Context): Promise<Response> {
     name: r.data.name ?? old.name,
     expiresInDays: r.data.expiresInDays,
     rotatedFrom: old.id,
+    createdBy: who(c),
   });
   const graceEnd = new Date(Date.now() + r.data.graceHours * 3_600_000);
   const newExpiry = old.expiresAt && old.expiresAt < graceEnd ? old.expiresAt : graceEnd;

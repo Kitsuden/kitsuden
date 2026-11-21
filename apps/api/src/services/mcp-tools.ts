@@ -81,6 +81,8 @@ import { KON_REGISTRY } from "@/services/module-registry";
 import { generateReact } from "../../../../packages/codegen/src/generators/react";
 import { generateSvelte } from "../../../../packages/codegen/src/generators/svelte";
 import { generateVue } from "../../../../packages/codegen/src/generators/vue";
+// Deep import (not the facade), as in agent-tools.ts.
+import { toolActionBaseScope } from "../../../../packages/engine/src/actions";
 
 import type { LLMTool } from "./llm/types";
 import { introspectTable } from "./schema-introspector";
@@ -368,6 +370,16 @@ function validateArgs<N extends ToolName>(
 function hasToolScope(scopes: string[], required: string): boolean {
   // Kitsuden's single rule (wildcards and denials): @kitsuden/shared.
   return concedeScope(scopes, required);
+}
+
+/**
+ * The base scope a tool needs. A kon's tool action (`agent.tool:<name>`) is
+ * resolved first, as /api/mcp and the engine run it before a core tool of the
+ * same name: `mcp:write` unless it declares `meta.readOnly` (security audit
+ * 2026-11-19; it used to fall through to `mcp:read`). Core tools: `TOOL_SCOPES`.
+ */
+export function requiredToolScope(toolName: string): string {
+  return toolActionBaseScope(toolName) ?? TOOL_SCOPES[toolName] ?? "mcp:read";
 }
 
 /**
@@ -779,11 +791,11 @@ export function writingTool(toolName: string): boolean {
 export function canTryTool(toolName: string, scopes?: string[]): boolean {
   const list = scopes ?? [];
   if (DATASET_ACTION[toolName] && canTryDataset(toolName, list)) return true;
-  return hasToolScope(list, TOOL_SCOPES[toolName] || "mcp:read");
+  return hasToolScope(list, requiredToolScope(toolName));
 }
 
 export function assertToolScope(toolName: string, scopes?: string[]): void {
-  const required = TOOL_SCOPES[toolName] || "mcp:read";
+  const required = requiredToolScope(toolName);
   if (!hasToolScope(scopes || [], required)) {
     throw new Error(`Agent lacks required scope '${required}' to execute tool '${toolName}'`);
   }
@@ -2046,6 +2058,11 @@ async function kitsudenDefineAction(args: ArgsOf<"kitsuden_define_action">): Pro
   if (type === "webhook_out") {
     const { webhookConfigUrlProblem } = await import("@/lib/actions/handlers/webhook-out-handler");
     const problem = await webhookConfigUrlProblem((config as { url?: unknown } | undefined)?.url);
+    if (problem) return problem;
+  }
+  if (type === "webhook_in") {
+    const { webhookInConfigProblem } = await import("@/lib/actions/handlers/webhook-in-handler");
+    const problem = webhookInConfigProblem(config);
     if (problem) return problem;
   }
   // An agent does not define an action that makes an agent with MORE

@@ -64,6 +64,12 @@ export interface KonCache {
   set<T = any>(key: string, value: T, ttlSeconds?: number): Promise<void>;
   /** Invalidate cache by pattern (e.g. "blog:*") */
   invalidate(pattern: string): Promise<void>;
+  /**
+   * Invalidate every entry stored with any of these tags (`page:<id>`). Cheaper and more exact than a
+   * pattern: the core's cache keeps the keys of each tag. Optional: a host without it falls back to
+   * patterns.
+   */
+  invalidateTags?: (...tags: string[]) => Promise<void>;
 }
 
 /**
@@ -473,6 +479,59 @@ export interface KonContext<TDb = any> {
    * Optional: absent when the datasets battery is not installed.
    */
   entities?: KonEntities;
+
+  /**
+   * The job queue, tied to this kon (docs/kons/queues.md): names live in the kon's namespace
+   * (`<short id>:`), a plain name is mapped into it (`handle("sync")` and `add("sync", …)` both use
+   * `crm:sync`), and a core queue or another kon's is refused unless the core or that kon allows it.
+   * Optional: a host or test without a queue leaves it undefined.
+   */
+  queue?: KonQueue;
+}
+
+/** A job as `ctx.queue` hands it to a handler. */
+export interface KonQueueJob<T = unknown> {
+  id: string;
+  /** The full name it was queued on (`crm:sync`). */
+  queue: string;
+  name: string;
+  payload: T;
+  attempt: number;
+  maxAttempts: number;
+  /** Who queued it, re-read when it runs; `null` = the system. */
+  actor: { id: string; role: string; scopes?: string[] } | null;
+  requestId: string | null;
+}
+
+/** `ctx.queue` (docs/kons/queues.md). */
+export interface KonQueue {
+  /** Queues a job; inside a request it is written in the request's transaction. */
+  add<T = unknown>(
+    queue: string,
+    job: string,
+    payload: T,
+    options?: {
+      reason?: string;
+      attempts?: number;
+      delayMs?: number;
+      cost?: number;
+      onBudgetExhausted?: "postpone" | "fail";
+      dedupeKey?: string;
+    }
+  ): Promise<{ id: string; deduplicated?: boolean }>;
+  /** Registers this kon's handler for one of its queues. */
+  handle<T = unknown>(
+    queue: string,
+    fn: (job: KonQueueJob<T>) => Promise<unknown>,
+    options?: {
+      concurrency?: number;
+      rules?: { label: string; description: string; payload?: Record<string, string> };
+      /** Other kons that may queue jobs here: kon ids, short ids or `"*"`. */
+      senders?: string[];
+    }
+  ): void;
+  /** The full name a queue of this kon resolves to (`sync` → `crm:sync`), e.g. to tell another kon where to reply. */
+  name(queue: string): string;
 }
 
 export interface KonAgentRun {
@@ -736,6 +795,35 @@ export interface KonDefinition {
    * (docs/kons/secrets.md), so a key rotation re-encrypts them.
    */
   secretColumns?: KonSecretColumn[];
+
+  /**
+   * Work the kon does on a clock (docs/kons/schedules.md): a nightly sync, an hourly cleanup. Each tick runs
+   * ONCE across every replica of the API, on the durable job queue.
+   */
+  schedules?: KonSchedule[];
+}
+
+/** A kon's periodic task (`defineKon({ schedules })`). */
+export interface KonSchedule {
+  /** Unique inside the kon: `sync-partners` (lower case letters, digits and `-`). */
+  id: string;
+  /** Cron expression: 5 fields (minute first) or 6 (second first). `0 3 * * *` is 03:00 daily. */
+  cron: string;
+  /** IANA time zone the expression is read in. Default UTC. */
+  timezone?: string;
+  /** What it does, for the panel and agents. */
+  description?: string;
+  /**
+   * Attempts when `run` throws (1 to 5, default 1). Retries back off on the queue; keep them below the
+   * interval, or a retry may meet the next tick.
+   */
+  attempts?: number;
+  /**
+   * The work. `scheduledAt` is the tick's instant, the same on every replica: use it, not `new Date()`,
+   * to decide what "since the last run" means. Runs as the system (no request, no user); must be
+   * idempotent, as every queued job (a lease that expires can run it again).
+   */
+  run(ctx: KonContext, tick: { scheduledAt: Date }): Promise<void>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

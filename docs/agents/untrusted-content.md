@@ -149,6 +149,10 @@ Supported on `GET /api/data-sets/:id/entries`, `GET /api/data-sets/:id/entries/:
   Tests: `apps/api/src/tests-unit/provenance-and-toolsets.test.ts` and
   `apps/api/src/tests/mcp-provenance-and-toolsets.test.ts` (a record with injected
   instructions comes back marked, and the fake closing tag does not escape).
+- Agent runs in the engine (chat, actions, rules, `ctx.agents.run`) use the
+  agent's wrapper too: core tools wrap their rows as over MCP, and a kon tool
+  action's whole result is wrapped (`delimiters` or `object`) when the agent's
+  setting is not `none`.
 - Writes (`create_record`, kon `POST`/`PUT`…) are not marked: they return what
   the agent itself sent.
 - Kon responses: the records are found in an array body or under `items`,

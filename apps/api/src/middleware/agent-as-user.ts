@@ -49,8 +49,9 @@ export function agentCanActAsUser(c: Context): boolean {
   const agent = get("agent") as { scopes?: string[] } | undefined;
   if (!agent) return true;
   if (get("sdkOperation") || get("agentOpenedByGate")) return true;
+  // With the denials: `!user:act` beats `user:act` and `admin` (hardening 2026-11-20).
+  if (agentActsAsUser(agent.scopes)) return true;
   const scopes = (agent.scopes ?? []).filter((s) => !s.startsWith("!"));
-  if (agentActsAsUser(scopes)) return true;
   const family = routeFamily(c.req.path);
   return (
     family !== null &&

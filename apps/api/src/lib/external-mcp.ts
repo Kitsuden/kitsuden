@@ -41,7 +41,7 @@ import { logAgentAction } from "../services/agent-audit";
 import { decryptSecret, encryptSecret, type EncryptedValue } from "../services/secrets";
 
 import { oauthBearer } from "./external-mcp-oauth";
-import { serverTargetProblem, serverUrlProblem } from "./external-mcp-target";
+import { externalMcpFetch, serverTargetProblem, serverUrlProblem } from "./external-mcp-target";
 import { logger } from "./logger";
 
 // ═══════════════════════════════════════════════════════════════
@@ -228,10 +228,20 @@ export async function withExternalMcpClient<T>(
   ): Promise<Response> => {
     const target = new URL(input instanceof Request ? input.url : String(input));
     if (target.origin !== origin) throw new Error(`MCP transport tried to leave ${origin}`);
-    const signal = init?.signal
-      ? AbortSignal.any([init.signal, AbortSignal.timeout(LIMITS.timeoutMs)])
-      : AbortSignal.timeout(LIMITS.timeoutMs);
-    const res = await fetch(input, { ...init, redirect: "manual", signal });
+    if (input instanceof Request) throw new Error("MCP transport passed a Request object");
+    const body = init?.body;
+    if (body !== undefined && body !== null && typeof body !== "string") {
+      throw new Error("MCP transport sent a body that is not text");
+    }
+    // Connects only to the addresses it checked (no second DNS lookup), never
+    // follows a redirect, and stops after the timeout, body included.
+    const res = await externalMcpFetch(target, {
+      method: init?.method,
+      headers: Object.fromEntries(new Headers(init?.headers).entries()),
+      body: body ?? undefined,
+      signal: init?.signal ?? undefined,
+      timeoutMs: LIMITS.timeoutMs,
+    });
     if (!res.body) return res;
     return new Response(limitedBody(res.body, LIMITS.responseBytes), {
       status: res.status,
@@ -411,6 +421,25 @@ export async function createServer(
   return (await getServer(String(r!.id)))!;
 }
 
+/**
+ * Does a change of URL drop the stored auth header? Yes when the new URL is on
+ * another origin and the same change does not set a new header: the header was
+ * a credential for the old host, and it used to be sent to the new one
+ * (security audit 2026-11-19). A new path on the same origin keeps it.
+ */
+export function headerDroppedByUrlChange(
+  currentUrl: string,
+  input: Pick<ServerInput, "url" | "authHeaderName" | "authHeaderValue">
+): boolean {
+  if (input.url === undefined || input.url === currentUrl) return false;
+  if (input.authHeaderName && input.authHeaderValue) return false;
+  try {
+    return new URL(input.url).origin !== new URL(currentUrl).origin;
+  } catch {
+    return true;
+  }
+}
+
 export async function updateServer(
   id: string,
   input: ServerInput,
@@ -431,7 +460,11 @@ export async function updateServer(
              change = COALESCE(change, 'changed')
        WHERE server_id = ${id}::uuid`);
   }
-  if (input.authHeaderName === null || input.authHeaderValue === null) {
+  if (
+    input.authHeaderName === null ||
+    input.authHeaderValue === null ||
+    headerDroppedByUrlChange(current.url, input)
+  ) {
     sets.push(sql`auth_header_name = NULL`, sql`auth_header_value = NULL`);
   } else if (input.authHeaderName && input.authHeaderValue) {
     // A header replaces OAuth: a server uses one or the other.

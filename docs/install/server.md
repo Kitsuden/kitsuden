@@ -250,6 +250,16 @@ others. The simple choice: **do not publish AAAA records** at first. Real IPv6 n
 it enabled in Docker (`/etc/docker/daemon.json`: `"ipv6": true, "ip6tables": true`)
 and `enable_ipv6: true` on the `kitsuden_net_prod` network (not tested).
 
+**Proxies in front of the API:** the API takes the client's address from
+`X-Forwarded-For`, counting `TRUSTED_PROXY_HOPS` entries from the right (one per
+proxy you run; each proxy appends one). `docker-compose.tls.yml` sets `2`, because
+`/api/*` goes Caddy, then the panel's nginx, then the API. If you put the API
+behind a single proxy of your own (Caddy or nginx straight to the API port), set
+`TRUSTED_PROXY_HOPS=1` in `.env`; if nothing is in front, `0`. A number higher than
+the real one lets a client choose the address the rate limit sees. Caddy replaces
+an `X-Forwarded-For` it receives from the internet, so a request that crosses
+fewer proxies (`/media/*` goes Caddy straight to the API) is still read right.
+
 ## 8. Configure the public mode
 
 In addition to [section 2](#2-configure-env), in `.env`:

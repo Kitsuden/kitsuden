@@ -17,10 +17,47 @@
 /** `"a@b.com"` o `{ address, name }`. */
 export type Address = string | { address: string; name?: string };
 
-/** Normalizes an address to the canonical header form. */
+/**
+ * Normalizes an address to the canonical header form.
+ *
+ * The display name is quoted (RFC 5322) when it holds a character that would
+ * change how the header parses: unquoted, `{ name: "Ada, eve@evil.test" }` became
+ * a second recipient. Line breaks are dropped.
+ */
 export function formatAddress(addr: Address): string {
   if (typeof addr === "string") return addr;
-  return addr.name ? `${addr.name} <${addr.address}>` : addr.address;
+  if (!addr.name) return addr.address;
+  const name = addr.name.replace(/[\r\n]+/g, " ");
+  const display = /[",;:<>@()[\]\\]/.test(name)
+    ? `"${name.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`
+    : name;
+  return `${display} <${addr.address}>`;
+}
+
+/** One mailbox: no spaces, line breaks, commas, quotes or angle brackets. */
+const MAILBOX = /^[^\s@<>,;:"()[\]\\]+@[^\s@<>,;:"()[\]\\]+$/;
+/** `Name <mailbox>` with a plain name or a quoted one (what `formatAddress` writes). */
+const NAMED = /^(?:"(?:[^"\\\r\n]|\\.)*"|[^<>@,;"\r\n]*)\s*<([^<>\r\n]+)>$/;
+
+/**
+ * Is this ONE well-formed address? A string may be `a@b.com`, `Name <a@b.com>`
+ * or `"Name, quoted" <a@b.com>`; an object needs a well-formed `address`.
+ * Anything that could carry a second recipient or a header line is refused.
+ */
+export function isValidAddress(addr: Address): boolean {
+  if (typeof addr === "string") {
+    if (/[\r\n]/.test(addr)) return false;
+    const s = addr.trim();
+    const named = NAMED.exec(s);
+    return named ? MAILBOX.test(named[1]!.trim()) : MAILBOX.test(s);
+  }
+  return (
+    !!addr &&
+    typeof addr === "object" &&
+    typeof addr.address === "string" &&
+    MAILBOX.test(addr.address) &&
+    (addr.name === undefined || typeof addr.name === "string")
+  );
 }
 
 /** Extracts only the email (without the name) — useful for deduplicating and asserting. */
@@ -35,7 +72,11 @@ export interface Attachment {
   filename: string;
   /** In-memory content. Mutually exclusive with `path`. */
   content?: string | Uint8Array;
-  /** Path on disk. Mutually exclusive with `content`. */
+  /**
+   * Path on disk, read by the SMTP driver (which never fetches a URL here). It
+   * must come from code, never from request or event data. Mutually exclusive
+   * with `content`.
+   */
   path?: string;
   contentType?: string;
   /** For embedded images: `<img src="cid:logo">`. */

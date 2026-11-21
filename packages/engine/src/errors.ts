@@ -194,6 +194,17 @@ export function sqlstateOf(err: unknown): string | null {
   return null;
 }
 
+/** The `detail` of the Postgres error inside `err` (drizzle wraps it in `cause`). */
+function sqlDetailOf(err: unknown): string | null {
+  let cur: unknown = err;
+  for (let i = 0; i < 5 && cur && typeof cur === "object"; i++) {
+    const detail = (cur as { detail?: unknown }).detail;
+    if (typeof detail === "string") return detail;
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return null;
+}
+
 /**
  * A Postgres error that is the fault of the INPUT, not the server: the status
  * and a message without the query. Schemathesis found a dozen 500s that were
@@ -218,12 +229,19 @@ export function postgresInputError(
       code: ErrorCode.CONFLICT,
       message: "A record with that unique value already exists.",
     };
-  if (status === "23503")
+  if (status === "23503") {
+    // Both directions of a foreign key raise 23503: pointing at a row that does
+    // not exist, and deleting a row others still point at. Only the detail
+    // tells them apart (it never goes out; it names tables and keys).
+    const stillUsed = /is still referenced/i.test(sqlDetailOf(err) ?? "");
     return {
       status: 409,
       code: ErrorCode.CONFLICT,
-      message: "It refers to a nonexistent record.",
+      message: stillUsed
+        ? "Other records still use it: remove or reassign them first."
+        : "It refers to a nonexistent record.",
     };
+  }
   if (status === "23502" || status === "23514") {
     return {
       status: 422,

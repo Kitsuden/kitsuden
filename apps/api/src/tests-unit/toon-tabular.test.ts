@@ -286,5 +286,6 @@ describe("TOON — random data against the reference", () => {
       }
     }
     expect(failures).toBe(0);
-  });
+    // 20 000 encodes and two decodes each: past bun's 5 s default when the suite runs in parallel.
+  }, 30_000);
 });

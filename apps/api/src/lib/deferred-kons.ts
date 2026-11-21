@@ -47,7 +47,7 @@
  */
 
 import { toErrorEnvelope } from "@kitsuden/engine";
-import type { KonContext } from "@kitsuden/shared";
+import type { KonContext, KonDefinition } from "@kitsuden/shared";
 import type { Hono } from "hono";
 
 import { db } from "../db";
@@ -56,7 +56,9 @@ import { withTransactionalRLS } from "../middleware/transactional-rls";
 
 import { inProduction } from "./environment";
 import { withHostContext, envForTheKon } from "./host-context";
+import { registerKonRouter } from "./kon-routes";
 import { announceKon, bindKonContext } from "./kon-setup";
+import { runAsKon } from "./queue-kon-access";
 
 export interface DeferredKon {
   /** The kon's id, as in its manifest (`kon-booking`). */
@@ -87,10 +89,24 @@ export interface DeferredKon {
   path: string;
   /** Does it declare request limits that cannot be applied on the fly? */
   hasRateLimits: boolean;
+  /** `events` of its kon.json, merged with the code's declaration when it is activated. */
+  manifestEvents?: unknown;
 }
 
 const deferredItems = new Map<string, DeferredKon>();
 const routers = new Map<string, Hono>();
+/**
+ * The definitions of the kons activated after startup. The API docs
+ * (`/api/docs/openapi.json`) read the kons loaded at startup; without these, a
+ * kon enabled from the panel answered on its routes but was missing from the
+ * spec until the API restarted (web app test 2026-11-19).
+ */
+const definitions = new Map<string, KonDefinition>();
+
+/** Kons activated after startup that declare a definition (for the API docs). */
+export function hotLoadedKonDefinitions(): KonDefinition[] {
+  return [...definitions.values()];
+}
 
 /**
  * Gives a kon's router the same error translator as the API.
@@ -220,7 +236,11 @@ async function load(kon: DeferredKon): Promise<Hono | null> {
     let mod: Record<string, unknown> | null = null;
     for (const candidate of candidates) {
       if (!existsSync(candidate)) continue;
-      mod = (await import(pathToFileURL(candidate).href)) as Record<string, unknown>;
+      // In its kon scope, like at startup (lib/queue-kon-access.ts).
+      mod = (await runAsKon(kon.id, () => import(pathToFileURL(candidate).href))) as Record<
+        string,
+        unknown
+      >;
       break;
     }
     if (!mod) throw new Error(`could not import ${kon.id} from ${kon.path}`);
@@ -229,10 +249,19 @@ async function load(kon: DeferredKon): Promise<Hono | null> {
     const exported = mod.kon ?? mod.default;
 
     if (isKonDefinition(exported)) {
+      // The id in the code is the one its context is bound to (secrets, events, channels): it must be
+      // the installed kon, and the SDK it declares gets the check startup gives it (H47, H49).
+      const { deferredKonCodeProblem } = await import("./installed-kons");
+      const problem = deferredKonCodeProblem(kon.id, exported.id, exported.sdk);
+      if (problem) throw new Error(problem);
+      const { mergeKonEventDeclarations } = await import("@kitsuden/shared");
       // Tied to this kon, like at startup (lib/kon-setup.ts).
       const konContext = bindKonContext(context, exported.id);
-      await announceKon(exported, konContext);
-      const router = exported.createRouter(konContext);
+      await announceKon(
+        { ...exported, events: mergeKonEventDeclarations(exported.events, kon.manifestEvents) },
+        konContext
+      );
+      const router = runAsKon(exported.id, () => exported.createRouter(konContext));
       // Kon SDK: its operations, for MCP (the path is the one declared
       // by the kon or the first of the reserved candidates).
       if (exported.operations) {
@@ -241,22 +270,34 @@ async function load(kon: DeferredKon): Promise<Hono | null> {
         registerMountedOperations(
           kon.id,
           exported.mountPath ?? kon.mountRoutes[0] ?? `/api/custom/${kon.id}`,
-          operationsOf(exported, konContext),
+          runAsKon(exported.id, () => operationsOf(exported, konContext)),
           router as never
         );
       }
       // `onStartup` runs here and not at startup: for this kon, THIS is its
       // startup. If it throws, activation fails and nothing is cached.
-      if (exported.hooks?.onStartup) await exported.hooks.onStartup(konContext);
+      const onStartup = exported.hooks?.onStartup;
+      if (onStartup) await runAsKon(exported.id, () => onStartup(konContext));
+      // Like at startup (module-loader): the route registry tells which kon
+      // serves a path. Without it a kon enabled from the panel was invisible to
+      // `pathKon` until a restart: an agent key's `!<kon>:*` denial did not
+      // cover its legacy routes, and the API docs left its routes out.
+      registerKonRouter(
+        kon.id,
+        exported.mountPath ?? kon.mountRoutes[0] ?? `/api/custom/${kon.id}`,
+        router
+      );
       withErrorTranslator(router, kon.id);
       const wrappedItem = withErrorTranslator(withHostContext(router), kon.id);
       routers.set(kon.id, wrappedItem);
+      definitions.set(kon.id, exported);
       return wrappedItem;
     }
 
     // Legacy kon: exports a bare Hono.
     for (const value of Object.values(mod)) {
       if (isHonoRouter(value)) {
+        registerKonRouter(kon.id, kon.mountRoutes[0] ?? `/api/custom/${kon.id}`, value);
         withErrorTranslator(value, kon.id);
         const wrappedItem = withErrorTranslator(withHostContext(value), kon.id);
         routers.set(kon.id, wrappedItem);
@@ -370,9 +411,12 @@ export function registerDeferredKons(
       const prefix =
         validRoutes.find((r) => url.pathname === r || url.pathname.startsWith(`${r}/`)) ?? "";
       url.pathname = url.pathname.slice(prefix.length) || "/";
-      return router.fetch(
-        new Request(url.toString(), c.req.raw),
-        envForTheKon(c.env, (k) => c.get(k))
+      // In the kon's scope, as a kon mounted at startup (lib/queue-kon-access.ts).
+      return runAsKon(kon.id, () =>
+        router.fetch(
+          new Request(url.toString(), c.req.raw),
+          envForTheKon(c.env, (k) => c.get(k))
+        )
       );
     };
 
@@ -421,6 +465,17 @@ export async function activateKonHot(
   } catch (err) {
     return { mounted: false, reason: err instanceof Error ? err.message : String(err) };
   }
+}
+
+/**
+ * Was this kon enabled at runtime (hot-loaded) and switched off since? `konSwitchedOff` (kon-activation.ts)
+ * only judges kons loaded at startup; a hot-loaded one keeps its definition in memory after it is disabled,
+ * so whatever runs on its own clock (lib/kon-schedules.ts) asks here too.
+ */
+export async function hotKonSwitchedOff(konId: string): Promise<boolean> {
+  if (![...definitions.keys()].some((id) => sameKon(id, konId))) return false;
+  for (const key of await activeKons()) if (sameKon(key, konId)) return false;
+  return true;
 }
 
 /** Does this kon have a reserved path that already responds? For the restart warning. */
