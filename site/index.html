@@ -20,9 +20,28 @@
     />
     <meta property="og:url" content="https://kitsuden.github.io/kitsuden/" />
     <meta property="og:image" content="https://kitsuden.github.io/kitsuden/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Kitsuden's kitsune logo next to the line: your agent gets a key, not the database password. Six tutorial steps: install, model, key, connect, checks, approve."
+    />
+    <meta property="og:site_name" content="Kitsuden" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Kitsuden — your agent gets a key, not the database password"
+    />
+    <meta
+      name="twitter:description"
+      content="An open-source backend for apps that AI agents use. Learn it in six steps, with a film that plays along."
+    />
+    <meta name="twitter:image" content="https://kitsuden.github.io/kitsuden/og.png" />
     <meta name="color-scheme" content="dark light" />
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#0a0910" />
+    <link rel="icon" href="favicon.png" type="image/png" sizes="64x64" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="preload" href="media/tutorial-chapters.json" as="fetch" crossorigin />
     <script>
       // Theme: the visitor's saved choice, else the system's. Runs before paint.
       try {
@@ -44,23 +63,24 @@
         font-display: swap;
       }
       :root {
-        --ink: #09090b;
-        --panel: #131318;
-        --panel-2: #1b1b22;
-        --line: #2e2e3a;
-        --text: #fafafa;
-        --dim: #a1a1aa;
-        --violet: #a855f7;
-        --seal: #ff2d6f;
-        --on-seal: #09090b;
-        --agent: #c084fc;
-        --ok: #00e676;
-        --wait: #ffab00;
-        --no: #ff6b8f;
-        --fill-a: #6d28d9;
-        --fill-b: #be185d;
-        --glow-a: rgb(168 85 247 / 0.24);
-        --glow-b: rgb(255 45 111 / 0.16);
+        /* The kitsune logo's own colours: indigo at the ears, crimson at the chin. */
+        --ink: #0a0910;
+        --panel: #13111b;
+        --panel-2: #1a1724;
+        --line: #2c2838;
+        --text: #f4f2f8;
+        --dim: #a39fb4;
+        --violet: #7d68ff;
+        --seal: #ff3d5e;
+        --on-seal: #0a0910;
+        --agent: #a99bff;
+        --ok: #3ddc97;
+        --wait: #ffb547;
+        --no: #ff6b85;
+        --fill-a: #4f35e0;
+        --fill-b: #d0143a;
+        --glow-a: rgb(110 91 255 / 0.24);
+        --glow-b: rgb(224 16 47 / 0.17);
         --grid: rgb(255 255 255 / 0.035);
         --serif: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
         --sans: "Space Grotesk", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
@@ -75,15 +95,15 @@
         --line: #d5d0e6;
         --text: #14121c;
         --dim: #4d4860;
-        --violet: #7e22ce;
-        --seal: #c2185b;
+        --violet: #4a35c9;
+        --seal: #c8102e;
         --on-seal: #ffffff;
-        --agent: #6d28d9;
+        --agent: #4a35c9;
         --ok: #087443;
         --wait: #8a5a00;
         --no: #b3123f;
-        --glow-a: rgb(126 34 206 / 0.12);
-        --glow-b: rgb(194 24 91 / 0.08);
+        --glow-a: rgb(74 53 201 / 0.12);
+        --glow-b: rgb(200 16 46 / 0.08);
         --grid: rgb(20 18 28 / 0.045);
       }
 
@@ -200,9 +220,14 @@
       .brand:hover {
         color: var(--text);
       }
-      .brand svg {
-        width: 1.75rem;
-        height: 1.75rem;
+      .brand img {
+        width: 2.1rem;
+        height: 2.1rem;
+        filter: drop-shadow(0 0 10px rgb(125 104 255 / 0.45));
+        transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .brand:hover img {
+        transform: rotate(-6deg) scale(1.06);
       }
       .top nav {
         display: flex;
@@ -1254,6 +1279,368 @@
         background-clip: text;
         color: transparent;
       }
+
+      /* ── the kitsune behind the hero ── */
+      .hero-mark {
+        position: absolute;
+        right: -7rem;
+        top: -2rem;
+        width: min(36rem, 70vw);
+        height: auto;
+        opacity: 0.22;
+        pointer-events: none;
+        animation: float 9s ease-in-out infinite alternate;
+        mask-image: linear-gradient(100deg, transparent 8%, #000 60%);
+      }
+      :root[data-theme="light"] .hero-mark {
+        opacity: 0.1;
+      }
+      @keyframes float {
+        to {
+          transform: translateY(1.4rem) rotate(-2deg);
+        }
+      }
+
+      /* ── reading progress: the logo's gradient fills as you scroll ── */
+      .top::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: -1px;
+        height: 2px;
+        width: 100%;
+        transform-origin: 0 50%;
+        transform: scaleX(0);
+        background: linear-gradient(90deg, var(--fill-a), var(--violet), var(--seal));
+      }
+      @supports (animation-timeline: scroll()) {
+        .top::after {
+          animation: read linear both;
+          animation-timeline: scroll(root);
+        }
+      }
+      @keyframes read {
+        to {
+          transform: scaleX(1);
+        }
+      }
+
+      /* ── the interactive tutorial ── */
+      .tutorial {
+        padding-block: clamp(3rem, 6vw, 5rem) clamp(3rem, 6vw, 5rem);
+        position: relative;
+      }
+      .tut-head h2 {
+        font-size: clamp(1.8rem, 3.4vw, 2.8rem);
+      }
+      .tut-head p {
+        color: var(--dim);
+        margin-top: 0.8rem;
+      }
+      .tut-head p b {
+        color: var(--text);
+      }
+      .tut {
+        display: grid;
+        gap: 1.6rem;
+        margin-top: 2rem;
+        align-items: start;
+      }
+      @media (min-width: 64rem) {
+        .tut {
+          grid-template-columns: minmax(0, 1.75fr) minmax(18rem, 1fr);
+        }
+        .tut-stage {
+          position: sticky;
+          top: 5rem;
+        }
+      }
+      .tut-clip {
+        margin-top: 0;
+      }
+      .tut-cover {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 0.9rem;
+        border: 0;
+        cursor: pointer;
+        color: #fff;
+        font: 600 1.05rem var(--sans);
+        background: radial-gradient(closest-side, rgb(10 9 16 / 0.15), rgb(10 9 16 / 0.6));
+      }
+      .tut-cover-play {
+        display: grid;
+        place-items: center;
+        width: 5rem;
+        height: 5rem;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--fill-a), var(--fill-b));
+        box-shadow:
+          0 0 0 0.5rem rgb(255 255 255 / 0.08),
+          0 0 60px -6px var(--seal);
+        transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .tut-cover:hover .tut-cover-play {
+        transform: scale(1.07);
+      }
+      .tut-cover-play svg {
+        width: 2rem;
+        height: 2rem;
+        margin-left: 0.2rem;
+      }
+      .tut-pause {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 0.6rem;
+        padding: 1.5rem;
+        text-align: center;
+        background: rgb(10 9 16 / 0.82);
+        backdrop-filter: blur(6px);
+        color: #f4f2f8;
+        animation: rise 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .tut-pause-k {
+        font: 600 0.85rem var(--mono);
+        color: #ffb547;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .tut-pause-t {
+        font: 700 clamp(1.1rem, 2.4vw, 1.6rem) / 1.2 var(--sans);
+        max-width: 30ch;
+        margin-bottom: 0.6rem;
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          translate: 0 0.8rem;
+        }
+      }
+      .tut-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        margin-top: 0.8rem;
+      }
+      .tut-btn {
+        flex: none;
+        display: grid;
+        place-items: center;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .tut-btn svg {
+        width: 1rem;
+        height: 1rem;
+      }
+      .tut-track {
+        flex: 1;
+        display: flex;
+        gap: 0.3rem;
+        min-width: 0;
+      }
+      .tut-track button {
+        position: relative;
+        flex: var(--w, 1);
+        height: 2.75rem;
+        padding: 0;
+        border: 0;
+        background: none;
+        cursor: pointer;
+      }
+      .tut-track button::before,
+      .tut-track button::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 6px;
+        margin-top: -3px;
+        border-radius: 3px;
+        background: color-mix(in srgb, var(--text) 12%, transparent);
+      }
+      .tut-track button::after {
+        right: auto;
+        width: calc(var(--p, 0) * 100%);
+        background: linear-gradient(90deg, var(--fill-a), var(--seal));
+      }
+      .tut-track button:hover::before {
+        background: color-mix(in srgb, var(--text) 24%, transparent);
+      }
+      .tut-time {
+        flex: none;
+        font: 500 0.85rem var(--mono);
+        color: var(--dim);
+        min-width: 4.6rem;
+        text-align: right;
+      }
+      .tut-mode {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.9rem;
+        color: var(--dim);
+        cursor: pointer;
+        min-height: 2.75rem;
+      }
+      .tut-mode input {
+        accent-color: var(--seal);
+        width: 1.05rem;
+        height: 1.05rem;
+      }
+      @media (max-width: 40rem) {
+        .tut-bar {
+          flex-wrap: wrap;
+        }
+        .tut-track {
+          order: 3;
+          flex-basis: 100%;
+        }
+        .tut-mode {
+          margin-left: auto;
+        }
+      }
+      .tut-now {
+        min-height: 3.2em;
+        margin-top: 0.4rem;
+        font-size: 1.05rem;
+        color: var(--text);
+        max-width: none;
+      }
+      .tut-now .k {
+        font: 600 0.8rem var(--mono);
+        color: var(--seal);
+        margin-right: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .tut-steps {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 0.55rem;
+      }
+      .tut-steps li {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: color-mix(in srgb, var(--panel) 80%, transparent);
+        overflow: hidden;
+        transition:
+          border-color 0.3s,
+          box-shadow 0.3s,
+          background 0.3s;
+      }
+      .tut-step-h {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        width: 100%;
+        min-height: 3.2rem;
+        padding: 0.7rem 1rem;
+        border: 0;
+        background: none;
+        color: var(--text);
+        font: 600 1rem var(--sans);
+        text-align: left;
+        cursor: pointer;
+      }
+      .tut-n {
+        font: 700 0.85rem var(--mono);
+        color: var(--dim);
+        transition: color 0.3s;
+      }
+      .tut-fill {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        height: 2px;
+        width: calc(var(--p, 0) * 100%);
+        background: linear-gradient(90deg, var(--fill-a), var(--seal));
+      }
+      .tut-steps li[data-state="done"] .tut-n::after {
+        content: " ✓";
+        color: var(--ok);
+      }
+      .tut-steps li[data-state="done"] .tut-fill {
+        opacity: 0.35;
+      }
+      .tut-body {
+        padding: 0 1rem 1rem 3.1rem;
+        font-size: 0.95rem;
+        color: var(--dim);
+      }
+      .tut-body p {
+        max-width: none;
+      }
+      .tut-steps.live li:not([data-state="now"]) .tut-body {
+        display: none;
+      }
+      .tut-steps.live li[data-state="now"] .tut-body {
+        animation: rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .tut-steps li[data-state="now"] {
+        border-color: color-mix(in srgb, var(--violet) 70%, var(--line));
+        background: linear-gradient(
+          135deg,
+          color-mix(in srgb, var(--fill-a) 14%, var(--panel)),
+          color-mix(in srgb, var(--fill-b) 9%, var(--panel))
+        );
+        box-shadow: 0 0 40px -14px var(--violet);
+      }
+      .tut-steps li[data-state="now"] .tut-n {
+        color: var(--seal);
+      }
+      .tut-copy {
+        display: flex;
+        gap: 0.5rem;
+        align-items: stretch;
+        margin-top: 0.8rem;
+      }
+      .tut-copy code {
+        flex: 1;
+        min-width: 0;
+        display: block;
+        padding: 0.6rem 0.75rem;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: var(--ink);
+        color: var(--text);
+        font-size: 0.78rem;
+        line-height: 1.5;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+      .tut-copy .btn {
+        min-height: 0;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+      }
+      .tut-more {
+        display: inline-block;
+        margin-top: 0.7rem;
+        font-size: 0.9rem;
+        color: var(--agent);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero-mark {
+          animation: none;
+        }
+      }
       @media (prefers-reduced-motion: reduce) {
         .js .reveal {
           opacity: 1;
@@ -1279,29 +1666,11 @@
     <header class="top">
       <div class="wrap">
         <a class="brand" href="#top" aria-label="Kitsuden, home">
-          <svg viewBox="0 0 32 32" aria-hidden="true">
-            <rect
-              x="2.5"
-              y="2.5"
-              width="27"
-              height="27"
-              rx="7"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.4"
-            />
-            <path
-              d="M11 9v14M11 16l9-7M13.5 14l7.5 9"
-              fill="none"
-              stroke="var(--seal)"
-              stroke-width="2.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <img src="logo-96.png" width="48" height="48" alt="" />
           Kitsuden
         </a>
         <nav aria-label="Sections">
+          <a href="#tutorial">Tutorial</a>
           <a class="wide" href="#declare">How it works</a>
           <a class="wide" href="#kons">Kons</a>
           <a class="wide" href="#start">Install</a>
@@ -1323,6 +1692,7 @@
     <main id="main">
       <section class="hero" id="top">
         <canvas id="sky" aria-hidden="true"></canvas>
+        <img class="hero-mark" src="logo.webp" width="480" height="480" alt="" aria-hidden="true" />
         <div class="wrap hero-grid">
           <div>
             <span class="tag"><i></i>Open source · beta 0.9.0</span>
@@ -1356,7 +1726,7 @@
             <p class="fineprint">
               For people who build with Claude Code, Cursor or Codex and want their agent to touch
               real data safely. Needs Docker. MIT licensed.
-              <a href="#watch">Watch the 30-second video</a>.
+              <a href="#tutorial">Follow the 70-second tutorial</a>.
             </p>
           </div>
         </div>
@@ -1441,24 +1811,199 @@
         </div>
       </section>
 
-      <section class="watch" id="watch">
+      <section class="tutorial" id="tutorial" aria-labelledby="tut-title">
+        <span id="watch" aria-hidden="true"></span>
         <div class="wrap">
-          <h2>The whole idea in 30 seconds</h2>
-          <p>
-            An agent reads, reaches too far, and asks to delete. Watch what Kitsuden does with each.
-          </p>
-          <div class="clip reveal">
-            <video
-              controls
-              playsinline
-              preload="metadata"
-              poster="media/explainer.jpg"
-              width="1280"
-              height="720"
-              aria-label="Video: an agent reads its notes, is denied an admin route, asks to delete a note, and a person approves it"
-            >
-              <source src="media/explainer.mp4" type="video/mp4" />
-            </video>
+          <div class="tut-head">
+            <span class="tag"><i></i>Interactive tutorial · 71 seconds</span>
+            <h2 id="tut-title">
+              Learn it in six steps. <span class="grad">The page plays along.</span>
+            </h2>
+            <p>
+              The list follows the film: the step on screen lights up and its command is ready to
+              copy. Click a step to jump to it, or turn on <b>step mode</b> and the film stops after
+              each one, so you can do it yourself before you go on.
+            </p>
+          </div>
+
+          <div class="tut">
+            <div class="tut-stage">
+              <div class="clip tut-clip">
+                <video
+                  id="tut-video"
+                  playsinline
+                  muted
+                  preload="metadata"
+                  poster="media/tutorial.jpg"
+                  width="1280"
+                  height="720"
+                  aria-describedby="tut-now"
+                  aria-label="Tutorial film: install Kitsuden, declare a model, give an agent a key, connect it over MCP, watch every call get checked, and approve a risky delete"
+                >
+                  <source src="media/tutorial.mp4" type="video/mp4" />
+                  <track kind="captions" src="media/tutorial.vtt" srclang="en" label="English" />
+                </video>
+                <button class="tut-cover" id="tut-cover" type="button" hidden>
+                  <span class="tut-cover-play" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>
+                  </span>
+                  <span>Play the tutorial</span>
+                </button>
+                <div class="tut-pause" id="tut-pause" hidden>
+                  <p class="tut-pause-k" id="tut-pause-k"></p>
+                  <p class="tut-pause-t" id="tut-pause-t"></p>
+                  <button class="btn primary" id="tut-next" type="button">Next step</button>
+                </div>
+              </div>
+              <div class="tut-bar" id="tut-bar" hidden>
+                <button class="tut-btn" id="tut-play" type="button" aria-label="Play">
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path id="tut-icon" d="M4 2.5v11l9-5.5z" fill="currentColor" />
+                  </svg>
+                </button>
+                <div
+                  class="tut-track"
+                  id="tut-track"
+                  role="group"
+                  aria-label="Jump to a step"
+                ></div>
+                <span class="tut-time" id="tut-time">0:00</span>
+                <label class="tut-mode">
+                  <input type="checkbox" id="tut-step" />
+                  <span>Step mode</span>
+                </label>
+              </div>
+              <p class="tut-now" id="tut-now" aria-live="polite"></p>
+            </div>
+
+            <ol class="tut-steps" id="tut-steps">
+              <li data-ch="install">
+                <button type="button" class="tut-step-h">
+                  <span class="tut-n">01</span><span class="tut-t">Install it</span>
+                  <span class="tut-fill" aria-hidden="true"></span>
+                </button>
+                <div class="tut-body">
+                  <p>
+                    One command clones the repository and runs the installer. It writes every
+                    secret, builds the images on your machine and prints the panel URL with a
+                    one-time setup token. Needs Docker.
+                  </p>
+                  <div class="tut-copy">
+                    <code
+                      >git clone https://github.com/Kitsuden/kitsuden.git &amp;&amp; cd kitsuden
+                      &amp;&amp; ./install.sh</code
+                    >
+                    <button
+                      class="btn"
+                      type="button"
+                      data-copy="git clone https://github.com/Kitsuden/kitsuden.git &amp;&amp; cd kitsuden &amp;&amp; ./install.sh"
+                    >
+                      <span>Copy</span>
+                    </button>
+                  </div>
+                </div>
+              </li>
+              <li data-ch="model">
+                <button type="button" class="tut-step-h">
+                  <span class="tut-n">02</span><span class="tut-t">Declare a model</span>
+                  <span class="tut-fill" aria-hidden="true"></span>
+                </button>
+                <div class="tut-body">
+                  <p>
+                    One file says what a note is and who may touch it. You get a REST API, MCP
+                    tools, an admin form and a typed SDK method. The access rule is required and
+                    reaches PostgreSQL row-level security.
+                  </p>
+                  <div class="tut-copy">
+                    <code
+                      >pnpm kitsuden make kon notes &amp;&amp; pnpm kitsuden make model note --kon
+                      notes</code
+                    >
+                    <button
+                      class="btn"
+                      type="button"
+                      data-copy="pnpm kitsuden make kon notes &amp;&amp; pnpm kitsuden make model note --kon notes"
+                    >
+                      <span>Copy</span>
+                    </button>
+                  </div>
+                  <a class="tut-more" href="#declare">More on models ↓</a>
+                </div>
+              </li>
+              <li data-ch="key">
+                <button type="button" class="tut-step-h">
+                  <span class="tut-n">03</span><span class="tut-t">Give the agent a key</span>
+                  <span class="tut-fill" aria-hidden="true"></span>
+                </button>
+                <div class="tut-body">
+                  <p>
+                    In the panel at <code>http://localhost:3001</code>, open <b>Agents</b>, create
+                    one and pick only the scopes it needs. It gets its own
+                    <code>kitsuden_agent_…</code> key and rate limit; revoke it without touching the
+                    others.
+                  </p>
+                </div>
+              </li>
+              <li data-ch="connect">
+                <button type="button" class="tut-step-h">
+                  <span class="tut-n">04</span><span class="tut-t">Connect it over MCP</span>
+                  <span class="tut-fill" aria-hidden="true"></span>
+                </button>
+                <div class="tut-body">
+                  <p>
+                    Copy <code>docs/agents/kitsuden.mcp.json</code> to <code>.mcp.json</code>. The
+                    key reaches the server from the environment, so it is never written in the
+                    repository.
+                  </p>
+                  <div class="tut-copy">
+                    <code
+                      >export KITSUDEN_API_URL=http://localhost:3000
+                      KITSUDEN_API_TOKEN=kitsuden_agent_…</code
+                    >
+                    <button
+                      class="btn"
+                      type="button"
+                      data-copy="export KITSUDEN_API_URL=http://localhost:3000 KITSUDEN_API_TOKEN="
+                    >
+                      <span>Copy</span>
+                    </button>
+                  </div>
+                  <a
+                    class="tut-more"
+                    href="https://github.com/Kitsuden/kitsuden/blob/main/docs/agents/coding-agents.md"
+                    >Set-up for Claude Code, Codex and Antigravity</a
+                  >
+                </div>
+              </li>
+              <li data-ch="checks">
+                <button type="button" class="tut-step-h">
+                  <span class="tut-n">05</span><span class="tut-t">Every call is checked</span>
+                  <span class="tut-fill" aria-hidden="true"></span>
+                </button>
+                <div class="tut-body">
+                  <p>
+                    Key, scope, policy and row-level security, then the audit log. Outside its
+                    scopes the agent gets a <code>403</code> with a stable code and a hint it can
+                    act on.
+                  </p>
+                  <a class="tut-more" href="#defaults">See all six defaults ↓</a>
+                </div>
+              </li>
+              <li data-ch="approve">
+                <button type="button" class="tut-step-h">
+                  <span class="tut-n">06</span><span class="tut-t">Risky actions wait for you</span>
+                  <span class="tut-fill" aria-hidden="true"></span>
+                </button>
+                <div class="tut-body">
+                  <p>
+                    Switch approvals on and an agent's <code>DELETE</code> becomes a proposal
+                    (<code>202</code>) with a diff in your inbox. Approved, it runs once with the
+                    agent's own permissions.
+                  </p>
+                  <a class="tut-more" href="#top">Try it live in the demo above ↑</a>
+                </div>
+              </li>
+            </ol>
           </div>
         </div>
         <div class="ticker" aria-hidden="true">
@@ -2039,6 +2584,167 @@ powershell -ExecutionPolicy Bypass -File install.ps1</code></pre>
           btn.addEventListener("click", () => (btn.dataset.user = "1"));
           sync();
         }
+
+        /* ── the tutorial: the list follows the film, the film follows the list ──
+           Chapter times and captions come from media/tutorial-chapters.json, the same file
+           the Remotion source (video/) reads, so the page and the film cannot drift apart. */
+        (async () => {
+          const video = $("#tut-video");
+          if (!video) return;
+          let data;
+          try {
+            data = await (await fetch("media/tutorial-chapters.json")).json();
+          } catch (e) {
+            video.controls = true; // no chapter data: a plain player still teaches
+            return;
+          }
+          const fps = data.fps;
+          const all = data.chapters.map((ch) => ({
+            ...ch,
+            t0: ch.start / fps,
+            t1: (ch.start + ch.frames) / fps,
+          }));
+          const steps = all.filter((ch) => ch.n >= 1 && ch.n <= 6);
+          const items = new Map($$("#tut-steps li").map((li) => [li.dataset.ch, li]));
+          const track = $("#tut-track");
+          const now = $("#tut-now");
+          const icon = $("#tut-icon");
+          const play = $("#tut-play");
+          const time = $("#tut-time");
+          const cover = $("#tut-cover");
+          const pause = $("#tut-pause");
+          const stepMode = $("#tut-step");
+          const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+          const total = all[all.length - 1].t1;
+
+          $("#tut-bar").hidden = false;
+          $("#tut-steps").classList.add("live");
+          cover.hidden = false;
+          const segs = new Map();
+          for (const ch of steps) {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.style.setProperty("--w", ch.frames);
+            b.setAttribute("aria-label", `Step ${ch.n}: ${ch.title}`);
+            b.title = `${ch.n} · ${ch.title}`;
+            b.addEventListener("click", () => go(ch));
+            track.append(b);
+            segs.set(ch.id, b);
+          }
+          for (const [id, li] of items) {
+            const ch = all.find((c) => c.id === id);
+            if (ch) $(".tut-step-h", li).addEventListener("click", () => go(ch));
+          }
+
+          let current = null;
+          let beatKey = "";
+          let stopAt = null; // step mode: where the film pauses next
+          const go = (ch) => {
+            pause.hidden = true;
+            cover.hidden = true;
+            video.currentTime = ch.t0 + 0.01;
+            stopAt = null;
+            video.play().catch(() => {});
+          };
+          const render = () => {
+            const t = video.currentTime;
+            const ch = all.find((c) => t >= c.t0 && t < c.t1) ?? all[all.length - 1];
+            for (const s of steps) {
+              const p = Math.min(1, Math.max(0, (t - s.t0) / (s.t1 - s.t0)));
+              segs.get(s.id).style.setProperty("--p", p);
+              const li = items.get(s.id);
+              if (!li) continue;
+              li.style.setProperty("--p", p);
+              li.dataset.state = s === ch ? "now" : t >= s.t1 ? "done" : "next";
+              $(".tut-step-h", li).setAttribute("aria-current", s === ch ? "step" : "false");
+            }
+            time.textContent = `${fmt(t)} / ${fmt(total)}`;
+            const local = (t - ch.t0) * fps;
+            let beat = ch.beats[0];
+            for (const b of ch.beats) if (local >= b.at) beat = b;
+            const key = `${ch.id}:${beat.at}`;
+            if (key !== beatKey) {
+              beatKey = key;
+              now.innerHTML = "";
+              if (ch.n >= 1 && ch.n <= 6) {
+                const k = document.createElement("span");
+                k.className = "k";
+                k.textContent = `Step ${ch.n} of 6`;
+                now.append(k);
+              }
+              now.append(document.createTextNode(beat.text));
+            }
+            if (ch !== current) {
+              current = ch;
+              if (stepMode.checked && ch.n >= 1 && ch.n <= 6) stopAt = ch;
+            }
+            // step mode: hold at the end of each step so the reader can do it
+            if (stopAt && t >= stopAt.t1 - 0.15 && !video.paused) {
+              const done = stopAt;
+              stopAt = null;
+              video.pause();
+              const next = all.find((c) => c.n === done.n + 1);
+              $("#tut-pause-k").textContent = `Step ${done.n} of 6 done`;
+              $("#tut-pause-t").textContent =
+                done.n < 6
+                  ? `${done.title}. Try it on your machine, then carry on.`
+                  : "That's the whole loop. Your turn.";
+              $("#tut-next").textContent = done.n < 6 ? `Next: ${next.title}` : "Watch the ending";
+              $("#tut-next").onclick = () => go(next);
+              pause.hidden = false;
+              items
+                .get(done.id)
+                ?.scrollIntoView({ block: "nearest", behavior: still.matches ? "auto" : "smooth" });
+            }
+          };
+          const sync = () => {
+            icon.setAttribute("d", video.paused ? "M4 2.5v11l9-5.5z" : "M4 2h3v12H4zM9 2h3v12H9z");
+            play.setAttribute("aria-label", video.paused ? "Play" : "Pause");
+          };
+          let raf = 0;
+          const loop = () => {
+            render();
+            raf = video.paused ? 0 : requestAnimationFrame(loop);
+          };
+          video.addEventListener("play", () => {
+            sync();
+            cover.hidden = true;
+            pause.hidden = true;
+            if (!raf) raf = requestAnimationFrame(loop);
+          });
+          video.addEventListener("pause", () => (sync(), render()));
+          video.addEventListener("seeked", render);
+          video.addEventListener("ended", () => {
+            cover.hidden = false;
+            $("span:last-child", cover).textContent = "Watch it again";
+          });
+          play.addEventListener("click", () => {
+            video.dataset.user = "1";
+            video.paused ? video.play() : video.pause();
+          });
+          cover.addEventListener("click", () => {
+            video.dataset.user = "1";
+            if (video.ended) video.currentTime = 0;
+            video.play().catch(() => {});
+          });
+          video.addEventListener("click", () => play.click());
+          stepMode.addEventListener("change", () => {
+            stopAt =
+              stepMode.checked && current && current.n >= 1 && current.n <= 6 ? current : null;
+          });
+          // Start muted when the reader reaches it (never under reduced motion), and pause
+          // when it leaves the screen, until the reader takes over.
+          new IntersectionObserver(
+            ([e]) => {
+              if (still.matches || video.dataset.user) return;
+              if (e.isIntersecting && pause.hidden) video.play().catch(() => {});
+              else if (!e.isIntersecting) video.pause();
+            },
+            { threshold: 0.55 }
+          ).observe(video);
+          sync();
+          render();
+        })();
 
         const sky = $("#sky");
         if (sky && !still.matches) {
