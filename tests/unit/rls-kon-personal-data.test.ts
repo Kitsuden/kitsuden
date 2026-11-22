@@ -84,8 +84,8 @@ beforeAll(async () => {
 
   // The new migrations, twice: they have to be idempotent.
   for (let i = 0; i < 2; i++) {
-    await pg.exec(read("kon-members/migrations/0002_rls_datos_personales.sql"));
-    await pg.exec(read("kon-newsletter/migrations/0001_rls_datos_personales.sql"));
+    await pg.exec(read("kon-members/migrations/0002_personal_data_rls.sql"));
+    await pg.exec(read("kon-newsletter/migrations/0001_personal_data_rls.sql"));
   }
 
   await pg.exec(`
