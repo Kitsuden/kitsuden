@@ -33,11 +33,13 @@ and read their summary; if a worker fails to start under load, rerun that file a
    `CHANGELOG.md` (below `[Unreleased]`, which should be empty or renamed for the release) and the
    version stated in `README.md`.
 10. **Spanish scan.** Code, docs and API messages are English only (the admin panel's locales in
-    `packages/admin/src/lib/i18n` excepted). Review each hit; persisted names recorded in a
+    `packages/admin/src/lib/i18n`, the Spanish landing page `site/es/` and its captions
+    `site/media/tutorial.es.vtt` excepted). Review each hit; persisted names recorded in a
     `history.json` `renamed` map are fine, prose is not:
     ```bash
     git grep -nIwiE 'para|los|las|que|con|una|del|está|también|cuando|según|ningún' -- \
-      ':!pnpm-lock.yaml' ':!*.json' ':!packages/admin/src/lib/i18n' | head -50
+      ':!pnpm-lock.yaml' ':!*.json' ':!packages/admin/src/lib/i18n' ':!site/es' \
+      ':!site/media/tutorial.es.vtt' | head -50
     ```
 11. **Secrets scan.** No `.env` is tracked except examples
     (`git ls-files | grep -E '(^|/)\.env' | grep -v '\.example$'` prints nothing), and no key is

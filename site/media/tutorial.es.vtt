@@ -1,0 +1,61 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:05.000
+Un backend para apps que usan agentes de IA. Seis pasos, un minuto.
+
+00:00:05.000 --> 00:00:08.667
+Paso 1, Instálalo. Un comando. Solo necesitas Docker.
+
+00:00:08.667 --> 00:00:11.167
+Escribe los secretos y construye las imágenes en tu máquina.
+
+00:00:11.167 --> 00:00:14.000
+Imprime la URL del panel y un token de configuración de un solo uso. Guarda ambos.
+
+00:00:14.000 --> 00:00:19.000
+Paso 2, Declara un modelo. Describe los datos una vez: sus campos y quién puede leerlos o escribirlos.
+
+00:00:19.000 --> 00:00:20.667
+La regla de acceso es obligatoria. Sin regla, la respuesta es no.
+
+00:00:20.667 --> 00:00:25.000
+De ese único archivo: REST, herramientas MCP, un formulario de admin y un SDK tipado.
+
+00:00:25.000 --> 00:00:27.333
+Paso 3, Dale una key al agente. En el panel: Agents, New agent. Ponle un nombre.
+
+00:00:27.333 --> 00:00:30.667
+Elige solo los scopes que necesita. Admin queda apagado.
+
+00:00:30.667 --> 00:00:34.000
+Recibe su propia key. No la contraseña de la base de datos.
+
+00:00:34.000 --> 00:00:36.667
+Paso 4, Conéctalo por MCP. Apunta Claude Code, Cursor o Codex al servidor MCP.
+
+00:00:36.667 --> 00:00:39.000
+La key llega desde el entorno, nunca desde un archivo en git.
+
+00:00:39.000 --> 00:00:42.000
+El agente solo ve las herramientas que sus scopes permiten.
+
+00:00:42.000 --> 00:00:47.500
+Paso 5, Cada llamada se revisa. Una lectura pasa todos los controles y devuelve solo sus filas.
+
+00:00:47.500 --> 00:00:51.000
+Pasarse de la raya da un 403 con un código y una pista.
+
+00:00:51.000 --> 00:00:53.000
+Ambas quedan en el registro de auditoría, por agente.
+
+00:00:53.000 --> 00:00:57.333
+Paso 6, Lo riesgoso te espera. Con las aprobaciones activas, un borrado no se ejecuta: se vuelve una propuesta.
+
+00:00:57.333 --> 00:01:00.667
+Te espera en tu bandeja, con lo que cambiaría.
+
+00:01:00.667 --> 00:01:05.000
+Apruebas. Se ejecuta una vez y la auditoría dice quién decidió.
+
+00:01:05.000 --> 00:01:11.000
+Código abierto, licencia MIT. Se instala con un comando.

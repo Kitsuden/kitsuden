@@ -9,6 +9,9 @@
       content="Open-source backend for apps that AI agents use. Declare a model once and get the REST API, MCP tools and admin panel, with scoped agent keys, an audit log and human approval for risky actions."
     />
     <link rel="canonical" href="https://kitsuden.github.io/kitsuden/" />
+    <link rel="alternate" hreflang="en" href="https://kitsuden.github.io/kitsuden/" />
+    <link rel="alternate" hreflang="es" href="https://kitsuden.github.io/kitsuden/es/" />
+    <link rel="alternate" hreflang="x-default" href="https://kitsuden.github.io/kitsuden/" />
     <meta property="og:type" content="website" />
     <meta
       property="og:title"
@@ -1045,6 +1048,30 @@
       footer .grow {
         margin-right: auto;
       }
+      .foot-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.8rem;
+        text-decoration: none;
+      }
+      .foot-brand img {
+        width: 2.6rem;
+        height: 2.6rem;
+        filter: drop-shadow(0 0 12px rgb(125 104 255 / 0.45));
+      }
+      .foot-brand b {
+        display: block;
+        font: 700 1.15rem/1.2 var(--sans);
+        color: var(--text);
+      }
+      .foot-brand small {
+        font-size: 0.85rem;
+      }
+      .icon-btn.lang {
+        font: 700 0.8rem var(--mono);
+        text-decoration: none;
+        letter-spacing: 0.04em;
+      }
 
       @media (prefers-reduced-motion: reduce) {
         html {
@@ -1676,6 +1703,14 @@
           <a class="wide" href="#start">Install</a>
           <a href="https://github.com/Kitsuden/kitsuden">GitHub</a>
         </nav>
+        <a
+          class="icon-btn lang"
+          href="es/"
+          hreflang="es"
+          lang="es"
+          aria-label="Ver la página en español"
+          >ES</a
+        >
         <button
           class="icon-btn"
           id="theme"
@@ -2515,13 +2550,20 @@ powershell -ExecutionPolicy Bypass -File install.ps1</code></pre>
 
     <footer>
       <div class="wrap">
-        <span class="grow">Kitsuden is MIT licensed.</span>
+        <a class="foot-brand grow" href="#top" aria-label="Kitsuden, back to the top">
+          <img src="logo-96.png" width="48" height="48" alt="" />
+          <span>
+            <b>Kitsuden</b>
+            <small>The backend your AI agent talks to. MIT licensed.</small>
+          </span>
+        </a>
         <a href="https://github.com/Kitsuden/kitsuden">GitHub</a>
         <a href="https://github.com/Kitsuden/kitsuden/blob/main/docs/install/README.md">Docs</a>
         <a href="https://kitsuden.github.io/kitsuden-kons/">Kons</a>
         <a href="https://github.com/tallao-ui/tallao">tallao</a>
         <a href="https://github.com/IntiJS/inti">Inti</a>
         <a href="https://github.com/Kitsuden/kitsuden/issues">Issues</a>
+        <a href="es/" hreflang="es" lang="es">Español</a>
       </div>
     </footer>
 
@@ -2599,6 +2641,33 @@ powershell -ExecutionPolicy Bypass -File install.ps1</code></pre>
             return;
           }
           const fps = data.fps;
+          // The Spanish page (es/) is a copy of this one: it reads the same JSON in its language.
+          const es = document.documentElement.lang === "es";
+          const T = es
+            ? {
+                step: (n) => `Paso ${n} de 6`,
+                done: (n) => `Paso ${n} de 6 listo`,
+                try: (t) => `${t}. Pruébalo en tu máquina y sigue.`,
+                end: "Ese es el ciclo completo. Tu turno.",
+                next: (t) => `Siguiente: ${t}`,
+                ending: "Ver el final",
+                again: "Verlo otra vez",
+                play: "Reproducir",
+                pause: "Pausar",
+              }
+            : {
+                step: (n) => `Step ${n} of 6`,
+                done: (n) => `Step ${n} of 6 done`,
+                try: (t) => `${t}. Try it on your machine, then carry on.`,
+                end: "That's the whole loop. Your turn.",
+                next: (t) => `Next: ${t}`,
+                ending: "Watch the ending",
+                again: "Watch it again",
+                play: "Play",
+                pause: "Pause",
+              };
+          const title = (ch) => (es ? ch.title_es : ch.title);
+          const say = (b) => (es ? b.text_es : b.text);
           const all = data.chapters.map((ch) => ({
             ...ch,
             t0: ch.start / fps,
@@ -2625,8 +2694,8 @@ powershell -ExecutionPolicy Bypass -File install.ps1</code></pre>
             const b = document.createElement("button");
             b.type = "button";
             b.style.setProperty("--w", ch.frames);
-            b.setAttribute("aria-label", `Step ${ch.n}: ${ch.title}`);
-            b.title = `${ch.n} · ${ch.title}`;
+            b.setAttribute("aria-label", `${T.step(ch.n)}: ${title(ch)}`);
+            b.title = `${ch.n} · ${title(ch)}`;
             b.addEventListener("click", () => go(ch));
             track.append(b);
             segs.set(ch.id, b);
@@ -2669,10 +2738,10 @@ powershell -ExecutionPolicy Bypass -File install.ps1</code></pre>
               if (ch.n >= 1 && ch.n <= 6) {
                 const k = document.createElement("span");
                 k.className = "k";
-                k.textContent = `Step ${ch.n} of 6`;
+                k.textContent = T.step(ch.n);
                 now.append(k);
               }
-              now.append(document.createTextNode(beat.text));
+              now.append(document.createTextNode(say(beat)));
             }
             if (ch !== current) {
               current = ch;
@@ -2684,12 +2753,9 @@ powershell -ExecutionPolicy Bypass -File install.ps1</code></pre>
               stopAt = null;
               video.pause();
               const next = all.find((c) => c.n === done.n + 1);
-              $("#tut-pause-k").textContent = `Step ${done.n} of 6 done`;
-              $("#tut-pause-t").textContent =
-                done.n < 6
-                  ? `${done.title}. Try it on your machine, then carry on.`
-                  : "That's the whole loop. Your turn.";
-              $("#tut-next").textContent = done.n < 6 ? `Next: ${next.title}` : "Watch the ending";
+              $("#tut-pause-k").textContent = T.done(done.n);
+              $("#tut-pause-t").textContent = done.n < 6 ? T.try(title(done)) : T.end;
+              $("#tut-next").textContent = done.n < 6 ? T.next(title(next)) : T.ending;
               $("#tut-next").onclick = () => go(next);
               pause.hidden = false;
               items
@@ -2699,7 +2765,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1</code></pre>
           };
           const sync = () => {
             icon.setAttribute("d", video.paused ? "M4 2.5v11l9-5.5z" : "M4 2h3v12H4zM9 2h3v12H9z");
-            play.setAttribute("aria-label", video.paused ? "Play" : "Pause");
+            play.setAttribute("aria-label", video.paused ? T.play : T.pause);
           };
           let raf = 0;
           const loop = () => {
@@ -2716,7 +2782,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1</code></pre>
           video.addEventListener("seeked", render);
           video.addEventListener("ended", () => {
             cover.hidden = false;
-            $("span:last-child", cover).textContent = "Watch it again";
+            $("span:last-child", cover).textContent = T.again;
           });
           play.addEventListener("click", () => {
             video.dataset.user = "1";
