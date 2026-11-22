@@ -70,6 +70,7 @@ import { incompleteCorsWarning, allowedOrigin, sameOrigin } from "./lib/cors-ori
 import { registerCriticalFeatures } from "./lib/critical-features";
 import { initCronScheduler } from "./lib/cron-scheduler";
 import { availableKon } from "./lib/deferred-kons";
+import { ensureDerivative, isResizable, requestedWidth } from "./lib/derivatives";
 import { inProduction } from "./lib/environment";
 import { toErrorEnvelope } from "./lib/errors";
 import { startExternalMcpSweep } from "./lib/external-mcp-sweep";
@@ -767,13 +768,25 @@ if (!usesS3) {
       const route = localPathOf(decoded);
       const medium = file(route);
       if (!(await medium.exists())) return c.notFound();
+      // `?w=<width>`: on-the-fly resized derivative cached on disk for public images
+      // (`.derivatives/<width>/<key>`). Private signed files are never cached as derivatives.
+      let servedPath = route;
+      let servedModified = medium.lastModified;
+      const width = !priv ? requestedWidth(c.req.query("w")) : null;
+      if (width && isResizable(decoded)) {
+        const derivative = await ensureDerivative(decoded, route, width);
+        if (derivative) {
+          servedPath = derivative;
+          servedModified = file(derivative).lastModified;
+        }
+      }
       // Under Bun, the BunFile (type and zero-copy send); under Node, a stream (G4).
-      const { body: body, type: type } = fileBody(route);
+      const { body: body, type: type } = fileBody(servedPath);
       return new Response(body, {
         headers: {
           ...(type ? { "Content-Type": type } : {}),
           "Cache-Control": priv ? "private, no-store" : mediaCache(key),
-          "Last-Modified": new Date(medium.lastModified).toUTCString(),
+          "Last-Modified": new Date(servedModified).toUTCString(),
           /**
            * So that they can be READ, not just painted.
            *
