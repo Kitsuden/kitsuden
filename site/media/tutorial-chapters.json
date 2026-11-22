@@ -10,9 +10,11 @@
       "beats": [
         {
           "at": 0,
-          "text": "A backend for apps that AI agents use. Six steps, one minute."
+          "text": "A backend for apps that AI agents use. Six steps, one minute.",
+          "text_es": "Un backend para apps que usan agentes de IA. Seis pasos, un minuto."
         }
-      ]
+      ],
+      "title_es": "Kitsuden en un minuto"
     },
     {
       "id": "install",
@@ -23,17 +25,21 @@
       "beats": [
         {
           "at": 0,
-          "text": "One command. Docker is the only thing you need."
+          "text": "One command. Docker is the only thing you need.",
+          "text_es": "Un comando. Solo necesitas Docker."
         },
         {
           "at": 110,
-          "text": "It writes the secrets and builds the images on your machine."
+          "text": "It writes the secrets and builds the images on your machine.",
+          "text_es": "Escribe los secretos y construye las imágenes en tu máquina."
         },
         {
           "at": 185,
-          "text": "It prints the panel URL and a one-time setup token. Keep both."
+          "text": "It prints the panel URL and a one-time setup token. Keep both.",
+          "text_es": "Imprime la URL del panel y un token de configuración de un solo uso. Guarda ambos."
         }
-      ]
+      ],
+      "title_es": "Instálalo"
     },
     {
       "id": "model",
@@ -44,17 +50,21 @@
       "beats": [
         {
           "at": 0,
-          "text": "Describe the data once: its fields and who may read or write it."
+          "text": "Describe the data once: its fields and who may read or write it.",
+          "text_es": "Describe los datos una vez: sus campos y quién puede leerlos o escribirlos."
         },
         {
           "at": 150,
-          "text": "The access rule is required. No rule means no."
+          "text": "The access rule is required. No rule means no.",
+          "text_es": "La regla de acceso es obligatoria. Sin regla, la respuesta es no."
         },
         {
           "at": 200,
-          "text": "From that one file: REST, MCP tools, an admin form and a typed SDK."
+          "text": "From that one file: REST, MCP tools, an admin form and a typed SDK.",
+          "text_es": "De ese único archivo: REST, herramientas MCP, un formulario de admin y un SDK tipado."
         }
-      ]
+      ],
+      "title_es": "Declara un modelo"
     },
     {
       "id": "key",
@@ -65,17 +75,21 @@
       "beats": [
         {
           "at": 0,
-          "text": "In the panel: Agents, New agent. Give it a name."
+          "text": "In the panel: Agents, New agent. Give it a name.",
+          "text_es": "En el panel: Agents, New agent. Ponle un nombre."
         },
         {
           "at": 70,
-          "text": "Pick only the scopes it needs. Admin stays off."
+          "text": "Pick only the scopes it needs. Admin stays off.",
+          "text_es": "Elige solo los scopes que necesita. Admin queda apagado."
         },
         {
           "at": 170,
-          "text": "It gets its own key. Not the database password."
+          "text": "It gets its own key. Not the database password.",
+          "text_es": "Recibe su propia key. No la contraseña de la base de datos."
         }
-      ]
+      ],
+      "title_es": "Dale una key al agente"
     },
     {
       "id": "connect",
@@ -86,17 +100,21 @@
       "beats": [
         {
           "at": 0,
-          "text": "Point Claude Code, Cursor or Codex at the MCP server."
+          "text": "Point Claude Code, Cursor or Codex at the MCP server.",
+          "text_es": "Apunta Claude Code, Cursor o Codex al servidor MCP."
         },
         {
           "at": 80,
-          "text": "The key comes from the environment, never from a file in git."
+          "text": "The key comes from the environment, never from a file in git.",
+          "text_es": "La key llega desde el entorno, nunca desde un archivo en git."
         },
         {
           "at": 150,
-          "text": "The agent only sees the tools its scopes allow."
+          "text": "The agent only sees the tools its scopes allow.",
+          "text_es": "El agente solo ve las herramientas que sus scopes permiten."
         }
-      ]
+      ],
+      "title_es": "Conéctalo por MCP"
     },
     {
       "id": "checks",
@@ -107,17 +125,21 @@
       "beats": [
         {
           "at": 0,
-          "text": "A read passes every check and returns only its own rows."
+          "text": "A read passes every check and returns only its own rows.",
+          "text_es": "Una lectura pasa todos los controles y devuelve solo sus filas."
         },
         {
           "at": 165,
-          "text": "Reaching too far gets a 403 with a code and a hint."
+          "text": "Reaching too far gets a 403 with a code and a hint.",
+          "text_es": "Pasarse de la raya da un 403 con un código y una pista."
         },
         {
           "at": 270,
-          "text": "Both land in the audit log, per agent."
+          "text": "Both land in the audit log, per agent.",
+          "text_es": "Ambas quedan en el registro de auditoría, por agente."
         }
-      ]
+      ],
+      "title_es": "Cada llamada se revisa"
     },
     {
       "id": "approve",
@@ -128,17 +150,21 @@
       "beats": [
         {
           "at": 0,
-          "text": "With approvals on, a delete does not run. It becomes a proposal."
+          "text": "With approvals on, a delete does not run. It becomes a proposal.",
+          "text_es": "Con las aprobaciones activas, un borrado no se ejecuta: se vuelve una propuesta."
         },
         {
           "at": 130,
-          "text": "It waits in your inbox, with what would change."
+          "text": "It waits in your inbox, with what would change.",
+          "text_es": "Te espera en tu bandeja, con lo que cambiaría."
         },
         {
           "at": 230,
-          "text": "You approve. It runs once, and the audit log says who decided."
+          "text": "You approve. It runs once, and the audit log says who decided.",
+          "text_es": "Apruebas. Se ejecuta una vez y la auditoría dice quién decidió."
         }
-      ]
+      ],
+      "title_es": "Lo riesgoso te espera"
     },
     {
       "id": "outro",
@@ -149,9 +175,11 @@
       "beats": [
         {
           "at": 0,
-          "text": "Open source, MIT licensed. Install it in one command."
+          "text": "Open source, MIT licensed. Install it in one command.",
+          "text_es": "Código abierto, licencia MIT. Se instala con un comando."
         }
-      ]
+      ],
+      "title_es": "Tu turno"
     }
   ]
 }
