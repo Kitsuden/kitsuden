@@ -1,0 +1,61 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:05.000
+A backend for apps that AI agents use. Six steps, one minute.
+
+00:00:05.000 --> 00:00:08.667
+Step 1, Install it. One command. Docker is the only thing you need.
+
+00:00:08.667 --> 00:00:11.167
+It writes the secrets and builds the images on your machine.
+
+00:00:11.167 --> 00:00:14.000
+It prints the panel URL and a one-time setup token. Keep both.
+
+00:00:14.000 --> 00:00:19.000
+Step 2, Declare a model. Describe the data once: its fields and who may read or write it.
+
+00:00:19.000 --> 00:00:20.667
+The access rule is required. No rule means no.
+
+00:00:20.667 --> 00:00:25.000
+From that one file: REST, MCP tools, an admin form and a typed SDK.
+
+00:00:25.000 --> 00:00:27.333
+Step 3, Give the agent a key. In the panel: Agents, New agent. Give it a name.
+
+00:00:27.333 --> 00:00:30.667
+Pick only the scopes it needs. Admin stays off.
+
+00:00:30.667 --> 00:00:34.000
+It gets its own key. Not the database password.
+
+00:00:34.000 --> 00:00:36.667
+Step 4, Connect it over MCP. Point Claude Code, Cursor or Codex at the MCP server.
+
+00:00:36.667 --> 00:00:39.000
+The key comes from the environment, never from a file in git.
+
+00:00:39.000 --> 00:00:42.000
+The agent only sees the tools its scopes allow.
+
+00:00:42.000 --> 00:00:47.500
+Step 5, Every call is checked. A read passes every check and returns only its own rows.
+
+00:00:47.500 --> 00:00:51.000
+Reaching too far gets a 403 with a code and a hint.
+
+00:00:51.000 --> 00:00:53.000
+Both land in the audit log, per agent.
+
+00:00:53.000 --> 00:00:57.333
+Step 6, Risky actions wait for you. With approvals on, a delete does not run. It becomes a proposal.
+
+00:00:57.333 --> 00:01:00.667
+It waits in your inbox, with what would change.
+
+00:01:00.667 --> 00:01:05.000
+You approve. It runs once, and the audit log says who decided.
+
+00:01:05.000 --> 00:01:11.000
+Open source, MIT licensed. Install it in one command.

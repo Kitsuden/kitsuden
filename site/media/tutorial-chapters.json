@@ -1,0 +1,157 @@
+{
+  "fps": 30,
+  "chapters": [
+    {
+      "id": "intro",
+      "n": 0,
+      "title": "Kitsuden in one minute",
+      "start": 0,
+      "frames": 150,
+      "beats": [
+        {
+          "at": 0,
+          "text": "A backend for apps that AI agents use. Six steps, one minute."
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "n": 1,
+      "title": "Install it",
+      "start": 150,
+      "frames": 270,
+      "beats": [
+        {
+          "at": 0,
+          "text": "One command. Docker is the only thing you need."
+        },
+        {
+          "at": 110,
+          "text": "It writes the secrets and builds the images on your machine."
+        },
+        {
+          "at": 185,
+          "text": "It prints the panel URL and a one-time setup token. Keep both."
+        }
+      ]
+    },
+    {
+      "id": "model",
+      "n": 2,
+      "title": "Declare a model",
+      "start": 420,
+      "frames": 330,
+      "beats": [
+        {
+          "at": 0,
+          "text": "Describe the data once: its fields and who may read or write it."
+        },
+        {
+          "at": 150,
+          "text": "The access rule is required. No rule means no."
+        },
+        {
+          "at": 200,
+          "text": "From that one file: REST, MCP tools, an admin form and a typed SDK."
+        }
+      ]
+    },
+    {
+      "id": "key",
+      "n": 3,
+      "title": "Give the agent a key",
+      "start": 750,
+      "frames": 270,
+      "beats": [
+        {
+          "at": 0,
+          "text": "In the panel: Agents, New agent. Give it a name."
+        },
+        {
+          "at": 70,
+          "text": "Pick only the scopes it needs. Admin stays off."
+        },
+        {
+          "at": 170,
+          "text": "It gets its own key. Not the database password."
+        }
+      ]
+    },
+    {
+      "id": "connect",
+      "n": 4,
+      "title": "Connect it over MCP",
+      "start": 1020,
+      "frames": 240,
+      "beats": [
+        {
+          "at": 0,
+          "text": "Point Claude Code, Cursor or Codex at the MCP server."
+        },
+        {
+          "at": 80,
+          "text": "The key comes from the environment, never from a file in git."
+        },
+        {
+          "at": 150,
+          "text": "The agent only sees the tools its scopes allow."
+        }
+      ]
+    },
+    {
+      "id": "checks",
+      "n": 5,
+      "title": "Every call is checked",
+      "start": 1260,
+      "frames": 330,
+      "beats": [
+        {
+          "at": 0,
+          "text": "A read passes every check and returns only its own rows."
+        },
+        {
+          "at": 165,
+          "text": "Reaching too far gets a 403 with a code and a hint."
+        },
+        {
+          "at": 270,
+          "text": "Both land in the audit log, per agent."
+        }
+      ]
+    },
+    {
+      "id": "approve",
+      "n": 6,
+      "title": "Risky actions wait for you",
+      "start": 1590,
+      "frames": 360,
+      "beats": [
+        {
+          "at": 0,
+          "text": "With approvals on, a delete does not run. It becomes a proposal."
+        },
+        {
+          "at": 130,
+          "text": "It waits in your inbox, with what would change."
+        },
+        {
+          "at": 230,
+          "text": "You approve. It runs once, and the audit log says who decided."
+        }
+      ]
+    },
+    {
+      "id": "outro",
+      "n": 7,
+      "title": "Your turn",
+      "start": 1950,
+      "frames": 180,
+      "beats": [
+        {
+          "at": 0,
+          "text": "Open source, MIT licensed. Install it in one command."
+        }
+      ]
+    }
+  ]
+}
