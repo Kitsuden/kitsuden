@@ -8,8 +8,9 @@
     "typecheck": "tsc --noEmit",
     "render:tutorial": "remotion render src/index.ts Tutorial out/tutorial-1080.mp4 --codec=h264 --crf=16 && ffmpeg -y -v error -i out/tutorial-1080.mp4 -vf scale=1280:720:flags=lanczos -c:v libx264 -preset slow -crf 27 -pix_fmt yuv420p -movflags +faststart -an ../site/media/tutorial.mp4 && ffmpeg -y -v error -ss 49.6 -i out/tutorial-1080.mp4 -frames:v 1 -vf scale=1280:720 -q:v 4 ../site/media/tutorial.jpg",
     "render:og": "remotion still src/index.ts OgImage ../site/og.png",
-    "render": "npm run render:vtt && npm run render:tutorial && npm run render:og",
-    "render:vtt": "node scripts/vtt.mjs"
+    "render": "npm run render:vtt && npm run render:tutorial && npm run render:og && npm run render:repo",
+    "render:vtt": "node scripts/vtt.mjs",
+    "render:repo": "remotion still src/index.ts RepoPreview ../assets/social-preview.png"
   },
   "dependencies": {
     "@remotion/cli": "4.0.533",

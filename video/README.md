@@ -4,7 +4,9 @@ Remotion source for two files in `site/`:
 
 - `site/media/tutorial.mp4` (+ `tutorial.jpg`, `tutorial.vtt`): the 71-second tutorial in six
   steps that the landing page plays in its "Learn it in six steps" section.
-- `site/og.png`: the 1200×630 social card.
+- `site/og.png`: the 1200×630 social card for the landing page.
+- `assets/social-preview.png`: the 1280×640 repository social preview. GitHub has no API for
+  it: upload it by hand in Settings → General → Social preview.
 
 Chapter timings and captions live in **`site/media/tutorial-chapters.json`**. The film reads it
 at render time and the page reads it in the browser, so the step list, the progress bar, step
