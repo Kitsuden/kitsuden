@@ -6,9 +6,12 @@
  * `apply: true` the route wrote the server's source files. Code reaches the
  * server through promotion, which is human-only, so an agent now gets 403 for
  * `apply: true`. A dry run (no `apply`) stays open to it.
+ *
+ * In production nobody applies, not even a person: the server runs a built
+ * image, and a write there edits files nobody reviewed (cms audit 2026-11-18).
  */
 import { Hono } from "hono";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // The auth gates are tested elsewhere; here they let everyone through so the
 // route's own check is what answers.
@@ -61,6 +64,29 @@ describe("code-graph edit: apply is for people", () => {
   it("an agent's dry run is not refused by the check", async () => {
     const res = await post(appAs({ agent: { agentId: "ag_1", scopes: ["admin"] } }), {});
     expect(res.status).toBe(400);
+  });
+
+  describe("in production", () => {
+    afterEach(() => vi.unstubAllEnvs());
+
+    it("a human admin cannot apply", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      const res = await post(appAs({ user: { id: "u1", role: "admin" } }), {
+        name: "x",
+        code: "export const y = 1;",
+        apply: true,
+      });
+      expect(res.status).toBe(403);
+      expect(((await res.json()) as { error: { message: string } }).error.message).toMatch(
+        /production/
+      );
+    });
+
+    it("a dry run is still allowed", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      const res = await post(appAs({ user: { id: "u1", role: "admin" } }), {});
+      expect(res.status).toBe(400);
+    });
   });
 
   it("callerIsAgent", () => {

@@ -48,6 +48,7 @@ import {
 } from "@kitsuden/engine";
 import { Hono } from "hono";
 
+import { inProduction } from "../lib/environment";
 import { protectRoute, requireAdmin } from "../middleware/auth-guard";
 
 const app = new Hono();
@@ -225,7 +226,11 @@ app.get("/semantic", protectRoute, async (c) => {
 //
 // SECURITY: requires ADMIN (it modifies the server's source code) and it is
 // a dry run unless `apply: true` is explicit in the body. Only a person may
-// apply: an agent key, even with the `admin` scope, gets 403 for `apply: true`. The engine also verifies
+// apply: an agent key, even with the `admin` scope, gets 403 for `apply: true`.
+// And never in production, not even a person: a production server runs a built
+// image, so a write there edits files nobody reviewed and the next deploy loses.
+// Edits are applied in development and reach production through a release
+// (cms security audit 2026-11-18). The engine also verifies
 // that the result is still syntactically valid before writing.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -255,6 +260,18 @@ app.post("/edit/:op", protectRoute, requireAdmin, async (c) => {
           code: "FORBIDDEN",
           message:
             "Agents cannot apply source edits; send a dry run (without apply) and let a person apply it or use promotion",
+        },
+      },
+      403
+    );
+  }
+
+  if (apply === true && inProduction()) {
+    return c.json(
+      {
+        error: {
+          code: "FORBIDDEN",
+          message: "apply is disabled in production; apply the edit in development and release it",
         },
       },
       403
