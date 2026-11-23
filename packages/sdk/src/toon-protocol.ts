@@ -157,11 +157,20 @@ function setByPath(root: unknown, path: string, value: unknown): unknown {
   for (let i = 0; i < segs.length - 1; i++) {
     const seg = segs[i]!;
     if (UNSAFE_SEGMENTS.has(seg)) return root;
-    cur = cur?.[seg] as Record<string, unknown>;
+    // Only the object's own properties: never a path through an inherited one.
+    if (
+      cur === null ||
+      typeof cur !== "object" ||
+      !Object.prototype.hasOwnProperty.call(cur, seg)
+    ) {
+      return root;
+    }
+    cur = cur[seg] as Record<string, unknown>;
     if (cur === null || cur === undefined) return root;
   }
   const last = segs[segs.length - 1]!;
-  if (UNSAFE_SEGMENTS.has(last)) return root;
+  if (cur === null || typeof cur !== "object") return root;
+  if (last === "__proto__" || last === "constructor" || last === "prototype") return root;
   (cur as Record<string, unknown>)[last] = value;
   return root;
 }

@@ -70,8 +70,10 @@ const MAX_LOGGED_LENGTH = 500;
  * separators become spaces (a message cannot forge extra log lines) and it is capped.
  */
 export function logSafe(value: unknown): string {
-  // eslint-disable-next-line no-control-regex
-  const text = String(value ?? "").replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ");
+  const text = String(value ?? "")
+    .replace(/\n|\r/g, " ")
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ");
   return text.length > MAX_LOGGED_LENGTH ? `${text.slice(0, MAX_LOGGED_LENGTH)}…` : text;
 }
 
@@ -388,7 +390,11 @@ export class KitsudenRealtime {
         break;
 
       case "error":
-        console.warn("[KitsudenRealtime] Server error:", logSafe(msg.message));
+        // logSafe already removes line breaks; the replace here is the form CodeQL recognises.
+        console.warn(
+          "[KitsudenRealtime] Server error:",
+          logSafe(msg.message).replace(/\n|\r/g, " ")
+        );
         break;
     }
   }

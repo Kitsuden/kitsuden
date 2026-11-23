@@ -43,7 +43,9 @@ describe("the startup warning", () => {
     // `example.com`, so login and comments fail ON THE WEB
     const warning = incompleteCorsWarning(["https://cms.example.com"], "https://example.com");
     expect(warning).toMatch(/ALLOWED_ORIGINS/);
-    expect(warning).toContain("https://example.com");
+    // The origin itself stays out of the log line (it can come from the environment)
+    expect(warning).not.toContain("https://example.com");
+    expect(warning).toMatch(/site URL in Settings/);
     expect(warning).toMatch(/Sister sites/);
   });
 

@@ -40,9 +40,12 @@ export function incompleteCorsWarning(
 
   if (fixedItems.includes(site.origin)) return null;
 
+  // The origin stays out of the text: the site URL can come from the environment, which
+  // stays out of logs. The site URL in Settings says which origin is meant.
   return (
-    `ALLOWED_ORIGINS does not include the public site (${site.origin}): login and comments ` +
-    `will fail there due to CORS even though the site loads fine. Sister sites go too, one per origin.`
+    `ALLOWED_ORIGINS does not include the public site's origin (the site URL in Settings): ` +
+    `login and comments will fail there due to CORS even though the site loads fine. ` +
+    `Sister sites go too, one per origin.`
   );
 }
 

@@ -374,32 +374,74 @@ export function sanitizeEmbed(code: unknown): string {
   if (typeof code !== "string") return "";
   const iframes: string[] = [];
   // `\u0001` is the marker below: kept out of the input so it cannot be forged.
-  const extract = (text: string): string =>
-    text.replace(
-      /<iframe\b((?:[^>"']|"[^"]*"|'[^']*')*)>(?:[\s\S]*?<\/iframe\s*>)?/gi,
-      (_t, attrs: string) => {
-        let src = "";
-        let rest = "";
-        for (const m of attrs.matchAll(RE_ATTRIBUTE)) {
-          const name = m[1]!.toLowerCase();
-          const value = m[2] ?? m[3] ?? m[4];
-          if (name === "src") src = value ?? "";
-          else if (IFRAME_ATTRIBUTES.has(name)) {
-            rest += value === undefined ? ` ${name}` : ` ${name}="${escapeAttribute(value)}"`;
-          }
-        }
-        let host = "";
-        try {
-          const u = new URL(src);
-          if (u.protocol === "https:") host = u.hostname.toLowerCase();
-        } catch {
-          host = "";
-        }
-        if (!HOSTS_INCRUSTABLES.has(host)) return "";
-        iframes.push(`<iframe src="${escapeAttribute(src)}"${rest}></iframe>`);
-        return `\u0001${iframes.length - 1}\u0001`;
+  const keep = (attrs: string): string => {
+    let src = "";
+    let rest = "";
+    for (const m of attrs.matchAll(RE_ATTRIBUTE)) {
+      const name = m[1]!.toLowerCase();
+      const value = m[2] ?? m[3] ?? m[4];
+      if (name === "src") src = value ?? "";
+      else if (IFRAME_ATTRIBUTES.has(name)) {
+        rest += value === undefined ? ` ${name}` : ` ${name}="${escapeAttribute(value)}"`;
       }
-    );
+    }
+    let host = "";
+    try {
+      const u = new URL(src);
+      if (u.protocol === "https:") host = u.hostname.toLowerCase();
+    } catch {
+      host = "";
+    }
+    if (!HOSTS_INCRUSTABLES.has(host)) return "";
+    iframes.push(`<iframe src="${escapeAttribute(src)}"${rest}></iframe>`);
+    return `\u0001${iframes.length - 1}\u0001`;
+  };
+  // A left-to-right scan for `<iframe …>` (attribute quotes respected) and, when there is
+  // one later, everything up to the next `</iframe …>`. Each iframe becomes a marker or
+  // nothing; the text between them is kept as it is.
+  const extract = (text: string): string => {
+    const lower = text.toLowerCase();
+    let out = "";
+    let from = 0;
+    for (;;) {
+      const start = lower.indexOf("<iframe", from);
+      if (start < 0) return out + text.slice(from);
+      const after = lower.charCodeAt(start + 7);
+      const wordChar =
+        (after >= 97 && after <= 122) || (after >= 48 && after <= 57) || after === 95;
+      if (wordChar) {
+        out += text.slice(from, start + 7);
+        from = start + 7;
+        continue;
+      }
+      // The end of the opening tag: the first `>` outside quotes.
+      let quote = 0;
+      let end = -1;
+      for (let i = start + 7; i < text.length; i++) {
+        const ch = text.charCodeAt(i);
+        if (quote) {
+          if (ch === quote) quote = 0;
+        } else if (ch === 34 || ch === 39) quote = ch;
+        else if (ch === 62) {
+          end = i;
+          break;
+        }
+      }
+      if (end < 0) return out + text.slice(from);
+      let next = end + 1;
+      for (let close = lower.indexOf("</iframe", next); close >= 0;) {
+        let j = close + 8;
+        while (j < lower.length && /\s/.test(lower[j]!)) j++;
+        if (lower[j] === ">") {
+          next = j + 1;
+          break;
+        }
+        close = lower.indexOf("</iframe", close + 8);
+      }
+      out += text.slice(from, start) + keep(text.slice(start + 7, end));
+      from = next;
+    }
+  };
   // Removing one iframe can join the text around it into another (`<ifr<iframe …>ame`),
   // so the extraction repeats until nothing changes. What is left still goes through
   // `sanitizeHtml`, which drops any tag it does not know.
