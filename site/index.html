@@ -23,6 +23,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="color-scheme" content="dark light" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="fonts/geist.woff2" as="font" type="font/woff2" crossorigin />
     <script>
       // Theme: the visitor's saved choice, else the system's. Runs before paint.
       try {
@@ -31,16 +32,18 @@
       } catch (e) {}
     </script>
     <style>
+      /* Geist and Geist Mono (OFL-1.1, licenses in fonts/): the same faces as the admin,
+         so the landing and the panel read as one product (fonts.md). */
       @font-face {
-        font-family: "Space Grotesk";
-        src: url("fonts/space-grotesk.woff2") format("woff2");
-        font-weight: 300 700;
+        font-family: "Geist";
+        src: url("fonts/geist.woff2") format("woff2");
+        font-weight: 100 900;
         font-display: swap;
       }
       @font-face {
-        font-family: "JetBrains Mono";
-        src: url("fonts/jetbrains-mono.woff2") format("woff2");
-        font-weight: 100 800;
+        font-family: "Geist Mono";
+        src: url("fonts/geist-mono.woff2") format("woff2");
+        font-weight: 100 900;
         font-display: swap;
       }
       :root {
@@ -62,9 +65,9 @@
         --glow-a: rgb(168 85 247 / 0.24);
         --glow-b: rgb(255 45 111 / 0.16);
         --grid: rgb(255 255 255 / 0.035);
-        --serif: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
-        --sans: "Space Grotesk", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
-        --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+        --serif: "Geist", "Segoe UI", system-ui, sans-serif;
+        --sans: "Geist", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+        --mono: "Geist Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
         --wrap: 74rem;
         --gutter: clamp(1rem, 4vw, 2.5rem);
       }
