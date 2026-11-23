@@ -156,9 +156,10 @@
         {tr("dealForm.deals")}
       </Button>
       <span>/</span>
-      <span class="text-kitsuden-text"
-        >{dealId ? tr("common.edit") : tr("dealForm.new")} {tr("dealForm.deal")}</span
-      >
+      <span class="text-kitsuden-text">
+        {dealId ? tr("common.edit") : tr("dealForm.new")}
+        {tr("dealForm.deal")}
+      </span>
     </div>
   {/if}
 

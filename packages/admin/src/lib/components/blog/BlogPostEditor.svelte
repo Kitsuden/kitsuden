@@ -1108,9 +1108,9 @@
           </span>
           <span class="flex items-center gap-2 shrink-0">
             <Button size="sm" onclick={recoverDraft}>{tr("blogPostEditor.recover")}</Button>
-            <Button variant="ghost" size="sm" onclick={discardDraft}
-              >{tr("blogPostEditor.discard")}</Button
-            >
+            <Button variant="ghost" size="sm" onclick={discardDraft}>
+              {tr("blogPostEditor.discard")}
+            </Button>
           </span>
         </div>
       </Alert>
@@ -1232,9 +1232,9 @@
               <div>
                 <Label for="slug" class="mb-2 block">{tr("blogPostEditor.urlSlug")}</Label>
                 <div class="flex items-center gap-2 min-w-0">
-                  <span class="text-kitsuden-subtle text-sm font-mono shrink-0"
-                    >{tr("blogPostEditor.blog")}</span
-                  >
+                  <span class="text-kitsuden-subtle text-sm font-mono shrink-0">
+                    {tr("blogPostEditor.blog")}
+                  </span>
                   <Input
                     id="slug"
                     type="text"
@@ -1377,12 +1377,12 @@
                     onclick={requestCoverImage}
                   >
                     <Image class="w-8 h-8 text-kitsuden-subtle" />
-                    <span class="text-sm text-kitsuden-subtle"
-                      >{tr("blogPostEditor.clickToSelectFeaturedImage")}</span
-                    >
-                    <span class="text-xs text-kitsuden-subtle"
-                      >{tr("blogPostEditor.recommended1200x630px")}</span
-                    >
+                    <span class="text-sm text-kitsuden-subtle">
+                      {tr("blogPostEditor.clickToSelectFeaturedImage")}
+                    </span>
+                    <span class="text-xs text-kitsuden-subtle">
+                      {tr("blogPostEditor.recommended1200x630px")}
+                    </span>
                   </Button>
                 {/if}
               </div>
@@ -1449,9 +1449,9 @@
                     of old.
                   -->
                     <div>
-                      <Checkbox bind:checked={commentsEnabled} class="text-xs!"
-                        >{tr("blogPostEditor.allowComments")}</Checkbox
-                      >
+                      <Checkbox bind:checked={commentsEnabled} class="text-xs!">
+                        {tr("blogPostEditor.allowComments")}
+                      </Checkbox>
                       <p class="text-xs text-kitsuden-subtle mt-1">
                         {commentsEnabled
                           ? tr("blogPostEditor.readersCanCommentAnd")
@@ -1507,14 +1507,14 @@
                     </div>
 
                     <div>
-                      <Label for="layout" class="mb-1.5 block"
-                        >{tr("blogPostEditor.template")}</Label
-                      >
+                      <Label for="layout" class="mb-1.5 block">
+                        {tr("blogPostEditor.template")}
+                      </Label>
                       <Select id="layout" bind:value={layout}>
                         <option value="article">{tr("blogPostEditor.article")}</option>
-                        <option value="tips"
-                          >{tr("blogPostEditor.tipsNumberedListWithIndex")}</option
-                        >
+                        <option value="tips">
+                          {tr("blogPostEditor.tipsNumberedListWithIndex")}
+                        </option>
                       </Select>
                       <p class="text-xs text-kitsuden-subtle mt-1">
                         {layout === "tips"
@@ -1551,8 +1551,8 @@
                       </Select>
                     </div>
                   </div>
-                </CardContent></Card
-              >
+                </CardContent>
+              </Card>
 
               <!--
                 Categories: the HIERARCHICAL taxonomy. It goes above the tags
@@ -1598,8 +1598,8 @@
                     <Plus class="w-3 h-3" />
                     {tr("blogPostEditor.newCategory")}
                   </Button>
-                </CardContent></Card
-              >
+                </CardContent>
+              </Card>
 
               <!--
                 Games: this is where the heart the cover puts on the card comes from
@@ -1635,8 +1635,8 @@
                       {tr("blogPostEditor.inHomeTheCard")}
                     </p>
                   {/if}
-                </CardContent></Card
-              >
+                </CardContent>
+              </Card>
 
               <!-- Tags -->
               <Card>
@@ -1662,9 +1662,9 @@
                       </Badge>
                     {/each}
                     {#if tags.length === 0}
-                      <span class="text-xs text-kitsuden-subtle italic"
-                        >{tr("blogPostEditor.noTagsSelected")}</span
-                      >
+                      <span class="text-xs text-kitsuden-subtle italic">
+                        {tr("blogPostEditor.noTagsSelected")}
+                      </span>
                     {/if}
                   </div>
 
@@ -1677,8 +1677,8 @@
                     <Plus class="w-3 h-3" />
                     {tr("blogPostEditor.addTags")}
                   </Button>
-                </CardContent></Card
-              >
+                </CardContent>
+              </Card>
 
               <!-- SEO Summary -->
               <Card>
@@ -1705,8 +1705,8 @@
                       {tr("blogPostEditor.improveSeo")}
                     </Button>
                   </div>
-                </CardContent></Card
-              >
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -1798,9 +1798,9 @@
 
               <!-- Canonical URL -->
               <div>
-                <Label for="canonicalurl" class="mb-2 block"
-                  >{tr("blogPostEditor.canonicalUrl")}</Label
-                >
+                <Label for="canonicalurl" class="mb-2 block">
+                  {tr("blogPostEditor.canonicalUrl")}
+                </Label>
                 <Input
                   id="canonicalurl"
                   type="url"
@@ -1822,17 +1822,21 @@
                       bind:checked={
                         () => seoOverrides.robotsIndex ?? true,
                         (v) => (seoOverrides.robotsIndex = v)
-                      }>{tr("blogPostEditor.allowSearchEnginesToIndex")}</Checkbox
+                      }
                     >
+                      {tr("blogPostEditor.allowSearchEnginesToIndex")}
+                    </Checkbox>
                     <Checkbox
                       bind:checked={
                         () => seoOverrides.robotsFollow ?? true,
                         (v) => (seoOverrides.robotsFollow = v)
-                      }>{tr("blogPostEditor.allowSearchEnginesToFollow")}</Checkbox
+                      }
                     >
+                      {tr("blogPostEditor.allowSearchEnginesToFollow")}
+                    </Checkbox>
                   </div>
-                </CardContent></Card
-              >
+                </CardContent>
+              </Card>
 
               <!-- OG Settings -->
               <Card>
@@ -1845,9 +1849,9 @@
                 <CardContent>
                   <div class="space-y-4">
                     <div>
-                      <Label for="ogtitle" class="mb-1.5 block"
-                        >{tr("blogPostEditor.ogTitle")}</Label
-                      >
+                      <Label for="ogtitle" class="mb-1.5 block">
+                        {tr("blogPostEditor.ogTitle")}
+                      </Label>
                       <Input
                         class="text-sm!"
                         id="ogtitle"
@@ -1858,9 +1862,9 @@
                     </div>
 
                     <div>
-                      <Label for="ogdescription" class="mb-1.5 block"
-                        >{tr("blogPostEditor.ogDescription")}</Label
-                      >
+                      <Label for="ogdescription" class="mb-1.5 block">
+                        {tr("blogPostEditor.ogDescription")}
+                      </Label>
                       <Textarea
                         class="text-sm! resize-none!"
                         id="ogdescription"
@@ -1870,8 +1874,8 @@
                       />
                     </div>
                   </div>
-                </CardContent></Card
-              >
+                </CardContent>
+              </Card>
             </div>
 
             <!-- Previews -->
@@ -1962,8 +1966,8 @@
                       </div>
                     {/each}
                   </div>
-                </CardContent></Card
-              >
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -2017,9 +2021,9 @@
                   of old.
                 -->
                   <div>
-                    <Checkbox bind:checked={commentsEnabled} class="text-xs!"
-                      >{tr("blogPostEditor.allowComments")}</Checkbox
-                    >
+                    <Checkbox bind:checked={commentsEnabled} class="text-xs!">
+                      {tr("blogPostEditor.allowComments")}
+                    </Checkbox>
                     <p class="text-xs text-kitsuden-subtle mt-1">
                       {commentsEnabled
                         ? tr("blogPostEditor.readersCanCommentAnd")
@@ -2037,8 +2041,8 @@
                     </div>
                   {/if}
                 </div>
-              </CardContent></Card
-            >
+              </CardContent>
+            </Card>
 
             <!-- Author Settings -->
             <Card>
@@ -2052,13 +2056,13 @@
                 <Select bind:value={authorId}>
                   <option value="">{tr("blogPostEditor.selectAuthor")}</option>
                   {#each availableAuthors as author}
-                    <option value={author.id}
-                      >{author.name}{author.email ? ` (${author.email})` : ""}</option
-                    >
+                    <option value={author.id}>
+                      {author.name}{author.email ? ` (${author.email})` : ""}
+                    </option>
                   {/each}
                 </Select>
-              </CardContent></Card
-            >
+              </CardContent>
+            </Card>
 
             <!--
               Community groups of THIS entry: they show up as two cards
@@ -2075,9 +2079,9 @@
               <CardContent class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label for="facebook-group" class="mb-2 block"
-                      >{tr("blogPostEditor.facebookGroup")}</Label
-                    >
+                    <Label for="facebook-group" class="mb-2 block">
+                      {tr("blogPostEditor.facebookGroup")}
+                    </Label>
                     <Input
                       id="facebook-group"
                       type="url"
@@ -2091,9 +2095,9 @@
                     {/if}
                   </div>
                   <div>
-                    <Label for="whatsapp-group" class="mb-2 block"
-                      >{tr("blogPostEditor.whatsappGroup")}</Label
-                    >
+                    <Label for="whatsapp-group" class="mb-2 block">
+                      {tr("blogPostEditor.whatsappGroup")}
+                    </Label>
                     <Input
                       id="whatsapp-group"
                       type="url"
@@ -2110,8 +2114,8 @@
                 <p class="text-xs text-kitsuden-subtle">
                   {tr("blogPostEditor.emptyTheGeneralGroupOf")}
                 </p>
-              </CardContent></Card
-            >
+              </CardContent>
+            </Card>
 
             <!-- Danger Zone -->
             {#if postId}
@@ -2130,8 +2134,8 @@
                     <Trash2 class="w-4 h-4" />
                     {tr("blogPostEditor.deletePost")}
                   </Button>
-                </CardContent></Card
-              >
+                </CardContent>
+              </Card>
             {/if}
           </div>
         </div>

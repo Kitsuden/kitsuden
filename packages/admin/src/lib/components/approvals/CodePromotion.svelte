@@ -255,9 +255,9 @@
               >
                 <span>
                   <span class="block text-sm">{t("promotion.turboAllowed")}</span>
-                  <span class="block text-xs text-kitsuden-subtle"
-                    >{t("promotion.turboAllowedHelp")}</span
-                  >
+                  <span class="block text-xs text-kitsuden-subtle">
+                    {t("promotion.turboAllowedHelp")}
+                  </span>
                 </span>
               </Checkbox>
               <Field label={t("promotion.watchMinutes")}>
@@ -317,12 +317,12 @@
               <TableBody class="divide-y divide-kitsuden-border/70">
                 {#each settings.agents as a (a.id)}
                   <TableRow>
-                    <TableCell class="px-3 py-1.5 text-kitsuden-text"
-                      >{a.name}{a.isActive ? "" : ` (${t("promotion.inactive")})`}</TableCell
-                    >
-                    <TableCell class="px-3 py-1.5 text-kitsuden-text-dim"
-                      >{a.canPropose ? t("promotion.yes") : t("promotion.no")}</TableCell
-                    >
+                    <TableCell class="px-3 py-1.5 text-kitsuden-text">
+                      {a.name}{a.isActive ? "" : ` (${t("promotion.inactive")})`}
+                    </TableCell>
+                    <TableCell class="px-3 py-1.5 text-kitsuden-text-dim">
+                      {a.canPropose ? t("promotion.yes") : t("promotion.no")}
+                    </TableCell>
                     <TableCell class="px-3 py-1.5">
                       <Select
                         size="sm"
@@ -366,9 +366,9 @@
           options={STATUSES.map((e) => ({ value: e, label: t(`promotion.status_${e}`) }))}
         />
         <div class="flex-1"></div>
-        <Button variant="ghost" size="sm" onclick={load}
-          ><RefreshCw size={14} class="mr-1" />{t("promotion.refresh")}</Button
-        >
+        <Button variant="ghost" size="sm" onclick={load}>
+          <RefreshCw size={14} class="mr-1" />{t("promotion.refresh")}
+        </Button>
       </div>
       {#if loading}
         <Skeleton lines={3} />
@@ -391,15 +391,15 @@
               >
                 <div class="flex items-center gap-2 min-w-0">
                   <GitBranch size={14} class="text-kitsuden-subtle shrink-0" />
-                  <span class="text-sm text-kitsuden-text truncate min-w-0"
-                    >{v.target.slug} · v{v.versionNumber}</span
-                  >
-                  {#if v.origin !== "agent"}<span class="text-xs text-kitsuden-subtle shrink-0"
-                      >{t(`promotion.origin_${v.origin}`)}</span
-                    >{/if}
-                  <Badge variant={COLOR[v.status]} class="ml-auto shrink-0"
-                    >{t(`promotion.status_${v.status}`)}</Badge
-                  >
+                  <span class="text-sm text-kitsuden-text truncate min-w-0">
+                    {v.target.slug} · v{v.versionNumber}
+                  </span>
+                  {#if v.origin !== "agent"}<span class="text-xs text-kitsuden-subtle shrink-0">
+                      {t(`promotion.origin_${v.origin}`)}
+                    </span>{/if}
+                  <Badge variant={COLOR[v.status]} class="ml-auto shrink-0">
+                    {t(`promotion.status_${v.status}`)}
+                  </Badge>
                 </div>
                 <div class="text-[11px] text-kitsuden-subtle mt-0.5 truncate">
                   {v.agentName ?? v.agentId ?? "—"} · {t(`promotion.mode_${v.mode}`)} ·
@@ -430,9 +430,9 @@
             <h3 class="text-base font-semibold text-kitsuden-text min-w-0 truncate">
               {v.target.name} · v{v.versionNumber}
             </h3>
-            <Badge variant={COLOR[v.status]} data-testid="detail-status"
-              >{t(`promotion.status_${v.status}`)}</Badge
-            >
+            <Badge variant={COLOR[v.status]} data-testid="detail-status">
+              {t(`promotion.status_${v.status}`)}
+            </Badge>
           </div>
           <p class="text-xs text-kitsuden-subtle">
             {t("promotion.byAgent", {
@@ -469,12 +469,13 @@
                   <li class="text-xs">
                     <span
                       class={c.status === "passed" ? "text-kitsuden-green" : "text-kitsuden-danger"}
-                      >{t(`promotion.test_${c.status}`)}</span
                     >
+                      {t(`promotion.test_${c.status}`)}
+                    </span>
                     <span class="text-kitsuden-text ml-1">{c.name}</span>
-                    <span class="text-kitsuden-subtle ml-1"
-                      >{t("promotion.ms", { ms: String(c.durationMs) })}</span
-                    >
+                    <span class="text-kitsuden-subtle ml-1">
+                      {t("promotion.ms", { ms: String(c.durationMs) })}
+                    </span>
                     {#each c.mismatches as m}<div class="text-kitsuden-text-dim ml-4 break-all">
                         {m}
                       </div>{/each}
@@ -509,8 +510,10 @@
                     ? "text-kitsuden-danger"
                     : h.severity === "medium"
                       ? "text-kitsuden-amber"
-                      : "text-kitsuden-text-dim"}>{h.severity}</span
+                      : "text-kitsuden-text-dim"}
                 >
+                  {h.severity}
+                </span>
                 <code class="text-kitsuden-text ml-1">{h.rule}</code>
                 <span class="text-kitsuden-subtle ml-1">L{h.line}: {h.message}</span>
               </div>
@@ -577,8 +580,10 @@
                 })}
                 <a
                   href="/approvals?id={detail.proposal.id}"
-                  class="ml-1 text-kitsuden-accent hover:underline">{t("approvals.open")}</a
+                  class="ml-1 text-kitsuden-accent hover:underline"
                 >
+                  {t("approvals.open")}
+                </a>
                 {#if detail.proposal.comment}· {t("approvals.commentShown", {
                     comment: detail.proposal.comment,
                   })}{/if}
@@ -643,15 +648,17 @@
                     size="sm"
                     loading={busy === "approve"}
                     onclick={() => make("approve")}
-                    ><Check size={14} class="mr-1" />{t("promotion.approve")}</Button
                   >
+                    <Check size={14} class="mr-1" />{t("promotion.approve")}
+                  </Button>
                   <Button
                     variant="secondary"
                     size="sm"
                     loading={busy === "reject"}
                     onclick={() => make("reject")}
-                    ><X size={14} class="mr-1" />{t("promotion.reject")}</Button
                   >
+                    <X size={14} class="mr-1" />{t("promotion.reject")}
+                  </Button>
                 </div>
               </div>
             {:else if v.status === "active" && v.origin !== "baseline"}
@@ -677,44 +684,45 @@
                 size="sm"
                 loading={busy === "activate"}
                 onclick={() => make("activate")}
-                ><Play size={14} class="mr-1" />{t("promotion.activate")}</Button
               >
+                <Play size={14} class="mr-1" />{t("promotion.activate")}
+              </Button>
             {/if}
           {/if}
 
           <details open>
-            <summary class="text-xs text-kitsuden-text-dim cursor-pointer"
-              >{t("promotion.code")}</summary
-            >
+            <summary class="text-xs text-kitsuden-text-dim cursor-pointer">
+              {t("promotion.code")}
+            </summary>
             <pre
               class="text-xs bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-80 overflow-auto whitespace-pre-wrap break-all text-kitsuden-text"
               data-testid="promotion-code">{v.code}</pre>
           </details>
           {#if detail.previous}
             <details>
-              <summary class="text-xs text-kitsuden-text-dim cursor-pointer"
-                >{t("promotion.previousCode", {
+              <summary class="text-xs text-kitsuden-text-dim cursor-pointer">
+                {t("promotion.previousCode", {
                   n: String(detail.previous.versionNumber),
-                })}</summary
-              >
+                })}
+              </summary>
               <pre
                 class="text-xs bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-80 overflow-auto whitespace-pre-wrap break-all text-kitsuden-text-dim">{detail
                   .previous.code}</pre>
             </details>
           {/if}
           <details>
-            <summary class="text-xs text-kitsuden-text-dim cursor-pointer"
-              >{t("promotion.testCases")}</summary
-            >
+            <summary class="text-xs text-kitsuden-text-dim cursor-pointer">
+              {t("promotion.testCases")}
+            </summary>
             <pre
               class="text-xs bg-kitsuden-bg border border-kitsuden-border rounded-sm p-2 max-h-60 overflow-auto whitespace-pre-wrap break-all">{json(
                 v.tests
               )}</pre>
           </details>
           <details>
-            <summary class="text-xs text-kitsuden-text-dim cursor-pointer"
-              >{t("promotion.timeline")}</summary
-            >
+            <summary class="text-xs text-kitsuden-text-dim cursor-pointer">
+              {t("promotion.timeline")}
+            </summary>
             <ul class="mt-1 space-y-0.5" data-testid="promotion-events">
               {#each detail.events as e (e.id)}
                 <li class="text-xs text-kitsuden-text-dim">

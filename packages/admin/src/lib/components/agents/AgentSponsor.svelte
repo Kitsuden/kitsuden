@@ -101,9 +101,9 @@
           {:else}
             <p class="text-sm text-kitsuden-text">
               {data.sponsor.name ?? data.sponsor.userId}
-              {#if data.sponsor.email}<span class="text-xs text-kitsuden-subtle ml-1"
-                  >{data.sponsor.email}</span
-                >{/if}
+              {#if data.sponsor.email}<span class="text-xs text-kitsuden-subtle ml-1">
+                  {data.sponsor.email}
+                </span>{/if}
             </p>
             {#if data.sponsor.valid}
               <p class="text-xs text-kitsuden-green">

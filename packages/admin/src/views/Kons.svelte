@@ -342,14 +342,16 @@
             {#each selectedModule.tables.slice(0, 5) as table}
               <span
                 class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-text-dim font-mono"
-                >{table}</span
               >
+                {table}
+              </span>
             {/each}
             {#if selectedModule.tables.length > 5}
               <span
                 class="text-xs px-1.5 py-0.5 rounded-sm bg-kitsuden-bg border border-kitsuden-border text-kitsuden-subtle"
-                >{t("common.more", { v: selectedModule.tables.length - 5 })}</span
               >
+                {t("common.more", { v: selectedModule.tables.length - 5 })}
+              </span>
             {/if}
           </div>
         </div>

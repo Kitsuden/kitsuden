@@ -129,9 +129,9 @@
               <div class="flex items-start justify-between gap-2 min-w-0">
                 <div class="flex items-center gap-2 min-w-0">
                   <span class={getStatusColor(trace.status)}>{getStatusIcon(trace.status)}</span>
-                  <span class="text-sm font-medium text-kitsuden-text truncate max-w-[140px]"
-                    >{trace.sessionId || t("tracesPage.withoutSession")}</span
-                  >
+                  <span class="text-sm font-medium text-kitsuden-text truncate max-w-[140px]">
+                    {trace.sessionId || t("tracesPage.withoutSession")}
+                  </span>
                 </div>
                 <span class="text-xs text-kitsuden-subtle">{formatDate(trace.createdAt)}</span>
               </div>
@@ -180,9 +180,9 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div class="flex items-center gap-2">
-              <span class="{getStatusColor(selectedTrace.status)} text-lg"
-                >{getStatusIcon(selectedTrace.status)}</span
-              >
+              <span class="{getStatusColor(selectedTrace.status)} text-lg">
+                {getStatusIcon(selectedTrace.status)}
+              </span>
               <h2 class="text-xl font-semibold text-kitsuden-text">
                 {t("tracesPage.trace", { v: selectedTrace.id.slice(-8) })}
               </h2>

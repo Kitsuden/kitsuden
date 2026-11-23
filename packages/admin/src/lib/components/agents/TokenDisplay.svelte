@@ -101,9 +101,9 @@
 
       <!-- Usage Example -->
       <div class="p-3 bg-kitsuden-bg rounded-lg">
-        <span class="text-xs font-medium text-kitsuden-subtle uppercase"
-          >{tr("tokenDisplay.apiUsage")}</span
-        >
+        <span class="text-xs font-medium text-kitsuden-subtle uppercase">
+          {tr("tokenDisplay.apiUsage")}
+        </span>
         <pre class="mt-2 text-xs text-kitsuden-text-dim overflow-x-auto">
 Authorization: Bearer {showToken ? displayToken : maskToken(displayToken)}</pre>
       </div>
@@ -114,9 +114,9 @@ Authorization: Bearer {showToken ? displayToken : maskToken(displayToken)}</pre>
         <Button variant="secondary" onclick={copyToClipboard}>
           {copied ? tr("tokenDisplay.copied") : tr("tokenDisplay.copyToken")}
         </Button>
-        <Button variant="primary" onclick={() => (dismissed = true)}
-          >{tr("tokenDisplay.gotItClose")}</Button
-        >
+        <Button variant="primary" onclick={() => (dismissed = true)}>
+          {tr("tokenDisplay.gotItClose")}
+        </Button>
       </div>
     {/snippet}
   </Dialog>

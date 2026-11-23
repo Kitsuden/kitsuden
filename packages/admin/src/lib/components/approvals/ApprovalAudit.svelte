@@ -136,13 +136,14 @@
         <TableBody class="divide-y divide-kitsuden-border/70">
           {#each events as e (e.id)}
             <TableRow data-testid="audit-row" data-action={e.action}>
-              <TableCell class="px-3 py-1.5 whitespace-nowrap text-kitsuden-text-dim"
-                >{date(e.at)}</TableCell
-              >
+              <TableCell class="px-3 py-1.5 whitespace-nowrap text-kitsuden-text-dim">
+                {date(e.at)}
+              </TableCell>
               <TableCell
                 class="px-3 py-1.5 whitespace-nowrap {KIND[e.action] ?? 'text-kitsuden-text'}"
-                >{t(`approvals.action_${e.action}`)}</TableCell
               >
+                {t(`approvals.action_${e.action}`)}
+              </TableCell>
               <TableCell class="px-3 py-1.5 text-kitsuden-text">
                 {e.byName ??
                   (e.action === "proposal_created" || e.action === "promotion_submitted"
@@ -158,14 +159,18 @@
                 {#if e.proposalId && e.action.startsWith("proposal_")}
                   <a
                     href="/approvals?id={e.proposalId}"
-                    class="ml-1 text-kitsuden-accent hover:underline">{t("approvals.open")}</a
+                    class="ml-1 text-kitsuden-accent hover:underline"
                   >
+                    {t("approvals.open")}
+                  </a>
                 {:else if e.proposalId && e.action.startsWith("promotion_") && e.resource?.startsWith("action:")}
                   <code class="text-kitsuden-text break-all">{e.resource}</code>
                   <a
                     href="/approvals?tab=promotion&version={e.proposalId}"
-                    class="ml-1 text-kitsuden-accent hover:underline">{t("approvals.open")}</a
+                    class="ml-1 text-kitsuden-accent hover:underline"
                   >
+                    {t("approvals.open")}
+                  </a>
                 {/if}
               </TableCell>
             </TableRow>

@@ -490,8 +490,9 @@
 
     <div class="flex-1"></div>
 
-    <span class="text-xs text-kitsuden-subtle px-2">{t("slashCommandEditor.typeForCommands2")}</span
-    >
+    <span class="text-xs text-kitsuden-subtle px-2">
+      {t("slashCommandEditor.typeForCommands2")}
+    </span>
   </div>
 
   <!-- Editor -->

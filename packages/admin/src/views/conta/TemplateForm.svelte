@@ -115,9 +115,10 @@
 
 <div class="space-y-6 min-w-0">
   {#if onBack}
-    <Button variant="ghost" onclick={onBack}
-      ><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button
-    >
+    <Button variant="ghost" onclick={onBack}>
+      <ArrowLeft class="w-4 h-4" />
+      {t("common.back")}
+    </Button>
   {/if}
 
   {#if loading}
@@ -186,9 +187,10 @@
             </div>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onclick={testApply} loading={testLoading}
-          ><Play class="w-4 h-4" /> {t("templateForm.test")}</Button
-        >
+        <Button variant="secondary" size="sm" onclick={testApply} loading={testLoading}>
+          <Play class="w-4 h-4" />
+          {t("templateForm.test")}
+        </Button>
       </Card>
     {/if}
 
@@ -198,9 +200,10 @@
       {#if onBack}
         <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
       {/if}
-      <Button onclick={save} loading={saving}
-        ><Save class="w-4 h-4" /> {t("templateForm.saveTemplate")}</Button
-      >
+      <Button onclick={save} loading={saving}>
+        <Save class="w-4 h-4" />
+        {t("templateForm.saveTemplate")}
+      </Button>
     </div>
   {/if}
 </div>

@@ -221,8 +221,9 @@
         <div class="min-w-0">
           <p class="text-sm font-medium text-kitsuden-text" id="{id}-label">
             {field.label}
-            {#if field.isRequired}<span class="text-kitsuden-danger" aria-hidden="true">*</span
-              >{/if}
+            {#if field.isRequired}<span class="text-kitsuden-danger" aria-hidden="true">
+                *
+              </span>{/if}
           </p>
           {#if field.helpText}
             <p class="text-xs text-kitsuden-subtle" id="{id}-help">{field.helpText}</p>
@@ -385,9 +386,9 @@
             class="w-full h-40 rounded-xl border-2 border-dashed border-kitsuden-accent/30 bg-kitsuden-accent/5 flex flex-col items-center justify-center gap-3"
           >
             <Spinner size="lg" class="text-kitsuden-accent" label={t("dynamicForm.uploading")} />
-            <span class="text-sm text-kitsuden-accent" aria-hidden="true"
-              >{t("dynamicForm.uploading")}</span
-            >
+            <span class="text-sm text-kitsuden-accent" aria-hidden="true">
+              {t("dynamicForm.uploading")}
+            </span>
           </div>
         {:else}
           <button
@@ -407,9 +408,9 @@
               <span class="block text-sm text-kitsuden-text font-medium">
                 {t("dynamicForm.clickToUploadImage")}
               </span>
-              <span class="block text-xs text-kitsuden-subtle mt-1"
-                >{t("dynamicForm.pngJpgGifUpTo")}</span
-              >
+              <span class="block text-xs text-kitsuden-subtle mt-1">
+                {t("dynamicForm.pngJpgGifUpTo")}
+              </span>
             </span>
           </button>
           <!-- Choose one that is ALREADY uploaded, instead of uploading the same logo again. -->
@@ -441,8 +442,9 @@
               target="_blank"
               rel="noopener noreferrer"
               class="min-w-0 flex-1 truncate text-sm text-kitsuden-accent hover:underline"
-              >{fileNameOf(value)}</a
             >
+              {fileNameOf(value)}
+            </a>
             <Button variant="ghost" size="sm" {id} onclick={() => pickFile(path, update)}>
               <Upload class="w-3.5 h-3.5" />
               {t("dynamicForm.replaceFile")}
@@ -483,9 +485,9 @@
             <fieldset class="rounded-lg border border-kitsuden-border bg-kitsuden-card p-3">
               <legend class="sr-only">{t("dynamicForm.rowN", { n: i + 1 })}</legend>
               <div class="mb-2 flex items-center justify-between">
-                <span class="text-xs font-medium text-kitsuden-subtle" aria-hidden="true"
-                  >{t("dynamicForm.rowN", { n: i + 1 })}</span
-                >
+                <span class="text-xs font-medium text-kitsuden-subtle" aria-hidden="true">
+                  {t("dynamicForm.rowN", { n: i + 1 })}
+                </span>
                 <Button
                   variant="danger-ghost"
                   size="icon"

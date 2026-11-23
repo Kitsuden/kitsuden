@@ -172,9 +172,10 @@
 <div class="space-y-6 min-w-0">
   <div class="flex flex-wrap items-center justify-between gap-2">
     {#if onBack}
-      <Button variant="ghost" onclick={onBack}
-        ><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button
-      >
+      <Button variant="ghost" onclick={onBack}>
+        <ArrowLeft class="w-4 h-4" />
+        {t("common.back")}
+      </Button>
     {:else}
       <span></span>
     {/if}
@@ -184,9 +185,10 @@
       {:else}
         <Badge variant="error">{t("journalForm.unbalanced")}</Badge>
       {/if}
-      <span class="text-sm text-kitsuden-text-dim"
-        >{t("journalForm.debitCredit", { v: totalDebit.toFixed(2) })} {totalCredit.toFixed(2)}</span
-      >
+      <span class="text-sm text-kitsuden-text-dim">
+        {t("journalForm.debitCredit", { v: totalDebit.toFixed(2) })}
+        {totalCredit.toFixed(2)}
+      </span>
     </div>
   </div>
 
@@ -224,9 +226,10 @@
     <div class="space-y-2">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h3 class="text-sm font-medium text-kitsuden-text">{t("journalForm.ledgerLines")}</h3>
-        <Button variant="secondary" size="sm" onclick={addLine}
-          ><Plus class="w-4 h-4" /> {t("journalForm.addLine")}</Button
-        >
+        <Button variant="secondary" size="sm" onclick={addLine}>
+          <Plus class="w-4 h-4" />
+          {t("journalForm.addLine")}
+        </Button>
       </div>
 
       <div>
@@ -256,30 +259,27 @@
                     {/each}
                   </Select>
                 </TableCell>
-                <TableCell
-                  ><Input
-                    bind:value={line.description}
-                    aria-label={t("common.description")}
-                  /></TableCell
-                >
-                <TableCell
-                  ><Input
+                <TableCell>
+                  <Input bind:value={line.description} aria-label={t("common.description")} />
+                </TableCell>
+                <TableCell>
+                  <Input
                     type="number"
                     step="0.01"
                     bind:value={line.debit}
                     aria-label={t("journalForm.debit")}
                     class="text-right"
-                  /></TableCell
-                >
-                <TableCell
-                  ><Input
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
                     type="number"
                     step="0.01"
                     bind:value={line.credit}
                     aria-label={t("journalForm.credit")}
                     class="text-right"
-                  /></TableCell
-                >
+                  />
+                </TableCell>
                 <TableCell>
                   <Select size="sm" bind:value={line.currency} aria-label={t("common.currency")}>
                     {#each currencies as c}<option value={c.code}>{c.code}</option>{/each}
@@ -291,8 +291,10 @@
                     size="icon"
                     ariaLabel={t("journalForm.removeLine")}
                     title={t("journalForm.removeLine")}
-                    onclick={() => removeLine(idx)}><X class="w-4 h-4" aria-hidden="true" /></Button
+                    onclick={() => removeLine(idx)}
                   >
+                    <X class="w-4 h-4" aria-hidden="true" />
+                  </Button>
                 </TableCell>
               </TableRow>
             {/each}
@@ -308,12 +310,14 @@
         <Button variant="secondary" onclick={onBack} disabled={saving}>{t("common.cancel")}</Button>
       {/if}
       <div class="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" onclick={saveDraft} loading={saving}
-          ><Save class="w-4 h-4" /> {t("journalForm.saveDraft")}</Button
-        >
-        <Button onclick={post} loading={saving} disabled={!isBalanced}
-          ><CheckCircle class="w-4 h-4" /> {t("journalForm.post")}</Button
-        >
+        <Button variant="secondary" onclick={saveDraft} loading={saving}>
+          <Save class="w-4 h-4" />
+          {t("journalForm.saveDraft")}
+        </Button>
+        <Button onclick={post} loading={saving} disabled={!isBalanced}>
+          <CheckCircle class="w-4 h-4" />
+          {t("journalForm.post")}
+        </Button>
       </div>
     </div>
   {/if}

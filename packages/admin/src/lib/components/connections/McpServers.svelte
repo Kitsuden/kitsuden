@@ -188,8 +188,10 @@
                   size="sm"
                   class="-ml-2 font-medium"
                   aria-expanded={open === s.id}
-                  onclick={() => toggle(s)}>{s.name}</Button
+                  onclick={() => toggle(s)}
                 >
+                  {s.name}
+                </Button>
                 <span class="block text-xs text-kitsuden-subtle break-all">{s.url}</span>
                 <span class="block text-xs text-kitsuden-subtle">
                   {t("mcpServers.summary", {
@@ -198,15 +200,15 @@
                     date: date(s.lastRefreshedAt),
                   })}
                 </span>
-                {#if s.lastError}<span class="block text-xs text-kitsuden-danger"
-                    >{s.lastError}</span
-                  >{/if}
+                {#if s.lastError}<span class="block text-xs text-kitsuden-danger">
+                    {s.lastError}
+                  </span>{/if}
               </div>
               <div class="flex flex-wrap items-center gap-2">
                 {#if s.needsReview > 0}
-                  <Badge variant="warning"
-                    >{t("mcpServers.needsReview", { count: s.needsReview })}</Badge
-                  >
+                  <Badge variant="warning">
+                    {t("mcpServers.needsReview", { count: s.needsReview })}
+                  </Badge>
                 {/if}
                 <Switch
                   size="sm"
@@ -286,26 +288,27 @@
                                   <code class="text-kitsuden-text">{tool.agentTool.scope}</code>
                                 </span>
                                 {#if !tool.agentTool.offered}
-                                  <span class="block text-xs text-kitsuden-amber"
-                                    >{t("mcpServers.notOffered")}</span
-                                  >
+                                  <span class="block text-xs text-kitsuden-amber">
+                                    {t("mcpServers.notOffered")}
+                                  </span>
                                 {/if}
                               {/if}
                             {:else}
-                              <Badge variant="warning"
-                                >{t("mcpServers.statusReview")} · {changeLabel(tool.change)}</Badge
-                              >
+                              <Badge variant="warning">
+                                {t("mcpServers.statusReview")} · {changeLabel(tool.change)}
+                              </Badge>
                             {/if}
                           </TableCell>
                           <TableCell>
-                            <code class="text-xs text-kitsuden-text">{short(tool.fingerprint)}</code
-                            >
+                            <code class="text-xs text-kitsuden-text">
+                              {short(tool.fingerprint)}
+                            </code>
                             {#if tool.approvedFingerprint && tool.approvedFingerprint !== tool.fingerprint}
-                              <span class="block text-xs text-kitsuden-subtle"
-                                >{t("mcpServers.approvedWas", {
+                              <span class="block text-xs text-kitsuden-subtle">
+                                {t("mcpServers.approvedWas", {
                                   fp: short(tool.approvedFingerprint),
-                                })}</span
-                              >
+                                })}
+                              </span>
                             {/if}
                           </TableCell>
                           <TableCell class="text-right">

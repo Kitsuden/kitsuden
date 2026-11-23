@@ -57,9 +57,9 @@
 
 <div class="max-w-4xl space-y-3" data-testid="ledger-reviews">
   <div class="flex flex-wrap items-center gap-2">
-    <label for="review-filter" class="text-xs text-kitsuden-subtle"
-      >{t("approvals.reviewsFilter")}</label
-    >
+    <label for="review-filter" class="text-xs text-kitsuden-subtle">
+      {t("approvals.reviewsFilter")}
+    </label>
     <Select
       id="review-filter"
       width="auto"
@@ -87,17 +87,19 @@
       {#each list as r (r.id)}
         <li class="px-3 py-2.5 text-xs space-y-1" data-testid="review-row">
           <div class="flex flex-wrap items-center gap-2">
-            <Badge variant={r.status === "due" ? "warning" : "default"}
-              >{t(`approvals.reviewStatus_${r.status}`)}</Badge
-            >
-            <span class="text-kitsuden-text"
-              >{t("approvals.reviewDueOn", { date: date(r.dueAt) })}</span
-            >
+            <Badge variant={r.status === "due" ? "warning" : "default"}>
+              {t(`approvals.reviewStatus_${r.status}`)}
+            </Badge>
+            <span class="text-kitsuden-text">
+              {t("approvals.reviewDueOn", { date: date(r.dueAt) })}
+            </span>
             <div class="flex-1"></div>
             <a
               href="/approvals?tab=inbox&id={r.proposalId}"
-              class="text-kitsuden-accent hover:underline">{t("approvals.reviewOpen")}</a
+              class="text-kitsuden-accent hover:underline"
             >
+              {t("approvals.reviewOpen")}
+            </a>
           </div>
           {#if r.note}
             <p class="text-kitsuden-text">{r.note}</p>
@@ -118,15 +120,19 @@
                 variant="ghost"
                 size="sm"
                 disabled={closing === r.id}
-                onclick={() => close(r, true)}>{t("approvals.reviewCancel")}</Button
+                onclick={() => close(r, true)}
               >
+                {t("approvals.reviewCancel")}
+              </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 loading={closing === r.id}
                 disabled={closing === r.id}
-                onclick={() => close(r, false)}>{t("approvals.reviewMarkDone")}</Button
+                onclick={() => close(r, false)}
               >
+                {t("approvals.reviewMarkDone")}
+              </Button>
             </div>
           {/if}
         </li>

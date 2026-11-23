@@ -388,8 +388,10 @@
               onclick={() => {
                 showCreate = false;
                 resetForm();
-              }}>{t("common.cancel")}</Button
+              }}
             >
+              {t("common.cancel")}
+            </Button>
             <Button type="submit" loading={creating} disabled={creating || !formName}>
               {t("connectorsView.createConnector")}
             </Button>
@@ -435,16 +437,16 @@
                   <div class="connector-text">
                     <h3>{conn.name}</h3>
                     <div class="connector-meta">
-                      <Badge variant={conn.type === "database" ? "accent" : "success"}
-                        >{conn.type}</Badge
-                      >
+                      <Badge variant={conn.type === "database" ? "accent" : "success"}>
+                        {conn.type}
+                      </Badge>
                       {#if !conn.enabled}
                         <Badge>{t("connectorsView.disabled")}</Badge>
                       {/if}
                       {#if conn.config?.host}
-                        <span class="connector-addr"
-                          >{conn.config.host}:{conn.config.port || 3306}</span
-                        >
+                        <span class="connector-addr">
+                          {conn.config.host}:{conn.config.port || 3306}
+                        </span>
                       {:else if conn.config?.baseUrl}
                         <span class="connector-addr">{conn.config.baseUrl}</span>
                       {/if}

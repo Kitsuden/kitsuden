@@ -1260,9 +1260,9 @@
                   >
                     <span aria-hidden="true">{category.icon || "📁"}</span>
                     <span class="truncate">{category.name}</span>
-                    <span class="ml-auto text-xs text-kitsuden-subtle"
-                      >{category.documentCount || 0}</span
-                    >
+                    <span class="ml-auto text-xs text-kitsuden-subtle">
+                      {category.documentCount || 0}
+                    </span>
                   </Button>
                 </div>
                 {#if expanded && hasChildren}
@@ -1339,9 +1339,10 @@
             </DropdownMenu>
             {#if selectedIds.size > 0}
               <div class="ml-auto flex items-center gap-2">
-                <span class="text-xs text-kitsuden-subtle"
-                  >{selectedIds.size} {tr("common.selected")}</span
-                >
+                <span class="text-xs text-kitsuden-subtle">
+                  {selectedIds.size}
+                  {tr("common.selected")}
+                </span>
                 <Button variant="danger-ghost" size="sm" onclick={promptBulkDelete}>
                   <Trash2 class="w-3.5 h-3.5" />
                   {tr("common.delete")}
@@ -1396,9 +1397,9 @@
                       </Button>
                     </TableHead>
                   {/each}
-                  <TableHead class="dms-pin"
-                    ><span class="sr-only">{tr("common.actions")}</span></TableHead
-                  >
+                  <TableHead class="dms-pin">
+                    <span class="sr-only">{tr("common.actions")}</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1413,17 +1414,19 @@
                         onchange={() => toggleSelect(doc.id)}
                       />
                     </TableCell>
-                    <TableCell class="font-mono text-kitsuden-subtle whitespace-nowrap"
-                      >{doc.code}</TableCell
-                    >
+                    <TableCell class="font-mono text-kitsuden-subtle whitespace-nowrap">
+                      {doc.code}
+                    </TableCell>
                     <TableCell>
                       <div class="flex items-start gap-2 min-w-40">
                         {#if doc.requiresReview || isOverdue(doc.reviewDueDate)}
-                          <span class="mt-0.5" title={tr("dMSView.reviewOverdue")}
-                            ><AlertCircle class="w-3.5 h-3.5 shrink-0 text-kitsuden-danger" /><span
-                              class="sr-only">{tr("dMSView.reviewOverdue")}</span
-                            ></span
-                          >
+                          <span class="mt-0.5" title={tr("dMSView.reviewOverdue")}>
+                            <AlertCircle class="w-3.5 h-3.5 shrink-0 text-kitsuden-danger" /><span
+                              class="sr-only"
+                            >
+                              {tr("dMSView.reviewOverdue")}
+                            </span>
+                          </span>
                         {/if}
                         <!-- The title opens the document, as a list's first column does. -->
                         <button type="button" class="dms-doc-link" onclick={() => openDrawer(doc)}>
@@ -1448,19 +1451,19 @@
                       </TableCell>
                     {/if}
                     {#if shows("categoryName")}
-                      <TableCell class="dms-wrap text-kitsuden-subtle"
-                        >{doc.categoryName || "—"}</TableCell
-                      >
+                      <TableCell class="dms-wrap text-kitsuden-subtle">
+                        {doc.categoryName || "—"}
+                      </TableCell>
                     {/if}
                     {#if shows("currentVersionNumber")}
-                      <TableCell class="font-mono text-kitsuden-subtle"
-                        >v{doc.currentVersionNumber}</TableCell
-                      >
+                      <TableCell class="font-mono text-kitsuden-subtle">
+                        v{doc.currentVersionNumber}
+                      </TableCell>
                     {/if}
                     {#if shows("updatedAt")}
-                      <TableCell class="whitespace-nowrap text-kitsuden-subtle"
-                        >{formatDate(doc.updatedAt)}</TableCell
-                      >
+                      <TableCell class="whitespace-nowrap text-kitsuden-subtle">
+                        {formatDate(doc.updatedAt)}
+                      </TableCell>
                     {/if}
                     <TableCell class="dms-pin">
                       <DropdownMenu
@@ -1480,9 +1483,9 @@
                         {/snippet}
                         <MenuItem onSelect={() => openDrawer(doc)}>{tr("common.edit")}</MenuItem>
                         {#if doc.isTemplate}
-                          <MenuItem onSelect={() => cloneFromTemplate(doc.id)}
-                            >{tr("dMSView.clone")}</MenuItem
-                          >
+                          <MenuItem onSelect={() => cloneFromTemplate(doc.id)}>
+                            {tr("dMSView.clone")}
+                          </MenuItem>
                         {/if}
                         <MenuSeparator />
                         <MenuItem
@@ -1490,8 +1493,10 @@
                           onSelect={() => {
                             deleteTargetIds = [doc.id];
                             showConfirmDeleteModal = true;
-                          }}>{tr("common.delete")}</MenuItem
+                          }}
                         >
+                          {tr("common.delete")}
+                        </MenuItem>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
@@ -1600,8 +1605,9 @@
                   <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center justify-between gap-x-3">
                       <h3 class="text-sm font-medium text-kitsuden-text">{n.title}</h3>
-                      <span class="text-xs text-kitsuden-subtle">{formatDateTime(n.createdAt)}</span
-                      >
+                      <span class="text-xs text-kitsuden-subtle">
+                        {formatDateTime(n.createdAt)}
+                      </span>
                     </div>
                     <p class="mt-0.5 text-xs text-kitsuden-subtle">{n.message || ""}</p>
                     {#if n.documentId}
@@ -2021,16 +2027,16 @@
                       <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="flex items-center gap-2">
                           <GitCommit class="w-4 h-4 text-kitsuden-accent" />
-                          <span class="font-mono text-sm text-kitsuden-text"
-                            >v{v.versionNumber}</span
-                          >
-                          <Badge variant={statusVariant(v.status)}
-                            >{getStatusConfig(v.status).label}</Badge
-                          >
+                          <span class="font-mono text-sm text-kitsuden-text">
+                            v{v.versionNumber}
+                          </span>
+                          <Badge variant={statusVariant(v.status)}>
+                            {getStatusConfig(v.status).label}
+                          </Badge>
                         </div>
-                        <span class="text-xs text-kitsuden-subtle"
-                          >{formatDateTime(v.createdAt)}</span
-                        >
+                        <span class="text-xs text-kitsuden-subtle">
+                          {formatDateTime(v.createdAt)}
+                        </span>
                       </div>
                       <p class="mt-1 text-xs text-kitsuden-subtle">
                         {v.changelog || tr("dMSView.noChangelog")}
@@ -2090,12 +2096,12 @@
                 <div class="min-w-0 flex-1">
                   {#if replyToId}
                     <div class="mb-1 flex items-center gap-2">
-                      <span class="text-xs text-kitsuden-accent"
-                        >{tr("dMSView.replyingToComment")}</span
-                      >
-                      <Button variant="ghost" size="sm" onclick={() => (replyToId = null)}
-                        >{tr("common.cancel")}</Button
-                      >
+                      <span class="text-xs text-kitsuden-accent">
+                        {tr("dMSView.replyingToComment")}
+                      </span>
+                      <Button variant="ghost" size="sm" onclick={() => (replyToId = null)}>
+                        {tr("common.cancel")}
+                      </Button>
                     </div>
                   {/if}
                   <Textarea
@@ -2123,12 +2129,12 @@
                       />
                       <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center justify-between gap-x-3">
-                          <span class="text-sm font-medium text-kitsuden-text"
-                            >{comment.createdBy?.name || tr("dMSView.unknown")}</span
-                          >
-                          <span class="text-xs text-kitsuden-subtle"
-                            >{formatDateTime(comment.createdAt)}</span
-                          >
+                          <span class="text-sm font-medium text-kitsuden-text">
+                            {comment.createdBy?.name || tr("dMSView.unknown")}
+                          </span>
+                          <span class="text-xs text-kitsuden-subtle">
+                            {formatDateTime(comment.createdAt)}
+                          </span>
                         </div>
                         <p class="mt-1 text-sm text-kitsuden-subtle">{comment.content}</p>
                         <div class="mt-2 flex flex-wrap items-center gap-1">
@@ -2174,12 +2180,12 @@
                                 />
                                 <div class="min-w-0 flex-1">
                                   <div class="flex flex-wrap items-center gap-x-2">
-                                    <span class="text-xs font-medium text-kitsuden-text"
-                                      >{reply.createdBy?.name || tr("dMSView.unknown")}</span
-                                    >
-                                    <span class="text-xs text-kitsuden-subtle"
-                                      >{formatDateTime(reply.createdAt)}</span
-                                    >
+                                    <span class="text-xs font-medium text-kitsuden-text">
+                                      {reply.createdBy?.name || tr("dMSView.unknown")}
+                                    </span>
+                                    <span class="text-xs text-kitsuden-subtle">
+                                      {formatDateTime(reply.createdAt)}
+                                    </span>
                                   </div>
                                   <p class="mt-0.5 text-xs text-kitsuden-subtle">{reply.content}</p>
                                 </div>
@@ -2256,9 +2262,9 @@
                     <CardContent>
                       <div class="flex flex-wrap items-center justify-between gap-x-3">
                         <span class="text-sm font-medium text-kitsuden-text">{entry.action}</span>
-                        <span class="text-xs text-kitsuden-subtle"
-                          >{formatDateTime(entry.createdAt)}</span
-                        >
+                        <span class="text-xs text-kitsuden-subtle">
+                          {formatDateTime(entry.createdAt)}
+                        </span>
                       </div>
                       <p class="mt-1 text-xs text-kitsuden-subtle">
                         {tr("dMSView.by")}
@@ -2386,9 +2392,9 @@
       </div>
     </form>
     {#snippet footer()}
-      <Button variant="secondary" onclick={() => (showCreateDocModal = false)}
-        >{tr("common.cancel")}</Button
-      >
+      <Button variant="secondary" onclick={() => (showCreateDocModal = false)}>
+        {tr("common.cancel")}
+      </Button>
       <Button type="submit" form="{uid}-doc" loading={saving} disabled={saving || !formDoc.title}>
         <Plus class="w-4 h-4" />
         {saving ? tr("common.creating") : tr("dMSView.createDocument")}
@@ -2443,9 +2449,9 @@
       </Field>
     </form>
     {#snippet footer()}
-      <Button variant="secondary" onclick={() => (showCreateCatModal = false)}
-        >{tr("common.cancel")}</Button
-      >
+      <Button variant="secondary" onclick={() => (showCreateCatModal = false)}>
+        {tr("common.cancel")}
+      </Button>
       <Button type="submit" form="{uid}-cat" loading={saving} disabled={saving || !newCategoryName}>
         <Plus class="w-4 h-4" />
         {saving ? tr("common.creating") : tr("dMSView.createCategory")}
@@ -2468,9 +2474,9 @@
     onClose={() => (showConfirmDeleteModal = false)}
   >
     {#snippet footer()}
-      <Button variant="secondary" onclick={() => (showConfirmDeleteModal = false)}
-        >{tr("common.cancel")}</Button
-      >
+      <Button variant="secondary" onclick={() => (showConfirmDeleteModal = false)}>
+        {tr("common.cancel")}
+      </Button>
       <Button variant="danger" onclick={() => deleteDocuments(deleteTargetIds)}>
         <Trash2 class="w-4 h-4" />
         {tr("common.delete")}
@@ -2499,9 +2505,9 @@
       </Field>
     </div>
     {#snippet footer()}
-      <Button variant="secondary" onclick={() => (showCreateVersionModal = false)}
-        >{tr("common.cancel")}</Button
-      >
+      <Button variant="secondary" onclick={() => (showCreateVersionModal = false)}>
+        {tr("common.cancel")}
+      </Button>
       <Button
         onclick={createNewVersion}
         loading={saving}
@@ -2539,9 +2545,9 @@
       </Field>
     </form>
     {#snippet footer()}
-      <Button variant="secondary" onclick={() => (showCreateDiagramModal = false)}
-        >{tr("common.cancel")}</Button
-      >
+      <Button variant="secondary" onclick={() => (showCreateDiagramModal = false)}>
+        {tr("common.cancel")}
+      </Button>
       <Button
         type="submit"
         form="{uid}-diagram"

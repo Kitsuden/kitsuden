@@ -539,9 +539,9 @@
               <Badge variant="info">{localDef.fields.length}</Badge>
             </div>
             {#if localDef.fields.length > 0}
-              <Button variant="ghost" size="sm" onclick={collapseAll}
-                >{tr("schemaBuilder.collapseAll")}</Button
-              >
+              <Button variant="ghost" size="sm" onclick={collapseAll}>
+                {tr("schemaBuilder.collapseAll")}
+              </Button>
             {/if}
           </div>
 
@@ -600,8 +600,9 @@
                     <span class="sb-field-text">
                       <span class="sb-field-label">
                         {field.label || tr("schemaBuilder.untitledField")}
-                        {#if field.isRequired}<span class="sb-required" aria-hidden="true">*</span
-                          >{/if}
+                        {#if field.isRequired}<span class="sb-required" aria-hidden="true">
+                            *
+                          </span>{/if}
                       </span>
                       <span class="sb-field-key">
                         {field.key || tr("schemaBuilder.noKey")} · {field.type}
@@ -610,9 +611,9 @@
 
                     {#if field.isUnique || field.relation}
                       <span class="sb-field-badges">
-                        {#if field.isUnique}<Badge variant="warning"
-                            >{tr("schemaBuilder.unq")}</Badge
-                          >{/if}
+                        {#if field.isUnique}<Badge variant="warning">
+                            {tr("schemaBuilder.unq")}
+                          </Badge>{/if}
                         {#if field.relation}
                           <Badge variant="accent-2">
                             {field.relation.type === "many-to-many"

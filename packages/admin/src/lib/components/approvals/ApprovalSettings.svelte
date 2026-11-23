@@ -327,9 +327,9 @@
                     <code class="text-kitsuden-text break-all">{o.method} {o.path}</code>
                     <div class="text-kitsuden-subtle break-all">{o.key}</div>
                     {#if o.readOnly && o.method !== "GET"}
-                      <Badge variant="info" data-testid="read-only-post"
-                        >{t("approvals.readOnlyPost")}</Badge
-                      >
+                      <Badge variant="info" data-testid="read-only-post">
+                        {t("approvals.readOnlyPost")}
+                      </Badge>
                     {/if}
                   </TableCell>
                   <TableCell
@@ -374,12 +374,12 @@
             <TableBody class="divide-y divide-kitsuden-border/70">
               {#each a.mcpTools as h (h.key)}
                 <TableRow>
-                  <TableCell class="px-2 py-1.5"
-                    ><code class="text-kitsuden-text">{h.name}</code></TableCell
-                  >
-                  <TableCell class="px-2 py-1.5 text-kitsuden-subtle"
-                    >{h.write ? t("approvals.writes") : t("approvals.reads")}</TableCell
-                  >
+                  <TableCell class="px-2 py-1.5">
+                    <code class="text-kitsuden-text">{h.name}</code>
+                  </TableCell>
+                  <TableCell class="px-2 py-1.5 text-kitsuden-subtle">
+                    {h.write ? t("approvals.writes") : t("approvals.reads")}
+                  </TableCell>
                   <TableCell
                     class="px-2 py-1.5 whitespace-nowrap {h.default
                       ? 'text-kitsuden-amber'

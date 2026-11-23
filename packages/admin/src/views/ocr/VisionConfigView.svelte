@@ -176,9 +176,9 @@
           <CardContent>
             <div class="flex flex-col items-start gap-3">
               {#if cfg?.api_key_present}
-                <Badge variant="success" dot
-                  >{t("visionConfigView.keyPresentInKitsudenSecrets")}</Badge
-                >
+                <Badge variant="success" dot>
+                  {t("visionConfigView.keyPresentInKitsudenSecrets")}
+                </Badge>
               {:else}
                 <Badge variant="warning" dot>{t("visionConfigView.withoutConfiguredKey")}</Badge>
               {/if}

@@ -105,9 +105,9 @@
           }))}
         />
         <p class="text-xs">
-          <a href="/approvals?tab=promotion" class="text-kitsuden-accent hover:underline"
-            >{t("agentPromotion.pipelineLink")}</a
-          >
+          <a href="/approvals?tab=promotion" class="text-kitsuden-accent hover:underline">
+            {t("agentPromotion.pipelineLink")}
+          </a>
         </p>
         {#if isAdmin()}
           <SaveBar

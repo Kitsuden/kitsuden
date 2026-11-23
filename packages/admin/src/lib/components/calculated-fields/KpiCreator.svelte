@@ -306,9 +306,9 @@
         <Checkbox bind:checked={field.isKpi}>
           <span>
             <span class="block font-medium text-kitsuden-text">{t("kpiCreator.markAsKpi")}</span>
-            <span class="block text-xs text-kitsuden-subtle"
-              >{t("kpiCreator.showInDashboardsAndEnable")}</span
-            >
+            <span class="block text-xs text-kitsuden-subtle">
+              {t("kpiCreator.showInDashboardsAndEnable")}
+            </span>
           </span>
         </Checkbox>
       </div>

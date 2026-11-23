@@ -352,9 +352,10 @@
       <!-- Bulk bar -->
       {#if selectedCount > 0}
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <span class="text-sm text-kitsuden-text font-medium"
-            >{selectedCount} {t("common.selected")}</span
-          >
+          <span class="text-sm text-kitsuden-text font-medium">
+            {selectedCount}
+            {t("common.selected")}
+          </span>
           <Button variant="danger-ghost" size="sm" onclick={deleteSelected}>
             <Trash2 class="w-4 h-4" />
             {t("streamersView.deleteSelected")}
@@ -442,14 +443,15 @@
                     <Badge>{t("streamersView.offline")}</Badge>
                   {/if}
                 </TableCell>
-                <TableCell class="text-right text-kitsuden-text"
-                  >{formatNumber(s.viewerCount)}</TableCell
-                >
-                <TableCell class="text-right text-kitsuden-text"
-                  >{formatNumber(s.followerCount)}</TableCell
-                >
-                <TableCell class="text-kitsuden-subtle text-xs">{timeAgo(s.lastSyncedAt)}</TableCell
-                >
+                <TableCell class="text-right text-kitsuden-text">
+                  {formatNumber(s.viewerCount)}
+                </TableCell>
+                <TableCell class="text-right text-kitsuden-text">
+                  {formatNumber(s.followerCount)}
+                </TableCell>
+                <TableCell class="text-kitsuden-subtle text-xs">
+                  {timeAgo(s.lastSyncedAt)}
+                </TableCell>
                 <TableCell class="text-right">
                   <div class="flex items-center justify-end gap-1">
                     <Button
@@ -485,9 +487,10 @@
             <ChevronLeft class="w-4 h-4" />
             {t("streamersView.prev")}
           </Button>
-          <span class="text-sm text-kitsuden-subtle"
-            >{t("streamersView.pageOf", { page })} {totalPages}</span
-          >
+          <span class="text-sm text-kitsuden-subtle">
+            {t("streamersView.pageOf", { page })}
+            {totalPages}
+          </span>
           <Button
             variant="secondary"
             size="sm"

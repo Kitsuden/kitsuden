@@ -187,24 +187,27 @@
                     ? 'text-kitsuden-danger'
                     : tr.status >= 400
                       ? 'text-kitsuden-amber'
-                      : 'text-kitsuden-green'}">{tr.status}</TableCell
+                      : 'text-kitsuden-green'}"
                 >
-                <TableCell
-                  >{actorOf(tr)}<span class="block text-kitsuden-subtle font-mono"
-                    >{tr.actor_id ?? ""}</span
-                  ></TableCell
-                >
+                  {tr.status}
+                </TableCell>
+                <TableCell>
+                  {actorOf(tr)}<span class="block text-kitsuden-subtle font-mono">
+                    {tr.actor_id ?? ""}
+                  </span>
+                </TableCell>
                 <TableCell>{tr.kon ?? "—"}{tr.operation ? ` · ${tr.operation}` : ""}</TableCell>
                 <TableCell class="text-right">{ms(tr.duration_ms)}</TableCell>
-                <TableCell class="text-right"
-                  >{ms(tr.db_time_ms)}{tr.queries ? ` · ${tr.queries}q` : ""}</TableCell
-                >
+                <TableCell class="text-right">
+                  {ms(tr.db_time_ms)}{tr.queries ? ` · ${tr.queries}q` : ""}
+                </TableCell>
                 <TableCell class="text-right">{tr.rows_affected ?? "—"}</TableCell>
                 <TableCell>
                   {#each tr.denial_details ?? [] as b}
-                    <Badge variant="warning" class="mr-1"
-                      >{b.operation} {b.table}: {reason(b.reason)}</Badge
-                    >
+                    <Badge variant="warning" class="mr-1">
+                      {b.operation}
+                      {b.table}: {reason(b.reason)}
+                    </Badge>
                   {/each}
                 </TableCell>
               </TableRow>
@@ -239,13 +242,17 @@
               <TableCell
                 class="px-3 py-1.5 text-right {Number(r.errors) > 0
                   ? 'text-kitsuden-danger'
-                  : 'text-kitsuden-subtle'}">{r.errors}</TableCell
+                  : 'text-kitsuden-subtle'}"
               >
+                {r.errors}
+              </TableCell>
               <TableCell
                 class="px-3 py-1.5 text-right {Number(r.denials) > 0
                   ? 'text-kitsuden-amber'
-                  : 'text-kitsuden-subtle'}">{r.denials}</TableCell
+                  : 'text-kitsuden-subtle'}"
               >
+                {r.denials}
+              </TableCell>
               <TableCell class="text-right">{ms(r.p95_ms)}</TableCell>
               <TableCell class="text-right">{ms(r.avg_db_ms)}</TableCell>
               <TableCell class="text-right">{r.rows}</TableCell>

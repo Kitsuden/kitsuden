@@ -225,9 +225,9 @@
       class="min-h-[80px] bg-kitsuden-bg border border-kitsuden-border rounded-lg p-3 flex flex-wrap gap-2 items-center"
     >
       {#if formulaTokens.length === 0}
-        <span class="text-kitsuden-subtle text-sm italic"
-          >{tr("formulaBuilder.clickButtonsBelowToBuild")}</span
-        >
+        <span class="text-kitsuden-subtle text-sm italic">
+          {tr("formulaBuilder.clickButtonsBelowToBuild")}
+        </span>
       {:else}
         {#each formulaTokens as token, index}
           <div class="group relative flex items-center">
@@ -380,9 +380,9 @@
               title={fn.description}
             >
               <span class="font-mono text-kitsuden-accent">{fn.id}()</span>
-              <span class="min-w-0 truncate text-kitsuden-subtle text-xs ml-auto"
-                >{fn.description}</span
-              >
+              <span class="min-w-0 truncate text-kitsuden-subtle text-xs ml-auto">
+                {fn.description}
+              </span>
             </Button>
           {/each}
         </div>
@@ -392,9 +392,9 @@
 
   <!-- Expression Raw (editable) -->
   <div class="space-y-2">
-    <label for="expression" class="text-sm text-kitsuden-subtle"
-      >{tr("formulaBuilder.rawExpression")}</label
-    >
+    <label for="expression" class="text-sm text-kitsuden-subtle">
+      {tr("formulaBuilder.rawExpression")}
+    </label>
     <Textarea
       id="expression"
       mono

@@ -264,9 +264,9 @@
           <p class="text-xs text-kitsuden-subtle font-mono">{block.type}</p>
         </div>
       </div>
-      <Button onclick={onClose} variant="ghost" size="icon" ariaLabel={t("blockEditor.close")}
-        ><X class="w-4 h-4" /></Button
-      >
+      <Button onclick={onClose} variant="ghost" size="icon" ariaLabel={t("blockEditor.close")}>
+        <X class="w-4 h-4" />
+      </Button>
     </div>
   </div>
 
@@ -541,12 +541,14 @@
 
   <!-- Footer -->
   <div class="p-4 border-t border-kitsuden-border shrink-0 flex items-center justify-between">
-    <Button onclick={onDelete} variant="danger-ghost" size="sm"
-      ><Trash2 class="w-3.5 h-3.5" /> {t("blockEditor.remove")}</Button
-    >
-    <Button onclick={onClose} size="sm"
-      ><Check class="w-3.5 h-3.5" /> {t("blockEditor.done")}</Button
-    >
+    <Button onclick={onDelete} variant="danger-ghost" size="sm">
+      <Trash2 class="w-3.5 h-3.5" />
+      {t("blockEditor.remove")}
+    </Button>
+    <Button onclick={onClose} size="sm">
+      <Check class="w-3.5 h-3.5" />
+      {t("blockEditor.done")}
+    </Button>
   </div>
 </div>
 

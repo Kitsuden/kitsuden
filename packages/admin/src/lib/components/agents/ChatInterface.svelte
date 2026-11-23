@@ -153,11 +153,11 @@
                   </span>
                 {/if}
                 {#if message.metadata.tokensOut}
-                  <span
-                    >{message.metadata.tokensIn}{t("chatInterface.tokens", {
+                  <span>
+                    {message.metadata.tokensIn}{t("chatInterface.tokens", {
                       tokensOut: message.metadata.tokensOut,
-                    })}</span
-                  >
+                    })}
+                  </span>
                 {/if}
                 {#if message.metadata.durationMs}
                   <span>{(message.metadata.durationMs / 1000).toFixed(2)}s</span>
