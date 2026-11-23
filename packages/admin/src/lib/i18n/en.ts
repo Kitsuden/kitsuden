@@ -2765,6 +2765,8 @@ const en = {
     configure: "Configure",
     createNewAgent: "New agent",
     access: "Access",
+    modelStoredOnly:
+      "For now this is only stored with the agent: runs use the model set on the server (KITSUDEN_LLM_MODEL, or the provider default).",
     accessReadOnly: "Read only",
     accessReadAndEdit: "Read and edit data",
     accessConnectOnly: "Connect only (no tools)",

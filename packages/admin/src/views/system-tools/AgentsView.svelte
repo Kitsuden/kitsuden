@@ -240,6 +240,7 @@
         bind:value={() => formData.model ?? "", (v) => (formData.model = v)}
         options={modelOptions(formData.model)}
       />
+      <span class="model-hint">{t("agentsView.modelStoredOnly")}</span>
     </Field>
 
     <Field label={t("agentsView.access")}>
@@ -273,3 +274,13 @@
     <TokenDisplay token={newToken} onCopy={() => {}} />
   {/key}
 {/if}
+
+<style>
+  /* A <span>: the field wraps its control in a <label>, which takes no <p>. */
+  .model-hint {
+    display: block;
+    margin: 0.25rem 0 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
+</style>

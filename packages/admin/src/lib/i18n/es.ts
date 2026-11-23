@@ -2778,6 +2778,8 @@ const es = {
     configure: "Configurar",
     createNewAgent: "Nuevo agente",
     access: "Acceso",
+    modelStoredOnly:
+      "Por ahora solo se guarda con el agente: al ejecutarlo se usa el modelo configurado en el servidor (KITSUDEN_LLM_MODEL o el del proveedor).",
     accessReadOnly: "Solo lectura",
     accessReadAndEdit: "Leer y editar datos",
     accessConnectOnly: "Solo conectar (sin herramientas)",
