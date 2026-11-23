@@ -1,6 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap")
-layer(base);
-
 @import "tailwindcss";
 
 @theme {
@@ -27,8 +24,8 @@ layer(base);
   --color-kitsuden-purple: rgb(var(--kitsuden-purple));
   --color-kitsuden-danger: rgb(var(--kitsuden-danger));
 
-  --font-sans: var(--kitsuden-font-sans), Inter, system-ui, sans-serif;
-  --font-mono: var(--kitsuden-font-mono), JetBrains Mono, Fira Code, monospace;
+  --font-sans: var(--kitsuden-font-sans), "Geist Variable", system-ui, sans-serif;
+  --font-mono: var(--kitsuden-font-mono), "Geist Mono Variable", ui-monospace, monospace;
 
   --animate-fade-in: fade-in 0.15s ease-out;
 

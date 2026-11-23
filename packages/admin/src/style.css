@@ -1,5 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap")
-layer(base);
+/*
+ * Fonts ship with the panel (Geist and Geist Mono, OFL-1.1), never from Google:
+ * the panel is installed on internal networks with no internet access, every
+ * request to Google sends it the user's IP, and a remote @import blocks paint.
+ */
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @import "tailwindcss";
 
@@ -27,8 +32,8 @@ layer(base);
   --color-kitsuden-purple: rgb(var(--kitsuden-purple));
   --color-kitsuden-danger: rgb(var(--kitsuden-danger));
 
-  --font-sans: var(--kitsuden-font-sans), Inter, system-ui, sans-serif;
-  --font-mono: var(--kitsuden-font-mono), JetBrains Mono, Fira Code, monospace;
+  --font-sans: var(--kitsuden-font-sans), "Geist Variable", system-ui, sans-serif;
+  --font-mono: var(--kitsuden-font-mono), "Geist Mono Variable", ui-monospace, monospace;
 
   --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
   --animate-slide-in: slide-in 0.2s ease-out;
@@ -127,8 +132,11 @@ layer(base);
     --kitsuden-purple: 179 136 255;
     /* Lighter than accent-2 (the brand crimson): as text on its own tint that one is 4.0:1. */
     --kitsuden-danger: 255 96 147;
-    --kitsuden-font-sans: "Inter", system-ui, sans-serif;
-    --kitsuden-font-mono: "JetBrains Mono", "Fira Code", monospace;
+    --kitsuden-font-sans: "Geist Variable", system-ui, sans-serif;
+    --kitsuden-font-mono: "Geist Mono Variable", ui-monospace, monospace;
+    /* Public name for kon views built as Web Components: the variable crosses
+       their shadow DOM, and the fonts above are already loaded. */
+    --kitsuden-font: var(--kitsuden-font-sans);
   }
 
   /**
@@ -193,7 +201,6 @@ layer(base);
   body {
     @apply bg-kitsuden-bg text-kitsuden-text antialiased;
     font-family: var(--kitsuden-font-sans);
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   ::-webkit-scrollbar {
