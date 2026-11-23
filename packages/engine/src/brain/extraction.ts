@@ -12,6 +12,7 @@
  */
 
 import { embedTextLocal, cosineSimilarity } from "./embeddings";
+import { parseHeading } from "./markdown-heading";
 import type { BrainNote } from "./types";
 
 const STOP_WORDS = new Set([
@@ -126,8 +127,8 @@ export function keywords(text: string, topK = 8): string[] {
 export function headings(text: string): string[] {
   const out: string[] = [];
   for (const line of text.split("\n")) {
-    const m = line.match(/^#{1,6}\s+(.+?)\s*$/);
-    if (m) out.push(m[1]);
+    const heading = parseHeading(line);
+    if (heading) out.push(heading.title);
   }
   return out;
 }

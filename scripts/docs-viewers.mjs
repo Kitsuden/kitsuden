@@ -115,7 +115,10 @@ async function outdated() {
       headers: { accept: "application/json" },
     });
     if (!res.ok) throw new Error(`GET ${v.package}/latest → ${res.status}`);
-    const latest = (await res.json()).version;
+    // The registry's answer reaches the summary file: only a plain x.y.z, rebuilt from
+    // its numbers, gets there. Anything else is reported as such for a person to look at.
+    const m = /^(\d{1,9})\.(\d{1,9})\.(\d{1,9})$/.exec(String((await res.json())?.version));
+    const latest = m ? `${Number(m[1])}.${Number(m[2])}.${Number(m[3])}` : "(not x.y.z)";
     rows.push({ id, package: v.package, pinned: v.version, latest, behind: latest !== v.version });
   }
   for (const r of rows) {

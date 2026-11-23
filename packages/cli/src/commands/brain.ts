@@ -52,12 +52,33 @@ async function apiFetch(path: string, init: RequestInit = {}): Promise<Response>
   return res;
 }
 
+/** Largest BRAIN.md the CLI will write. */
+const MAX_SCHEMA_BYTES = 1024 * 1024;
+
+/**
+ * The schema document from the API, checked before anything is written to disk:
+ * a 2xx answer, a text (not binary or HTML) content type, a size cap and no NUL bytes.
+ */
+async function brainSchemaText(res: Response): Promise<string> {
+  if (!res.ok) throw new Error(`The API responded ${res.status}`);
+  const type = (res.headers.get("content-type") ?? "text/plain").split(";")[0]!.trim();
+  if (!/^text\/(markdown|plain)$/i.test(type)) {
+    throw new Error(`Unexpected content type for the schema: ${type}`);
+  }
+  const text = await res.text();
+  if (Buffer.byteLength(text, "utf8") > MAX_SCHEMA_BYTES) {
+    throw new Error(`The schema is larger than ${MAX_SCHEMA_BYTES} bytes`);
+  }
+  if (text.includes("\0")) throw new Error("The schema contains binary data");
+  return text;
+}
+
 export async function brainCommand(action: string, options: BrainOptions = {}): Promise<void> {
   try {
     switch (action) {
       case "schema": {
         const res = await apiFetch("/api/brain/schema");
-        const md = await res.text();
+        const md = await brainSchemaText(res);
         if (options.file || options.force) {
           const target = options.file ?? "BRAIN.md";
           await fs.writeFile(target, md, "utf8");

@@ -30,7 +30,10 @@
  *
  *   --baseline-update   accepts this run's failures into the baseline
  *   --baseline-prune    removes from the baseline what this run tested and did not reproduce
- *   --only=<regex>      only the operations whose path matches (`--solo=` is the old name)
+ *   --only=<paths>      only these OpenAPI paths, comma-separated: `/api/dc` is that path and
+ *                       everything under it, `/api/dc/import$` that path only (`--solo=` is
+ *                       the old name). Not a regex since 2026-11-22: lib/path-filter.ts
+ *   --skip=<paths>      leaves these paths out, same syntax
  *   --only-installed   only those of the installed kons (not core or API): what
  *                       a kons repository's CI uses
  *   --baseline=<path>   another baseline file (that repository's)
@@ -52,6 +55,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { newlineSafeSpec } from "./lib/newline-safe-patterns";
+import { looksLikeRegex, pathFilter } from "./lib/path-filter";
 import { operationCount, splitRecursiveInputs } from "./lib/recursive-inputs";
 
 /** PINNED version (two weeks old when it was pinned). */
@@ -85,6 +89,16 @@ const specOnly = args.includes("--spec-only");
 // `--only` is what the header documented; `--solo` is what this read until
 // 2026-11-20, and kons CI passes it: both work.
 const filter = arg("only") ?? arg("solo");
+const skip = arg("skip");
+// An old regex filter would match nothing and the run would pass with zero operations.
+if ([filter, skip].some((f) => f && looksLikeRegex(f))) {
+  console.error(
+    "[schemathesis] --only/--solo/--skip take comma-separated paths, not a regex " +
+      "(e.g. --skip=/api/dc/blueprints$,/api/dc/import$): see scripts/lib/path-filter.ts."
+  );
+  process.exit(2);
+}
+const tested = pathFilter(filter, skip);
 const examples = Number(arg("examples") ?? 25);
 // A kons repository (kitsuden-kons) tests ITS OWN with its own baseline.
 const onlyInstalled = args.includes("--only-installed");
@@ -185,7 +199,7 @@ for (const { konId, mountPath, operations: operations } of mountedOperations()) 
       excludedOnes.push(key);
       continue;
     }
-    if (filter && !new RegExp(filter).test(`/api${g.path}`)) continue;
+    if (!tested(`/api${g.path}`)) continue;
     (doc.paths[g.path] ??= {})[g.method] = g.operation;
   }
 }
@@ -201,6 +215,10 @@ const recursiveSpecPath = join(OUTPUT, "openapi.recursive.json");
 writeFileSync(specPath, JSON.stringify(split.flat, null, 2));
 writeFileSync(recursiveSpecPath, JSON.stringify(split.recursive, null, 2));
 const total = operationCount(doc);
+if (total === 0 && (filter || skip)) {
+  console.error("[schemathesis] --only/--skip left no operation to test.");
+  process.exit(2);
+}
 console.log(
   `[schemathesis] ${total} operations in ${specPath}; ${safePatterns.count} patterns made newline-safe; excluded: ${excludedOnes.join(", ") || "none"}`
 );

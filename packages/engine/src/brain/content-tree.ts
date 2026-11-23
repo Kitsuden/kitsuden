@@ -26,6 +26,8 @@
  * use the model, and even that has a no-cost heuristic mode.
  */
 
+import { parseHeading } from "./markdown-heading";
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface TreeNode {
@@ -62,8 +64,6 @@ export interface TreePath {
 }
 
 // ── Construction (deterministic, no AI) ──────────────────────────────────────
-
-const HEADING = /^(#{1,6})\s+(.+?)\s*$/;
 
 /** First sentence with substance — the summary without calling any model. */
 function summarize(content: string, maxLength = 180): string {
@@ -109,9 +109,9 @@ export function buildContentTree(
     // ``` toggles a code block: a "# " inside is NOT a heading.
     if (/^\s*```/.test(line)) inCodeBlock = !inCodeBlock;
 
-    const match = inCodeBlock ? null : HEADING.exec(line);
-    if (match) {
-      current = { level: match[1].length, title: match[2], line: i + 1, body: [] };
+    const heading = inCodeBlock ? null : parseHeading(line);
+    if (heading) {
+      current = { level: heading.level, title: heading.title, line: i + 1, body: [] };
       sections.push(current);
     } else if (current) {
       current.body.push(line);

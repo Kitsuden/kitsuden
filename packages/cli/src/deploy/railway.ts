@@ -86,24 +86,26 @@ export async function deployToRailway(
 
   // ── 3. Optional: create railway.json if not present ──
   const railwayJsonPath = join(projectRoot, "railway.json");
-  if (!existsSync(railwayJsonPath)) {
-    const spinner = ora("Creating railway.json...").start();
-    const config = {
-      $schema: "https://railway.app/railway.schema.json",
-      build: {
-        builder: "DOCKERFILE",
-        dockerfilePath: "docker/Dockerfile.prod",
-      },
-      deploy: {
-        startCommand: "sh /app/docker/start-with-check.sh",
-        healthcheckPath: "/api/health",
-        healthcheckTimeout: 300,
-        restartPolicyType: "ON_FAILURE",
-        restartPolicyMaxRetries: 3,
-      },
-    };
-    await writeFile(railwayJsonPath, JSON.stringify(config, null, 2) + "\n");
-    spinner.succeed(chalk.green("Created railway.json (Dockerfile build)"));
+  const config = {
+    $schema: "https://railway.app/railway.schema.json",
+    build: {
+      builder: "DOCKERFILE",
+      dockerfilePath: "docker/Dockerfile.prod",
+    },
+    deploy: {
+      startCommand: "sh /app/docker/start-with-check.sh",
+      healthcheckPath: "/api/health",
+      healthcheckTimeout: 300,
+      restartPolicyType: "ON_FAILURE",
+      restartPolicyMaxRetries: 3,
+    },
+  };
+  // "wx" leaves an existing railway.json alone, with no separate existence check.
+  try {
+    await writeFile(railwayJsonPath, JSON.stringify(config, null, 2) + "\n", { flag: "wx" });
+    ora().succeed(chalk.green("Created railway.json (Dockerfile build)"));
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
   }
 
   // ── 4. Build locally first ──

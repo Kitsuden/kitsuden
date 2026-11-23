@@ -142,15 +142,39 @@ export function localDir(location: string, cwd = process.cwd()): string {
   return dirname(fileURLToPath(u));
 }
 
+/**
+ * Registry URLs come from project files (kitsuden.kons.json, index.json). Before one
+ * is fetched it must be https (plain http only to this machine) and carry no
+ * credentials, so a file cannot point the CLI at an arbitrary scheme or leak userinfo.
+ */
+function fetchableUrl(url: URL): string {
+  const u = new URL(url.href);
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+  if (u.protocol !== "https:" && !(u.protocol === "http:" && loopback)) {
+    throw new RecordError(`refusing to fetch ${u.protocol}//${u.host}: use https`);
+  }
+  if (u.username || u.password) throw new RecordError(`refusing a registry URL with credentials`);
+  return u.href;
+}
+
 export async function bring(url: URL, limit: number): Promise<Buffer> {
   if (url.protocol === "file:") {
     const route = fileURLToPath(url);
-    if (!existsSync(route)) throw new RecordError(`not found: ${route}`);
-    const data = readFileSync(route);
+    let data: Buffer;
+    try {
+      data = readFileSync(route);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT")
+        throw new RecordError(`not found: ${route}`);
+      throw e;
+    }
     if (data.length > limit) throw new RecordError(`${route}: larger than ${limit} bytes`);
     return data;
   }
-  const r = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(30_000) });
+  const r = await fetch(fetchableUrl(url), {
+    redirect: "error",
+    signal: AbortSignal.timeout(30_000),
+  });
   if (!r.ok) throw new RecordError(`GET ${url.href} → ${r.status}`);
   const long = Number(r.headers.get("content-length") ?? 0);
   if (long > limit) throw new RecordError(`${url.href}: larger than ${limit} bytes`);

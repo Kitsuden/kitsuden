@@ -35,6 +35,7 @@
   import Page from "$lib/components/layout/Page.svelte";
   import { confirmDialog } from "$lib/confirm.svelte";
   import { localeFormat, t } from "$lib/i18n";
+  import { modelOptions } from "$lib/llm-models";
   import { setQuery } from "$lib/page";
   import {
     deleteAgent,
@@ -566,14 +567,9 @@
                   <Select
                     bind:value={() => formData.model ?? "", (v) => (formData.model = v)}
                     placeholder={t("agentPage.noModel")}
-                    options={[
-                      { value: "gpt-4", label: t("idPage.gpt4") },
-                      { value: "gpt-4-turbo", label: t("idPage.gpt4Turbo") },
-                      { value: "gpt-3.5-turbo", label: t("idPage.gpt35Turbo") },
-                      { value: "claude-3-opus", label: t("idPage.claude3Opus") },
-                      { value: "claude-3-sonnet", label: t("idPage.claude3Sonnet") },
-                    ]}
+                    options={modelOptions(formData.model)}
                   />
+                  <span class="model-hint">{t("agentsView.modelStoredOnly")}</span>
                 </Field>
               </form>
               <SaveBar
@@ -630,6 +626,13 @@
 </Sheet>
 
 <style>
+  /* A <span>: the field wraps its control in a <label>, which takes no <p>. */
+  .model-hint {
+    display: block;
+    margin: 0.25rem 0 0;
+    font-size: 0.75rem;
+    color: rgb(var(--ta-text-dim));
+  }
   .agent-overview {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));

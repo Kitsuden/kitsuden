@@ -788,14 +788,14 @@ describe("kitsuden kon (registry) end to end", () => {
     assert.match(r.stdout, /kon-app[\s\S]*kon-base/);
     r = inProject(["info", "app"]);
     assert.equal(r.status, 0, r.stderr);
-    assert.match(r.stdout, /api\.example\.com/);
+    assert.match(r.stdout, /^\s+hosts\s+api\.example\.com$/m);
     assert.match(r.stdout, /kon-base@\^1\.1\.0/);
   });
 
   it("add without a terminal and without --yes shows the permissions and installs nothing", () => {
     const r = inProject(["add", "app", "--no-install", "--no-migrate"]);
     assert.equal(r.status, 3, r.stderr + r.stdout);
-    assert.match(r.stdout, /api\.example\.com/);
+    assert.match(r.stdout, /^\s+hosts\s+(?:\+ )?api\.example\.com$/m);
     assert.match(r.stderr, /confirmation required/);
     assert.ok(!existsSync(join(project, "packages", "kons", "kon-app")));
     assert.ok(!existsSync(join(project, "kitsuden.kons.lock")));

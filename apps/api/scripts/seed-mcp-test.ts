@@ -8,9 +8,15 @@
  * tests with Claude Desktop.
  *
  * Usage: bun run apps/api/scripts/seed-mcp-test.ts
+ *
+ * The token (and, offline, the SQL that registers its hash) is written to
+ * `.kitsuden/seed-mcp-token.txt` under the current directory with mode 0600. The
+ * console only shows that path: it never prints the token or anything derived from it.
  */
 
 import { createHash, randomBytes } from "crypto";
+
+import { writeSecretFile } from "../src/db/secret-file";
 
 // Console colors
 const colors = {
@@ -94,9 +100,9 @@ async function seedMcpTest() {
     const plainToken = apiKeyResult.plainKey;
     const keyHash = apiKeyResult.keyHash;
     const keyPrefix = apiKeyResult.keyPrefix;
+    let sqlScript = "";
 
-    log(`   ✅ Token generated: ${keyPrefix}...`, "green");
-    log(`   🔒 Hash SHA-256: ${keyHash.substring(0, 16)}...\n`, "green");
+    log("   ✅ Token generated (the database keeps its SHA-256 hash, never the token)\n", "green");
 
     // ───────────────────────────────────────────────────────────────────────
     // IF THERE IS A CONNECTION, INSERT INTO THE DATABASE
@@ -193,15 +199,11 @@ async function seedMcpTest() {
 
       await db.$client.end?.();
     } else {
-      // Offline mode - show SQL to run manually
+      // Offline mode - the SQL to run manually goes to the token file, not the console
       log("👤 Step 3 (OFFLINE MODE): Preparing SQL for manual execution...", "yellow");
       log(`   ⚠️  Could not connect to the database\n`, "yellow");
 
-      log("════════════════════════════════════════════════════════════════", "bold");
-      log("SQL SCRIPT TO RUN MANUALLY:", "bold");
-      log("════════════════════════════════════════════════════════════════\n", "bold");
-
-      const sqlScript = `
+      sqlScript = `
 -- Insert DevBot into agent_identities
 INSERT INTO agent_identities (
   id, name, description, type, capabilities, system_prompt,
@@ -236,9 +238,6 @@ INSERT INTO agent_api_keys (
   NULL
 );
 `;
-      log(sqlScript, "cyan");
-
-      log("════════════════════════════════════════════════════════════════\n", "bold");
     }
 
     // ───────────────────────────────────────────────────────────────────────
@@ -247,11 +246,6 @@ INSERT INTO agent_api_keys (
     log("╔═══════════════════════════════════════════════════════════════╗", "cyan");
     log("║   🎉 STEP 0 COMPLETED - MCP TOKEN GENERATED                   ║", "cyan");
     log("╚═══════════════════════════════════════════════════════════════╝\n", "cyan");
-
-    log("════════════════════════════════════════════════════════════════", "bold");
-    log("MCP TOKEN (KEEP IN A SAFE PLACE):", "bold");
-    log("════════════════════════════════════════════════════════════════", "bold");
-    log(`\n${plainToken}\n`, "cyan");
 
     log("════════════════════════════════════════════════════════════════", "bold");
     log("CONFIGURATION FOR CLAUDE DESKTOP:", "bold");
@@ -263,7 +257,7 @@ INSERT INTO agent_api_keys (
           command: "bun",
           args: ["run", "/path/to/kitsuden/apps/api/src/mcp-server.ts"],
           env: {
-            KITSUDEN_API_TOKEN: plainToken,
+            KITSUDEN_API_TOKEN: "<the TOKEN in .kitsuden/seed-mcp-token.txt>",
             KITSUDEN_API_URL: "http://localhost:3001",
             NODE_ENV: "development",
           },
@@ -290,7 +284,7 @@ INSERT INTO agent_api_keys (
 
     log("2. Open Claude Desktop", "reset");
     log("3. Ve a Config > Developer > Edit Config", "reset");
-    log("4. Paste the JSON configuration above", "reset");
+    log("4. Paste the JSON configuration above, with the TOKEN from the token file", "reset");
     log("5. Restart Claude Desktop", "reset");
     log("6. Type: 'List the tools you have available'\n", "reset");
 
@@ -308,7 +302,7 @@ INSERT INTO agent_api_keys (
     if (!dbConnected) {
       log("⚠️  WARNING: No database connection", "yellow");
       log("   The token was generated but is NOT registered in the DB.", "yellow");
-      log("   Run the SQL script shown above before using the token.\n", "yellow");
+      log("   Run the SQL script in the token file before using the token.\n", "yellow");
     }
 
     log("════════════════════════════════════════════════════════════════\n", "bold");
@@ -329,7 +323,7 @@ AGENT:
 
 TOKEN:
   ${plainToken}
-
+${sqlScript ? `\nSQL TO RUN MANUALLY (no database connection):\n${sqlScript}` : ""}
 CLAUDE DESKTOP CONFIGURATION:
   Windows: %APPDATA%\\Claude\\claude_desktop_config.json
   macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
@@ -348,16 +342,13 @@ VALIDATION:
 ═══════════════════════════════════════════════════════════════════
 `;
 
-    // Write to progress.txt
+    // The only place the token is written: a 0600 file in a git-ignored folder.
     try {
-      const fs = await import("fs");
-      const path = await import("path");
-      const progressPath = path.join(process.cwd(), "progress.txt");
-
-      fs.writeFileSync(progressPath, tokenInfo);
-      log(`📝 Token saved to: ${progressPath}`, "green");
-    } catch (fsError) {
-      log(`⚠️  Could not save to progress.txt`, "yellow");
+      const tokenPath = writeSecretFile("seed-mcp-token.txt", tokenInfo);
+      log(`📝 Token saved to: ${tokenPath} (mode 0600). Read it, then delete the file.`, "green");
+    } catch {
+      log("❌ Could not save the token file: the token is lost, run the script again.", "red");
+      process.exit(1);
     }
 
     return {

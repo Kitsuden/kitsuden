@@ -88,13 +88,21 @@ export function checkInstance(name) {
 
 /** A valid instance from a folder name: `My App!` → `my-app`. */
 export function instanceFromName(name) {
-  const clean = String(name)
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^[^a-z0-9]+/, "")
-    .replace(/-+$/, "")
-    .slice(0, 40);
+  const clean = trimTrailing(
+    String(name)
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^[^a-z0-9]+/, ""),
+    "-"
+  ).slice(0, 40);
   return clean || "kitsuden";
+}
+
+/** `text` without the trailing runs of `char`. A loop, not `/-+$/`, which is quadratic. */
+function trimTrailing(text, char) {
+  let end = text.length;
+  while (end > 0 && text[end - 1] === char) end--;
+  return text.slice(0, end);
 }
 
 /** Is there already an install with this prefix (its database container or volume)? */
@@ -273,11 +281,14 @@ export function renderLocalEnv(apiExample, opts) {
     api.push(line);
   }
   const apiText = `${api.join("\n")}\n`;
-  const left = apiText.match(/^[A-Z_][A-Z0-9_]*=.*<[A-Z0-9_]+>.*$/m);
-  if (left)
-    throw new Error(
-      `apps/api/.env.example has a placeholder this tool does not know: ${left[0].split("=")[0]}`
-    );
+  // Line by line, key first: one regex with `.*<…>.*` backtracks on long lines.
+  for (const line of api) {
+    const key = /^[A-Z_][A-Z0-9_]*=/.exec(line);
+    if (key && /<[A-Z0-9_]+>/.test(line.slice(key[0].length)))
+      throw new Error(
+        `apps/api/.env.example has a placeholder this tool does not know: ${key[0].slice(0, -1)}`
+      );
+  }
   return { root, api: apiText };
 }
 
@@ -346,7 +357,7 @@ export async function scaffold(o) {
       valkey: await pick("valkey", 6379),
     };
     const tag = o.imageTag ?? VERSION;
-    const registry = (o.registry ?? DEFAULT_REGISTRY).replace(/\/+$/, "");
+    const registry = trimTrailing(o.registry ?? DEFAULT_REGISTRY, "/");
     const apiImage = `${registry}/api:${tag}`;
     const adminImage = `${registry}/admin:${tag}`;
     const src = templatesDir();

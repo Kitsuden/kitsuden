@@ -191,10 +191,13 @@ function runRunner(
   previous: Snapshot | null,
   o: MakemigrationsOptions
 ): RunnerResult {
-  const runner = join(d.dir, `__kitsuden_makemigrations_${process.pid}.ts`);
+  const runnerName = `__kitsuden_makemigrations_${process.pid}.ts`;
+  const runner = join(d.dir, runnerName);
   writeFileSync(runner, RUNNER, "utf8");
   try {
-    const bun = buildInvocation(o.bun ?? "bun", ["run", runner]);
+    // Relative to cwd (d.dir): no absolute path reaches the command line, which on
+    // Windows may go through cmd.exe when bun is a .cmd shim.
+    const bun = buildInvocation(o.bun ?? "bun", ["run", `./${runnerName}`]);
     const r = spawnSync(bun.file, bun.args, {
       windowsVerbatimArguments: bun.windowsVerbatimArguments,
       cwd: d.dir,
@@ -223,6 +226,18 @@ function runRunner(
   }
 }
 
+/** The previous snapshot, or null when there is none yet. */
+function readSnapshot(snapshotPath: string): Snapshot | null {
+  let text: string;
+  try {
+    text = readFileSync(snapshotPath, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw e;
+  }
+  return JSON.parse(text) as Snapshot;
+}
+
 /** Generates (and writes, unless `dryRun`) the migration of each target. */
 export async function generateModelMigrations(
   o: MakemigrationsOptions
@@ -232,8 +247,7 @@ export async function generateModelMigrations(
   for (const d of modelsTargets(o)) {
     if (d.files.length === 0) throw new Error(`${d.dir} has no models (*.model.ts or models.ts)`);
     const snapshotPath = join(d.migrations, SNAPSHOT);
-    const readFrom = existsSync(snapshotPath) ? snapshotPath : null;
-    const previous = readFrom ? (JSON.parse(readFileSync(readFrom, "utf8")) as Snapshot) : null;
+    const previous = readSnapshot(snapshotPath);
     const r = runRunner(d, previous, o);
     if (!r.sql) {
       results.push({
@@ -382,10 +396,15 @@ export async function makeModel(rawName: string, o: MakeModelOptions): Promise<s
     );
   }
   const file = join(dir, `${name}.model.ts`);
-  if (existsSync(file) && !o.force)
-    throw new Error(`Already exists: ${file} (use --force to overwrite)`);
   await mkdir(dir, { recursive: true });
-  await writeFile(file, modelTemplate(name), "utf8");
+  // "wx" fails if the file exists, so there is no check-then-write race.
+  try {
+    await writeFile(file, modelTemplate(name), { encoding: "utf8", flag: o.force ? "w" : "wx" });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "EEXIST")
+      throw new Error(`Already exists: ${file} (use --force to overwrite)`);
+    throw e;
+  }
   return [
     `created ${file}`,
     `register it: defineModelsKon({ id, name, version, models: [${aCamel(name)}] }) from @kitsuden/engine`,

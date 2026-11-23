@@ -13,6 +13,7 @@ import { inProduction } from "../lib/environment";
 import { insertCredentialUser } from "../lib/first-run";
 
 import { authUsers as user } from "./schema";
+import { writeSecretFile } from "./secret-file";
 
 import { db } from "./index";
 
@@ -62,12 +63,15 @@ async function seed() {
       });
 
       console.log(`  ✓ Created admin: ${ADMIN_EMAIL}`);
-      // Only if this script generated it: if it came from ADMIN_SEED_PASSWORD, whoever
-      // set it already has it, and it must not end up in logs.
-      console.log(
-        `    Password: ${process.env.ADMIN_SEED_PASSWORD ? "(la de ADMIN_SEED_PASSWORD)" : ADMIN_PASSWORD}`
-      );
-      console.log(`    ⚠ IMPORTANT: Save this password or set ADMIN_SEED_PASSWORD env var.`);
+      // The password never goes to the console (or to CI logs). If this script generated
+      // it, it goes to a 0600 file; if it came from ADMIN_SEED_PASSWORD, whoever set it
+      // already has it.
+      if (process.env.ADMIN_SEED_PASSWORD) {
+        console.log("    Password: the one in ADMIN_SEED_PASSWORD");
+      } else {
+        const file = writeSecretFile("seed-admin-password.txt", ADMIN_PASSWORD);
+        console.log(`    Password: written to ${file} (mode 0600). Read it, then delete the file.`);
+      }
       console.log(`    Role: admin`);
     } catch (err: unknown) {
       console.error("  ✗ Error creating admin:", messageOf(err) || err);

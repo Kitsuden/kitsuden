@@ -27,7 +27,7 @@
  * admin (the site must be built with INTI=true).
  */
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { deflateSync, crc32 } from "node:zlib";
 
 const API = (process.env.SMOKE_API_URL ?? "http://localhost:3000").replace(/\/+$/, "");
@@ -139,10 +139,31 @@ function png() {
 
 const created = { pageId: null, postId: null, mediaId: null, mediaPath: null };
 
+/**
+ * The credentials this script saved on an earlier run, or `{}` when the file does not
+ * exist. They are sent to the (local) API, so anything but the shape written below is
+ * refused instead of being passed on.
+ */
+function savedCredentials(file) {
+  let text;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") return {};
+    throw error;
+  }
+  const data = JSON.parse(text);
+  const email = typeof data?.email === "string" ? data.email : "";
+  const password = typeof data?.password === "string" ? data.password : "";
+  if (!/^[^\s@]{1,64}@[^\s@]{1,255}$/.test(email) || password.length < 8 || password.length > 256)
+    throw new Error(`${file} does not hold the { email, password } this script writes.`);
+  return { email, password };
+}
+
 async function signIn() {
   const init = await api("GET", "/api/system/init-check");
   const file = process.env.SMOKE_CREDENTIALS_FILE;
-  const saved = file && existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
+  const saved = file ? savedCredentials(file) : {};
   let email = process.env.SMOKE_ADMIN_EMAIL ?? saved.email;
   let password = process.env.SMOKE_ADMIN_PASSWORD ?? saved.password;
   if (init.json?.initialized === false) {

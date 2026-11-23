@@ -1158,9 +1158,14 @@ function scaffoldKonsRepo(root: string, slug: string): void {
   }
   for (const f of ["package.json", "README.md"]) {
     const p = join(root, f);
-    if (existsSync(p)) {
-      writeFileSync(p, readFileSync(p, "utf8").replaceAll("__KON_SLUG__", slug), "utf8");
+    let text: string;
+    try {
+      text = readFileSync(p, "utf8");
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") continue;
+      throw e;
     }
+    writeFileSync(p, text.replaceAll("__KON_SLUG__", slug), "utf8");
   }
 }
 

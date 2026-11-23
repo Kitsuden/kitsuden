@@ -29,7 +29,7 @@
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -109,13 +109,18 @@ export const TOOLS = {
 
 const EXE = process.platform === "win32" ? ".exe" : "";
 
-function run(cmd, args, { capture = false } = {}) {
+function run(cmd, args, { capture = false, input = null } = {}) {
   return new Promise((done) => {
     const child = spawn(cmd, args, {
       cwd: ROOT,
-      stdio: capture ? ["ignore", "pipe", "inherit"] : "inherit",
+      stdio: [
+        input ? "pipe" : capture ? "ignore" : "inherit",
+        capture ? "pipe" : "inherit",
+        "inherit",
+      ],
       env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
     });
+    if (input) child.stdin.end(input);
     let out = "";
     if (capture) child.stdout.on("data", (d) => (out += d));
     child.on("close", (code) => done({ code: code ?? 1, out }));
@@ -142,17 +147,25 @@ export async function tool(name) {
 
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
-  const archive = join(dir, file);
-  writeFileSync(archive, bytes);
-  if (/\.(tar\.gz|zip)$/.test(file)) {
-    // Windows' own tar (bsdtar) also reads zip files
-    const tar = process.platform === "win32" ? "C:\\Windows\\System32\\tar.exe" : "tar";
-    const { code } = await run(tar, ["-xf", archive, "-C", dir]);
+  // Windows' own tar (bsdtar) also reads zip files
+  const tar = process.platform === "win32" ? "C:\\Windows\\System32\\tar.exe" : "tar";
+  if (file.endsWith(".tar.gz")) {
+    // The verified bytes go to tar's stdin: the archive is never written to disk.
+    const { code } = await run(tar, ["-xzf", "-", "-C", dir], { input: bytes });
     if (code !== 0) throw new Error(`${name}: could not extract ${file}`);
+  } else if (file.endsWith(".zip")) {
+    // A zip needs its central directory, so bsdtar reads it from a file, not a pipe.
+    const archive = join(dir, file);
+    writeFileSync(archive, bytes, { flag: "wx" });
+    const { code } = await run(tar, ["-xf", archive, "-C", dir]);
     rmSync(archive);
+    if (code !== 0) throw new Error(`${name}: could not extract ${file}`);
   } else {
-    writeFileSync(exe, bytes);
-    rmSync(archive);
+    // Under a temporary name, then renamed: `exe` never exists half-written, and
+    // nothing is written to the path checked above.
+    const partial = join(dir, `${file}.partial`);
+    writeFileSync(partial, bytes, { flag: "wx", mode: 0o755 });
+    renameSync(partial, exe);
   }
   if (process.platform !== "win32") await run("chmod", ["+x", exe]);
   return exe;

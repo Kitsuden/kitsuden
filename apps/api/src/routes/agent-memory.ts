@@ -105,12 +105,15 @@ function buildMemoryFilters(agentId: string, filters: MemorySearchRequest) {
   }
 
   if (filters.tags && filters.tags.length > 0) {
-    // Look for memories that have ANY of the tags (OR)
-    // Use PostgreSQL array format manually
-    // @ts-ignore - tagArray is used for SQL generation
-    const tagArray = filters.tags.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(",");
+    // Look for memories that have ANY of the tags (OR), each tag a bound parameter.
+    // (It used to splice raw `$1..$n` placeholders, which pointed at the query's first
+    // parameters, the agent id among them, instead of the tags; and it built an unused,
+    // half-escaped string literal of them.)
     conditions.push(
-      sql`${agentMemory.tags} ?| ARRAY[${sql.raw(filters.tags.map((_: string, i: number) => `$${i + 1}`).join(","))}]`
+      sql`${agentMemory.tags} ?| ARRAY[${sql.join(
+        filters.tags.map((t: string) => sql`${t}`),
+        sql`, `
+      )}]::text[]`
     );
   }
 

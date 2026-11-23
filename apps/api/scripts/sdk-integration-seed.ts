@@ -18,6 +18,7 @@
  * local and its name contains `test` (and not `prod`).
  */
 
+import { randomBytes } from "node:crypto";
 import { writeFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
@@ -53,7 +54,7 @@ const { createAgent } = await import("../src/services/agent-auth");
 
 const stamp = Date.now().toString(36);
 const email = `sdk-it-admin-${stamp}@example.test`;
-const password = `Sdk-It-${stamp}-${Math.random().toString(36).slice(2)}!`;
+const password = `Sdk-It-${stamp}-${randomBytes(12).toString("base64url")}!`;
 
 async function post(route: string, body: unknown) {
   return fetch(`${api}${route}`, {

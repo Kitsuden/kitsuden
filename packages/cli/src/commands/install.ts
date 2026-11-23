@@ -169,13 +169,7 @@ async function updateKitsudenConfig(
 ): Promise<boolean> {
   const configPath = path.join(projectRoot, "apps", "api", "kitsuden.config.ts");
   try {
-    await fs.access(configPath);
-  } catch {
-    // Config file not found, skip
-    return false;
-  }
-
-  try {
+    // A missing config file makes readFile throw, and that skips the update.
     let content = await fs.readFile(configPath, "utf-8");
 
     // Check if already present

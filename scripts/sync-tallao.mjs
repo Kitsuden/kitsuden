@@ -78,11 +78,32 @@ function resolveSpecifier(fromFile, spec) {
 const SPECIFIER = /(\bfrom\s+|\bimport\s+|\bimport\s*\(\s*)"([^"]+)"/g;
 
 // Usage examples in doc comments (`import { setLabels } from "tallao"`) are not imports.
-const withoutComments = (text) =>
-  text
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+// Repeated until nothing changes: removing one comment can join the text around it
+// into another (`<!<!-- a -->-- b -->`).
+// Drops every `open … close` span with a left-to-right scan; an unclosed one drops the rest.
+const withoutSpans = (text, open, close) => {
+  let out = "";
+  let from = 0;
+  for (;;) {
+    const start = text.indexOf(open, from);
+    if (start < 0) return out + text.slice(from);
+    out += text.slice(from, start);
+    const end = text.indexOf(close, start + open.length);
+    if (end < 0) return out;
+    from = end + close.length;
+  }
+};
+const withoutComments = (text) => {
+  let current = text;
+  for (;;) {
+    const next = withoutSpans(withoutSpans(current, "<!--", "-->"), "/*", "*/").replace(
+      /^[ \t]*\/\/.*$/gm,
+      ""
+    );
+    if (next === current) return next;
+    current = next;
+  }
+};
 
 // Components plus what they import, until nothing new appears. `utils.ts` and `i18n.ts`
 // always go: the admin's root layout calls `setLabels`.

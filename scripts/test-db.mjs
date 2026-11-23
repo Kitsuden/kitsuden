@@ -68,8 +68,9 @@ export function unsafeReason(env) {
   if (env.KITSUDEN_ALLOW_UNSAFE_TEST_DB === "1") return null;
   const db = env.POSTGRES_DB ?? "kitsuden_test";
   const port = String(env.POSTGRES_PORT ?? "5434");
-  if (!/test/i.test(db)) return `database "${db}" does not have "test" in its name`;
-  if (/prod/i.test(db)) return `database "${db}" has "prod" in its name`;
+  // The reasons name the variable, never its value: they end up on the console.
+  if (!/test/i.test(db)) return 'the POSTGRES_DB database does not have "test" in its name';
+  if (/prod/i.test(db)) return 'the POSTGRES_DB database has "prod" in its name';
   if (port === "5432") return "port 5432 is the regular Postgres port, not the test one (5434)";
   const url = env.DATABASE_URL;
   if (url) {
@@ -96,8 +97,12 @@ export function unsafeReason(env) {
  */
 function readEnvFiles() {
   const read = (name) => {
-    const file = join(ROOT, name);
-    return existsSync(file) ? parseEnv(readFileSync(file, "utf8")) : {};
+    try {
+      return parseEnv(readFileSync(join(ROOT, name), "utf8"));
+    } catch (error) {
+      if (error?.code === "ENOENT") return {};
+      throw error;
+    }
   };
   return { ...read(ENV_EXAMPLE), ...read(ENV_FILE) };
 }
@@ -120,11 +125,14 @@ export function testEnvironment(overrides = {}) {
 /** Creates the file docker compose reads if needed, and checks it. */
 function prepareComposeEnv() {
   const file = join(ROOT, ENV_FILE);
-  if (!existsSync(file)) {
-    // Not a plain copy: a shell cannot source a CRLF file, and a checkout may have one.
-    const example = readFileSync(join(ROOT, ENV_EXAMPLE), "utf8");
-    writeFileSync(file, example.replaceAll("\r\n", "\n"));
+  // Not a plain copy: a shell cannot source a CRLF file, and a checkout may have one.
+  // `wx` creates it only when missing, with no gap between a check and the write.
+  const example = readFileSync(join(ROOT, ENV_EXAMPLE), "utf8");
+  try {
+    writeFileSync(file, example.replaceAll("\r\n", "\n"), { flag: "wx" });
     console.log(`test-db: created ${ENV_FILE} from ${ENV_EXAMPLE}`);
+  } catch (error) {
+    if (error?.code !== "EEXIST") throw error;
   }
   const reason = unsafeReason(parseEnv(readFileSync(file, "utf8")));
   if (reason) fail(`refusing to use ${ENV_FILE}: ${reason}.`);
@@ -142,7 +150,8 @@ function requirePostgres(env) {
     const socket = connect({ host, port: Number(port) || 5432, timeout: CONNECT_TIMEOUT_MS });
     const refuse = () => {
       socket.destroy();
-      fail(`Postgres is not answering on ${host}:${port}. Start it with: pnpm test:db:up`);
+      // No host or port here: they come from DATABASE_URL, which is never printed.
+      fail("Postgres is not answering at the test DATABASE_URL. Start it with: pnpm test:db:up");
     };
     socket.once("connect", () => {
       socket.destroy();
@@ -178,8 +187,7 @@ function up() {
     if (health.stdout.trim() === "healthy") {
       const migrated = testEnvironment({ KITSUDEN_TEST_DB: "postgres" });
       migrate(migrated);
-      const { username, host, pathname } = new URL(migrated.DATABASE_URL);
-      console.log(`test-db: ready and migrated at postgres://${username}:***@${host}${pathname}`);
+      console.log(`test-db: ready and migrated (settings from ${ENV_FILE}).`);
       return;
     }
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
