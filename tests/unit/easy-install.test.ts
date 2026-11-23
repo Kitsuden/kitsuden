@@ -93,8 +93,16 @@ describe("docker-compose.yml", () => {
 describe("what reaches the API by name", () => {
   it("nginx uses the service name, which does not change with the instance", () => {
     const conf = read("docker/nginx-admin.conf");
-    expect(conf).toContain("proxy_pass http://kitsuden_api:3000;");
+    expect(conf).toContain("set $kitsuden_api_upstream http://kitsuden_api:3000;");
     expect(conf).not.toContain("kitsuden_api_prod");
+  });
+
+  it("nginx re-resolves the API: a recreated API container must not leave the panel on 502", () => {
+    const conf = read("docker/nginx-admin.conf");
+    // A literal upstream is resolved once at startup; a variable with a resolver is not.
+    expect(conf).toMatch(/resolver 127\.0\.0\.11 valid=\d+s/);
+    expect(conf).toContain("proxy_pass $kitsuden_api_upstream;");
+    expect(conf).not.toMatch(/^\s*proxy_pass http:\/\/kitsuden_api/m);
   });
 
   it("so do Caddy and the TLS overlay", () => {

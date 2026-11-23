@@ -12,7 +12,7 @@
   content one padding and nothing else.
 -->
 <script lang="ts">
-  import { RefreshCw, Search, Sword } from "lucide-svelte";
+  import { RefreshCw, Search } from "lucide-svelte";
   import { onMount, untrack, type Snippet } from "svelte";
 
   import { getUser, isAdmin as currentUserIsAdmin, isStaff } from "$lib/auth.svelte";
@@ -197,7 +197,7 @@
     >
       {#snippet header()}
         <a href="/" class="kitsuden-brand" onclick={mobile ? close : undefined}>
-          <span class="kitsuden-brand-mark"><Sword size={16} aria-hidden="true" /></span>
+          <img class="kitsuden-brand-mark" src="/logo-96.png" width="28" height="28" alt="" />
           <span class="kitsuden-brand-name">{t("common.kitsuden")}</span>
         </a>
       {/snippet}
@@ -318,16 +318,13 @@
     outline-offset: 2px;
     border-radius: var(--ta-radius-sm);
   }
+  /* The kitsune logo: it carries its own colours, so no tinted tile behind it. */
   .kitsuden-brand-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
     flex: 0 0 auto;
     width: 1.75rem;
     height: 1.75rem;
-    color: rgb(var(--ta-accent));
-    background: rgb(var(--ta-accent) / 0.1);
-    border-radius: var(--ta-radius);
+    object-fit: contain;
   }
   .kitsuden-brand-name {
     font-size: 0.875rem;

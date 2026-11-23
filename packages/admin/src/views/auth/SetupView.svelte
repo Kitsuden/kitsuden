@@ -99,27 +99,8 @@
       <CardContent class="auth-panel-body">
         <div class="brand">
           <div class="brand-icon">
-            <!--
-              Kitsune: geometric fox mask. Ears and muzzle use straight
-              strokes to rhyme with the background grid.
-            -->
-            <svg
-              width="34"
-              height="34"
-              viewBox="0 0 32 32"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M4 5 L10 11 M28 5 L22 11" />
-              <path d="M4 5 L6 13 M28 5 L26 13" />
-              <path d="M6 13 C6 22, 11 27, 16 29 C21 27, 26 22, 26 13 L22 11 L16 14 L10 11 Z" />
-              <path d="M11.5 18 L13.5 18 M18.5 18 L20.5 18" />
-              <path d="M16 22 L14.5 24 M16 22 L17.5 24" />
-            </svg>
+            <!-- The Kitsuden kitsune, the same mark as the site and the favicon. -->
+            <img src="/logo-96.png" width="56" height="56" alt="" />
           </div>
           <h1 class="brand-name">{t("common.kitsuden")}</h1>
           <p class="brand-sub">{t("setupView.createMasterAdmin")}</p>
@@ -291,10 +272,7 @@
     width: 60px;
     height: 60px;
     margin-bottom: 0.75rem;
-    color: rgb(var(--kitsuden-accent));
-    background: rgb(var(--kitsuden-accent) / 0.1);
-    border: 1px solid rgb(var(--kitsuden-accent) / 0.2);
-    border-radius: 16px;
+    /* The kitsune logo carries its own colours: no tinted tile behind it. */
   }
 
   .brand-name {
