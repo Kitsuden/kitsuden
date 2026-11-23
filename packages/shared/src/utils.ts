@@ -150,3 +150,15 @@ export function createPaginatedResponse<T>(
     hasPrevPage: page > 1,
   };
 }
+
+/**
+ * `text` without the runs of `char` at its start and end. An index loop, because
+ * `/^-+|-+$/` and `/\/+$/` take quadratic time on a long run of that character.
+ */
+export function trimChar(text: string, char: string, ends: "both" | "end" = "both"): string {
+  let start = 0;
+  let end = text.length;
+  if (ends === "both") while (start < end && text[start] === char) start++;
+  while (end > start && text[end - 1] === char) end--;
+  return text.slice(start, end);
+}

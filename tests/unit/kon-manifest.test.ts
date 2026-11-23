@@ -197,14 +197,24 @@ describe.skipIf(!HAS_INSTALLED_KONS)("the manifest declares ALL the tables the k
     for (const f of readdirSync(dir)
       .filter((f) => f.endsWith(".sql"))
       .sort()) {
+      const raw = readFileSync(join(dir, f), "utf8");
       // Without stripping comments, an esports migration that MENTIONS
       // «CREATE TABLE IF NOT EXISTS» inside an explanation was read as
       // DDL and produced a table called «IF».
-      const sql = readFileSync(join(dir, f), "utf8")
-        .replace(/\/\*[\s\S]*?\*\//g, " ")
-        .replace(/--.*/g, " ");
+      const sql = raw.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--.*/g, " ");
 
       for (const m of sql.matchAll(creates)) alive.add(m[1]);
+      // English-rename migrations rename tables inside a `DO $$ … END $$;`
+      // block headed by `-- Tables.` with a `(VALUES ('old', 'new'), …)` list.
+      const tablesMarker = raw.indexOf("-- Tables.");
+      if (tablesMarker >= 0) {
+        const blockEnd = raw.indexOf("END $$;", tablesMarker);
+        const block = blockEnd > tablesMarker ? raw.slice(tablesMarker, blockEnd) : "";
+        for (const m of block.matchAll(/\(\s*'([a-z0-9_]+)'\s*,\s*'([a-z0-9_]+)'\s*\)/g)) {
+          alive.delete(m[1]);
+          alive.add(m[2]);
+        }
+      }
       for (const m of sql.matchAll(renames)) {
         alive.delete(m[1]);
         alive.add(m[2]);

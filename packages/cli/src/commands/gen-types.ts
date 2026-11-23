@@ -62,7 +62,8 @@ export async function genTypesCommand(options: GenTypesOptions = {}) {
     // In series and not in parallel: there are dozens of tables and a simultaneous burst
     // against a small deployment is how the generator takes down the API
     // it is trying to describe.
-    const tables = [];
+    const tables: IntrospectedTable[] = [];
+    const skipped: string[] = [];
     for (const name of names) {
       const res = await fetch(`${baseUrl}/api/schema/tables/${encodeURIComponent(name)}`, {
         credentials: "include",
@@ -70,7 +71,9 @@ export async function genTypesCommand(options: GenTypesOptions = {}) {
       });
       if (!res.ok) continue;
       const body = (await res.json()) as { table?: unknown };
-      if (body.table) tables.push(body.table);
+      const table = introspectedTable(body.table);
+      if (table) tables.push(table);
+      else if (body.table) skipped.push(name);
     }
 
     if (tables.length === 0) {
@@ -78,9 +81,16 @@ export async function genTypesCommand(options: GenTypesOptions = {}) {
       process.exit(1);
     }
 
+    if (skipped.length > 0) {
+      spinner.warn(
+        chalk.yellow(`Skipped tables with names unsafe for generated code: ${skipped.join(", ")}`)
+      );
+      spinner.start();
+    }
+
     const { generateTypes } = await import("@kitsuden/codegen/generators/types");
 
-    const code = generateTypes(tables as never, {
+    const code = generateTypes(tables, {
       exclude: options.exclude
         ?.split(",")
         .map((s) => s.trim())
@@ -93,7 +103,10 @@ export async function genTypesCommand(options: GenTypesOptions = {}) {
 
     // If the content does not change, the file is not touched: that way regenerating after every
     // migration does not dirty the git tree or trigger recompilations.
-    const previous = (await fs.pathExists(target)) ? await fs.readFile(target, "utf-8") : null;
+    const previous = await fs.readFile(target, "utf-8").catch((e: NodeJS.ErrnoException) => {
+      if (e.code === "ENOENT") return null;
+      throw e;
+    });
     if (previous === code) {
       spinner.succeed(chalk.green(`No schema changes — ${outFile} is already up to date`));
       return;
@@ -120,6 +133,66 @@ export async function genTypesCommand(options: GenTypesOptions = {}) {
     }
     process.exit(1);
   }
+}
+
+/** Identifiers that are safe to print into generated code and its comments. */
+const SAFE_NAME = /^[A-Za-z0-9_$.-]{1,128}$/;
+
+interface IntrospectedColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+  defaultValue: string | null;
+  isPrimaryKey: boolean;
+  isForeignKey?: boolean;
+  foreignTable?: string | null;
+  foreignColumn?: string | null;
+}
+
+interface IntrospectedTable {
+  name: string;
+  columns: IntrospectedColumn[];
+  primaryKey?: string[];
+}
+
+const optionalName = (v: unknown): v is string | null | undefined =>
+  v === undefined || v === null || (typeof v === "string" && SAFE_NAME.test(v));
+
+/**
+ * The API's description of one table, checked field by field before it is turned
+ * into code: a name with a newline or a `*\/` would otherwise end up in the
+ * generated file. Anything that does not fit is dropped (null).
+ */
+function introspectedTable(value: unknown): IntrospectedTable | null {
+  if (!value || typeof value !== "object") return null;
+  const t = value as Record<string, unknown>;
+  if (typeof t.name !== "string" || !SAFE_NAME.test(t.name) || !Array.isArray(t.columns)) {
+    return null;
+  }
+  const columns: IntrospectedColumn[] = [];
+  for (const raw of t.columns as unknown[]) {
+    if (!raw || typeof raw !== "object") return null;
+    const c = raw as Record<string, unknown>;
+    if (typeof c.name !== "string" || !SAFE_NAME.test(c.name)) return null;
+    if (typeof c.type !== "string" || c.type.length > 128) return null;
+    if (!optionalName(c.foreignTable) || !optionalName(c.foreignColumn)) return null;
+    columns.push({
+      name: c.name,
+      type: c.type,
+      nullable: c.nullable === true,
+      defaultValue: typeof c.defaultValue === "string" ? c.defaultValue : null,
+      isPrimaryKey: c.isPrimaryKey === true,
+      isForeignKey: c.isForeignKey === true,
+      foreignTable: c.foreignTable ?? null,
+      foreignColumn: c.foreignColumn ?? null,
+    });
+  }
+  let primaryKey: string[] | undefined;
+  if (Array.isArray(t.primaryKey)) {
+    if (!t.primaryKey.every((k) => typeof k === "string" && SAFE_NAME.test(k))) return null;
+    primaryKey = t.primaryKey as string[];
+  }
+  return { name: t.name, columns, ...(primaryKey ? { primaryKey } : {}) };
 }
 
 /**

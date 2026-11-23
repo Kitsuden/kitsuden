@@ -154,26 +154,95 @@ export function table(rows: [string, string][]): string {
  * the message. By generating it automatically, no email is left without one.
  */
 export function htmlToText(html: string): string {
-  return (
-    html
-      .replace(/<head[\s\S]*?<\/head>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
+  return decodeEntities(stripTags(html))
+    .replace(/\n{3,}/g, "\n\n")
+    .split("\n")
+    .map((l) => l.trim())
+    .join("\n")
+    .trim();
+}
+
+/** Elements dropped together with their content. */
+const SKIPPED = new Set(["head", "style", "script"]);
+/** Closing tags that end a line. */
+const LINE_ENDS = new Set(["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "tr", "li"]);
+const TAG_NAME = /^\/?([a-z][a-z0-9]*)/i;
+
+/**
+ * Removes the markup in one left-to-right pass. A single pass (instead of chained
+ * regex replacements) means removing one tag can never assemble another, and end
+ * tags are found by name, so `</script >` or `</SCRIPT foo>` also close the block.
+ */
+function stripTags(html: string): string {
+  let out = "";
+  let pendingHref: string | null = null;
+  let i = 0;
+
+  while (i < html.length) {
+    const lt = html.indexOf("<", i);
+    if (lt === -1) {
+      out += html.slice(i);
+      break;
+    }
+    out += html.slice(i, lt);
+    const gt = html.indexOf(">", lt + 1);
+    if (gt === -1) {
+      // No tag closes: the rest is text, as before.
+      out += html.slice(lt);
+      break;
+    }
+    if (gt === lt + 1) {
+      out += "<>";
+      i = gt + 1;
+      continue;
+    }
+
+    const tag = html.slice(lt + 1, gt);
+    const closing = tag.startsWith("/");
+    const name = TAG_NAME.exec(tag)?.[1].toLowerCase() ?? "";
+    i = gt + 1;
+
+    if (!closing && SKIPPED.has(name)) {
+      i = endOfElement(html, i, name);
+    } else if (!closing && name === "a") {
       // Keep the link destination: "Sign in (https://…)"
-      .replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, "$2 ($1)")
-      .replace(/<\/(p|div|h[1-6]|tr|li)>/gi, "\n")
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<[^>]+>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/\n{3,}/g, "\n\n")
-      .split("\n")
-      .map((l) => l.trim())
-      .join("\n")
-      .trim()
-  );
+      pendingHref = /href=["']([^"']+)["']/i.exec(tag)?.[1] ?? null;
+    } else if (closing && name === "a") {
+      if (pendingHref !== null) out += ` (${pendingHref})`;
+      pendingHref = null;
+    } else if ((closing && LINE_ENDS.has(name)) || (!closing && name === "br")) {
+      out += "\n";
+    }
+  }
+  return out;
+}
+
+/** Index just past `</name ...>` from `from`; the end of the input if it never closes. */
+function endOfElement(html: string, from: number, name: string): number {
+  let at = from;
+  for (;;) {
+    const open = html.indexOf("</", at);
+    if (open === -1) return html.length;
+    const candidate = html.slice(open + 2, open + 2 + name.length).toLowerCase();
+    const after = html.charAt(open + 2 + name.length);
+    if (candidate === name && !/[a-z0-9]/i.test(after)) {
+      const gt = html.indexOf(">", open);
+      return gt === -1 ? html.length : gt + 1;
+    }
+    at = open + 2;
+  }
+}
+
+const ENTITIES: Record<string, string> = {
+  nbsp: " ",
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  "#39": "'",
+};
+
+/** One pass, so "&amp;lt;" becomes "&lt;" and not "<". */
+function decodeEntities(text: string): string {
+  return text.replace(/&(nbsp|amp|lt|gt|quot|#39);/g, (_, name: string) => ENTITIES[name]);
 }

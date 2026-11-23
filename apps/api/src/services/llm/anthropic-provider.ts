@@ -51,6 +51,7 @@ const DEFAULT_TIMEOUT_MS = 180_000;
 
 /** Models that accept `fallbacks: "default"` on the Claude API. Claude Haiku 5.5 has no server-side fallback. */
 const FALLBACK_MODELS = new Set([
+  "claude-fable-5-2",
   "claude-fable-5-1",
   "claude-fable-5",
   "claude-opus-5-5",

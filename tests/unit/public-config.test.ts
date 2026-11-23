@@ -173,7 +173,10 @@ describe("ALLOWED_ORIGINS in a real deployment", () => {
       ADMIN_URL: "https://cms.example.com",
       ALLOWED_ORIGINS: "https://cms.example.com",
     });
-    expect(p.map((x) => x.reason).join(" ")).toMatch(/does not include https:\/\/example\.com/);
+    const reasons = p.map((x) => x.reason).join(" ");
+    expect(reasons).toMatch(/does not include the origin of APP_URL/);
+    // The messages reach the container log: they never echo a value from the environment
+    expect(reasons).not.toContain("example.com");
   });
 
   it("all three sites set correctly pass", () => {

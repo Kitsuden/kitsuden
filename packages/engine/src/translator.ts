@@ -35,6 +35,8 @@ import type { PgTable, PgColumn } from "drizzle-orm/pg-core";
 import { db } from "../../../apps/api/src/db";
 import * as schema from "../../../apps/api/src/db/schema";
 
+import { escapeLike } from "./like-pattern";
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES AND CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -317,8 +319,7 @@ function buildOperatorCondition(
           { operator, value, expected: "string" }
         );
       }
-      // Escape special SQL LIKE characters
-      const escapedValue = value.replace(/[%_]/g, "\\$&");
+      const escapedValue = escapeLike(value);
       return ilike(column, `%${escapedValue}%`);
     case "startsWith":
       if (typeof value !== "string") {
@@ -328,7 +329,7 @@ function buildOperatorCondition(
           { operator, value, expected: "string" }
         );
       }
-      const escapedStart = value.replace(/[%_]/g, "\\$&");
+      const escapedStart = escapeLike(value);
       return ilike(column, `${escapedStart}%`);
     case "endsWith":
       if (typeof value !== "string") {
@@ -338,7 +339,7 @@ function buildOperatorCondition(
           { operator, value, expected: "string" }
         );
       }
-      const escapedEnd = value.replace(/[%_]/g, "\\$&");
+      const escapedEnd = escapeLike(value);
       return ilike(column, `%${escapedEnd}`);
     default:
       throw new KitsudenQLError(`Unsupported operator: ${operator}`, "UNSUPPORTED_OPERATOR", {

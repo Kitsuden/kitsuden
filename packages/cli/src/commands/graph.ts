@@ -13,13 +13,46 @@
  * Config: KITSUDEN_API_URL (default http://localhost:3000), KITSUDEN_API_TOKEN.
  */
 
-import { writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { randomBytes } from "node:crypto";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 
 import chalk from "chalk";
 
 import { openWithDefaultApp } from "../utils/run-command.js";
+
+/** How long the one-shot page server waits for the browser before it gives up. */
+const SERVE_TIMEOUT_MS = 2 * 60_000;
+
+/**
+ * Serves `html` once on 127.0.0.1 at a random port and an unguessable path, and
+ * resolves with its URL. The server closes after the page is sent (or after
+ * SERVE_TIMEOUT_MS): nothing is left on disk or listening.
+ */
+async function serveOnce(html: string): Promise<string> {
+  const path = `/${randomBytes(16).toString("hex")}`;
+  const server = createServer((req, res) => {
+    if (req.method !== "GET" || req.url !== path) {
+      res.writeHead(404).end();
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "referrer-policy": "no-referrer",
+    });
+    res.end(html, () => server.close());
+  });
+  const timer = setTimeout(() => server.close(), SERVE_TIMEOUT_MS);
+  timer.unref();
+  server.on("close", () => clearTimeout(timer));
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+  const { port } = server.address() as AddressInfo;
+  return `http://127.0.0.1:${port}${path}`;
+}
 
 interface GraphOptions {
   json?: boolean;
@@ -143,10 +176,15 @@ export async function graphCommand(
         const res = await fetch(`${base}/api/code-graph/visualize`, { headers });
         if (!res.ok) return fail(`The API responded ${res.status}`);
         const html = await res.text();
-        const out = join(tmpdir(), "kitsuden-code-graph.html");
-        writeFileSync(out, html);
-        console.log(chalk.cyan(`\n🕸️  Graph generated: ${out}\n`));
-        openWithDefaultApp(out);
+        if (!isGraphHtml(res.headers.get("content-type"), html)) {
+          return fail(
+            "The API did not return the graph page (expected a self-contained HTML file)"
+          );
+        }
+        // Served once from 127.0.0.1 under an unguessable path, never written to disk.
+        const url = await serveOnce(html);
+        console.log(chalk.cyan(`\n🕸️  Graph ready: ${url}\n`));
+        openWithDefaultApp(url);
         break;
       }
       case "semantic": {
@@ -214,6 +252,16 @@ export async function graphCommand(
     console.error(chalk.gray("Is the API running? (kitsuden dev / kitsuden start)"));
     process.exit(1);
   }
+}
+
+/** Largest graph page the CLI will write to disk. */
+const MAX_GRAPH_HTML_BYTES = 50 * 1024 * 1024;
+
+/** The visualize route answers one HTML document; anything else is not written to disk. */
+function isGraphHtml(contentType: string | null, html: string): boolean {
+  if (!/^text\/html\b/i.test(contentType ?? "")) return false;
+  if (Buffer.byteLength(html, "utf8") > MAX_GRAPH_HTML_BYTES) return false;
+  return /^\s*(<!doctype html|<html[\s>])/i.test(html);
 }
 
 function fail(msg: string): void {

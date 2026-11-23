@@ -59,10 +59,10 @@ beforeAll(async () => {
     "packages/kons/kon-tierlist/migrations/0001_tierlist.sql",
     "packages/kons/kon-tierlist/migrations/0002_tierlist.sql",
     "packages/kons/kon-character-builder/migrations/0001_builder.sql",
-    "packages/kons/kon-character-builder/migrations/0002_builds_publicas.sql",
+    "packages/kons/kon-character-builder/migrations/0002_public_builds.sql",
     "packages/kons/kon-cardsim/migrations/0001_cardsim.sql",
     "packages/kons/kon-ecommerce/migrations/0001_shop.sql",
-    "packages/kons/kon-ecommerce/migrations/0002_pedidos_seguros.sql",
+    "packages/kons/kon-ecommerce/migrations/0002_secure_orders.sql",
   ]) {
     await client.exec(read(m));
   }
@@ -70,10 +70,10 @@ beforeAll(async () => {
   // order is the reverse on each startup, but they are independent).
   await client.exec(read("apps/api/src/db/rls-owned-tables.sql"));
   for (const m of [
-    "packages/kons/kon-tierlist/migrations/0003_plantillas_publicas_rls.sql",
-    "packages/kons/kon-character-builder/migrations/0003_lectura_publica_rls.sql",
-    "packages/kons/kon-cardsim/migrations/0004_mazos_sin_dueno_rls.sql",
-    "packages/kons/kon-ecommerce/migrations/0003_sistema_sin_usuario.sql",
+    "packages/kons/kon-tierlist/migrations/0003_public_templates_rls.sql",
+    "packages/kons/kon-character-builder/migrations/0003_public_read_rls.sql",
+    "packages/kons/kon-cardsim/migrations/0004_ownerless_decks_rls.sql",
+    "packages/kons/kon-ecommerce/migrations/0003_system_without_user.sql",
   ]) {
     await client.exec(read(m));
   }

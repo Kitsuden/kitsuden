@@ -28,8 +28,9 @@
  *
  * ── NO SECRETS IN MESSAGES ─────────────────────────────────────────────────
  *
- * These messages end up in the container log. For the secret, the
- * length is stated, never the value; for the Resend key, not even that.
+ * These messages end up in the container log, so none of them echoes a value
+ * from the environment (not even a URL): they name the variable, and for
+ * `ALLOWED_ORIGINS` the position of the entry (1 = first), never its text.
  */
 
 /**
@@ -70,14 +71,14 @@ function checkUrl(env: Environment, name: string, problems: ConfigProblem[]): vo
   try {
     url = new URL(value);
   } catch {
-    problems.push({ variable: name, reason: `is not a valid URL: «${value}»` });
+    problems.push({ variable: name, reason: "is not a valid URL" });
     return;
   }
 
   if (url.protocol !== "https:") {
     problems.push({
       variable: name,
-      reason: `uses ${url.protocol.replace(":", "")} and not https: the session cookie would travel in the clear`,
+      reason: "does not use https: the session cookie would travel in the clear",
     });
   }
 
@@ -85,8 +86,8 @@ function checkUrl(env: Environment, name: string, problems: ConfigProblem[]): vo
     problems.push({
       variable: name,
       reason:
-        `points to ${url.hostname}: OAuth callbacks and the origin ` +
-        `check would go to the machine of whoever opens the page, not to this server`,
+        "points to a local host (localhost, 127.0.0.1, *.localhost): OAuth callbacks and the origin " +
+        "check would go to the machine of whoever opens the page, not to this server",
     });
   }
 }
@@ -129,19 +130,20 @@ export function publicConfigProblems(env: Environment = process.env): ConfigProb
     });
   }
 
-  for (const origin of origins) {
+  for (const [i, origin] of origins.entries()) {
+    const entry = `entry ${i + 1}`;
     let url: URL;
     try {
       url = new URL(origin);
     } catch {
-      problems.push({ variable: "ALLOWED_ORIGINS", reason: `«${origin}» is not a valid origin` });
+      problems.push({ variable: "ALLOWED_ORIGINS", reason: `${entry} is not a valid origin` });
       continue;
     }
 
     if (isLocal(url.hostname)) {
       problems.push({
         variable: "ALLOWED_ORIGINS",
-        reason: `includes ${origin}: any page served from that machine could call the API with the user's session`,
+        reason: `${entry} is a local host: any page served from that machine could call the API with the user's session`,
       });
       continue;
     }
@@ -149,7 +151,7 @@ export function publicConfigProblems(env: Environment = process.env): ConfigProb
     if (url.protocol !== "https:") {
       problems.push({
         variable: "ALLOWED_ORIGINS",
-        reason: `${origin} is not https: the browser treats it as a different origin from the site and the session would travel in the clear`,
+        reason: `${entry} is not https: the browser treats it as a different origin from the site and the session would travel in the clear`,
       });
     }
 
@@ -161,7 +163,7 @@ export function publicConfigProblems(env: Environment = process.env): ConfigProb
     if (origin !== url.origin) {
       problems.push({
         variable: "ALLOWED_ORIGINS",
-        reason: `«${origin}» has a slash or path: an origin is «${url.origin}» so it never matches`,
+        reason: `${entry} has a slash or path: an origin is scheme://host[:port] with nothing after it, so it never matches`,
       });
     }
   }
@@ -181,8 +183,8 @@ export function publicConfigProblems(env: Environment = process.env): ConfigProb
         problems.push({
           variable: "ALLOWED_ORIGINS",
           reason:
-            `does not include ${appOrigin}, which is APP_URL: the main site would be left ` +
-            `without login or comments`,
+            "does not include the origin of APP_URL: the main site would be left " +
+            "without login or comments",
         });
       }
     } catch {
@@ -197,7 +199,7 @@ export function publicConfigProblems(env: Environment = process.env): ConfigProb
     problems.push({
       variable: "RESEND_API_KEY / SMTP_HOST",
       reason:
-        `email would use the driver «${driver}»: email verification and the ` +
+        `email would use the driver «${driver === "log" ? "log" : "memory"}»: email verification and the ` +
         `password recovery would reach nobody`,
     });
   }
@@ -208,7 +210,7 @@ export function publicConfigProblems(env: Environment = process.env): ConfigProb
     problems.push({
       variable: "MAIL_FROM",
       reason:
-        `«${sender || "(empty)"}» does not have a real domain: providers ` +
+        `${sender ? "does not have a real domain" : "is empty"}: providers ` +
         `reject that sender or send it to spam`,
     });
   }
@@ -217,7 +219,7 @@ export function publicConfigProblems(env: Environment = process.env): ConfigProb
   if (secret.length < 32) {
     problems.push({
       variable: "BETTER_AUTH_SECRET",
-      reason: `has ${secret.length} characters; at least 32 are needed`,
+      reason: "is shorter than 32 characters",
     });
   }
 

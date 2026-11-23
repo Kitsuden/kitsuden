@@ -70,6 +70,7 @@ import { incompleteCorsWarning, allowedOrigin, sameOrigin } from "./lib/cors-ori
 import { registerCriticalFeatures } from "./lib/critical-features";
 import { initCronScheduler } from "./lib/cron-scheduler";
 import { availableKon } from "./lib/deferred-kons";
+import { ensureDerivative, isResizable, requestedWidth } from "./lib/derivatives";
 import { inProduction } from "./lib/environment";
 import { toErrorEnvelope } from "./lib/errors";
 import { startExternalMcpSweep } from "./lib/external-mcp-sweep";
@@ -294,7 +295,9 @@ app.use(
 void sitePublicUrl()
   .then((url) => {
     const warning = incompleteCorsWarning(corsConfig.origins, url);
-    if (warning) logger.warn({ origins: corsConfig.origins }, `⚠️  ${warning}`);
+    // Nothing from ALLOWED_ORIGINS (not even its length): it comes from the environment,
+    // which stays out of logs. The warning text is fixed.
+    if (warning) logger.warn(`⚠️  ${warning}`);
   })
   .catch(() => {
     // Without a database it cannot be checked; startup continues
@@ -643,9 +646,11 @@ app.use("*", async (c, next) => {
         .catch(() => {});
 
       // Deprecation warnings
+      // Nothing from the key row goes to the log: its lastUsedAt (set above) shows in the
+      // panel which legacy key is still in use.
       logger.warn(
-        { keyId: apiKey.id, path: logPath(c.req.path) },
-        "[DEPRECATION] Legacy API key (kitsuden_sk_*) used. Migrate to Agent NHI (kitsuden_agent_*)."
+        { path: logPath(c.req.path) },
+        "[DEPRECATION] Legacy API key (kitsuden_sk_*) used. Migrate to Agent NHI (kitsuden_agent_*); the panel's API keys list shows which one by its last use."
       );
       c.header("Deprecation", "kitsuden_sk_*; kitsuden_agent_*");
       c.header("Sunset", "2026-08-01");
@@ -767,13 +772,25 @@ if (!usesS3) {
       const route = localPathOf(decoded);
       const medium = file(route);
       if (!(await medium.exists())) return c.notFound();
+      // `?w=<width>`: on-the-fly resized derivative cached on disk for public images
+      // (`.derivatives/<width>/<key>`). Private signed files are never cached as derivatives.
+      let servedPath = route;
+      let servedModified = medium.lastModified;
+      const width = !priv ? requestedWidth(c.req.query("w")) : null;
+      if (width && isResizable(decoded)) {
+        const derivative = await ensureDerivative(decoded, route, width);
+        if (derivative) {
+          servedPath = derivative;
+          servedModified = file(derivative).lastModified;
+        }
+      }
       // Under Bun, the BunFile (type and zero-copy send); under Node, a stream (G4).
-      const { body: body, type: type } = fileBody(route);
+      const { body: body, type: type } = fileBody(servedPath);
       return new Response(body, {
         headers: {
           ...(type ? { "Content-Type": type } : {}),
           "Cache-Control": priv ? "private, no-store" : mediaCache(key),
-          "Last-Modified": new Date(medium.lastModified).toUTCString(),
+          "Last-Modified": new Date(servedModified).toUTCString(),
           /**
            * So that they can be READ, not just painted.
            *

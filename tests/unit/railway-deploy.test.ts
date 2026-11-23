@@ -77,10 +77,9 @@ describe("Railway Deploy Implementation", () => {
     // Looks for railway.json path
     expect(content).toMatch(/railway\.json/);
 
-    // Checks existence before creating
-    expect(content).toMatch(/existsSync\(\s*railwayJsonPath\s*\)/);
-
-    // Writes the file
+    // Writes it only when absent: the "wx" flag, no separate existence check (a race)
     expect(content).toMatch(/writeFile\(\s*railwayJsonPath/);
+    expect(content).toMatch(/flag:\s*"wx"/);
+    expect(content).toMatch(/EEXIST/);
   });
 });

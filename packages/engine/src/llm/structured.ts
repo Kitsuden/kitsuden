@@ -76,6 +76,20 @@ export interface StructuredOptions {
 // ── JSON extraction ──────────────────────────────────────────────────────────
 
 /**
+ * Body of the first ``` block (an optional `json` tag skipped), trimmed; null
+ * when there is no closed block. Index-based: the regex it replaces,
+ * /```(?:json)?\s*([\s\S]*?)```/, was quadratic on "```" plus many spaces.
+ */
+function fencedBlock(text: string): string | null {
+  const open = text.indexOf("```");
+  if (open === -1) return null;
+  let start = open + 3;
+  if (text.startsWith("json", start)) start += 4;
+  const close = text.indexOf("```", start);
+  return close === -1 ? null : text.slice(start, close).trim();
+}
+
+/**
  * Extracts the JSON object from a response.
  *
  * Models often wrap the JSON in ```json ... ``` or add prose before
@@ -93,10 +107,10 @@ export function extractJson(text: string): unknown {
   }
 
   // 2. Inside a code block.
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(trimmed);
-  if (fenced) {
+  const fenced = fencedBlock(trimmed);
+  if (fenced !== null) {
     try {
-      return JSON.parse(fenced[1].trim());
+      return JSON.parse(fenced);
     } catch {
       // carry on
     }

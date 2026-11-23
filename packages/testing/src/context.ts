@@ -43,9 +43,22 @@ export async function createTestContext(
         memoryStore.set(`cache:${key}`, JSON.stringify(value));
       },
       invalidate: async (pattern: string): Promise<void> => {
-        // Simple implementation - in real would use pattern matching
+        // Prefix match where every `*` stands for any run of characters.
+        // Earliest match of each literal part in order is enough when only the prefix counts.
+        const [head = "", ...parts] = pattern.split("*");
+        const matches = (key: string): boolean => {
+          const prefix = `cache:${head}`;
+          if (!key.startsWith(prefix)) return false;
+          let pos = prefix.length;
+          for (const part of parts) {
+            const at = key.indexOf(part, pos);
+            if (at === -1) return false;
+            pos = at + part.length;
+          }
+          return true;
+        };
         for (const key of memoryStore.keys()) {
-          if (key.startsWith(`cache:${pattern.replace("*", "")}`)) {
+          if (matches(key)) {
             memoryStore.delete(key);
           }
         }
@@ -98,19 +111,38 @@ export async function createTestContext(
       getSession: async (_headers: Headers) => {
         return null;
       },
+      // No users in the sandbox: unknown ids are simply absent, as in KonAuth.
+      usersById: async (_ids: string[]) =>
+        new Map<string, { id: string; name: string; image: string | null }>(),
     },
 
     // Mock storage
     storage: {
+      // Objects live in the sandbox's memory store, under `storage:<key>`.
+      put: async (key: string, content: Buffer, _contentType: string) => {
+        memoryStore.set(`storage:${key}`, Buffer.from(content));
+        return {
+          key,
+          url: `https://test-storage.kitsuden.local/${key}`,
+          bytes: content.length,
+        };
+      },
+      publicUrl: (key: string) => `https://test-storage.kitsuden.local/${key}`,
       getSignedUploadUrl: async (key: string, _contentType: string) => {
         return `https://test-storage.kitsuden.local/upload/${key}`;
       },
       getSignedDownloadUrl: async (key: string) => {
         return `https://test-storage.kitsuden.local/download/${key}`;
       },
-      delete: async (_key: string) => {
-        // No-op
+      delete: async (key: string) => {
+        memoryStore.delete(`storage:${key}`);
       },
+      get: async (key: string): Promise<Buffer | null> =>
+        (memoryStore.get(`storage:${key}`) as Buffer | undefined) ?? null,
+      list: async (prefix: string) =>
+        [...memoryStore.keys()]
+          .filter((k) => k.startsWith(`storage:${prefix}`))
+          .map((k) => k.slice("storage:".length)),
     },
 
     // Mock content publishing

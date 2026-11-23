@@ -134,6 +134,16 @@ function policyInterface(Pascal: string): string {
 `;
 }
 
+/** The file's contents, or null when it does not exist. */
+async function readIfExists(file: string): Promise<string | null> {
+  try {
+    return await fs.readFile(file, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw e;
+  }
+}
+
 /**
  * Policy inside a kon: a single `<kon>.policy.ts` with
  * `register<Kon>Policy()`, like kon-booking or kon-directory.
@@ -153,7 +163,9 @@ async function makePolicy(name: string, d: Target): Promise<string[]> {
   const file = path.join(d.dirKon, `${k}.policy.ts`);
   const register = `register${K}Policy`;
 
-  if (!existsSync(file)) {
+  // Read first and create with "wx": no window between checking and writing.
+  const source = await readIfExists(file);
+  if (source === null) {
     const content = `/**
  * ${K} — Authorization policy
  * ============================================================================
@@ -169,7 +181,7 @@ ${policyBlock(resource, Pascal)}}
 
 ${register}();
 `;
-    await fs.writeFile(file, content, "utf8");
+    await fs.writeFile(file, content, { encoding: "utf8", flag: "wx" });
     return [
       `created ${file}`,
       `wire it: in ${k}.routes.ts add \`import { ${register} } from "./${k}.policy";\` and call ${register}() at module level`,
@@ -178,7 +190,6 @@ ${register}();
     ];
   }
 
-  const source = await fs.readFile(file, "utf8");
   if (source.includes(`"${resource}"`)) {
     throw new Error(`${path.basename(file)} already defines a policy "${resource}"`);
   }
@@ -381,11 +392,16 @@ export async function makeCommand(
       content,
       notes: notes,
     } = template(kind as "request" | "job" | "test", name, target);
-    if (existsSync(file) && !options.force) {
-      throw new Error(`Already exists: ${file} (use --force to overwrite)`);
-    }
     await fs.mkdir(path.dirname(file), { recursive: true });
-    await fs.writeFile(file, content, "utf8");
+    // "wx" fails if the file exists, so there is no check-then-write race.
+    try {
+      await fs.writeFile(file, content, { encoding: "utf8", flag: options.force ? "w" : "wx" });
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new Error(`Already exists: ${file} (use --force to overwrite)`);
+      }
+      throw e;
+    }
     console.log(chalk.green(`✔ ${kind}`) + ` ${tag} ` + path.relative(process.cwd(), file));
     for (const n of notes) console.log(`  ${n}`);
     syncKonFiles(target.root, target.shortKon);

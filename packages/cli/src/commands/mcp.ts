@@ -197,8 +197,11 @@ function generateIdeConfig(ide: string, port: string, apiUrl: string) {
 
         // Merge with existing config if present
         let existing: any = {};
-        if (fs.existsSync(configPath)) {
+        try {
           existing = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+        } catch (e) {
+          // No config yet: start from an empty one. Any other error goes to the fallback below.
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
         }
 
         const merged = {

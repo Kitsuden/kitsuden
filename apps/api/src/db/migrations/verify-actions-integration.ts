@@ -29,6 +29,21 @@ import { actions, actionExecutions } from "../schema";
 
 const TEST_ACTION_SLUG = "test-verification-action";
 
+/**
+ * An error message on one log line, so it cannot forge another: line breaks become
+ * " | " and other control characters spaces. The last step removes any CR or LF left,
+ * in the form CodeQL's log-injection query recognises.
+ */
+function oneLine(text: string): string {
+  return (
+    text
+      .replace(/\r\n|\r|\n|\u2028|\u2029/g, " | ")
+      // eslint-disable-next-line no-control-regex -- matching control characters is the point
+      .replace(/[\u0000-\u001f\u007f-\u009f]/g, " ")
+      .replace(/[\r\n]/g, "")
+  );
+}
+
 interface TestResult {
   name: string;
   passed: boolean;
@@ -413,7 +428,7 @@ async function runAllTests(): Promise<void> {
     console.log(`${icon} ${test.name.padEnd(25)} ${status} (${test.durationMs}ms)`);
 
     if (!test.passed && test.error) {
-      console.log(`   Error: ${test.error}`);
+      console.log(`   Error: ${oneLine(test.error)}`);
     }
 
     if (test.passed) passed++;

@@ -80,10 +80,12 @@ function origin(): string | undefined {
 }
 
 export function normalizeBaseUrl(url: string): string {
-  return url
-    .trim()
-    .replace(/\/+$/, "")
-    .replace(/\/api$/, "");
+  // A loop, not `/\/+$/`: that regex is quadratic on a long run of slashes.
+  const trimmed = url.trim();
+  let end = trimmed.length;
+  while (end > 0 && trimmed[end - 1] === "/") end--;
+  const base = trimmed.slice(0, end);
+  return base.endsWith("/api") ? base.slice(0, -4) : base;
 }
 
 type Call = (

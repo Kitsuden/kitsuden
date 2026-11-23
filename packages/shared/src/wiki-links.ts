@@ -15,6 +15,7 @@
  */
 
 import { safeMarkdown } from "./render-blocks";
+import { trimChar } from "./utils";
 
 // ── Slugs ────────────────────────────────────────────────────────────────────
 
@@ -27,20 +28,18 @@ import { safeMarkdown } from "./render-blocks";
  * prevents "Long Sword" and "long sword" from being duplicated.
  */
 export function wikiPageSlug(title: string): string {
-  return (
-    title
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      // Apostrophes are DELETED, not turned into a separator: "Baldur's
-      // Gate" is `baldurs-gate`, not `baldur-s-gate`. They are everywhere in
-      // game and item titles, and splitting the word gives an ugly slug
-      // that also breaks prefix search.
-      .replace(/['’]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 120)
-  );
+  const hyphenated = title
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    // Apostrophes are DELETED, not turned into a separator: "Baldur's
+    // Gate" is `baldurs-gate`, not `baldur-s-gate`. They are everywhere in
+    // game and item titles, and splitting the word gives an ugly slug
+    // that also breaks prefix search.
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-");
+  // A loop, not `/^-+|-+$/`: that regex is quadratic on a long run of '-'.
+  return trimChar(hyphenated, "-").slice(0, 120);
 }
 
 // ── Wiki links ───────────────────────────────────────────────────────────────
@@ -54,6 +53,75 @@ export interface WikiLink {
   label: string | null;
 }
 
+interface RawWikiLink {
+  start: number;
+  end: number;
+  target: string;
+  label: string | undefined;
+}
+
+/**
+ * Every `[[target]]` / `[[target|label]]` in `content`: exactly the matches of
+ * `/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g`, found in linear time.
+ *
+ * That regex backtracks: a text with many `[[` and no closing `]]` made it rescan the
+ * rest of the text from every `[[`. Here each search for `]` or `|` resumes from its
+ * last result, so the text is read a bounded number of times.
+ */
+function scanWikiLinks(content: string): RawWikiLink[] {
+  const found: RawWikiLink[] = [];
+  // The first `]` / `|` at or after the last query. Queries only move forward, so a
+  // cached position is still the first one while it is not behind the new query.
+  let close = -2;
+  let pipe = -2;
+  const nextClose = (from: number): number => {
+    if (close !== -1 && close < from) close = content.indexOf("]", from);
+    return close;
+  };
+  const nextPipe = (from: number): number => {
+    if (pipe !== -1 && pipe < from) pipe = content.indexOf("|", from);
+    return pipe;
+  };
+
+  let from = 0;
+  while (from < content.length) {
+    const start = content.indexOf("[[", from);
+    if (start === -1) break;
+    const body = start + 2;
+    const c = nextClose(body);
+    const p = nextPipe(body);
+    // The target runs up to the first `]` or `|`, and is not empty.
+    const stop = c === -1 ? p : p === -1 ? c : Math.min(c, p);
+    if (stop === -1) break; // no `]` or `|` left: nothing further can match
+    if (stop > body) {
+      if (stop === c) {
+        if (content[c + 1] === "]") {
+          found.push({ start, end: c + 2, target: content.slice(body, c), label: undefined });
+          from = c + 2;
+          continue;
+        }
+      } else {
+        // After `|`, the label runs up to the next `]`, is not empty, and `]]` closes it.
+        const labelEnd = nextClose(stop + 1);
+        if (labelEnd > stop + 1 && content[labelEnd + 1] === "]") {
+          found.push({
+            start,
+            end: labelEnd + 2,
+            target: content.slice(body, stop),
+            label: content.slice(stop + 1, labelEnd),
+          });
+          from = labelEnd + 2;
+          continue;
+        }
+      }
+    }
+    // Every later `[[` before `stop` has a target ending at the same `stop` and fails
+    // the same way, so the next possible start is `stop` itself.
+    from = Math.max(start + 1, stop);
+  }
+  return found;
+}
+
 /**
  * Extracts the `[[links]]` from a text.
  *
@@ -65,34 +133,33 @@ export interface WikiLink {
 export function extractWikiLinks(content: string): WikiLink[] {
   const links: WikiLink[] = [];
   const seen = new Set<string>();
-  const pattern = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(content)) !== null) {
-    const target = match[1].trim();
+  for (const match of scanWikiLinks(content)) {
+    const target = match.target.trim();
     if (!target) continue;
     const slug = wikiPageSlug(target);
     if (!slug || seen.has(slug)) continue; // one backlink per page, not per mention
     seen.add(slug);
-    links.push({ target, slug, label: match[2]?.trim() ?? null });
+    links.push({ target, slug, label: match.label?.trim() ?? null });
   }
   return links;
 }
 
 /** Replaces `[[links]]` with the HTML from the renderer passed in. */
 export function renderWikiLinks(content: string, render: (link: WikiLink) => string): string {
-  return content.replace(
-    /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
-    (raw, target: string, label?: string) => {
-      const trimmed = target.trim();
-      if (!trimmed) return raw;
-      return render({
-        target: trimmed,
-        slug: wikiPageSlug(trimmed),
-        label: label?.trim() ?? null,
-      });
-    }
-  );
+  let out = "";
+  let last = 0;
+  for (const match of scanWikiLinks(content)) {
+    const trimmed = match.target.trim();
+    if (!trimmed) continue; // left as written
+    out += content.slice(last, match.start);
+    out += render({
+      target: trimmed,
+      slug: wikiPageSlug(trimmed),
+      label: match.label?.trim() ?? null,
+    });
+    last = match.end;
+  }
+  return out + content.slice(last);
 }
 
 // ── Full page ────────────────────────────────────────────────────────────────

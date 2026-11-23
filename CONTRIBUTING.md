@@ -61,6 +61,7 @@ not contain `test`. Never point them at a database you care about.
   lint-staged on commit.
 
 Code, comments, docs and API messages are in English. The admin panel's interface text goes
-through `packages/admin/src/lib/i18n`, with a key in every locale.
+through `packages/admin/src/lib/i18n`, with a key in every locale. The landing page has a
+Spanish copy in `site/es/`: a change to the text of `site/index.html` goes to both.
 
 By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE).

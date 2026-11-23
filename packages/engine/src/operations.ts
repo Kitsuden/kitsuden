@@ -60,6 +60,7 @@ import { AppError, respondError } from "./errors";
 import { flowResponse } from "./flows";
 import type { TransactionalConnection, RlsUser } from "./rls-request";
 import { withRouteMeta, type RouteValidationMeta } from "./route-meta";
+import { trimTrailingSlashes } from "./trim-slashes";
 import { searchUnknownFields, similarKey } from "./validation";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- variance boundary: each operation brings its own schemas
@@ -483,7 +484,7 @@ export function registerMountedOperations(
   operations: AnyOperation[],
   router: Hono
 ): void {
-  mountedOnes.set(konId, { konId, mountPath: mountPath.replace(/\/+$/, ""), operations, router });
+  mountedOnes.set(konId, { konId, mountPath: trimTrailingSlashes(mountPath), operations, router });
   version++;
 }
 

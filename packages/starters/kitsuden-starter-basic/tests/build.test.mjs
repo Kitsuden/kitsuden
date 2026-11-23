@@ -16,7 +16,7 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -54,10 +54,11 @@ function build(extraEnv) {
 function bundle() {
   const out = [];
   const walk = (dir) => {
-    for (const name of readdirSync(dir)) {
-      const path = join(dir, name);
-      if (statSync(path).isDirectory()) walk(path);
-      else if (/\.(m?js|json|html|css)$/.test(name)) out.push(readFileSync(path, "utf8"));
+    // The entry types come with the listing: no separate stat before the read.
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (/\.(m?js|json|html|css)$/.test(entry.name)) out.push(readFileSync(path, "utf8"));
     }
   };
   walk(join(root, "dist"));

@@ -121,7 +121,7 @@ FIX:
      └─ Legacy API keys (deprecated): kitsuden_sk_xxx
   2. IF token is missing from env:
      └─ Run: bun run apps/api/scripts/seed-mcp-test.ts
-     └─ Copy token from progress.txt into env/KITSUDEN_API_TOKEN.
+     └─ Copy the token from .kitsuden/seed-mcp-token.txt (mode 0600) into env/KITSUDEN_API_TOKEN.
   3. IF token expired:
      └─ Regenerate in Admin → API Keys or Agent Identities.
   4. IF agent NHI:
