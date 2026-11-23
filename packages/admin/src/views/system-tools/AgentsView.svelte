@@ -17,6 +17,7 @@
   import Page from "$lib/components/layout/Page.svelte";
   import ListView from "$lib/components/list/ListView.svelte";
   import { t } from "$lib/i18n";
+  import { DEFAULT_LLM_MODEL, modelOptions } from "$lib/llm-models";
   import { memorySource, type Row } from "$lib/list/source";
   import { setQuery } from "$lib/page";
   import { createAgent, deleteAgent, listAgents } from "$lib/services/agents";
@@ -54,7 +55,7 @@
     name: "",
     description: "",
     identityId: "",
-    model: "gpt-4",
+    model: DEFAULT_LLM_MODEL,
     enabled: true,
   });
   let access = $state("read-only");
@@ -237,13 +238,7 @@
     <Field label={t("common.model")}>
       <Select
         bind:value={() => formData.model ?? "", (v) => (formData.model = v)}
-        options={[
-          { value: "gpt-4", label: t("agentsView.gpt4") },
-          { value: "gpt-4-turbo", label: t("agentsView.gpt4Turbo") },
-          { value: "gpt-3.5-turbo", label: t("agentsView.gpt35Turbo") },
-          { value: "claude-3-opus", label: t("agentsView.claude3Opus") },
-          { value: "claude-3-sonnet", label: t("agentsView.claude3Sonnet") },
-        ]}
+        options={modelOptions(formData.model)}
       />
     </Field>
 
