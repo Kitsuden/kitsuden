@@ -393,7 +393,7 @@ export class KitsudenRealtime {
         // logSafe already removes line breaks; the replace here is the form CodeQL recognises.
         console.warn(
           "[KitsudenRealtime] Server error:",
-          logSafe(msg.message).replace(/\n|\r/g, " ")
+          logSafe(msg.message).replace(/\n|\r/g, "")
         );
         break;
     }

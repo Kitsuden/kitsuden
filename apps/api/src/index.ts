@@ -295,8 +295,9 @@ app.use(
 void sitePublicUrl()
   .then((url) => {
     const warning = incompleteCorsWarning(corsConfig.origins, url);
-    // The count, not the list: ALLOWED_ORIGINS comes from the environment, which stays out of logs.
-    if (warning) logger.warn({ originCount: corsConfig.origins.length }, `⚠️  ${warning}`);
+    // Nothing from ALLOWED_ORIGINS (not even its length): it comes from the environment,
+    // which stays out of logs. The warning text is fixed.
+    if (warning) logger.warn(`⚠️  ${warning}`);
   })
   .catch(() => {
     // Without a database it cannot be checked; startup continues
