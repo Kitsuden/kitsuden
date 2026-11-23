@@ -194,16 +194,19 @@
     >
       <div class="flex items-center gap-2">
         <LayoutGrid class="w-4 h-4 text-kitsuden-accent" />
-        <span class="text-xs font-semibold text-kitsuden-text"
-          >{t("pageBuilder.layoutBuilder")}</span
-        >
+        <span class="text-xs font-semibold text-kitsuden-text">
+          {t("pageBuilder.layoutBuilder")}
+        </span>
         <Badge variant="info">{blocks.length} {t("pageBuilder.blocks")}</Badge>
       </div>
       <Button
         onclick={() => (panelMode = panelMode === "picker" ? null : "picker")}
         variant="ghost"
-        size="sm"><Plus class="w-3.5 h-3.5" /> {t("pageBuilder.addBlock")}</Button
+        size="sm"
       >
+        <Plus class="w-3.5 h-3.5" />
+        {t("pageBuilder.addBlock")}
+      </Button>
     </div>
 
     {#if blocks.length === 0}
@@ -211,9 +214,10 @@
         <LayoutGrid class="w-14 h-14 mb-5 text-kitsuden-subtle" />
         <p class="text-sm font-medium mb-1">{t("pageBuilder.noBlocksYet")}</p>
         <p class="text-xs mb-6">{t("pageBuilder.clickAddBlockOrDrag")}</p>
-        <Button onclick={() => (panelMode = "picker")} size="sm"
-          ><Plus class="w-3.5 h-3.5" /> {t("pageBuilder.addYourFirstBlock")}</Button
-        >
+        <Button onclick={() => (panelMode = "picker")} size="sm">
+          <Plus class="w-3.5 h-3.5" />
+          {t("pageBuilder.addYourFirstBlock")}
+        </Button>
       </div>
     {:else}
       <div class="p-4 space-y-2">
@@ -264,8 +268,9 @@
               </div>
               <span
                 class="text-xs font-mono text-kitsuden-subtle bg-kitsuden-bg rounded-sm px-1.5 py-0.5 shrink-0"
-                >{idx + 1}</span
               >
+                {idx + 1}
+              </span>
               <div
                 class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
               >
@@ -277,8 +282,10 @@
                   disabled={idx === 0}
                   variant="ghost"
                   size="icon"
-                  title={t("pageBuilder.moveUp")}><ChevronUp class="w-3.5 h-3.5" /></Button
+                  title={t("pageBuilder.moveUp")}
                 >
+                  <ChevronUp class="w-3.5 h-3.5" />
+                </Button>
                 <Button
                   onclick={(e) => {
                     e.stopPropagation();
@@ -287,8 +294,10 @@
                   disabled={idx === blocks.length - 1}
                   variant="ghost"
                   size="icon"
-                  title={t("pageBuilder.moveDown")}><ChevronDown class="w-3.5 h-3.5" /></Button
+                  title={t("pageBuilder.moveDown")}
                 >
+                  <ChevronDown class="w-3.5 h-3.5" />
+                </Button>
                 <Button
                   onclick={(e) => {
                     e.stopPropagation();
@@ -296,8 +305,10 @@
                   }}
                   variant="ghost"
                   size="icon"
-                  title={t("pageBuilder.duplicate")}><Copy class="w-3.5 h-3.5" /></Button
+                  title={t("pageBuilder.duplicate")}
                 >
+                  <Copy class="w-3.5 h-3.5" />
+                </Button>
                 <Button
                   onclick={(e) => {
                     e.stopPropagation();
@@ -305,8 +316,10 @@
                   }}
                   variant="danger-ghost"
                   size="icon"
-                  title={t("common.delete")}><Trash2 class="w-3.5 h-3.5" /></Button
+                  title={t("common.delete")}
                 >
+                  <Trash2 class="w-3.5 h-3.5" />
+                </Button>
               </div>
             </div>
             {#if block.type === "divider"}

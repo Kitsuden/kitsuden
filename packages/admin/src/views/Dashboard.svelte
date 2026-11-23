@@ -319,9 +319,9 @@
         level={2}
       >
         {#snippet toolbar()}
-          <Button variant="ghost" size="sm" href="/activity?tab=agents"
-            >{t("dashboard.viewAll")}</Button
-          >
+          <Button variant="ghost" size="sm" href="/activity?tab=agents">
+            {t("dashboard.viewAll")}
+          </Button>
         {/snippet}
         {#if logs.state === "loading"}
           <Skeleton height="14rem" />
@@ -394,9 +394,9 @@
       >
         {#snippet toolbar()}
           {#if admin}
-            <Button variant="ghost" size="sm" href="/activity?tab=audit"
-              >{t("dashboard.viewAll")}</Button
-            >
+            <Button variant="ghost" size="sm" href="/activity?tab=audit">
+              {t("dashboard.viewAll")}
+            </Button>
           {/if}
         {/snippet}
         {#if feedLoading}

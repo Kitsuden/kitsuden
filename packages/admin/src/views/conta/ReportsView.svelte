@@ -130,13 +130,15 @@
     <div>
       <Table>
         <TableHeader>
-          <TableRow
-            ><TableHead>{t("reportsView.code")}</TableHead><TableHead
-              >{t("reportsView.account")}</TableHead
-            ><TableHead class="text-right">{t("reportsView.debit")}</TableHead><TableHead
-              class="text-right">{t("reportsView.credit")}</TableHead
-            ><TableHead class="text-right">{t("reportsView.balance")}</TableHead></TableRow
-          >
+          <TableRow>
+            <TableHead>{t("reportsView.code")}</TableHead><TableHead>
+              {t("reportsView.account")}
+            </TableHead><TableHead class="text-right">{t("reportsView.debit")}</TableHead><TableHead
+              class="text-right"
+            >
+              {t("reportsView.credit")}
+            </TableHead><TableHead class="text-right">{t("reportsView.balance")}</TableHead>
+          </TableRow>
         </TableHeader>
         <TableBody>
           {#each trialData as row}
@@ -148,109 +150,115 @@
               <TableCell class="text-right font-mono">{amount(row.balance)}</TableCell>
             </TableRow>
           {:else}
-            <TableRow
-              ><TableCell colspan={5} class="2 text-center text-kitsuden-subtle"
-                >{t("reportsView.noData")}</TableCell
-              ></TableRow
-            >
+            <TableRow>
+              <TableCell colspan={5} class="2 text-center text-kitsuden-subtle">
+                {t("reportsView.noData")}
+              </TableCell>
+            </TableRow>
           {/each}
         </TableBody>
       </Table>
     </div>
   {:else if activeTab === "balance" && balanceData}
     <div class="grid gap-4 md:grid-cols-3">
-      <Card
-        ><CardHeader><CardTitle class="text-sm">{t("reportsView.assets")}</CardTitle></CardHeader
-        ><CardContent>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm">{t("reportsView.assets")}</CardTitle>
+        </CardHeader><CardContent>
           <div class="text-2xl font-bold">{amount(balanceData.totalAssets)}</div>
-        </CardContent></Card
-      >
-      <Card
-        ><CardHeader
-          ><CardTitle class="text-sm">{t("reportsView.liabilities")}</CardTitle></CardHeader
-        ><CardContent>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm">{t("reportsView.liabilities")}</CardTitle>
+        </CardHeader><CardContent>
           <div class="text-2xl font-bold">{amount(balanceData.totalLiabilities)}</div>
-        </CardContent></Card
-      >
-      <Card
-        ><CardHeader><CardTitle class="text-sm">{t("reportsView.equity")}</CardTitle></CardHeader
-        ><CardContent>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm">{t("reportsView.equity")}</CardTitle>
+        </CardHeader><CardContent>
           <div class="text-2xl font-bold">{amount(balanceData.totalEquity)}</div>
-        </CardContent></Card
-      >
+        </CardContent>
+      </Card>
     </div>
     <div>
       <Table>
-        <TableHeader
-          ><TableRow
-            ><TableHead>{t("reportsView.account")}</TableHead><TableHead class="text-right"
-              >{t("reportsView.balance")}</TableHead
-            ></TableRow
-          ></TableHeader
-        >
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t("reportsView.account")}</TableHead><TableHead class="text-right">
+              {t("reportsView.balance")}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
         <TableBody>
-          {#each balanceData.assets as a}<TableRow
-              ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
-                >{amount(a.balance)}</TableCell
-              ></TableRow
-            >{/each}
-          {#each balanceData.liabilities as a}<TableRow
-              ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
-                >{amount(a.balance)}</TableCell
-              ></TableRow
-            >{/each}
-          {#each balanceData.equity as a}<TableRow
-              ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
-                >{amount(a.balance)}</TableCell
-              ></TableRow
-            >{/each}
+          {#each balanceData.assets as a}<TableRow>
+              <TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono">
+                {amount(a.balance)}
+              </TableCell>
+            </TableRow>{/each}
+          {#each balanceData.liabilities as a}<TableRow>
+              <TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono">
+                {amount(a.balance)}
+              </TableCell>
+            </TableRow>{/each}
+          {#each balanceData.equity as a}<TableRow>
+              <TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono">
+                {amount(a.balance)}
+              </TableCell>
+            </TableRow>{/each}
         </TableBody>
       </Table>
     </div>
   {:else if activeTab === "pl" && plData}
     <div class="grid gap-4 md:grid-cols-3">
-      <Card
-        ><CardHeader><CardTitle class="text-sm">{t("reportsView.revenue")}</CardTitle></CardHeader
-        ><CardContent
-          ><div class="text-2xl font-bold text-kitsuden-green">
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm">{t("reportsView.revenue")}</CardTitle>
+        </CardHeader><CardContent>
+          <div class="text-2xl font-bold text-kitsuden-green">
             {amount(plData.totalRevenue)}
-          </div></CardContent
-        ></Card
-      >
-      <Card
-        ><CardHeader><CardTitle class="text-sm">{t("reportsView.expenses")}</CardTitle></CardHeader
-        ><CardContent
-          ><div class="text-2xl font-bold text-kitsuden-danger">
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm">{t("reportsView.expenses")}</CardTitle>
+        </CardHeader><CardContent>
+          <div class="text-2xl font-bold text-kitsuden-danger">
             {amount(plData.totalExpenses)}
-          </div></CardContent
-        ></Card
-      >
-      <Card
-        ><CardHeader><CardTitle class="text-sm">{t("reportsView.netIncome")}</CardTitle></CardHeader
-        ><CardContent><div class="text-2xl font-bold">{amount(plData.netIncome)}</div></CardContent
-        ></Card
-      >
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm">{t("reportsView.netIncome")}</CardTitle>
+        </CardHeader><CardContent>
+          <div class="text-2xl font-bold">{amount(plData.netIncome)}</div>
+        </CardContent>
+      </Card>
     </div>
     <div>
       <Table>
-        <TableHeader
-          ><TableRow
-            ><TableHead>{t("reportsView.account")}</TableHead><TableHead class="text-right"
-              >{t("reportsView.balance")}</TableHead
-            ></TableRow
-          ></TableHeader
-        >
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t("reportsView.account")}</TableHead><TableHead class="text-right">
+              {t("reportsView.balance")}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
         <TableBody>
-          {#each plData.revenue as a}<TableRow
-              ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
-                >{amount(a.balance)}</TableCell
-              ></TableRow
-            >{/each}
-          {#each plData.expenses as a}<TableRow
-              ><TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono"
-                >{amount(a.balance)}</TableCell
-              ></TableRow
-            >{/each}
+          {#each plData.revenue as a}<TableRow>
+              <TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono">
+                {amount(a.balance)}
+              </TableCell>
+            </TableRow>{/each}
+          {#each plData.expenses as a}<TableRow>
+              <TableCell>{a.account.name}</TableCell><TableCell class="text-right font-mono">
+                {amount(a.balance)}
+              </TableCell>
+            </TableRow>{/each}
         </TableBody>
       </Table>
     </div>

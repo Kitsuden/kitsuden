@@ -1193,9 +1193,9 @@
                             {#if view}
                               <img src={view} alt="" class="max-h-16 max-w-full object-contain" />
                             {:else}
-                              <span class="text-xs text-kitsuden-text-dim"
-                                >{t("settings.withoutChoosing")}</span
-                              >
+                              <span class="text-xs text-kitsuden-text-dim">
+                                {t("settings.withoutChoosing")}
+                              </span>
                             {/if}
                           </div>
                           <p class="text-[11px] leading-snug text-kitsuden-text-dim">
@@ -1726,9 +1726,9 @@
 
           <!-- Error Alert -->
           {#if errorDataSources}
-            <Alert variant="error" onDismiss={() => (errorDataSources = "")}
-              >{errorDataSources}</Alert
-            >
+            <Alert variant="error" onDismiss={() => (errorDataSources = "")}>
+              {errorDataSources}
+            </Alert>
           {/if}
 
           <!-- Data Sources Grid -->
@@ -1997,8 +1997,9 @@
     </div>
 
     <div>
-      <Label class="block! mb-1.5" for="agentformscopes">{t("settings.scopesCommaSeparated")}</Label
-      >
+      <Label class="block! mb-1.5" for="agentformscopes">
+        {t("settings.scopesCommaSeparated")}
+      </Label>
       <Input
         id="agentformscopes"
         bind:value={agentFormScopes}
@@ -2011,15 +2012,16 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
-        <Label class="block! mb-1.5" for="agentformratelimit">{t("settings.rateLimitReqMin")}</Label
-        >
+        <Label class="block! mb-1.5" for="agentformratelimit">
+          {t("settings.rateLimitReqMin")}
+        </Label>
         <NumberInput id="agentformratelimit" bind:value={agentFormRateLimit} min={1} max={10000} />
       </div>
 
       <div>
-        <Label class="block! mb-1.5" for="agentformexpiresindays"
-          >{t("settings.keyExpiresDays")}</Label
-        >
+        <Label class="block! mb-1.5" for="agentformexpiresindays">
+          {t("settings.keyExpiresDays")}
+        </Label>
         <NumberInput
           id="agentformexpiresindays"
           bind:value={agentFormExpiresInDays}
@@ -2218,9 +2220,9 @@
                 >
                   <span class="text-lg" aria-hidden="true">{getActionIcon(log.action)}</span>
                   <Badge variant={log.success ? "success" : "error"}>{log.action}</Badge>
-                  <span class="flex-1 min-w-0 break-all text-kitsuden-text"
-                    >{log.resource || "-"}</span
-                  >
+                  <span class="flex-1 min-w-0 break-all text-kitsuden-text">
+                    {log.resource || "-"}
+                  </span>
                   <span class="text-kitsuden-subtle text-xs">{formatDate(log.createdAt)}</span>
                 </div>
               {/each}

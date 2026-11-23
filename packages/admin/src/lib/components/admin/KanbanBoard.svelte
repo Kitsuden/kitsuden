@@ -260,9 +260,9 @@
     <EmptyState icon="alert" title={t("kanbanBoard.incompatibleKanbanView")}>
       <p class="text-sm text-kitsuden-subtle mb-2">
         {t("kanbanBoard.thisKanbanViewIsConfigured")}
-        <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded-sm text-kitsuden-accent"
-          >'{view.groupBy}'</code
-        >{t("kanbanBoard.butTheCurrentDatasetDoes")}
+        <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded-sm text-kitsuden-accent">
+          '{view.groupBy}'
+        </code>{t("kanbanBoard.butTheCurrentDatasetDoes")}
       </p>
       <p class="text-xs text-kitsuden-text-dim">
         {t("kanbanBoard.pleaseUpdateTheGrimoireConfig")}
@@ -337,11 +337,12 @@
                 {#each cardFields.slice(1) as field}
                   {#if item[field] !== undefined && item[field] !== null}
                     <div class="flex items-center justify-between text-xs mb-1">
-                      <span class="text-kitsuden-subtle capitalize">{field.replace(/_/g, " ")}</span
-                      >
-                      <span class="text-kitsuden-text-dim font-medium"
-                        >{formatCardValue(item[field])}</span
-                      >
+                      <span class="text-kitsuden-subtle capitalize">
+                        {field.replace(/_/g, " ")}
+                      </span>
+                      <span class="text-kitsuden-text-dim font-medium">
+                        {formatCardValue(item[field])}
+                      </span>
                     </div>
                   {/if}
                 {/each}

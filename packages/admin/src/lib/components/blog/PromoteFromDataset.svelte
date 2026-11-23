@@ -524,17 +524,17 @@
       {/if}
 
       <div class="flex items-center gap-2 text-sm text-kitsuden-subtle">
-        <span class={step === "datasets" ? "text-kitsuden-accent font-medium" : ""}
-          >{tr("common.datasets")}</span
-        >
+        <span class={step === "datasets" ? "text-kitsuden-accent font-medium" : ""}>
+          {tr("common.datasets")}
+        </span>
         <ArrowRight class="w-4 h-4" />
-        <span class={step === "entries" ? "text-kitsuden-accent font-medium" : ""}
-          >{tr("promoteFromDataset.entries")}</span
-        >
+        <span class={step === "entries" ? "text-kitsuden-accent font-medium" : ""}>
+          {tr("promoteFromDataset.entries")}
+        </span>
         <ArrowRight class="w-4 h-4" />
-        <span class={step === "preview" ? "text-kitsuden-accent font-medium" : ""}
-          >{tr("common.preview")}</span
-        >
+        <span class={step === "preview" ? "text-kitsuden-accent font-medium" : ""}>
+          {tr("common.preview")}
+        </span>
       </div>
     </div>
 

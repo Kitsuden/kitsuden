@@ -46,7 +46,7 @@
     "@types/diff": "^5.0.0",
     "@types/fs-extra": "^11.0.0",
     "@types/inquirer": "^9.0.0",
-    "@types/bun": "^1.4.4",
+    "@types/bun": "^1.4.5",
     "typescript": "^5.9.3"
   },
   "engines": {

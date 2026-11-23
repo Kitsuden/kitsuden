@@ -192,18 +192,18 @@
               <!-- Content/Reasoning -->
               {#if step.content}
                 <div>
-                  <span class="text-xs font-medium text-kitsuden-subtle uppercase"
-                    >{t("common.content")}</span
-                  >
+                  <span class="text-xs font-medium text-kitsuden-subtle uppercase">
+                    {t("common.content")}
+                  </span>
                   <p class="mt-1 text-sm text-kitsuden-text whitespace-pre-wrap">{step.content}</p>
                 </div>
               {/if}
 
               {#if step.reasoning}
                 <div>
-                  <span class="text-xs font-medium text-kitsuden-subtle uppercase"
-                    >{t("timeline.reasoning")}</span
-                  >
+                  <span class="text-xs font-medium text-kitsuden-subtle uppercase">
+                    {t("timeline.reasoning")}
+                  </span>
                   <p class="mt-1 text-sm text-kitsuden-text whitespace-pre-wrap">
                     {step.reasoning}
                   </p>
@@ -213,9 +213,9 @@
               <!-- Tool Input -->
               {#if step.toolInput}
                 <div>
-                  <span class="text-xs font-medium text-kitsuden-subtle uppercase"
-                    >{t("timeline.toolInput")}</span
-                  >
+                  <span class="text-xs font-medium text-kitsuden-subtle uppercase">
+                    {t("timeline.toolInput")}
+                  </span>
                   <pre
                     class="mt-1 p-2 bg-kitsuden-bg rounded-lg text-xs text-kitsuden-text overflow-x-auto">{JSON.stringify(
                       step.toolInput,
@@ -228,9 +228,9 @@
               <!-- Tool Output -->
               {#if step.toolOutput}
                 <div>
-                  <span class="text-xs font-medium text-kitsuden-subtle uppercase"
-                    >{t("timeline.toolOutput")}</span
-                  >
+                  <span class="text-xs font-medium text-kitsuden-subtle uppercase">
+                    {t("timeline.toolOutput")}
+                  </span>
                   <pre
                     class="mt-1 p-2 bg-kitsuden-bg rounded-lg text-xs text-kitsuden-text overflow-x-auto">{JSON.stringify(
                       step.toolOutput,
@@ -243,9 +243,9 @@
               <!-- Error -->
               {#if step.errorMessage}
                 <div>
-                  <span class="text-xs font-medium text-kitsuden-danger uppercase"
-                    >{t("common.error")}</span
-                  >
+                  <span class="text-xs font-medium text-kitsuden-danger uppercase">
+                    {t("common.error")}
+                  </span>
                   <p class="mt-1 text-sm text-kitsuden-danger">{step.errorMessage}</p>
                 </div>
               {/if}

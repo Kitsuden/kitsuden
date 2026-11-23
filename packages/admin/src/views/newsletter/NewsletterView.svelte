@@ -393,37 +393,39 @@
               <TableCell>{pct(campaign.stats?.opened ?? 0, campaign.stats?.sent ?? 0)}</TableCell>
               <TableCell>
                 <div class="flex flex-wrap items-center justify-end gap-1">
-                  <Button variant="ghost" size="sm" onclick={() => openStats(campaign.id)}
-                    >{t("newsletterView.stats")}</Button
-                  >
+                  <Button variant="ghost" size="sm" onclick={() => openStats(campaign.id)}>
+                    {t("newsletterView.stats")}
+                  </Button>
                   {#if campaign.status === "draft" || campaign.status === "scheduled"}
-                    <Button variant="ghost" size="sm" onclick={() => startEdit(campaign)}
-                      >{t("newsletterView.edit")}</Button
-                    >
-                    <Button variant="soft" size="sm" onclick={() => askSend(campaign)}
-                      >{t("newsletterView.send")}</Button
-                    >
+                    <Button variant="ghost" size="sm" onclick={() => startEdit(campaign)}>
+                      {t("newsletterView.edit")}
+                    </Button>
+                    <Button variant="soft" size="sm" onclick={() => askSend(campaign)}>
+                      {t("newsletterView.send")}
+                    </Button>
                   {/if}
                   <Button
                     variant="ghost"
                     size="sm"
                     href={`${BASE}/campaigns/${campaign.id}/preview?format=html`}
                     target="_blank"
-                    rel="noreferrer">{t("newsletterView.view")}</Button
+                    rel="noreferrer"
                   >
+                    {t("newsletterView.view")}
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
           {:else}
-            <TableRow
-              ><TableCell colspan={6}>
+            <TableRow>
+              <TableCell colspan={6}>
                 <EmptyState
                   size="sm"
                   level={null}
                   title={t("newsletterView.withoutCampaignsYetCreateThe")}
                 />
-              </TableCell></TableRow
-            >
+              </TableCell>
+            </TableRow>
           {/each}
         </TableBody>
       </Table>
@@ -450,15 +452,15 @@
               <TableCell class="text-kitsuden-text-dim">{fmtDate(member.consentAt)}</TableCell>
             </TableRow>
           {:else}
-            <TableRow
-              ><TableCell colspan={5}>
+            <TableRow>
+              <TableCell colspan={5}>
                 <EmptyState
                   size="sm"
                   level={null}
                   title={t("newsletterView.withoutMembersThePublicForm")}
                 />
-              </TableCell></TableRow
-            >
+              </TableCell>
+            </TableRow>
           {/each}
         </TableBody>
       </Table>
@@ -490,20 +492,21 @@
                   variant="ghost"
                   size="sm"
                   onclick={() => removeSuppression(suppression.email)}
-                  >{t("newsletterView.remove")}</Button
                 >
+                  {t("newsletterView.remove")}
+                </Button>
               </TableCell>
             </TableRow>
           {:else}
-            <TableRow
-              ><TableCell colspan={5}>
+            <TableRow>
+              <TableCell colspan={5}>
                 <EmptyState
                   size="sm"
                   level={null}
                   title={t("newsletterView.emptySuppressionListGood")}
                 />
-              </TableCell></TableRow
-            >
+              </TableCell>
+            </TableRow>
           {/each}
         </TableBody>
       </Table>

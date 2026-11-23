@@ -77,12 +77,12 @@
         label: t("agentDecisions.days", { n: p }),
       }))}
     />
-    <Button variant="ghost" size="icon" ariaLabel={t("approvals.refresh")} onclick={load}
-      ><RefreshCw size={14} aria-hidden="true" /></Button
-    >
-    <a href="/approvals?tab=inbox" class="text-xs text-kitsuden-accent hover:underline self-center"
-      >{t("agentDecisions.inboxLink")}</a
-    >
+    <Button variant="ghost" size="icon" ariaLabel={t("approvals.refresh")} onclick={load}>
+      <RefreshCw size={14} aria-hidden="true" />
+    </Button>
+    <a href="/approvals?tab=inbox" class="text-xs text-kitsuden-accent hover:underline self-center">
+      {t("agentDecisions.inboxLink")}
+    </a>
   </div>
 
   {#if loading}
@@ -98,28 +98,28 @@
         <TableHeader class="text-xs text-kitsuden-subtle text-left">
           <TableRow>
             <TableHead class="px-3 py-2 font-medium">{t("agentDecisions.colWhen")}</TableHead>
-            {#if !agentId}<TableHead class="px-3 py-2 font-medium"
-                >{t("agentDecisions.colAgent")}</TableHead
-              >{/if}
+            {#if !agentId}<TableHead class="px-3 py-2 font-medium">
+                {t("agentDecisions.colAgent")}
+              </TableHead>{/if}
             <TableHead class="px-3 py-2 font-medium">{t("agentDecisions.colAction")}</TableHead>
             <TableHead class="px-3 py-2 font-medium">{t("agentDecisions.colReason")}</TableHead>
-            <TableHead class="px-3 py-2 font-medium"
-              >{t("agentDecisions.colAlternatives")}</TableHead
-            >
+            <TableHead class="px-3 py-2 font-medium">
+              {t("agentDecisions.colAlternatives")}
+            </TableHead>
             <TableHead class="px-3 py-2 font-medium">{t("agentDecisions.colVersion")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {#each decisions as d (d.id)}
             <TableRow class="border-t border-kitsuden-border align-top" data-testid="decision-row">
-              <TableCell class="px-3 py-2 whitespace-nowrap text-xs text-kitsuden-subtle"
-                >{date(d.createdAt)}</TableCell
-              >
+              <TableCell class="px-3 py-2 whitespace-nowrap text-xs text-kitsuden-subtle">
+                {date(d.createdAt)}
+              </TableCell>
               {#if !agentId}
                 <TableCell class="px-3 py-2 whitespace-nowrap">
-                  <a href="/agents/{d.agentId}" class="text-kitsuden-accent hover:underline"
-                    >{d.agentName ?? d.agentId}</a
-                  >
+                  <a href="/agents/{d.agentId}" class="text-kitsuden-accent hover:underline">
+                    {d.agentName ?? d.agentId}
+                  </a>
                 </TableCell>
               {/if}
               <TableCell class="px-3 py-2 text-kitsuden-text">{d.action}</TableCell>

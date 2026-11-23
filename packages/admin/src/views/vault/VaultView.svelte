@@ -323,9 +323,9 @@
               <fieldset class="flex min-w-0 flex-col gap-3">
                 <legend class="mb-2 text-sm font-medium text-kitsuden-text">
                   {tr("vaultView.columns")}
-                  <span class="text-xs font-normal text-kitsuden-subtle"
-                    >{tr("vaultView.idOwnerIdCreatedAt")}</span
-                  >
+                  <span class="text-xs font-normal text-kitsuden-subtle">
+                    {tr("vaultView.idOwnerIdCreatedAt")}
+                  </span>
                 </legend>
                 {#each draftColumns as col, i (i)}
                   <div class="flex flex-wrap items-center gap-2">
@@ -487,9 +487,9 @@
                           <TableHead>{tr("vaultView.column")}</TableHead>
                           <TableHead>{tr("vaultView.type")}</TableHead>
                           <TableHead>{tr("vaultView.nullable")}</TableHead>
-                          <TableHead class="text-right"
-                            ><span class="sr-only">{tr("common.actions")}</span></TableHead
-                          >
+                          <TableHead class="text-right">
+                            <span class="sr-only">{tr("common.actions")}</span>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -497,9 +497,9 @@
                           <TableRow>
                             <TableCell class="font-mono">
                               {c.name}
-                              {#if c.isPrimaryKey}<Badge variant="warning" class="ml-1"
-                                  >{tr("vaultView.pk")}</Badge
-                                >{/if}
+                              {#if c.isPrimaryKey}<Badge variant="warning" class="ml-1">
+                                  {tr("vaultView.pk")}
+                                </Badge>{/if}
                             </TableCell>
                             <TableCell class="font-mono">{c.type}</TableCell>
                             <TableCell>{c.nullable ? tr("vaultView.si") : "no"}</TableCell>

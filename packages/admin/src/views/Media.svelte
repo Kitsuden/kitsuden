@@ -320,9 +320,10 @@
             <span class="text-kitsuden-subtle">/</span>
             <span class="text-kitsuden-text">{mediaStore.selectedFolder.name}</span>
           {/if}
-          <span class="text-kitsuden-subtle ml-auto"
-            >{mediaStore.filteredFiles.length} {t("media.files")}</span
-          >
+          <span class="text-kitsuden-subtle ml-auto">
+            {mediaStore.filteredFiles.length}
+            {t("media.files")}
+          </span>
         </div>
 
         <!-- Loading / Empty / Grid / List -->
@@ -447,9 +448,9 @@
                   <TableCell>
                     <Badge variant="secondary">{file.mimeType.split("/")[1]}</Badge>
                   </TableCell>
-                  <TableCell class="text-kitsuden-text-dim"
-                    >{mediaStore.formatFileSize(file.size)}</TableCell
-                  >
+                  <TableCell class="text-kitsuden-text-dim">
+                    {mediaStore.formatFileSize(file.size)}
+                  </TableCell>
                   <TableCell class="text-right">
                     <div class="flex items-center justify-end gap-1">
                       <Button
@@ -727,9 +728,9 @@
       />
     </Field>
     {#snippet footer()}
-      <Button variant="secondary" onclick={() => (showNewFolderDialog = false)}
-        >{t("common.cancel")}</Button
-      >
+      <Button variant="secondary" onclick={() => (showNewFolderDialog = false)}>
+        {t("common.cancel")}
+      </Button>
       <Button onclick={handleCreateFolder} disabled={!newFolderName.trim()}>
         {t("common.create")}
       </Button>

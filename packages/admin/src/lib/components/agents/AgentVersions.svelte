@@ -105,22 +105,24 @@
         {@const detail = open[v.version]}
         <li class="p-3 rounded-lg border border-kitsuden-border" data-testid="version-{v.version}">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="text-sm text-kitsuden-text font-medium"
-              >{t("agentVersions.version", { n: v.version })}</span
-            >
+            <span class="text-sm text-kitsuden-text font-medium">
+              {t("agentVersions.version", { n: v.version })}
+            </span>
             {#if v.version === current}
               <span
                 class="text-xs px-1.5 py-0.5 rounded-full bg-kitsuden-green/20 text-kitsuden-green"
-                >{t("agentVersions.current")}</span
               >
+                {t("agentVersions.current")}
+              </span>
             {/if}
-            <span class="text-xs text-kitsuden-subtle">{t(`agentVersions.source_${v.source}`)}</span
-            >
+            <span class="text-xs text-kitsuden-subtle">
+              {t(`agentVersions.source_${v.source}`)}
+            </span>
             {#if v.note}<span class="text-xs text-kitsuden-subtle">· {v.note}</span>{/if}
             <span class="text-xs text-kitsuden-subtle">· {date(v.createdAt)}</span>
-            {#if v.createdBy}<span class="text-xs text-kitsuden-subtle"
-                >· {t("agentVersions.by", { who: v.createdBy })}</span
-              >{/if}
+            {#if v.createdBy}<span class="text-xs text-kitsuden-subtle">
+                · {t("agentVersions.by", { who: v.createdBy })}
+              </span>{/if}
             <div class="flex-1"></div>
             <Button variant="ghost" size="sm" onclick={() => toggle(v.version)}>
               {detail ? t("agentVersions.hide") : t("agentVersions.show")}

@@ -93,19 +93,20 @@
           ? "success"
           : status.worker === "stopped"
             ? "warning"
-            : "default"}>{t("systemQueue.worker")}: {workerTag(status.worker)}</Badge
+            : "default"}
       >
-      <Badge size="md"
-        >{t("systemQueue.listen")}: {status.listens
-          ? t("systemQueue.yes")
-          : t("systemQueue.no")}</Badge
-      >
+        {t("systemQueue.worker")}: {workerTag(status.worker)}
+      </Badge>
+      <Badge size="md">
+        {t("systemQueue.listen")}: {status.listens ? t("systemQueue.yes") : t("systemQueue.no")}
+      </Badge>
       {#each STATUSES as e}
         <Badge
           size="md"
           variant={e === "dead" && (status.totals.dead ?? 0) > 0 ? "error" : "default"}
-          >{statusLabel[e]()}: {status.totals[e] ?? 0}</Badge
         >
+          {statusLabel[e]()}: {status.totals[e] ?? 0}
+        </Badge>
       {/each}
     </div>
 
@@ -115,16 +116,18 @@
           <TableHeader>
             <TableRow>
               <TableHead class="text-left">{t("systemQueue.colQueue")}</TableHead>
-              {#each STATUSES as e}<TableHead class="text-right">{statusLabel[e]()}</TableHead
-                >{/each}
+              {#each STATUSES as e}<TableHead class="text-right">
+                  {statusLabel[e]()}
+                </TableHead>{/each}
             </TableRow>
           </TableHeader>
           <TableBody>
             {#each Object.entries(status.byQueue) as [queue, account] (queue)}
               <TableRow>
                 <TableCell class="font-mono">{queue}</TableCell>
-                {#each STATUSES as e}<TableCell class="text-right">{account[e] ?? 0}</TableCell
-                  >{/each}
+                {#each STATUSES as e}<TableCell class="text-right">
+                    {account[e] ?? 0}
+                  </TableCell>{/each}
               </TableRow>
             {/each}
           </TableBody>
@@ -154,23 +157,27 @@
                 <TableCell class="font-mono">{j.queue}</TableCell>
                 <TableCell class="font-mono">{j.name}</TableCell>
                 <TableCell class="text-right">{j.attempts}/{j.max_attempts}</TableCell>
-                <TableCell class="max-w-md truncate" title={j.last_error ?? ""}
-                  >{j.last_error ?? "—"}</TableCell
-                >
+                <TableCell class="max-w-md truncate" title={j.last_error ?? ""}>
+                  {j.last_error ?? "—"}
+                </TableCell>
                 <TableCell class="whitespace-nowrap">{date(j.finished_at)}</TableCell>
                 <TableCell class="whitespace-nowrap text-right">
                   <Button
                     variant="ghost"
                     size="sm"
                     disabled={busy === j.id}
-                    onclick={() => action(j.id, retryJob)}>{t("systemQueue.retry")}</Button
+                    onclick={() => action(j.id, retryJob)}
                   >
+                    {t("systemQueue.retry")}
+                  </Button>
                   <Button
                     variant="danger-ghost"
                     size="sm"
                     disabled={busy === j.id}
-                    onclick={() => action(j.id, discardJob)}>{t("systemQueue.discard")}</Button
+                    onclick={() => action(j.id, discardJob)}
                   >
+                    {t("systemQueue.discard")}
+                  </Button>
                 </TableCell>
               </TableRow>
             {/each}
