@@ -13,7 +13,7 @@
  * Config: KITSUDEN_API_URL (default http://localhost:3000), KITSUDEN_API_TOKEN.
  */
 
-import { writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -143,8 +143,14 @@ export async function graphCommand(
         const res = await fetch(`${base}/api/code-graph/visualize`, { headers });
         if (!res.ok) return fail(`The API responded ${res.status}`);
         const html = await res.text();
-        const out = join(tmpdir(), "kitsuden-code-graph.html");
-        writeFileSync(out, html);
+        if (!isGraphHtml(res.headers.get("content-type"), html)) {
+          return fail(
+            "The API did not return the graph page (expected a self-contained HTML file)"
+          );
+        }
+        // A fresh private folder (mode 0700): no fixed, guessable name in the shared temp dir.
+        const out = join(mkdtempSync(join(tmpdir(), "kitsuden-graph-")), "code-graph.html");
+        writeFileSync(out, html, { flag: "wx", mode: 0o600 });
         console.log(chalk.cyan(`\n🕸️  Graph generated: ${out}\n`));
         openWithDefaultApp(out);
         break;
@@ -214,6 +220,16 @@ export async function graphCommand(
     console.error(chalk.gray("Is the API running? (kitsuden dev / kitsuden start)"));
     process.exit(1);
   }
+}
+
+/** Largest graph page the CLI will write to disk. */
+const MAX_GRAPH_HTML_BYTES = 50 * 1024 * 1024;
+
+/** The visualize route answers one HTML document; anything else is not written to disk. */
+function isGraphHtml(contentType: string | null, html: string): boolean {
+  if (!/^text\/html\b/i.test(contentType ?? "")) return false;
+  if (Buffer.byteLength(html, "utf8") > MAX_GRAPH_HTML_BYTES) return false;
+  return /^\s*(<!doctype html|<html[\s>])/i.test(html);
 }
 
 function fail(msg: string): void {

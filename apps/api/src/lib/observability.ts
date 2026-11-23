@@ -29,6 +29,7 @@ import { requireAdminRole } from "../middleware/auth-guard";
 import type { AppVariables } from "../types/hono";
 
 import { getMetricsSnapshot, getRouteSnapshots } from "./metrics";
+import { prometheusLabelValue } from "./prometheus-label";
 import { realtimeManager } from "./realtime";
 import { buildAlertReport, evaluateSlo } from "./slo";
 import { getValkeyClient, valkeyConfigured } from "./valkey";
@@ -995,7 +996,7 @@ async function generatePrometheusMetrics(): Promise<string> {
   for (const row of stepsByTool) {
     const tool = row.toolName || "unknown";
     lines.push(
-      `kitsuden_agent_trace_steps_total{tool="${tool.replace(/"/g, '\\"')}"} ${row.count}`
+      `kitsuden_agent_trace_steps_total{tool="${prometheusLabelValue(tool)}"} ${row.count}`
     );
   }
 
@@ -1015,7 +1016,7 @@ async function generatePrometheusMetrics(): Promise<string> {
   for (const row of auditByAction) {
     const action = row.action || "unknown";
     lines.push(
-      `kitsuden_agent_audit_logs_total{action="${action}",success="${row.success}"} ${row.count}`
+      `kitsuden_agent_audit_logs_total{action="${prometheusLabelValue(action)}",success="${row.success}"} ${row.count}`
     );
   }
 

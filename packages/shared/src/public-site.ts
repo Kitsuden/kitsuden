@@ -22,6 +22,8 @@
  * Everything is pure: no network, no environment. The caller passes the public URL.
  */
 
+import { trimChar } from "./utils";
+
 // ─── Wikis ────────────────────────────────────────────────────────────────
 
 /** Wiki slug: lowercase letters and digits separated by single hyphens. */
@@ -148,15 +150,13 @@ export function invalidGameSlugReason(
  * the ends and deleted accented letters: "¡Pokémon!" gave `-pok-mon-`.
  */
 export function gameSlug(title: string): string {
-  return title
+  const slug = title
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/['’]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120)
-    .replace(/-+$/g, "");
+    .replace(/[^a-z0-9]+/g, "-");
+  return trimChar(trimChar(slug, "-").slice(0, 120), "-", "end");
 }
 
 // ─── Which public URL wins ────────────────────────────────────────────────
@@ -192,7 +192,7 @@ export function effectivePublicUrl(
     try {
       const url = new URL(clean);
       return url.protocol === "http:" || url.protocol === "https:"
-        ? clean.replace(/\/+$/, "")
+        ? trimChar(clean, "/", "end")
         : null;
     } catch {
       return null;

@@ -10,8 +10,9 @@ import { join } from "node:path";
 
 import type { BrainNote, KnowledgeGraph } from "./types";
 
-function escapeYaml(text: string): string {
-  return text.replace(/"/g, '\\"').replace(/\n/g, " ");
+/** Content for a YAML double-quoted scalar: backslash first, then the quote. */
+export function escapeYaml(text: string): string {
+  return text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ");
 }
 
 function buildFrontmatter(note: BrainNote): string {

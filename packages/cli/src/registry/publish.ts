@@ -148,8 +148,13 @@ export function publish(o: PublishOptions): PublishResult {
   const signature = signData(tgz, o.key, packageComment(m.id, m.version, sha, contentHash));
   mkdirSync(join(o.registryDir, "packages", m.id), { recursive: true });
   const tgzPath = join(o.registryDir, rel);
-  if (existsSync(tgzPath)) throw new RecordError(`${rel} already exists in the registry folder`);
-  writeFileSync(tgzPath, tgz, { flag: "wx" });
+  try {
+    writeFileSync(tgzPath, tgz, { flag: "wx" });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "EEXIST")
+      throw new RecordError(`${rel} already exists in the registry folder`);
+    throw e;
+  }
   writeFileSync(tgzPath + ".minisig", signature);
 
   const target = (index.kons[m.id] ??= { owners: [keyId], versions: {} });

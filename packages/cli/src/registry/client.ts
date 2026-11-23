@@ -298,8 +298,7 @@ export async function prepareInstall(o: PrepareOptions): Promise<Preparation> {
           `${id}@${version}: the package declares ${r.manifest.id}@${r.manifest.version}`
         );
       }
-      writeFileSync(join(cache, `${input.sha256}.tgz`), tgz);
-      if (signature) writeFileSync(join(cache, `${input.sha256}.tgz.minisig`), signature);
+      cacheVerifiedPackage(cache, input.sha256, tgz, signed ? signature : null);
 
       // Baseline for the diff: the lockfile, else the installed kon.json.
       const prior = blocking.kons[id];
@@ -366,6 +365,28 @@ export function updateBlocking(
   for (const k of p.kons) b.kons[k.choice.id] = k.lockInput;
   write(b);
   return b;
+}
+
+/**
+ * Stores a downloaded package in the local cache. Only bytes that passed
+ * `verifyPackage` get here; this re-checks what the file names and contents rely on
+ * (hex SHA-256 matching the bytes, bounded sizes) so nothing else is written.
+ */
+function cacheVerifiedPackage(
+  cache: string,
+  expectedSha: string,
+  tgz: Buffer,
+  signature: string | null
+): void {
+  if (!/^[0-9a-f]{64}$/.test(expectedSha) || sha256(tgz) !== expectedSha) {
+    throw new RecordError(`refusing to cache a package whose SHA-256 is not ${expectedSha}`);
+  }
+  if (tgz.length > LIMITS.compressed)
+    throw new RecordError("refusing to cache an oversized package");
+  writeFileSync(join(cache, `${expectedSha}.tgz`), tgz);
+  if (signature === null) return;
+  if (signature.length > 4096) throw new RecordError("refusing to cache an oversized signature");
+  writeFileSync(join(cache, `${expectedSha}.tgz.minisig`), signature, "utf8");
 }
 
 /** Re-verify a cached package of the lockfile offline: hash + publisher signature. */

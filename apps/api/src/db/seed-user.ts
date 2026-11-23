@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { insertCredentialUser } from "../lib/first-run";
 
 import { authUsers as user } from "./schema";
+import { writeSecretFile } from "./secret-file";
 
 import { db } from "./index";
 
@@ -49,11 +50,14 @@ async function seedAdmin() {
         .where(eq(user.id, created.id));
     });
     console.log(`✅ Created admin ${email}`);
-    // Only if this script generated it: if it came from USER_SEED_PASSWORD, whoever set it already has it.
-    console.log(
-      `   Password: ${process.env.USER_SEED_PASSWORD ? "(the one in USER_SEED_PASSWORD)" : password}`
-    );
-    console.log(`   ⚠ IMPORTANT: Save this password or set USER_SEED_PASSWORD env var.`);
+    // The password never goes to the console. If this script generated it, it goes to
+    // a 0600 file; if it came from USER_SEED_PASSWORD, whoever set it already has it.
+    if (process.env.USER_SEED_PASSWORD) {
+      console.log("   Password: the one in USER_SEED_PASSWORD");
+    } else {
+      const file = writeSecretFile("seed-admin-password.txt", password);
+      console.log(`   Password: written to ${file} (mode 0600). Read it, then delete the file.`);
+    }
   }
   process.exit(0);
 }

@@ -431,9 +431,11 @@ mcpRoutes.use("*", async (c, next) => {
     .catch(() => {});
 
   // Deprecation warnings
+  // Nothing from the key row goes to the log: its lastUsedAt (set above) shows in the
+  // panel which legacy key is still in use.
   logger.warn(
-    { keyId: apiKey.id, type: "mcp" },
-    "[DEPRECATION] Legacy API key (kitsuden_sk_*) used in MCP. Migrate to Agent NHI (kitsuden_agent_*)."
+    { type: "mcp" },
+    "[DEPRECATION] Legacy API key (kitsuden_sk_*) used in MCP. Migrate to Agent NHI (kitsuden_agent_*); the panel's API keys list shows which one by its last use."
   );
   c.header("Deprecation", "kitsuden_sk_*; kitsuden_agent_*");
   c.header("Sunset", "2026-08-01");
@@ -449,14 +451,7 @@ mcpRoutes.use("*", async (c, next) => {
     allowedTools: [],
   });
 
-  logger.info(
-    {
-      agentId: `machine-${apiKey.id}`,
-      agentName: apiKey.name,
-      type: "human",
-    },
-    "MCP legacy human user authenticated"
-  );
+  logger.info({ type: "human" }, "MCP legacy human user authenticated");
 
   await next();
 });

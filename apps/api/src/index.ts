@@ -295,7 +295,8 @@ app.use(
 void sitePublicUrl()
   .then((url) => {
     const warning = incompleteCorsWarning(corsConfig.origins, url);
-    if (warning) logger.warn({ origins: corsConfig.origins }, `⚠️  ${warning}`);
+    // The count, not the list: ALLOWED_ORIGINS comes from the environment, which stays out of logs.
+    if (warning) logger.warn({ originCount: corsConfig.origins.length }, `⚠️  ${warning}`);
   })
   .catch(() => {
     // Without a database it cannot be checked; startup continues
@@ -644,9 +645,11 @@ app.use("*", async (c, next) => {
         .catch(() => {});
 
       // Deprecation warnings
+      // Nothing from the key row goes to the log: its lastUsedAt (set above) shows in the
+      // panel which legacy key is still in use.
       logger.warn(
-        { keyId: apiKey.id, path: logPath(c.req.path) },
-        "[DEPRECATION] Legacy API key (kitsuden_sk_*) used. Migrate to Agent NHI (kitsuden_agent_*)."
+        { path: logPath(c.req.path) },
+        "[DEPRECATION] Legacy API key (kitsuden_sk_*) used. Migrate to Agent NHI (kitsuden_agent_*); the panel's API keys list shows which one by its last use."
       );
       c.header("Deprecation", "kitsuden_sk_*; kitsuden_agent_*");
       c.header("Sunset", "2026-08-01");

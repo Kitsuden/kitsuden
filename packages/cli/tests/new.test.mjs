@@ -75,7 +75,10 @@ describe("kitsuden new", () => {
     const env = readFileSync(join(project, ".env"), "utf8");
     assert.match(
       env,
-      new RegExp(`^KITSUDEN_API_URL=${API_UNREACHABLE.replace(/[.]/g, "\\.")}$`, "m")
+      new RegExp(
+        `^KITSUDEN_API_URL=${API_UNREACHABLE.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&")}$`,
+        "m"
+      )
     );
     assert.match(env, /^SITE_URL=https:\/\/example\.org$/m);
     assert.match(env, /^SITE_NAME=mi-web$/m);

@@ -367,14 +367,15 @@ const IFRAME_ATTRIBUTES = new Set([
 /** `embed.code`: only iframes from the hosts above; the rest, as sanitized HTML. */
 const IFRAME_MARK = String.fromCharCode(1);
 const RE_IFRAME = new RegExp(`${IFRAME_MARK}(\\d+)${IFRAME_MARK}`, "g");
+/** Enough for any nesting a person writes; a crafted one stops here and sanitizeHtml cleans it. */
+const MAX_IFRAME_PASSES = 32;
 
 export function sanitizeEmbed(code: unknown): string {
   if (typeof code !== "string") return "";
   const iframes: string[] = [];
   // `\u0001` is the marker below: kept out of the input so it cannot be forged.
-  const withoutIframes = code
-    .replaceAll(IFRAME_MARK, "")
-    .replace(
+  const extract = (text: string): string =>
+    text.replace(
       /<iframe\b((?:[^>"']|"[^"]*"|'[^']*')*)>(?:[\s\S]*?<\/iframe\s*>)?/gi,
       (_t, attrs: string) => {
         let src = "";
@@ -399,6 +400,15 @@ export function sanitizeEmbed(code: unknown): string {
         return `\u0001${iframes.length - 1}\u0001`;
       }
     );
+  // Removing one iframe can join the text around it into another (`<ifr<iframe …>ame`),
+  // so the extraction repeats until nothing changes. What is left still goes through
+  // `sanitizeHtml`, which drops any tag it does not know.
+  let withoutIframes = code.replaceAll(IFRAME_MARK, "");
+  for (let pass = 0; pass < MAX_IFRAME_PASSES; pass++) {
+    const next = extract(withoutIframes);
+    if (next === withoutIframes) break;
+    withoutIframes = next;
+  }
   return sanitizeHtml(withoutIframes).replace(
     RE_IFRAME,
     (_t, i: string) => iframes[Number(i)] ?? ""

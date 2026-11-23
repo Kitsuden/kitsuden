@@ -62,6 +62,19 @@ interface InternalMessage {
   timestamp?: number;
 }
 
+/** Longest server text that reaches the console. */
+const MAX_LOGGED_LENGTH = 500;
+
+/**
+ * Server text made safe for one console line: control characters and line
+ * separators become spaces (a message cannot forge extra log lines) and it is capped.
+ */
+export function logSafe(value: unknown): string {
+  // eslint-disable-next-line no-control-regex
+  const text = String(value ?? "").replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ");
+  return text.length > MAX_LOGGED_LENGTH ? `${text.slice(0, MAX_LOGGED_LENGTH)}…` : text;
+}
+
 export class KitsudenRealtime {
   private url: string;
   private ws: WebSocket | null = null;
@@ -375,7 +388,7 @@ export class KitsudenRealtime {
         break;
 
       case "error":
-        console.warn("[KitsudenRealtime] Server error:", msg.message);
+        console.warn("[KitsudenRealtime] Server error:", logSafe(msg.message));
         break;
     }
   }

@@ -8,6 +8,8 @@
  * similarity search and connection discovery.
  */
 
+import { trimTrailingSlashes } from "../trim-slashes";
+
 import type { EmbeddingProvider } from "./types";
 
 export const DEFAULT_EMBEDDING_DIMENSIONS = 384;
@@ -172,7 +174,7 @@ export interface HttpEmbeddingOptions {
 export function createHttpEmbeddingProvider(
   opts: HttpEmbeddingOptions
 ): PluggableEmbeddingProvider {
-  const base = opts.url.replace(/\/+$/, "");
+  const base = trimTrailingSlashes(opts.url);
   const make = opts.fetchImpl ?? fetch;
   const info: EmbeddingInfo = {
     kind: `http:${opts.model}`,

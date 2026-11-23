@@ -33,8 +33,11 @@
 
 import { createHash } from "node:crypto";
 import {
-  lstatSync,
+  closeSync,
+  constants as fsConstants,
+  fstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
   readdirSync,
   realpathSync,
@@ -72,34 +75,51 @@ export interface PackageFile {
   data: Buffer;
 }
 
+/**
+ * Reads one file to publish through a single descriptor, so the size checked is the
+ * size of the file read (no stat-then-read race). O_NOFOLLOW where the OS has it.
+ */
+function readPackagedFile(route: string, rel: string, totalSoFar: number): Buffer {
+  const fd = openSync(route, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
+  try {
+    const st = fstatSync(fd);
+    if (!st.isFile()) throw new PackageError(`${rel}: not a regular file`);
+    if (st.size > LIMITS.byFile)
+      throw new PackageError(`${rel}: larger than ${LIMITS.byFile} bytes`);
+    if (totalSoFar + st.size > LIMITS.expanded)
+      throw new PackageError(`the kon is larger than ${LIMITS.expanded} bytes`);
+    return readFileSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
+
 /** The files a kon folder publishes, sorted. Refuses symlinks and secrets. */
 export function filesToPackage(dir: string): PackageFile[] {
   const output: PackageFile[] = [];
   let total = 0;
   const visit = (actual: string): void => {
-    for (const name of readdirSync(actual).sort()) {
+    const entries = readdirSync(actual, { withFileTypes: true });
+    entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    for (const entry of entries) {
+      const name = entry.name;
       if (NOT_PACKAGED.has(name) || name.endsWith(".tsbuildinfo")) continue;
       const route = join(actual, name);
       const rel = relative(dir, route).split(sep).join("/");
-      const st = lstatSync(route);
-      if (st.isSymbolicLink()) throw new PackageError(`${rel}: symlinks cannot be published`);
-      if (st.isDirectory()) {
+      if (entry.isSymbolicLink()) throw new PackageError(`${rel}: symlinks cannot be published`);
+      if (entry.isDirectory()) {
         visit(route);
         continue;
       }
-      if (!st.isFile()) throw new PackageError(`${rel}: not a regular file`);
+      if (!entry.isFile()) throw new PackageError(`${rel}: not a regular file`);
       if (looksLikeSecret(name)) {
         throw new PackageError(
           `${rel}: looks like a secret (env file, private key or registry credentials); remove it before publishing`
         );
       }
       validateRelativePath(rel);
-      if (st.size > LIMITS.byFile)
-        throw new PackageError(`${rel}: larger than ${LIMITS.byFile} bytes`);
-      total += st.size;
-      if (total > LIMITS.expanded)
-        throw new PackageError(`the kon is larger than ${LIMITS.expanded} bytes`);
-      output.push({ path: rel, data: readFileSync(route) });
+      output.push({ path: rel, data: readPackagedFile(route, rel, total) });
+      total += output[output.length - 1]!.data.length;
       if (output.length > LIMITS.entries)
         throw new PackageError(`more than ${LIMITS.entries} files`);
     }

@@ -126,11 +126,27 @@ async function loadSpec() {
     });
     if (!res.ok) throw new Error(`GET ${base}/api/docs/openapi.json → ${res.status}`);
     const alive = await res.json();
+    // What is written below becomes generated code: check it is the API's document first.
+    const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+    if (
+      !isObject(alive) ||
+      typeof alive.openapi !== "string" ||
+      !/^3\.\d+\.\d+$/.test(alive.openapi) ||
+      !isObject(alive.paths) ||
+      !isObject(alive.components?.schemas?.Problem)
+    )
+      throw new Error(`${base}/api/docs/openapi.json is not a Kitsuden OpenAPI 3 document`);
     const paths = {};
-    for (const path of Object.keys(alive.paths ?? {}).sort()) {
+    for (const path of Object.keys(alive.paths).sort()) {
+      if (!path.startsWith("/")) continue; // an OpenAPI path; never `__proto__`
       for (const method of ["get", "put", "post", "delete", "patch"]) {
         const o = alive.paths[path]?.[method];
         if (!o?.["x-kitsuden-operation"]) continue;
+        const kon = o["x-kitsuden-operation"].kon;
+        if (typeof kon !== "string" || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(kon))
+          throw new Error(
+            `${method.toUpperCase()} ${path}: x-kitsuden-operation.kon is not a kon id`
+          );
         (paths[path] ??= {})[method] = o;
       }
     }
@@ -1256,7 +1272,13 @@ for (const p of [...existingOnes(DIR_TS), ...existingOnes(DIR_PY)]) {
   }
 }
 for (const [p, text] of f) {
-  const actual = existsSync(p) ? readFileSync(p, "utf8").replaceAll("\r\n", "\n") : null;
+  // Read and compare, with no separate existence check that could go stale.
+  let actual = null;
+  try {
+    actual = readFileSync(p, "utf8").replaceAll("\r\n", "\n");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
   if (actual === text) continue;
   mkdirSync(dirname(p), { recursive: true });
   writeFileSync(p, text);

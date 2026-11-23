@@ -32,8 +32,9 @@ export function adminMfaMode(env: Env = process.env): AdminMfaMode {
   const mode = env["KITSUDEN_ADMIN_MFA"]?.trim().toLowerCase();
   if (!mode || mode === "optional") return "optional";
   if (mode === "required") return "required";
+  // The value itself is not echoed: environment values stay out of logs.
   console.warn(
-    `[auth] KITSUDEN_ADMIN_MFA must be "optional" or "required": treating "${mode}" as required.`
+    `[auth] KITSUDEN_ADMIN_MFA must be "optional" or "required": treating the value set as required.`
   );
   return "required";
 }

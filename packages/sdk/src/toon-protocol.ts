@@ -133,11 +133,17 @@ export function encodeToonProtocol(input: unknown): ToonEnvelope {
 // DECODER
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * Path segments that reach an object's prototype. The envelope comes from the
+ * network: a `meta` or `refs` path like `__proto__.polluted` is never followed.
+ */
+const UNSAFE_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
+
 function getByPath(root: unknown, path: string): unknown {
   if (path === "") return root;
   let cur = root as Record<string, unknown> | null | undefined;
   for (const seg of path.split(".")) {
-    if (cur === null || cur === undefined) return undefined;
+    if (cur === null || cur === undefined || UNSAFE_SEGMENTS.has(seg)) return undefined;
     cur = cur[seg] as Record<string, unknown>;
   }
   return cur;
@@ -146,12 +152,17 @@ function getByPath(root: unknown, path: string): unknown {
 function setByPath(root: unknown, path: string, value: unknown): unknown {
   if (path === "") return value;
   const segs = path.split(".");
+  if (segs.some((seg) => UNSAFE_SEGMENTS.has(seg))) return root;
   let cur = root as Record<string, unknown> | null | undefined;
   for (let i = 0; i < segs.length - 1; i++) {
-    cur = cur?.[segs[i]!] as Record<string, unknown>;
+    const seg = segs[i]!;
+    if (UNSAFE_SEGMENTS.has(seg)) return root;
+    cur = cur?.[seg] as Record<string, unknown>;
     if (cur === null || cur === undefined) return root;
   }
-  (cur as Record<string, unknown>)[segs[segs.length - 1]!] = value;
+  const last = segs[segs.length - 1]!;
+  if (UNSAFE_SEGMENTS.has(last)) return root;
+  (cur as Record<string, unknown>)[last] = value;
   return root;
 }
 

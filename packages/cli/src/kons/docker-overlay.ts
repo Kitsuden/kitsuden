@@ -68,7 +68,12 @@ services:
       args:
         KITSUDEN_KONS: "${ids.join(",")}"
 `;
-  const before = existsSync(path) ? readFileSync(path, "utf8") : null;
+  let before: string | null = null;
+  try {
+    before = readFileSync(path, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+  }
   if (before !== yaml) writeFileSync(path, yaml, "utf8");
   return { written: true, path, kons: ids, context };
 }

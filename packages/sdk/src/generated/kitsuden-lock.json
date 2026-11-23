@@ -3,7 +3,7 @@
   "lockVersion": 1,
   "generator": {
     "script": "scripts/sdk/generate.mjs",
-    "sha256": "5af84b35fafba158f878932cc8cb5dbac9da64e217eea966e202b59b1504ad50"
+    "sha256": "910fc11794b11fd3a48a1df65d6541d33a4d2fb90ff4ef6024d33af9952d1adc"
   },
   "contract": {
     "apiVersion": "0.9.0-beta",

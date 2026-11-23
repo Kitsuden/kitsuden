@@ -93,10 +93,9 @@ async function oasdiffBinary() {
     );
   }
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, archive), bytes);
-  // Relative names and `cwd`: GNU tar (Git Bash) reads `C:\...` as a remote host.
-  const r = spawnSync("tar", ["-xzf", archive, exe], { cwd: dir, encoding: "utf8" });
-  rmSync(join(dir, archive), { force: true });
+  // The verified bytes go to tar's stdin: the archive is never written to disk.
+  // `cwd` and no paths: GNU tar (Git Bash) reads `C:\...` as a remote host.
+  const r = spawnSync("tar", ["-xzf", "-", exe], { cwd: dir, input: bytes, encoding: "utf8" });
   if (r.status !== 0 || !existsSync(bin)) {
     throw new Error(`oasdiff: could not extract ${archive}: ${r.stderr || r.error?.message}`);
   }

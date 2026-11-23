@@ -54,6 +54,8 @@ import type { PgTable, PgColumn } from "drizzle-orm/pg-core";
 import { db } from "../../../apps/api/src/db";
 import * as schema from "../../../apps/api/src/db/schema";
 
+import { escapeLike } from "./like-pattern";
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES AND CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -309,8 +311,7 @@ function buildOperatorCondition(column: PgColumn, operator: FilterOperator, valu
           { operator, value }
         );
       }
-      // Escape special characters
-      const escapedContains = value.replace(/[%_]/g, "\\$&");
+      const escapedContains = escapeLike(value);
       return ilike(column, `%${escapedContains}%`);
     case "startsWith":
       if (typeof value !== "string") {
@@ -320,7 +321,7 @@ function buildOperatorCondition(column: PgColumn, operator: FilterOperator, valu
           { operator, value }
         );
       }
-      const escapedStart = value.replace(/[%_]/g, "\\$&");
+      const escapedStart = escapeLike(value);
       return ilike(column, `${escapedStart}%`);
     case "exists":
       return value ? isNotNull(column) : isNull(column);

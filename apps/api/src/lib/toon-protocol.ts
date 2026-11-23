@@ -155,12 +155,22 @@ export function encodeToonProtocol(input: unknown): ToonEnvelope {
 // DECODER
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * Meta and ref paths come from the envelope, which may come from outside: a segment
+ * naming the prototype chain would let `setByPath` write into `Object.prototype`.
+ * Such a path is ignored, and traversal only follows the value's own properties.
+ */
+function isUnsafeSegment(seg: string): boolean {
+  return seg === "__proto__" || seg === "constructor" || seg === "prototype";
+}
+
 function getByPath(root: unknown, path: string): unknown {
   if (path === "") return root;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let cur: any = root;
   for (const seg of path.split(".")) {
-    if (cur === null || cur === undefined) return undefined;
+    if (cur === null || typeof cur !== "object") return undefined;
+    if (isUnsafeSegment(seg) || !Object.hasOwn(cur, seg)) return undefined;
     cur = cur[seg];
   }
   return cur;
@@ -170,12 +180,17 @@ function getByPath(root: unknown, path: string): unknown {
 function setByPath(root: any, path: string, value: unknown): unknown {
   if (path === "") return value; // replace root
   const segs = path.split(".");
+  if (segs.some(isUnsafeSegment)) return root;
   let cur = root;
   for (let i = 0; i < segs.length - 1; i++) {
-    cur = cur?.[segs[i]!];
-    if (cur === null || cur === undefined) return root;
+    const seg = segs[i]!;
+    if (cur === null || typeof cur !== "object" || !Object.hasOwn(cur, seg)) return root;
+    cur = cur[seg];
   }
-  cur[segs[segs.length - 1]!] = value;
+  const last = segs[segs.length - 1]!;
+  if (cur === null || typeof cur !== "object") return root;
+  if (last === "__proto__" || last === "constructor" || last === "prototype") return root;
+  cur[last] = value;
   return root;
 }
 
