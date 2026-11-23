@@ -581,19 +581,23 @@
           </form>
           {#if selectedGameIds.size > 0}
             <div class="flex items-center gap-2 ml-auto">
-              <span class="text-xs text-kitsuden-subtle"
-                >{selectedGameIds.size} {tr("common.selected")}</span
-              >
+              <span class="text-xs text-kitsuden-subtle">
+                {selectedGameIds.size}
+                {tr("common.selected")}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
                 class="text-kitsuden-amber"
                 onclick={bulkToggleFeatured}
-                ><Star class="w-3.5 h-3.5" /> {tr("gamesView.feature")}</Button
               >
-              <Button variant="danger-ghost" size="sm" onclick={bulkDeleteGames}
-                ><Trash2 class="w-3.5 h-3.5" /> {tr("common.delete")}</Button
-              >
+                <Star class="w-3.5 h-3.5" />
+                {tr("gamesView.feature")}
+              </Button>
+              <Button variant="danger-ghost" size="sm" onclick={bulkDeleteGames}>
+                <Trash2 class="w-3.5 h-3.5" />
+                {tr("common.delete")}
+              </Button>
             </div>
           {/if}
         </div>
@@ -603,26 +607,26 @@
             <TableRow
               class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
             >
-              <TableHead class="px-4 py-3 w-10"
-                ><Checkbox
+              <TableHead class="px-4 py-3 w-10">
+                <Checkbox
                   ariaLabel={tr("gamesView.selectAll")}
                   checked={selectedGameIds.size === games.length && games.length > 0}
                   onchange={toggleAll}
-                /></TableHead
-              >
+                />
+              </TableHead>
               <TableHead class="px-4 py-3 w-12">{tr("gamesView.cover")}</TableHead>
               <TableHead
                 class="px-4 py-3 cursor-pointer select-none"
                 onclick={() => toggleSort("title")}
               >
-                <span class="flex items-center gap-1"
-                  >{tr("common.title")}
+                <span class="flex items-center gap-1">
+                  {tr("common.title")}
                   {#if gamesSort.field === "title"}{#if gamesSort.dir === "asc"}<ArrowUp
                         class="w-3 h-3"
                       />{:else}<ArrowDown class="w-3 h-3" />{/if}{:else}<ArrowUpDown
                       class="w-3 h-3 opacity-50"
-                    />{/if}</span
-                >
+                    />{/if}
+                </span>
               </TableHead>
               <TableHead class="px-4 py-3">{tr("common.status")}</TableHead>
               <TableHead class="px-4 py-3">{tr("gamesView.developer")}</TableHead>
@@ -630,27 +634,27 @@
                 class="px-4 py-3 cursor-pointer select-none"
                 onclick={() => toggleSort("releaseDate")}
               >
-                <span class="flex items-center gap-1"
-                  >{tr("gamesView.released")}
+                <span class="flex items-center gap-1">
+                  {tr("gamesView.released")}
                   {#if gamesSort.field === "releaseDate"}{#if gamesSort.dir === "asc"}<ArrowUp
                         class="w-3 h-3"
                       />{:else}<ArrowDown class="w-3 h-3" />{/if}{:else}<ArrowUpDown
                       class="w-3 h-3 opacity-50"
-                    />{/if}</span
-                >
+                    />{/if}
+                </span>
               </TableHead>
               <TableHead
                 class="px-4 py-3 cursor-pointer select-none"
                 onclick={() => toggleSort("metacriticScore")}
               >
-                <span class="flex items-center gap-1"
-                  >{tr("gamesView.metacritic")}
+                <span class="flex items-center gap-1">
+                  {tr("gamesView.metacritic")}
                   {#if gamesSort.field === "metacriticScore"}{#if gamesSort.dir === "asc"}<ArrowUp
                         class="w-3 h-3"
                       />{:else}<ArrowDown class="w-3 h-3" />{/if}{:else}<ArrowUpDown
                       class="w-3 h-3 opacity-50"
-                    />{/if}</span
-                >
+                    />{/if}
+                </span>
               </TableHead>
               <TableHead class="px-4 py-3 text-center">{tr("gamesView.featured")}</TableHead>
               <TableHead class="px-4 py-3 text-right">{tr("common.actions")}</TableHead>
@@ -658,33 +662,29 @@
           </TableHeader>
           <TableBody>
             {#if gamesLoading}
-              <TableRow
-                ><TableCell colspan={9} class="px-4 py-12 text-center text-kitsuden-subtle"
-                  ><span class="flex justify-center"><Spinner /></span></TableCell
-                ></TableRow
-              >
+              <TableRow>
+                <TableCell colspan={9} class="px-4 py-12 text-center text-kitsuden-subtle">
+                  <span class="flex justify-center"><Spinner /></span>
+                </TableCell>
+              </TableRow>
             {:else if sortedGames().length === 0}
-              <TableRow
-                ><TableCell colspan={9} class="px-4 py-12 text-center text-kitsuden-subtle"
-                  ><EmptyState
-                    size="sm"
-                    level={null}
-                    title={tr("gamesView.noGamesFound")}
-                  /></TableCell
-                ></TableRow
-              >
+              <TableRow>
+                <TableCell colspan={9} class="px-4 py-12 text-center text-kitsuden-subtle">
+                  <EmptyState size="sm" level={null} title={tr("gamesView.noGamesFound")} />
+                </TableCell>
+              </TableRow>
             {:else}
               {#each sortedGames() as game (game.id)}
                 <TableRow
                   class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
                 >
-                  <TableCell class="px-4 py-2.5"
-                    ><Checkbox
+                  <TableCell class="px-4 py-2.5">
+                    <Checkbox
                       ariaLabel={tr("gamesView.selectGame", { name: game.title })}
                       checked={selectedGameIds.has(game.id)}
                       onchange={() => toggleSelection(game.id)}
-                    /></TableCell
-                  >
+                    />
+                  </TableCell>
                   <TableCell class="px-4 py-2.5">
                     <div
                       class="w-8 h-10 rounded-sm bg-kitsuden-muted/20 overflow-hidden border border-kitsuden-border"
@@ -718,50 +718,54 @@
                     points to the kon's screen, which does exist. When there is an
                     editor of its own, these are the links to change.
                   -->
-                  <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text"
-                    ><a href={"/g/kon-games"} class="hover:text-kitsuden-accent transition-colors"
-                      >{game.title}</a
-                    >
-                    <div class="text-xs text-kitsuden-subtle">/{game.slug}</div></TableCell
-                  >
-                  <TableCell class="px-4 py-2.5"
-                    ><Badge variant={statusVariant(game.status)}>{game.status}</Badge></TableCell
-                  >
-                  <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                    >{game.developer || "-"}</TableCell
-                  >
-                  <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                    >{formatDate(game.releaseDate)}</TableCell
-                  >
-                  <TableCell class="px-4 py-2.5"
-                    ><Badge variant={metacriticVariant(game.metacriticScore)}
-                      >{game.metacriticScore ?? "-"}</Badge
-                    ></TableCell
-                  >
-                  <TableCell class="px-4 py-2.5 text-center"
-                    ><Checkbox
+                  <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text">
+                    <a href={"/g/kon-games"} class="hover:text-kitsuden-accent transition-colors">
+                      {game.title}
+                    </a>
+                    <div class="text-xs text-kitsuden-subtle">/{game.slug}</div>
+                  </TableCell>
+                  <TableCell class="px-4 py-2.5">
+                    <Badge variant={statusVariant(game.status)}>{game.status}</Badge>
+                  </TableCell>
+                  <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">
+                    {game.developer || "-"}
+                  </TableCell>
+                  <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">
+                    {formatDate(game.releaseDate)}
+                  </TableCell>
+                  <TableCell class="px-4 py-2.5">
+                    <Badge variant={metacriticVariant(game.metacriticScore)}>
+                      {game.metacriticScore ?? "-"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell class="px-4 py-2.5 text-center">
+                    <Checkbox
                       ariaLabel={tr("gamesView.featureGame", { name: game.title })}
                       checked={!!game.isFeaturedOnHome}
                       onchange={() => toggleFeatured(game)}
-                    /></TableCell
-                  >
-                  <TableCell class="px-4 py-2.5 text-right"
-                    ><div class="flex items-center justify-end gap-1">
+                    />
+                  </TableCell>
+                  <TableCell class="px-4 py-2.5 text-right">
+                    <div class="flex items-center justify-end gap-1">
                       <Button
                         href={"/g/kon-games"}
                         variant="ghost"
                         size="icon"
                         title={tr("common.edit")}
-                        ariaLabel={tr("common.edit")}><Pencil class="w-3.5 h-3.5" /></Button
-                      ><Button
+                        ariaLabel={tr("common.edit")}
+                      >
+                        <Pencil class="w-3.5 h-3.5" />
+                      </Button><Button
                         variant="danger-ghost"
                         size="icon"
                         title={tr("common.delete")}
                         ariaLabel={tr("common.delete")}
-                        onclick={() => deleteGame(game.id)}><Trash2 class="w-3.5 h-3.5" /></Button
+                        onclick={() => deleteGame(game.id)}
                       >
-                    </div></TableCell
-                  >
+                        <Trash2 class="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               {/each}
             {/if}
@@ -781,8 +785,10 @@
               onclick={() => {
                 gamesPage -= 1;
                 loadGames();
-              }}><ChevronLeft class="w-4 h-4" /></Button
+              }}
             >
+              <ChevronLeft class="w-4 h-4" />
+            </Button>
             <Button
               variant="secondary"
               size="icon"
@@ -791,146 +797,150 @@
               onclick={() => {
                 gamesPage += 1;
                 loadGames();
-              }}><ChevronRight class="w-4 h-4" /></Button
+              }}
             >
+              <ChevronRight class="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>
     {:else if activeTab === "collections"}
       <div class="space-y-4 animate-fade-in">
-        <Card
-          ><CardHeader
-            ><CardTitle class="flex items-center gap-2">
+        <Card>
+          <CardHeader>
+            <CardTitle class="flex items-center gap-2">
               <Layers class="w-4 h-4 text-kitsuden-accent" />
               {tr("gamesView.newCollection")}
-            </CardTitle></CardHeader
-          ><CardContent>
+            </CardTitle>
+          </CardHeader><CardContent>
             <div class="flex flex-wrap items-end gap-3">
               <div class="flex-1 min-w-48">
-                <Field label={tr("common.name")}
-                  ><Input
+                <Field label={tr("common.name")}>
+                  <Input
                     id="coll-name"
                     placeholder={tr("gamesView.eGIndieGems")}
                     value={newCollectionName}
                     oninput={(e: Event) => onCollName((e.currentTarget as HTMLInputElement).value)}
-                  /></Field
-                >
+                  />
+                </Field>
               </div>
               <div class="flex-1 min-w-48">
-                <Field label={tr("common.slug")}
-                  ><Input
+                <Field label={tr("common.slug")}>
+                  <Input
                     id="coll-slug"
                     placeholder={tr("gamesView.exampleTagSlug")}
                     bind:value={newCollectionSlug}
-                  /></Field
-                >
+                  />
+                </Field>
               </div>
-              <Button size="sm" onclick={createCollection}
-                ><Plus class="w-4 h-4" /> {tr("common.create")}</Button
-              >
-            </div></CardContent
-          ></Card
-        >
+              <Button size="sm" onclick={createCollection}>
+                <Plus class="w-4 h-4" />
+                {tr("common.create")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Table class="w-full text-sm">
-          <TableHeader
-            ><TableRow
+          <TableHeader>
+            <TableRow
               class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
-              ><TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
-                class="px-4 py-3">{tr("common.slug")}</TableHead
-              ><TableHead class="px-4 py-3">{tr("gamesView.order")}</TableHead><TableHead
-                class="px-4 py-3">{tr("common.games")}</TableHead
-              ><TableHead class="px-4 py-3 text-right">{tr("common.actions")}</TableHead></TableRow
-            ></TableHeader
-          >
+            >
+              <TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
+                class="px-4 py-3"
+              >
+                {tr("common.slug")}
+              </TableHead><TableHead class="px-4 py-3">{tr("gamesView.order")}</TableHead><TableHead
+                class="px-4 py-3"
+              >
+                {tr("common.games")}
+              </TableHead><TableHead class="px-4 py-3 text-right">{tr("common.actions")}</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
-            {#if collectionsLoading}<TableRow
-                ><TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-subtle"
-                  ><span class="flex justify-center"><Spinner /></span></TableCell
-                ></TableRow
-              >
-            {:else if collections.length === 0}<TableRow
-                ><TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-subtle"
-                  ><EmptyState
-                    size="sm"
-                    level={null}
-                    title={tr("gamesView.noCollectionsYet")}
-                  /></TableCell
-                ></TableRow
-              >
+            {#if collectionsLoading}<TableRow>
+                <TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-subtle">
+                  <span class="flex justify-center"><Spinner /></span>
+                </TableCell>
+              </TableRow>
+            {:else if collections.length === 0}<TableRow>
+                <TableCell colspan={5} class="px-4 py-12 text-center text-kitsuden-subtle">
+                  <EmptyState size="sm" level={null} title={tr("gamesView.noCollectionsYet")} />
+                </TableCell>
+              </TableRow>
             {:else}
               {#each collections as c (c.id)}
                 <TableRow
                   class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
                 >
                   {#if editingCollectionId === c.id}
-                    <TableCell class="px-4 py-2.5"
-                      ><Input
-                        aria-label={tr("common.name")}
-                        bind:value={editCollectionName}
-                      /></TableCell
-                    >
-                    <TableCell class="px-4 py-2.5"
-                      ><Input
-                        aria-label={tr("common.slug")}
-                        bind:value={editCollectionSlug}
-                      /></TableCell
-                    >
-                    <TableCell class="px-4 py-2.5"
-                      ><NumberInput
+                    <TableCell class="px-4 py-2.5">
+                      <Input aria-label={tr("common.name")} bind:value={editCollectionName} />
+                    </TableCell>
+                    <TableCell class="px-4 py-2.5">
+                      <Input aria-label={tr("common.slug")} bind:value={editCollectionSlug} />
+                    </TableCell>
+                    <TableCell class="px-4 py-2.5">
+                      <NumberInput
                         width="auto"
                         ariaLabel={tr("gamesView.order")}
                         value={editCollectionOrder}
                         onchange={(n) => (editCollectionOrder = n ?? 0)}
-                      /></TableCell
-                    >
-                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                      >{c.games?.length ?? 0}</TableCell
-                    >
-                    <TableCell class="px-4 py-2.5 text-right"
-                      ><div class="flex items-center justify-end gap-1">
+                      />
+                    </TableCell>
+                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">
+                      {c.games?.length ?? 0}
+                    </TableCell>
+                    <TableCell class="px-4 py-2.5 text-right">
+                      <div class="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
                           class="text-kitsuden-green"
                           ariaLabel={tr("gamesView.saveCollection")}
-                          onclick={() => updateCollection(c)}><Save class="w-3.5 h-3.5" /></Button
-                        ><Button
+                          onclick={() => updateCollection(c)}
+                        >
+                          <Save class="w-3.5 h-3.5" />
+                        </Button><Button
                           variant="ghost"
                           size="icon"
                           ariaLabel={tr("common.cancel")}
                           onclick={() => (editingCollectionId = null)}
-                          ><X class="w-3.5 h-3.5" /></Button
                         >
-                      </div></TableCell
-                    >
+                          <X class="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   {:else}
-                    <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text"
-                      >{c.title}</TableCell
-                    >
+                    <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text">
+                      {c.title}
+                    </TableCell>
                     <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">/{c.slug}</TableCell>
-                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                      >{c.displayOrder ?? 0}</TableCell
-                    >
-                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                      >{c.games?.length ?? 0}</TableCell
-                    >
-                    <TableCell class="px-4 py-2.5 text-right"
-                      ><div class="flex items-center justify-end gap-1">
+                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">
+                      {c.displayOrder ?? 0}
+                    </TableCell>
+                    <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">
+                      {c.games?.length ?? 0}
+                    </TableCell>
+                    <TableCell class="px-4 py-2.5 text-right">
+                      <div class="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
                           ariaLabel={tr("common.edit")}
-                          onclick={() => startEditColl(c)}><Pencil class="w-3.5 h-3.5" /></Button
-                        ><Button
+                          onclick={() => startEditColl(c)}
+                        >
+                          <Pencil class="w-3.5 h-3.5" />
+                        </Button><Button
                           variant="danger-ghost"
                           size="icon"
                           ariaLabel={tr("common.delete")}
                           onclick={() => deleteCollection(c.id)}
-                          ><Trash2 class="w-3.5 h-3.5" /></Button
                         >
-                      </div></TableCell
-                    >
+                          <Trash2 class="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   {/if}
                 </TableRow>
               {/each}
@@ -940,92 +950,95 @@
       </div>
     {:else if activeTab === "platforms"}
       <div class="space-y-4 animate-fade-in">
-        <Card
-          ><CardHeader
-            ><CardTitle class="flex items-center gap-2">
+        <Card>
+          <CardHeader>
+            <CardTitle class="flex items-center gap-2">
               <Monitor class="w-4 h-4 text-kitsuden-accent" />
               {tr("gamesView.newPlatform")}
-            </CardTitle></CardHeader
-          ><CardContent>
+            </CardTitle>
+          </CardHeader><CardContent>
             <div class="flex flex-wrap items-end gap-3">
               <div class="flex-1 min-w-40">
-                <Field label={tr("common.name")}
-                  ><Input
+                <Field label={tr("common.name")}>
+                  <Input
                     id="plat-name"
                     placeholder={tr("gamesView.eGPlaystation5")}
                     value={newPlatformName}
                     oninput={(e: Event) => onPlatName((e.currentTarget as HTMLInputElement).value)}
-                  /></Field
-                >
+                  />
+                </Field>
               </div>
               <div class="flex-1 min-w-40">
-                <Field label={tr("common.slug")}
-                  ><Input
+                <Field label={tr("common.slug")}>
+                  <Input
                     id="plat-slug"
                     placeholder={tr("gamesView.eGPs5")}
                     bind:value={newPlatformSlug}
-                  /></Field
-                >
+                  />
+                </Field>
               </div>
               <div class="flex-1 min-w-40">
-                <Field label={tr("gamesView.manufacturer")}
-                  ><Input
+                <Field label={tr("gamesView.manufacturer")}>
+                  <Input
                     id="plat-mfr"
                     placeholder={tr("gamesView.eGSony")}
                     bind:value={newPlatformManufacturer}
-                  /></Field
-                >
+                  />
+                </Field>
               </div>
               <div class="w-24">
-                <Field label={tr("gamesView.short")}
-                  ><Input id="plat-short" placeholder="PS5" bind:value={newPlatformShort} /></Field
-                >
+                <Field label={tr("gamesView.short")}>
+                  <Input id="plat-short" placeholder="PS5" bind:value={newPlatformShort} />
+                </Field>
               </div>
-              <Button size="sm" onclick={createPlatform}
-                ><Plus class="w-4 h-4" /> {tr("gamesView.add")}</Button
-              >
-            </div></CardContent
-          ></Card
-        >
+              <Button size="sm" onclick={createPlatform}>
+                <Plus class="w-4 h-4" />
+                {tr("gamesView.add")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Table class="w-full text-sm">
-          <TableHeader
-            ><TableRow
+          <TableHeader>
+            <TableRow
               class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
-              ><TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
-                class="px-4 py-3">{tr("common.slug")}</TableHead
-              ><TableHead class="px-4 py-3">{tr("gamesView.manufacturer")}</TableHead><TableHead
-                class="px-4 py-3">{tr("gamesView.short")}</TableHead
-              ></TableRow
-            ></TableHeader
-          >
+            >
+              <TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
+                class="px-4 py-3"
+              >
+                {tr("common.slug")}
+              </TableHead><TableHead class="px-4 py-3">
+                {tr("gamesView.manufacturer")}
+              </TableHead><TableHead class="px-4 py-3">{tr("gamesView.short")}</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
-            {#if platformsLoading}<TableRow
-                ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
-                  ><span class="flex justify-center"><Spinner /></span></TableCell
-                ></TableRow
-              >
-            {:else if platforms.length === 0}<TableRow
-                ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
-                  ><EmptyState
-                    size="sm"
-                    level={null}
-                    title={tr("gamesView.noPlatformsYet")}
-                  /></TableCell
-                ></TableRow
-              >
+            {#if platformsLoading}<TableRow>
+                <TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle">
+                  <span class="flex justify-center"><Spinner /></span>
+                </TableCell>
+              </TableRow>
+            {:else if platforms.length === 0}<TableRow>
+                <TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle">
+                  <EmptyState size="sm" level={null} title={tr("gamesView.noPlatformsYet")} />
+                </TableCell>
+              </TableRow>
             {:else}
               {#each platforms as p (p.id)}
                 <TableRow
                   class="border-b border-kitsuden-border/50 hover:bg-kitsuden-muted/10 transition-colors"
-                  ><TableCell class="px-4 py-2.5 font-medium text-kitsuden-text">{p.name}</TableCell
-                  ><TableCell class="px-4 py-2.5 text-kitsuden-text-dim">/{p.slug}</TableCell
-                  ><TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                    >{p.manufacturer || "-"}</TableCell
-                  ><TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                    >{p.shortName || "-"}</TableCell
-                  ></TableRow
                 >
+                  <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text">
+                    {p.name}
+                  </TableCell><TableCell class="px-4 py-2.5 text-kitsuden-text-dim">
+                    /{p.slug}
+                  </TableCell><TableCell class="px-4 py-2.5 text-kitsuden-text-dim">
+                    {p.manufacturer || "-"}
+                  </TableCell><TableCell class="px-4 py-2.5 text-kitsuden-text-dim">
+                    {p.shortName || "-"}
+                  </TableCell>
+                </TableRow>
               {/each}
             {/if}
           </TableBody>
@@ -1033,80 +1046,82 @@
       </div>
     {:else if activeTab === "tags"}
       <div class="space-y-4 animate-fade-in">
-        <Card
-          ><CardHeader
-            ><CardTitle class="flex items-center gap-2">
+        <Card>
+          <CardHeader>
+            <CardTitle class="flex items-center gap-2">
               <Tag class="w-4 h-4 text-kitsuden-accent" />
               {tr("gamesView.newTag")}
-            </CardTitle></CardHeader
-          ><CardContent>
+            </CardTitle>
+          </CardHeader><CardContent>
             <div class="flex flex-wrap items-end gap-3">
               <div class="flex-1 min-w-40">
-                <Field label={tr("common.name")}
-                  ><Input
+                <Field label={tr("common.name")}>
+                  <Input
                     id="tag-name"
                     placeholder={tr("gamesView.eGRpg")}
                     value={newTagName}
                     oninput={(e: Event) => onTagName((e.currentTarget as HTMLInputElement).value)}
-                  /></Field
-                >
+                  />
+                </Field>
               </div>
               <div class="flex-1 min-w-40">
-                <Field label={tr("common.slug")}
-                  ><Input
+                <Field label={tr("common.slug")}>
+                  <Input
                     id="tag-slug"
                     placeholder={tr("gamesView.eGRpg2")}
                     bind:value={newTagSlug}
-                  /></Field
-                >
+                  />
+                </Field>
               </div>
               <div class="w-28">
-                <Field label={tr("gamesView.color")}
-                  ><Input id="tag-color" placeholder="#ff00ff" bind:value={newTagColor} /></Field
-                >
+                <Field label={tr("gamesView.color")}>
+                  <Input id="tag-color" placeholder="#ff00ff" bind:value={newTagColor} />
+                </Field>
               </div>
               <div class="flex-1 min-w-40">
-                <Field label={tr("common.category")}
-                  ><Input
+                <Field label={tr("common.category")}>
+                  <Input
                     id="tag-cat"
                     placeholder={tr("gamesView.eGGenre")}
                     bind:value={newTagCategory}
-                  /></Field
-                >
+                  />
+                </Field>
               </div>
-              <Button size="sm" onclick={createTag}
-                ><Plus class="w-4 h-4" /> {tr("gamesView.add")}</Button
-              >
-            </div></CardContent
-          ></Card
-        >
+              <Button size="sm" onclick={createTag}>
+                <Plus class="w-4 h-4" />
+                {tr("gamesView.add")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Table class="w-full text-sm">
-          <TableHeader
-            ><TableRow
+          <TableHeader>
+            <TableRow
               class="border-b border-kitsuden-border text-left text-xs text-kitsuden-subtle uppercase tracking-wider"
-              ><TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
-                class="px-4 py-3">{tr("common.slug")}</TableHead
-              ><TableHead class="px-4 py-3">{tr("gamesView.color")}</TableHead><TableHead
-                class="px-4 py-3">{tr("common.category")}</TableHead
-              ></TableRow
-            ></TableHeader
-          >
+            >
+              <TableHead class="px-4 py-3">{tr("common.name")}</TableHead><TableHead
+                class="px-4 py-3"
+              >
+                {tr("common.slug")}
+              </TableHead><TableHead class="px-4 py-3">{tr("gamesView.color")}</TableHead><TableHead
+                class="px-4 py-3"
+              >
+                {tr("common.category")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
-            {#if tagsLoading}<TableRow
-                ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
-                  ><span class="flex justify-center"><Spinner /></span></TableCell
-                ></TableRow
-              >
-            {:else if tags.length === 0}<TableRow
-                ><TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle"
-                  ><EmptyState
-                    size="sm"
-                    level={null}
-                    title={tr("gamesView.noTagsYet")}
-                  /></TableCell
-                ></TableRow
-              >
+            {#if tagsLoading}<TableRow>
+                <TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle">
+                  <span class="flex justify-center"><Spinner /></span>
+                </TableCell>
+              </TableRow>
+            {:else if tags.length === 0}<TableRow>
+                <TableCell colspan={4} class="px-4 py-12 text-center text-kitsuden-subtle">
+                  <EmptyState size="sm" level={null} title={tr("gamesView.noTagsYet")} />
+                </TableCell>
+              </TableRow>
             {:else}
               {#each tags as t (t.id)}
                 <TableRow
@@ -1114,17 +1129,17 @@
                 >
                   <TableCell class="px-4 py-2.5 font-medium text-kitsuden-text">{t.name}</TableCell>
                   <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">/{t.slug}</TableCell>
-                  <TableCell class="px-4 py-2.5"
-                    >{#if t.color}<span class="inline-flex items-center gap-1.5"
-                        ><span
+                  <TableCell class="px-4 py-2.5">
+                    {#if t.color}<span class="inline-flex items-center gap-1.5">
+                        <span
                           class="w-3 h-3 rounded-full border border-kitsuden-border"
                           style={`background-color:${t.color}`}
-                        ></span><span class="text-kitsuden-text-dim">{t.color}</span></span
-                      >{:else}<span class="text-kitsuden-text-dim">-</span>{/if}</TableCell
-                  >
-                  <TableCell class="px-4 py-2.5 text-kitsuden-text-dim"
-                    >{t.category || "-"}</TableCell
-                  >
+                        ></span><span class="text-kitsuden-text-dim">{t.color}</span>
+                      </span>{:else}<span class="text-kitsuden-text-dim">-</span>{/if}
+                  </TableCell>
+                  <TableCell class="px-4 py-2.5 text-kitsuden-text-dim">
+                    {t.category || "-"}
+                  </TableCell>
                 </TableRow>
               {/each}
             {/if}

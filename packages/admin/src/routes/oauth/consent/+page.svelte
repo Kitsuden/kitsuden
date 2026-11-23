@@ -173,13 +173,13 @@
             />
             <span>
               <span class="block text-sm text-kitsuden-text">{a.name}</span>
-              {#if a.description}<span class="block text-xs text-kitsuden-subtle"
-                  >{a.description}</span
-                >{/if}
+              {#if a.description}<span class="block text-xs text-kitsuden-subtle">
+                  {a.description}
+                </span>{/if}
               {#if a.sponsorUserId && a.sponsorUserId !== view.human.id}
-                <span class="block text-xs text-kitsuden-amber"
-                  >{t("oauthConsent.signerChanges")}</span
-                >
+                <span class="block text-xs text-kitsuden-amber">
+                  {t("oauthConsent.signerChanges")}
+                </span>
               {/if}
             </span>
           </label>
@@ -227,9 +227,9 @@
               <Checkbox checked={chosenItems.includes(s)} onchange={() => toggle(s)}>
                 <code class="text-xs">{s}</code>
                 {#if view.request.requestedScopes.includes(s)}
-                  <span class="text-xs uppercase tracking-wide text-kitsuden-accent"
-                    >{t("oauthConsent.requested")}</span
-                  >
+                  <span class="text-xs uppercase tracking-wide text-kitsuden-accent">
+                    {t("oauthConsent.requested")}
+                  </span>
                 {/if}
               </Checkbox>
             {/each}

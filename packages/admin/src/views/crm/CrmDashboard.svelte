@@ -447,15 +447,19 @@
       size="icon"
       ariaLabel={tr("common.edit")}
       title={tr("common.edit")}
-      onclick={onEdit}><Edit2 class="w-4 h-4" aria-hidden="true" /></Button
+      onclick={onEdit}
     >
+      <Edit2 class="w-4 h-4" aria-hidden="true" />
+    </Button>
     <Button
       variant="danger-ghost"
       size="icon"
       ariaLabel={tr("common.delete")}
       title={tr("common.delete")}
-      onclick={onDelete}><Trash2 class="w-4 h-4" aria-hidden="true" /></Button
+      onclick={onDelete}
     >
+      <Trash2 class="w-4 h-4" aria-hidden="true" />
+    </Button>
   </div>
 {/snippet}
 
@@ -472,16 +476,20 @@
         size="icon"
         ariaLabel={tr("crmDashboard.previousPage")}
         disabled={p.offset === 0}
-        onclick={() => pg(kind, -1)}><ChevronLeft class="w-4 h-4" aria-hidden="true" /></Button
+        onclick={() => pg(kind, -1)}
       >
+        <ChevronLeft class="w-4 h-4" aria-hidden="true" />
+      </Button>
       <span class="text-xs text-kitsuden-subtle">{pageLabel(p)}</span>
       <Button
         variant="secondary"
         size="icon"
         ariaLabel={tr("crmDashboard.nextPage")}
         disabled={p.offset + p.limit >= p.total}
-        onclick={() => pg(kind, 1)}><ChevronRight class="w-4 h-4" aria-hidden="true" /></Button
+        onclick={() => pg(kind, 1)}
       >
+        <ChevronRight class="w-4 h-4" aria-hidden="true" />
+      </Button>
     </div>
   </div>
 {/snippet}
@@ -514,9 +522,10 @@
   description={tr("crmDashboard.manageDealsContactsCompaniesAnd")}
 >
   {#snippet actions()}
-    <Button onclick={() => (dealSheet = null)}
-      ><Plus class="w-4 h-4" /> {tr("crmDashboard.addDeal")}</Button
-    >
+    <Button onclick={() => (dealSheet = null)}>
+      <Plus class="w-4 h-4" />
+      {tr("crmDashboard.addDeal")}
+    </Button>
   {/snippet}
 
   <div class="space-y-6 min-w-0">
@@ -595,9 +604,9 @@
         <Card class="min-w-0">
           <CardHeader>
             <CardTitle>{tr("crmDashboard.recentDeals")}</CardTitle>
-            <Button variant="ghost" size="sm" onclick={() => (activeTab = "deals")}
-              >{tr("crmDashboard.viewAll")}</Button
-            >
+            <Button variant="ghost" size="sm" onclick={() => (activeTab = "deals")}>
+              {tr("crmDashboard.viewAll")}
+            </Button>
           </CardHeader>
           <div class="divide-y divide-kitsuden-border">
             {#if overviewLoading}
@@ -633,9 +642,9 @@
         <Card class="min-w-0">
           <CardHeader>
             <CardTitle>{tr("crmDashboard.recentContacts")}</CardTitle>
-            <Button variant="ghost" size="sm" onclick={() => (activeTab = "contacts")}
-              >{tr("crmDashboard.viewAll")}</Button
-            >
+            <Button variant="ghost" size="sm" onclick={() => (activeTab = "contacts")}>
+              {tr("crmDashboard.viewAll")}
+            </Button>
           </CardHeader>
           <div class="divide-y divide-kitsuden-border">
             {#if overviewLoading}
@@ -675,15 +684,18 @@
           <CardHeader><CardTitle>{tr("crmDashboard.quickActions")}</CardTitle></CardHeader>
           <CardContent>
             <div class="flex flex-wrap gap-2">
-              <Button onclick={() => (dealSheet = null)}
-                ><Plus class="w-4 h-4" /> {tr("crmDashboard.addDeal")}</Button
-              >
-              <Button variant="secondary" onclick={() => goto(crmHref("contacts", "new"))}
-                ><Plus class="w-4 h-4" /> {tr("crmDashboard.addContact")}</Button
-              >
-              <Button variant="secondary" onclick={() => goto(crmHref("companies", "new"))}
-                ><Plus class="w-4 h-4" /> {tr("crmDashboard.addCompany")}</Button
-              >
+              <Button onclick={() => (dealSheet = null)}>
+                <Plus class="w-4 h-4" />
+                {tr("crmDashboard.addDeal")}
+              </Button>
+              <Button variant="secondary" onclick={() => goto(crmHref("contacts", "new"))}>
+                <Plus class="w-4 h-4" />
+                {tr("crmDashboard.addContact")}
+              </Button>
+              <Button variant="secondary" onclick={() => goto(crmHref("companies", "new"))}>
+                <Plus class="w-4 h-4" />
+                {tr("crmDashboard.addCompany")}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -733,10 +745,10 @@
             </Select>
           </div>
           {#if selDeals.size}
-            <Button variant="danger-ghost" onclick={bulkDelDeals}
-              ><Trash2 class="w-4 h-4" />
-              {tr("crmDashboard.delete", { size: selDeals.size })}</Button
-            >
+            <Button variant="danger-ghost" onclick={bulkDelDeals}>
+              <Trash2 class="w-4 h-4" />
+              {tr("crmDashboard.delete", { size: selDeals.size })}
+            </Button>
           {/if}
         </div>
 
@@ -838,10 +850,10 @@
             </Select>
           </div>
           {#if selContacts.size}
-            <Button variant="danger-ghost" onclick={bulkDelContacts}
-              ><Trash2 class="w-4 h-4" />
-              {tr("crmDashboard.delete", { size: selContacts.size })}</Button
-            >
+            <Button variant="danger-ghost" onclick={bulkDelContacts}>
+              <Trash2 class="w-4 h-4" />
+              {tr("crmDashboard.delete", { size: selContacts.size })}
+            </Button>
           {/if}
         </div>
 
@@ -880,9 +892,10 @@
                       () => (selContacts = toggleOne(selContacts, c.id))
                     )}
                   </TableCell>
-                  <TableCell class="text-kitsuden-text font-medium"
-                    >{c.firstName} {c.lastName}</TableCell
-                  >
+                  <TableCell class="text-kitsuden-text font-medium">
+                    {c.firstName}
+                    {c.lastName}
+                  </TableCell>
                   <TableCell class="text-kitsuden-subtle">{c.email}</TableCell>
                   <TableCell>{@render statusBadge(c.status, contactTone, "accent")}</TableCell>
                   <TableCell class="text-kitsuden-subtle">{c.company?.name || "—"}</TableCell>
@@ -934,10 +947,10 @@
             </Select>
           </div>
           {#if selCompanies.size}
-            <Button variant="danger-ghost" onclick={bulkDelCompanies}
-              ><Trash2 class="w-4 h-4" />
-              {tr("crmDashboard.delete", { size: selCompanies.size })}</Button
-            >
+            <Button variant="danger-ghost" onclick={bulkDelCompanies}>
+              <Trash2 class="w-4 h-4" />
+              {tr("crmDashboard.delete", { size: selCompanies.size })}
+            </Button>
           {/if}
         </div>
 

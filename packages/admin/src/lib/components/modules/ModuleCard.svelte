@@ -73,9 +73,9 @@
           <div class="module-card-deps">
             <span>{t("moduleCard.requires")}</span>
             {#each module.dependsOn as dep}
-              <Badge class="font-mono" variant={isDepEnabled(dep) ? "success" : "accent-2"}
-                >{dep}</Badge
-              >
+              <Badge class="font-mono" variant={isDepEnabled(dep) ? "success" : "accent-2"}>
+                {dep}
+              </Badge>
             {/each}
           </div>
         {/if}
@@ -109,21 +109,23 @@
 
     {#if module.enabled && !isThemeModule}
       <div transition:slide={{ duration: 200 }} class="module-card-foot">
-        <span class="module-card-on"
-          ><CheckCircle size={14} aria-hidden="true" /> {t("moduleCard.active")}</span
-        >
-        {#if module.tables?.length}<span class="font-mono"
-            >{module.tables.length}
-            {t("moduleCard.table")}{module.tables.length !== 1 ? "s" : ""}</span
-          >{/if}
+        <span class="module-card-on">
+          <CheckCircle size={14} aria-hidden="true" />
+          {t("moduleCard.active")}
+        </span>
+        {#if module.tables?.length}<span class="font-mono">
+            {module.tables.length}
+            {t("moduleCard.table")}{module.tables.length !== 1 ? "s" : ""}
+          </span>{/if}
       </div>
     {/if}
 
     {#if isThemeModule && module.enabled}
       <div transition:slide={{ duration: 200 }} class="module-card-foot">
-        <span class="module-card-theme"
-          ><Sparkles size={14} aria-hidden="true" /> {t("moduleCard.enabledByTheme")}</span
-        >
+        <span class="module-card-theme">
+          <Sparkles size={14} aria-hidden="true" />
+          {t("moduleCard.enabledByTheme")}
+        </span>
         {#if module.themeId}<span class="font-mono">{module.themeId}</span>{/if}
       </div>
     {/if}

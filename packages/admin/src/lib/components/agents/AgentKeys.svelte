@@ -200,12 +200,12 @@
               <TableCell class="px-3 py-2">
                 <Badge variant={STATUS[k.status].kind}>{STATUS[k.status].text()}</Badge>
               </TableCell>
-              <TableCell class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap"
-                >{date(k.createdAt)}</TableCell
-              >
-              <TableCell class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap"
-                >{k.lastUsedAt ? date(k.lastUsedAt) : t("agentKeys.never")}</TableCell
-              >
+              <TableCell class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap">
+                {date(k.createdAt)}
+              </TableCell>
+              <TableCell class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap">
+                {k.lastUsedAt ? date(k.lastUsedAt) : t("agentKeys.never")}
+              </TableCell>
               <TableCell class="px-3 py-2 text-kitsuden-text-dim whitespace-nowrap">
                 {k.revokedAt
                   ? date(k.revokedAt)
@@ -262,9 +262,9 @@
       />
     </Field>
     <div class="flex justify-end gap-3 pt-2">
-      <Button type="button" variant="secondary" onclick={() => (creating = false)}
-        >{t("common.cancel")}</Button
-      >
+      <Button type="button" variant="secondary" onclick={() => (creating = false)}>
+        {t("common.cancel")}
+      </Button>
       <Button type="submit" variant="primary" loading={busy}>{t("agentKeys.create")}</Button>
     </div>
   </form>

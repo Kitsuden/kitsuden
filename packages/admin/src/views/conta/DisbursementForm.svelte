@@ -120,9 +120,10 @@
 
 <div class="space-y-6 min-w-0">
   {#if onBack}
-    <Button variant="ghost" onclick={onBack}
-      ><ArrowLeft class="w-4 h-4" /> {t("common.back")}</Button
-    >
+    <Button variant="ghost" onclick={onBack}>
+      <ArrowLeft class="w-4 h-4" />
+      {t("common.back")}
+    </Button>
   {/if}
 
   {#if loading}
@@ -132,11 +133,11 @@
       {@const sb = statusBadge(disbursement.status)}
       <div class="flex flex-wrap items-center gap-3">
         <Badge variant={sb.variant}>{sb.label}</Badge>
-        <span class="text-sm text-kitsuden-text-dim"
-          >{disbursement.projectNumber ||
+        <span class="text-sm text-kitsuden-text-dim">
+          {disbursement.projectNumber ||
             projects.find((m) => m.id === disbursement.projectId)?.number ||
-            disbursement.projectId}</span
-        >
+            disbursement.projectId}
+        </span>
       </div>
     {/if}
 
@@ -185,19 +186,23 @@
       {#if disbursement}
         <div class="flex items-center gap-2">
           {#if disbursement.status === "pending"}
-            <Button variant="secondary" onclick={bill}
-              ><FileText class="w-4 h-4" /> {t("disbursementForm.bill")}</Button
-            >
+            <Button variant="secondary" onclick={bill}>
+              <FileText class="w-4 h-4" />
+              {t("disbursementForm.bill")}
+            </Button>
           {/if}
           {#if disbursement.status === "billed"}
-            <Button onclick={pay}><DollarSign class="w-4 h-4" /> {t("disbursementForm.pay")}</Button
-            >
+            <Button onclick={pay}>
+              <DollarSign class="w-4 h-4" />
+              {t("disbursementForm.pay")}
+            </Button>
           {/if}
         </div>
       {:else}
-        <Button onclick={save} loading={saving}
-          ><Save class="w-4 h-4" /> {t("common.create")}</Button
-        >
+        <Button onclick={save} loading={saving}>
+          <Save class="w-4 h-4" />
+          {t("common.create")}
+        </Button>
       {/if}
     </div>
   {/if}

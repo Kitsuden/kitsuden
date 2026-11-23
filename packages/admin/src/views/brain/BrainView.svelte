@@ -299,9 +299,9 @@
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span class="text-xs text-kitsuden-text"
-                      >{Math.round((note.importance ?? 0) * 100)}%</span
-                    >
+                    <span class="text-xs text-kitsuden-text">
+                      {Math.round((note.importance ?? 0) * 100)}%
+                    </span>
                   </TableCell>
                   <TableCell class="whitespace-nowrap">
                     {formatDate(note.updatedAt)}

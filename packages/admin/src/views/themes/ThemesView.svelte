@@ -193,9 +193,9 @@
                   class="w-6 h-6 rounded-sm"
                   style="background: rgb(var(--kitsuden-primary));"
                 ></div>
-                <span class="text-sm font-medium" style="color: rgb(var(--kitsuden-text));"
-                  >{tr("common.dashboard")}</span
-                >
+                <span class="text-sm font-medium" style="color: rgb(var(--kitsuden-text));">
+                  {tr("common.dashboard")}
+                </span>
               </div>
               <div class="flex gap-1.5">
                 <div
@@ -286,9 +286,9 @@
                     title={entry.value}
                   ></div>
                   <code class="text-xs text-kitsuden-text-dim font-mono truncate">{entry.key}</code>
-                  <span class="text-xs text-kitsuden-subtle ml-auto font-mono shrink-0"
-                    >{entry.value}</span
-                  >
+                  <span class="text-xs text-kitsuden-subtle ml-auto font-mono shrink-0">
+                    {entry.value}
+                  </span>
                 </div>
               {/each}
             </div>

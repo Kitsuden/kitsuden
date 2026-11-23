@@ -462,8 +462,11 @@
     </div>
 
     <p class="inbox-keys" data-testid="inbox-keys">
-      <span><Kbd keys={["j"]} size="sm" /> <Kbd keys={["k"]} size="sm" /> {t("inbox.keyMove")}</span
-      >
+      <span>
+        <Kbd keys={["j"]} size="sm" />
+        <Kbd keys={["k"]} size="sm" />
+        {t("inbox.keyMove")}
+      </span>
       <span><Kbd keys={["a"]} size="sm" /> {t("inbox.keyApprove")}</span>
       <span><Kbd keys={["r"]} size="sm" /> {t("inbox.keyReject")}</span>
     </p>
@@ -527,9 +530,9 @@
               data-proposal-id={p.id}
             >
               <span class="inbox-row-top">
-                <Badge variant={STATUS_VARIANT[p.status]} size="sm"
-                  >{STATUS_LABEL[p.status]()}</Badge
-                >
+                <Badge variant={STATUS_VARIANT[p.status]} size="sm">
+                  {STATUS_LABEL[p.status]()}
+                </Badge>
                 <code class="inbox-target">{p.method} {p.tool ?? p.path}</code>
               </span>
               <span class="inbox-row-meta">
@@ -579,9 +582,9 @@
           data-testid="proposal-card"
         >
           <p class="inbox-status">
-            <Badge variant={STATUS_VARIANT[s.status]} data-testid="detail-status"
-              >{STATUS_LABEL[s.status]()}</Badge
-            >
+            <Badge variant={STATUS_VARIANT[s.status]} data-testid="detail-status">
+              {STATUS_LABEL[s.status]()}
+            </Badge>
           </p>
 
           <div data-testid="detail-sponsor">
@@ -721,8 +724,10 @@
                                 <a
                                   href={e.source}
                                   target="_blank"
-                                  rel="noopener noreferrer nofollow">{e.source}</a
+                                  rel="noopener noreferrer nofollow"
                                 >
+                                  {e.source}
+                                </a>
                               {:else}
                                 <code>{e.source}</code>
                               {/if}
@@ -777,9 +782,9 @@
                         {t(`promotion.reason_${m}`)}
                       </li>{/each}
                   </ul>
-                  <a href="/approvals?tab=promotion&version={s.diff.versionId}"
-                    >{t("approvals.openPromotion")}</a
-                  >
+                  <a href="/approvals?tab=promotion&version={s.diff.versionId}">
+                    {t("approvals.openPromotion")}
+                  </a>
                 </div>
               {/if}
             {/if}

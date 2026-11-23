@@ -142,9 +142,9 @@
           }))}
         />
         <p class="text-xs">
-          <a href="/approvals" class="text-kitsuden-accent hover:underline"
-            >{t("agentApproval.inboxLink")}</a
-          >
+          <a href="/approvals" class="text-kitsuden-accent hover:underline">
+            {t("agentApproval.inboxLink")}
+          </a>
         </p>
         {#if isAdmin()}
           <SaveBar

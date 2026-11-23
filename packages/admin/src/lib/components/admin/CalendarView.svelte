@@ -190,9 +190,9 @@
     <EmptyState icon="alert" title={t("calendarView.incompatibleCalendarView")}>
       <p class="text-sm text-kitsuden-subtle mb-2">
         {t("calendarView.thisCalendarViewIsConfigured")}
-        <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded-sm text-kitsuden-accent"
-          >'{view.dateField}'</code
-        >{t("calendarView.butTheUnderlyingTableDoes")}
+        <code class="bg-kitsuden-bg px-1.5 py-0.5 rounded-sm text-kitsuden-accent">
+          '{view.dateField}'
+        </code>{t("calendarView.butTheUnderlyingTableDoes")}
       </p>
       <p class="text-xs text-kitsuden-text-dim">
         {t("calendarView.pleaseUpdateTheGrimoireConfig")}
@@ -259,15 +259,15 @@
     <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-kitsuden-text-dim">
       <span>{data.length} {t("calendarView.eventsTotal")}</span>
       <span>·</span>
-      <span
-        >{t("calendarView.dateField")}
-        <code class="text-kitsuden-accent">{view.dateField}</code></span
-      >
+      <span>
+        {t("calendarView.dateField")}
+        <code class="text-kitsuden-accent">{view.dateField}</code>
+      </span>
       <span>·</span>
-      <span
-        >{t("calendarView.titleField")}
-        <code class="text-kitsuden-accent">{view.titleField}</code></span
-      >
+      <span>
+        {t("calendarView.titleField")}
+        <code class="text-kitsuden-accent">{view.titleField}</code>
+      </span>
     </div>
   {/if}
 </div>

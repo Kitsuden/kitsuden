@@ -116,9 +116,9 @@
               <TableCell>{date(c.lastUsedAt)}</TableCell>
               <TableCell class="text-right">
                 {#if c.revokedAt}
-                  <Badge size="sm"
-                    >{t("oauthConnections.revokedAt", { date: date(c.revokedAt) })}</Badge
-                  >
+                  <Badge size="sm">
+                    {t("oauthConnections.revokedAt", { date: date(c.revokedAt) })}
+                  </Badge>
                 {:else}
                   <Button
                     variant="danger-ghost"

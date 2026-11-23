@@ -211,9 +211,9 @@
         {:else}
           <XCircle class="w-3.5 h-3.5 text-kitsuden-accent-2 shrink-0" />
         {/if}
-        <span class={check.pass ? "text-kitsuden-text-dim" : "text-kitsuden-accent-2"}
-          >{check.label}</span
-        >
+        <span class={check.pass ? "text-kitsuden-text-dim" : "text-kitsuden-accent-2"}>
+          {check.label}
+        </span>
       </div>
     {/each}
   </div>

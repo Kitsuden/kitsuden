@@ -587,9 +587,10 @@
             />
             {#if selectedIds.size > 0}
               <div class="flex items-center gap-2 ml-auto flex-wrap">
-                <span class="text-xs text-kitsuden-subtle"
-                  >{selectedIds.size} {tr("common.selected")}</span
-                >
+                <span class="text-xs text-kitsuden-subtle">
+                  {selectedIds.size}
+                  {tr("common.selected")}
+                </span>
                 <Button variant="secondary" size="sm" onclick={() => openAssignModal()}>
                   <Users class="w-3.5 h-3.5" />
                   {tr("academyView.assign")}
@@ -659,16 +660,16 @@
                           value={r.metrics.averageProgress}
                           label={tr("academyView.avgProgress")}
                         />
-                        <span class="text-xs text-kitsuden-subtle"
-                          >{fmtPct(r.metrics.averageProgress)}</span
-                        >
+                        <span class="text-xs text-kitsuden-subtle">
+                          {fmtPct(r.metrics.averageProgress)}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>{fmtPct(r.metrics.finishRate)}</TableCell>
                     <TableCell>{r.metrics.totalSurveys}</TableCell>
-                    <TableCell class="text-kitsuden-amber text-xs"
-                      >{fmtStar(r.metrics.averageSatisfaction)}</TableCell
-                    >
+                    <TableCell class="text-kitsuden-amber text-xs">
+                      {fmtStar(r.metrics.averageSatisfaction)}
+                    </TableCell>
                     <TableCell>
                       <div class="flex items-center gap-1">
                         <Button
@@ -677,24 +678,27 @@
                           ariaLabel={tr("academyView.viewStats")}
                           title={tr("academyView.viewStats")}
                           onclick={() => openDrawer(r)}
-                          ><Eye class="w-4 h-4" aria-hidden="true" /></Button
                         >
+                          <Eye class="w-4 h-4" aria-hidden="true" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           href={academyHref("grid-courses", r.course.id)}
                           ariaLabel={tr("common.edit")}
                           title={tr("common.edit")}
-                          ><Edit2 class="w-4 h-4" aria-hidden="true" /></Button
                         >
+                          <Edit2 class="w-4 h-4" aria-hidden="true" />
+                        </Button>
                         <Button
                           variant="danger-ghost"
                           size="icon"
                           ariaLabel={tr("common.delete")}
                           title={tr("common.delete")}
                           onclick={() => promptDelete([r.course.id])}
-                          ><Trash2 class="w-4 h-4" aria-hidden="true" /></Button
                         >
+                          <Trash2 class="w-4 h-4" aria-hidden="true" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -705,11 +709,11 @@
             <!-- Pagination -->
             {#if totalPages > 1}
               <div class="flex flex-wrap items-center justify-between gap-2">
-                <span class="text-xs text-kitsuden-subtle"
-                  >{filteredCourses.length}
+                <span class="text-xs text-kitsuden-subtle">
+                  {filteredCourses.length}
                   {tr("academyView.totalPageOf", { currentPage })}
-                  {totalPages}</span
-                >
+                  {totalPages}
+                </span>
                 <div class="flex items-center gap-2">
                   <Button
                     variant="secondary"
@@ -717,34 +721,39 @@
                     ariaLabel={tr("academyView.firstPage")}
                     disabled={currentPage === 1}
                     onclick={() => (currentPage = 1)}
-                    ><ChevronFirst class="w-4 h-4" aria-hidden="true" /></Button
                   >
+                    <ChevronFirst class="w-4 h-4" aria-hidden="true" />
+                  </Button>
                   <Button
                     variant="secondary"
                     size="icon"
                     ariaLabel={tr("academyView.previousPage")}
                     disabled={currentPage === 1}
                     onclick={() => currentPage--}
-                    ><ChevronLeft class="w-4 h-4" aria-hidden="true" /></Button
                   >
-                  <span class="text-xs text-kitsuden-subtle px-2">{currentPage} / {totalPages}</span
-                  >
+                    <ChevronLeft class="w-4 h-4" aria-hidden="true" />
+                  </Button>
+                  <span class="text-xs text-kitsuden-subtle px-2">
+                    {currentPage} / {totalPages}
+                  </span>
                   <Button
                     variant="secondary"
                     size="icon"
                     ariaLabel={tr("academyView.nextPage")}
                     disabled={currentPage === totalPages}
                     onclick={() => currentPage++}
-                    ><ChevronRight class="w-4 h-4" aria-hidden="true" /></Button
                   >
+                    <ChevronRight class="w-4 h-4" aria-hidden="true" />
+                  </Button>
                   <Button
                     variant="secondary"
                     size="icon"
                     ariaLabel={tr("academyView.lastPage")}
                     disabled={currentPage === totalPages}
                     onclick={() => (currentPage = totalPages)}
-                    ><ChevronLast class="w-4 h-4" aria-hidden="true" /></Button
                   >
+                    <ChevronLast class="w-4 h-4" aria-hidden="true" />
+                  </Button>
                 </div>
               </div>
             {/if}
@@ -777,9 +786,9 @@
                 <TableCell class="text-kitsuden-subtle">{lp.category || "—"}</TableCell>
                 <TableCell>{lp.totalCourses}</TableCell>
                 <TableCell>
-                  <Badge variant={lp.sequential ? "success" : "secondary"}
-                    >{lp.sequential ? tr("common.yes") : tr("common.no")}</Badge
-                  >
+                  <Badge variant={lp.sequential ? "success" : "secondary"}>
+                    {lp.sequential ? tr("common.yes") : tr("common.no")}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <div class="flex items-center gap-1">
@@ -788,16 +797,19 @@
                       size="icon"
                       href={academyHref("grid-learning-paths", lp.id)}
                       ariaLabel={tr("common.edit")}
-                      title={tr("common.edit")}><Edit2 class="w-4 h-4" aria-hidden="true" /></Button
+                      title={tr("common.edit")}
                     >
+                      <Edit2 class="w-4 h-4" aria-hidden="true" />
+                    </Button>
                     <Button
                       variant="danger-ghost"
                       size="icon"
                       ariaLabel={tr("common.delete")}
                       title={tr("common.delete")}
                       onclick={() => deletePath(lp.id)}
-                      ><Trash2 class="w-4 h-4" aria-hidden="true" /></Button
                     >
+                      <Trash2 class="w-4 h-4" aria-hidden="true" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -846,16 +858,19 @@
                       size="icon"
                       href={academyHref("grid-groups", g.id)}
                       ariaLabel={tr("common.edit")}
-                      title={tr("common.edit")}><Edit2 class="w-4 h-4" aria-hidden="true" /></Button
+                      title={tr("common.edit")}
                     >
+                      <Edit2 class="w-4 h-4" aria-hidden="true" />
+                    </Button>
                     <Button
                       variant="danger-ghost"
                       size="icon"
                       ariaLabel={tr("common.delete")}
                       title={tr("common.delete")}
                       onclick={() => deleteGroup(g.id)}
-                      ><Trash2 class="w-4 h-4" aria-hidden="true" /></Button
                     >
+                      <Trash2 class="w-4 h-4" aria-hidden="true" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -887,16 +902,16 @@
             {#each assignments as a}
               <TableRow>
                 <TableCell class="font-mono text-xs text-kitsuden-text">{a.courseId}</TableCell>
-                <TableCell class="font-mono text-xs text-kitsuden-subtle"
-                  >{a.userId || "—"}</TableCell
-                >
-                <TableCell class="font-mono text-xs text-kitsuden-subtle"
-                  >{a.groupId || "—"}</TableCell
-                >
+                <TableCell class="font-mono text-xs text-kitsuden-subtle">
+                  {a.userId || "—"}
+                </TableCell>
+                <TableCell class="font-mono text-xs text-kitsuden-subtle">
+                  {a.groupId || "—"}
+                </TableCell>
                 <TableCell>{a.method || "—"}</TableCell>
-                <TableCell class="text-kitsuden-subtle"
-                  >{a.date ? new Date(a.date).toLocaleDateString(localeFormat()) : "—"}</TableCell
-                >
+                <TableCell class="text-kitsuden-subtle">
+                  {a.date ? new Date(a.date).toLocaleDateString(localeFormat()) : "—"}
+                </TableCell>
               </TableRow>
             {:else}
               <TableRow>
@@ -999,12 +1014,13 @@
     onClose={() => (showDeleteModal = false)}
   >
     {#snippet footer()}
-      <Button variant="secondary" onclick={() => (showDeleteModal = false)}
-        >{tr("common.cancel")}</Button
-      >
-      <Button variant="danger" onclick={confirmDelete}
-        ><Trash2 class="w-4 h-4" /> {tr("common.delete")}</Button
-      >
+      <Button variant="secondary" onclick={() => (showDeleteModal = false)}>
+        {tr("common.cancel")}
+      </Button>
+      <Button variant="danger" onclick={confirmDelete}>
+        <Trash2 class="w-4 h-4" />
+        {tr("common.delete")}
+      </Button>
     {/snippet}
   </Dialog>
 
@@ -1036,9 +1052,9 @@
       </Field>
     </div>
     {#snippet footer()}
-      <Button variant="secondary" onclick={() => (showAssignModal = false)}
-        >{tr("common.cancel")}</Button
-      >
+      <Button variant="secondary" onclick={() => (showAssignModal = false)}>
+        {tr("common.cancel")}
+      </Button>
       <Button onclick={submitAssign} loading={assignLoading}>
         <Users class="w-4 h-4" />
         {tr("academyView.assign")}

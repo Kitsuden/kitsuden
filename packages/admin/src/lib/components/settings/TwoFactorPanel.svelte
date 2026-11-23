@@ -165,9 +165,9 @@
         <p class="text-sm text-kitsuden-text">{t("twoFactor.scanOrType")}</p>
         <p class="text-xs text-kitsuden-subtle">{t("twoFactor.secretKey")}</p>
         <code class="block break-all font-mono text-sm text-kitsuden-text">{enrolment.key}</code>
-        <a class="text-sm text-kitsuden-accent underline" href={enrolment.uri}
-          >{t("twoFactor.openInApp")}</a
-        >
+        <a class="text-sm text-kitsuden-accent underline" href={enrolment.uri}>
+          {t("twoFactor.openInApp")}
+        </a>
       </div>
 
       <form class="max-w-md space-y-3" onsubmit={confirm}>

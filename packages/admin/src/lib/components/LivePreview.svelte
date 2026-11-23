@@ -250,9 +250,9 @@
       consuming the API with its styles, this becomes a preview of the
       page — and then, and not before, the label can promise it again.
     -->
-    <span class="text-xs font-medium text-kitsuden-subtle uppercase tracking-wider"
-      >{t("common.contentPreview")}</span
-    >
+    <span class="text-xs font-medium text-kitsuden-subtle uppercase tracking-wider">
+      {t("common.contentPreview")}
+    </span>
     <div class="flex items-center gap-1">
       <Button
         variant={viewport === "desktop" ? "soft" : "ghost"}
