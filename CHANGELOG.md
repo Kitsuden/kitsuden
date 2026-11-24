@@ -296,6 +296,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   The repository keeps a fixed copy in `packages/deepmerge`, and a pnpm override points every
   `deepmerge` at it.
 
+### Removed
+
+- **Breaking (engine API):** `s3`, `BUCKET` and `PUBLIC_URL` are no longer exported by `@kitsuden/engine` or
+  `apps/api/src/services/storage`, and `getS3Client` is internal to `storage.ts`. A raw client plus the bucket
+  name let a kon bypass the bucket choice and write a `private/` key to the public bucket. Kons store files
+  through `ctx.storage` (or the exported `uploadFile`, `uploadBuffer`, `deleteFile`, `fileExists`, `getFile`,
+  `generateSignedDownloadUrl`, which all pick the bucket). No kon used them. `tests/unit/storage-single-seam.test.ts`
+  fails if they come back or a kon imports `@aws-sdk/*` or `lib/storage` directly.
+- `createStorageAdapter` and its four adapter classes in the media kon: a second storage implementation that
+  nothing called, with none of the public/private rules (its `getPublicUrl` gave a public address for
+  `private/` keys). `testStorageConnection`, the settings-form probe, stays.
+
 ### Changed
 
 - `agent_audit_logs` is append-only (migration `0088`): `UPDATE`, `DELETE` and `TRUNCATE` are

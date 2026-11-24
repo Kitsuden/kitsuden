@@ -7,7 +7,4 @@ export {
   getFile,
   generateSignedDownloadUrl,
   generateS3Key,
-  s3,
-  BUCKET,
-  PUBLIC_URL,
 } from "../lib/storage";

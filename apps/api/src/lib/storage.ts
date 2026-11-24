@@ -20,10 +20,12 @@ import { isPrivateKey, s3PublicUrl } from "./store";
 
 // ── Configuration ────────────────────────────────────────────────
 
-export const REGION = process.env.S3_REGION || "us-east-1";
-export const ENDPOINT = process.env.S3_ENDPOINT || "http://localhost:9000";
-export const BUCKET = process.env.S3_BUCKET || "kitsuden-media";
-export const PUBLIC_URL = process.env.S3_PUBLIC_URL || "http://localhost:9000";
+// Not exported, and neither is the client: everything goes through the functions below, which pick the
+// bucket with `bucketFor`. A raw client plus `BUCKET` in a kon's hands was a way around that choice (a
+// `private/` key written to the public bucket); `tests/unit/storage-single-seam.test.ts` keeps it closed.
+const REGION = process.env.S3_REGION || "us-east-1";
+const ENDPOINT = process.env.S3_ENDPOINT || "http://localhost:9000";
+const BUCKET = process.env.S3_BUCKET || "kitsuden-media";
 
 /**
  * Bucket for `private/…` keys. Empty (the default): one bucket holds everything, and only its policy keeps
@@ -60,9 +62,9 @@ let _s3: S3Client | null = null;
 
 /**
  * Lazy S3 client. Credentials are only required when storage provider is s3/minio.
- * No hardcoded secrets.
+ * No hardcoded secrets. Internal to this module (see `BUCKET` above).
  */
-export function getS3Client(): S3Client {
+function getS3Client(): S3Client {
   if (!_s3) {
     if (USES_S3_STORAGE) {
       requireEnv("S3_ACCESS_KEY");
@@ -89,16 +91,6 @@ export function getS3Client(): S3Client {
   }
   return _s3;
 }
-
-// Backwards-compatible export for code that imports `s3` directly.
-// ⚠️ This will throw on first access if S3 credentials are missing and storage is s3/minio.
-export const s3 = new Proxy({} as S3Client, {
-  get(_target, prop) {
-    const client = getS3Client();
-    const value = client[prop as keyof S3Client];
-    return typeof value === "function" ? value.bind(client) : value;
-  },
-});
 
 // ── Helpers ──────────────────────────────────────────────────────
 

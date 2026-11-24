@@ -27,7 +27,7 @@ export type {
   MediaKonConfig,
 } from "./config.schema";
 export { defaultMediaConfig, validateMediaConfig, storageProviders } from "./config.schema";
-export { createStorageAdapter, testStorageConnection } from "./storage.adapter";
+export { testStorageConnection } from "./storage.adapter";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HOOKS
