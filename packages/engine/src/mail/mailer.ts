@@ -33,6 +33,13 @@ export interface MailerOptions {
   driver?: MailDriver;
   /** Default sender if the Mailable does not specify one. */
   from?: Address;
+  /**
+   * Default reply-to if the Mailable does not specify one (`MAIL_REPLY_TO`). Precedence: the Mailable's
+   * `replyTo` → this → none. Set here, at the one place every message is rendered, so the core's own
+   * mail (verification, password recovery, magic link) and every kon's mail inherit it without each
+   * one setting it.
+   */
+  replyTo?: Address;
   appName?: string;
   appUrl?: string;
   defaultLocale?: string;
@@ -48,13 +55,32 @@ export interface SendResult {
   message: SentMessage;
 }
 
+/**
+ * `MAIL_REPLY_TO` as the Mailer's default. Empty is "none" (compose passes `${MAIL_REPLY_TO:-}`, and an
+ * empty string would otherwise count as set). An invalid value is dropped with a warning instead of being
+ * used: `send` refuses any message whose reply-to is invalid, so a typo here would stop EVERY email,
+ * password recovery included. In public mode `lib/public-config.ts` refuses to start with it instead.
+ */
+export function defaultReplyTo(value: string | undefined): string | undefined {
+  const v = value?.trim();
+  if (!v) return undefined;
+  if (!isValidAddress(v)) {
+    console.warn(`  ⚠️  MAIL_REPLY_TO is not a valid address and is ignored: ${JSON.stringify(v)}`);
+    return undefined;
+  }
+  return v;
+}
+
 const asArray = (v: Address | Address[] | undefined): Address[] =>
   v === undefined ? [] : Array.isArray(v) ? v : [v];
 
 export class Mailer {
   private mailables = new Map<string, Mailable<any>>();
   private driver: MailDriver;
-  private options: Required<Omit<MailerOptions, "driver" | "from">> & { from: Address };
+  private options: Required<Omit<MailerOptions, "driver" | "from" | "replyTo">> & {
+    from: Address;
+    replyTo?: Address;
+  };
   /** Real driver, kept while `fake()` is active. */
   private realDriver: MailDriver | null = null;
 
@@ -62,6 +88,7 @@ export class Mailer {
     this.driver = options.driver ?? driverFromEnv();
     this.options = {
       from: options.from ?? process.env.MAIL_FROM ?? "noreply@localhost",
+      replyTo: options.replyTo ?? defaultReplyTo(process.env.MAIL_REPLY_TO),
       appName: options.appName ?? process.env.APP_NAME ?? "Kitsuden",
       appUrl: options.appUrl ?? process.env.APP_URL ?? "http://localhost:3000",
       defaultLocale: options.defaultLocale ?? process.env.MAIL_LOCALE ?? "en",
@@ -157,7 +184,10 @@ export class Mailer {
       from: formatAddress(envelope.from ?? this.options.from),
       cc: asArray(envelope.cc).map(formatAddress),
       bcc: asArray(envelope.bcc).map(formatAddress),
-      replyTo: envelope.replyTo ? formatAddress(envelope.replyTo) : undefined,
+      replyTo: (() => {
+        const replyTo = envelope.replyTo ?? this.options.replyTo;
+        return replyTo ? formatAddress(replyTo) : undefined;
+      })(),
       subject: envelope.subject,
       html,
       text,

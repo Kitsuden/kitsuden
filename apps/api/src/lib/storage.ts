@@ -16,12 +16,33 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+import { isPrivateKey, s3PublicUrl } from "./store";
+
 // ── Configuration ────────────────────────────────────────────────
 
-export const REGION = process.env.S3_REGION || "us-east-1";
-export const ENDPOINT = process.env.S3_ENDPOINT || "http://localhost:9000";
-export const BUCKET = process.env.S3_BUCKET || "kitsuden-media";
-export const PUBLIC_URL = process.env.S3_PUBLIC_URL || "http://localhost:9000";
+// Not exported, and neither is the client: everything goes through the functions below, which pick the
+// bucket with `bucketFor`. A raw client plus `BUCKET` in a kon's hands was a way around that choice (a
+// `private/` key written to the public bucket); `tests/unit/storage-single-seam.test.ts` keeps it closed.
+const REGION = process.env.S3_REGION || "us-east-1";
+const ENDPOINT = process.env.S3_ENDPOINT || "http://localhost:9000";
+const BUCKET = process.env.S3_BUCKET || "kitsuden-media";
+
+/**
+ * Bucket for `private/…` keys. Empty (the default): one bucket holds everything, and only its policy keeps
+ * `private/` from being read unsigned (docs/kons/storage.md).
+ *
+ * Set, private keys live in a bucket of their own that has no public access at all and is read only through
+ * presigned URLs, while `S3_BUCKET` stays the public one (with a custom domain on Cloudflare R2, for
+ * example). That is safer than a prefix rule on a shared bucket: a mistake in the rule exposes `private/`,
+ * a bucket with no public access has no rule to get wrong. The choice is `isPrivateKey`, the same check that
+ * decides when an address must be signed, so a key never lands in one bucket and is looked for in the other.
+ */
+export const PRIVATE_BUCKET = (process.env.S3_PRIVATE_BUCKET || "").trim();
+
+/** The bucket a key lives in: the private one for `private/…` when `S3_PRIVATE_BUCKET` is set. */
+export function bucketFor(s3Key: string): string {
+  return PRIVATE_BUCKET && isPrivateKey(s3Key) ? PRIVATE_BUCKET : BUCKET;
+}
 
 const DEFAULT_STORAGE_PROVIDER = process.env.DEFAULT_STORAGE_PROVIDER || "local";
 const USES_S3_STORAGE = ["s3", "minio"].includes(DEFAULT_STORAGE_PROVIDER);
@@ -41,9 +62,9 @@ let _s3: S3Client | null = null;
 
 /**
  * Lazy S3 client. Credentials are only required when storage provider is s3/minio.
- * No hardcoded secrets.
+ * No hardcoded secrets. Internal to this module (see `BUCKET` above).
  */
-export function getS3Client(): S3Client {
+function getS3Client(): S3Client {
   if (!_s3) {
     if (USES_S3_STORAGE) {
       requireEnv("S3_ACCESS_KEY");
@@ -71,16 +92,6 @@ export function getS3Client(): S3Client {
   return _s3;
 }
 
-// Backwards-compatible export for code that imports `s3` directly.
-// ⚠️ This will throw on first access if S3 credentials are missing and storage is s3/minio.
-export const s3 = new Proxy({} as S3Client, {
-  get(_target, prop) {
-    const client = getS3Client();
-    const value = client[prop as keyof S3Client];
-    return typeof value === "function" ? value.bind(client) : value;
-  },
-});
-
 // ── Helpers ──────────────────────────────────────────────────────
 
 export function generateS3Key(filename: string, prefix = "public"): string {
@@ -92,8 +103,9 @@ export function generateS3Key(filename: string, prefix = "public"): string {
   return `${prefix}/${year}/${month}/${id}-${sanitized}`;
 }
 
+/** Same address `publicUrlOf` gives later (honours `S3_PUBLIC_URL_STYLE`). */
 function buildPublicUrl(s3Key: string): string {
-  return `${PUBLIC_URL}/${BUCKET}/${s3Key}`;
+  return s3PublicUrl(s3Key);
 }
 
 function assertS3Enabled(operation: string): void {
@@ -119,7 +131,7 @@ export async function uploadFile(
 
   await client.send(
     new PutObjectCommand({
-      Bucket: BUCKET,
+      Bucket: bucketFor(s3Key),
       Key: s3Key,
       Body: buffer,
       ContentType: mimeType,
@@ -147,7 +159,7 @@ export async function uploadBuffer(
 
   await client.send(
     new PutObjectCommand({
-      Bucket: BUCKET,
+      Bucket: bucketFor(s3Key),
       Key: s3Key,
       Body: buffer,
       ContentType: mimeType,
@@ -167,7 +179,7 @@ export async function deleteFile(s3Key: string): Promise<void> {
   const client = getS3Client();
   await client.send(
     new DeleteObjectCommand({
-      Bucket: BUCKET,
+      Bucket: bucketFor(s3Key),
       Key: s3Key,
     })
   );
@@ -177,7 +189,7 @@ export async function fileExists(s3Key: string): Promise<boolean> {
   assertS3Enabled("fileExists");
   const client = getS3Client();
   try {
-    await client.send(new HeadObjectCommand({ Bucket: BUCKET, Key: s3Key }));
+    await client.send(new HeadObjectCommand({ Bucket: bucketFor(s3Key), Key: s3Key }));
     return true;
   } catch {
     return false;
@@ -188,7 +200,9 @@ export async function getFile(s3Key: string): Promise<ReadableStream | null> {
   assertS3Enabled("getFile");
   const client = getS3Client();
   try {
-    const response = await client.send(new GetObjectCommand({ Bucket: BUCKET, Key: s3Key }));
+    const response = await client.send(
+      new GetObjectCommand({ Bucket: bucketFor(s3Key), Key: s3Key })
+    );
     return response.Body as unknown as ReadableStream;
   } catch {
     return null;
@@ -200,7 +214,9 @@ export async function getFileBuffer(s3Key: string): Promise<Buffer | null> {
   assertS3Enabled("getFileBuffer");
   const client = getS3Client();
   try {
-    const response = await client.send(new GetObjectCommand({ Bucket: BUCKET, Key: s3Key }));
+    const response = await client.send(
+      new GetObjectCommand({ Bucket: bucketFor(s3Key), Key: s3Key })
+    );
     if (!response.Body) return null;
     return Buffer.from(await response.Body.transformToByteArray());
   } catch (err) {
@@ -214,11 +230,13 @@ export async function getFileBuffer(s3Key: string): Promise<Buffer | null> {
 export async function listKeys(prefix: string): Promise<string[]> {
   assertS3Enabled("listKeys");
   const client = getS3Client();
+  // A prefix under `private/` is listed in the private bucket; any other prefix in the public one.
+  const bucket = bucketFor(prefix);
   const keys: string[] = [];
   let token: string | undefined;
   do {
     const r = await client.send(
-      new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token })
+      new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token })
     );
     for (const o of r.Contents ?? []) if (o.Key) keys.push(o.Key);
     token = r.IsTruncated ? r.NextContinuationToken : undefined;
@@ -236,6 +254,6 @@ export async function listKeys(prefix: string): Promise<string[]> {
 export async function generateSignedDownloadUrl(s3Key: string, expiresIn = 3600): Promise<string> {
   assertS3Enabled("generateSignedDownloadUrl");
   const clampedExpiry = Math.min(Math.max(expiresIn, 60), 86400);
-  const command = new GetObjectCommand({ Bucket: BUCKET, Key: s3Key });
+  const command = new GetObjectCommand({ Bucket: bucketFor(s3Key), Key: s3Key });
   return getSignedUrl(getS3Client(), command, { expiresIn: clampedExpiry });
 }

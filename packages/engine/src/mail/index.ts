@@ -46,4 +46,4 @@ export {
   type LayoutOptions,
 } from "./templates";
 
-export { Mailer, mail, type MailerOptions, type SendResult } from "./mailer";
+export { Mailer, mail, defaultReplyTo, type MailerOptions, type SendResult } from "./mailer";

@@ -9,6 +9,20 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A separate bucket for private files** (`S3_PRIVATE_BUCKET`, [docs/kons/storage.md](docs/kons/storage.md)):
+  with it set, every `private/…` key is written, read, listed, signed and deleted in a bucket with no public
+  access, chosen by the same normalized `isPrivateKey` check that decides when an address is signed, and
+  `S3_BUCKET` holds only public files (a Cloudflare R2 bucket with a custom domain, say). No per-prefix
+  policy left to get wrong. `GET /health` checks both buckets. Empty, nothing changes.
+- `MAIL_REPLY_TO`: where replies go when a message does not set its own (`MAIL_FROM` is usually a noreply).
+  The Mailer applies it where every message is rendered, so the core's own mail (verification, password
+  recovery, magic link) and every kon's mail inherit it; a message's own `replyTo` wins. In public mode an
+  invalid value aborts the start; otherwise it is ignored with a warning, since an invalid reply-to would
+  make every send fail.
+- `S3_PUBLIC_URL_STYLE=domain` builds public file addresses as `S3_PUBLIC_URL/<key>`, for a host that is the
+  bucket (a Cloudflare R2 custom domain or `r2.dev` address, a CDN). The default `path`
+  (`S3_PUBLIC_URL/<bucket>/<key>`) is unchanged. The address an upload returns and `ctx.storage.publicUrl`
+  are now built by one function, so they cannot disagree.
 - **Deprecating an operation** ([docs/api-contract.md](docs/api-contract.md#deprecation-policy)):
   `deprecated: { since, sunset, use? }` in `defineOperation` publishes `deprecated` + `x-sunset`
   (what oasdiff reads), sends `Deprecation`/`Sunset` headers (RFC 9745, RFC 8594) on every response,
@@ -281,6 +295,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Dependencies: `deepmerge` has no release that fixes GHSA-gcqx-w48m-w2h4 (prototype poisoning).
   The repository keeps a fixed copy in `packages/deepmerge`, and a pnpm override points every
   `deepmerge` at it.
+
+### Removed
+
+- **Breaking (engine API):** `s3`, `BUCKET` and `PUBLIC_URL` are no longer exported by `@kitsuden/engine` or
+  `apps/api/src/services/storage`, and `getS3Client` is internal to `storage.ts`. A raw client plus the bucket
+  name let a kon bypass the bucket choice and write a `private/` key to the public bucket. Kons store files
+  through `ctx.storage` (or the exported `uploadFile`, `uploadBuffer`, `deleteFile`, `fileExists`, `getFile`,
+  `generateSignedDownloadUrl`, which all pick the bucket). No kon used them. `tests/unit/storage-single-seam.test.ts`
+  fails if they come back or a kon imports `@aws-sdk/*` or `lib/storage` directly.
+- `createStorageAdapter` and its four adapter classes in the media kon: a second storage implementation that
+  nothing called, with none of the public/private rules (its `getPublicUrl` gave a public address for
+  `private/` keys). `testStorageConnection`, the settings-form probe, stays.
 
 ### Changed
 

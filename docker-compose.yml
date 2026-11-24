@@ -244,12 +244,16 @@ services:
       # SeaweedFS/S3 (used if DEFAULT_STORAGE_PROVIDER=s3; `minio` is still accepted)
       - S3_ENDPOINT=http://${KITSUDEN_INSTANCE:-kitsuden}_seaweedfs_prod:8333
       - S3_PUBLIC_URL=${S3_PUBLIC_URL:-http://localhost:9000}
+      # path = S3_PUBLIC_URL/<bucket>/<key>; domain = S3_PUBLIC_URL/<key> (a Cloudflare R2 custom domain)
+      - S3_PUBLIC_URL_STYLE=${S3_PUBLIC_URL_STYLE:-path}
       # ⚠️ REQUIRED only when DEFAULT_STORAGE_PROVIDER=minio or s3 (optional for local storage)
       # NOTE: the s3/full/dev profile does require them (see kitsuden_seaweedfs), here they are optional
       # so that `docker compose up -d` works with the default local storage.
       - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
       - S3_SECRET_KEY=${S3_SECRET_KEY:-}
       - S3_BUCKET=${S3_BUCKET:-kitsuden-media}
+      # Optional bucket with no public access for private/ keys (external S3 / R2 only)
+      - S3_PRIVATE_BUCKET=${S3_PRIVATE_BUCKET:-}
       - S3_REGION=${S3_REGION:-us-east-1}
       # Local Storage (used if DEFAULT_STORAGE_PROVIDER=local)
       - STORAGE_LOCAL_PATH=/app/data
@@ -316,6 +320,8 @@ services:
       # as defined, so mail would go out with no sender.
       - MAIL_DRIVER=${MAIL_DRIVER:-}
       - MAIL_FROM=${MAIL_FROM:-noreply@localhost}
+      # Where replies go when a message does not set its own reply-to. Empty = none.
+      - MAIL_REPLY_TO=${MAIL_REPLY_TO:-}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}

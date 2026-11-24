@@ -38,6 +38,19 @@ describe("public configuration", () => {
     expect(publicConfigProblems(GOOD)).toEqual([]);
   });
 
+  it("MAIL_REPLY_TO is optional, and when set it must be one valid address", () => {
+    expect(variables({ ...GOOD, MAIL_REPLY_TO: "" })).toEqual([]);
+    expect(variables({ ...GOOD, MAIL_REPLY_TO: "Support <support@example.com>" })).toEqual([]);
+    expect(variables({ ...GOOD, MAIL_REPLY_TO: "support@example.com" })).toEqual([]);
+    for (const bad of [
+      "support",
+      "a@b.com, c@d.com",
+      "a@b.com" + String.fromCharCode(10) + "Bcc: x@y.z",
+    ]) {
+      expect(variables({ ...GOOD, MAIL_REPLY_TO: bad }), bad).toEqual(["MAIL_REPLY_TO"]);
+    }
+  });
+
   it("the compose default values do NOT pass", () => {
     /**
      * It is exactly what had been deployed: if this passed, the startup

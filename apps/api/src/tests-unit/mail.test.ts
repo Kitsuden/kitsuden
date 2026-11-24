@@ -11,6 +11,7 @@ import { existsSync } from "node:fs";
 
 import {
   Mailer,
+  defaultReplyTo,
   layout,
   heading,
   paragraph,
@@ -307,4 +308,56 @@ describe("a kon provides its own emails (plugin requirement)", () => {
       expect(es.subject).toBe("Trato ganado: ACME annual");
     }
   );
+});
+
+describe("default reply-to (MAIL_REPLY_TO)", () => {
+  const mailerWith = (replyTo?: string) =>
+    new Mailer({ driver: memoryDriver(), from: "noreply@example.com", replyTo }).register(welcome);
+
+  test("a message without its own reply-to inherits the default", async () => {
+    const r = await mailerWith("Support <support@example.com>").send("welcome", {
+      to: "a@b.com",
+      name: "Ada",
+    });
+    expect(r.ok).toBe(true);
+    expect(r.message.replyTo).toBe("Support <support@example.com>");
+  });
+
+  test("the message's own reply-to wins over the default", async () => {
+    const m = mailerWith("support@example.com").register({
+      name: "crm.reply-to-seller",
+      envelope: (d: any) => ({ to: d.to, subject: "Quote", replyTo: "seller@example.com" }),
+      content: () => ({ html: "<p>Quote</p>" }),
+    });
+    const r = await m.send("crm.reply-to-seller", { to: "client@example.com" });
+    expect(r.message.replyTo).toBe("seller@example.com");
+  });
+
+  test("without a default and without its own, there is none", async () => {
+    const r = await mailerWith(undefined).send("welcome", { to: "a@b.com", name: "Ada" });
+    expect(r.message.replyTo).toBeUndefined();
+  });
+
+  test("MAIL_REPLY_TO: empty is none; an invalid value is dropped instead of stopping every email", () => {
+    expect(defaultReplyTo(undefined)).toBeUndefined();
+    expect(defaultReplyTo("   ")).toBeUndefined();
+    expect(defaultReplyTo(" support@example.com ")).toBe("support@example.com");
+    expect(defaultReplyTo("a@b.com, c@d.com")).toBeUndefined();
+    expect(defaultReplyTo("not-an-address")).toBeUndefined();
+  });
+
+  test("MAIL_REPLY_TO from the environment reaches the default instance's messages", async () => {
+    const before = process.env.MAIL_REPLY_TO;
+    process.env.MAIL_REPLY_TO = "help@example.com";
+    try {
+      const m = new Mailer({ driver: memoryDriver(), from: "noreply@example.com" }).register(
+        welcome
+      );
+      const r = await m.send("welcome", { to: "a@b.com", name: "Ada" });
+      expect(r.message.replyTo).toBe("help@example.com");
+    } finally {
+      if (before === undefined) delete process.env.MAIL_REPLY_TO;
+      else process.env.MAIL_REPLY_TO = before;
+    }
+  });
 });

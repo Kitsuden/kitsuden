@@ -177,11 +177,89 @@ describe("storage", () => {
     expect(listings.every((c) => c.input.Bucket === "kitsuden-media")).toBe(true);
   });
 
+  it("without S3_PRIVATE_BUCKET, private keys share the one bucket", async () => {
+    expect(storage.PRIVATE_BUCKET).toBe("");
+    expect(storage.bucketFor("private/koe/note.ogg")).toBe("kitsuden-media");
+    await storage.uploadBuffer(Buffer.from("x"), "private/koe/note.ogg", "audio/ogg");
+    expect(sentCommands[0].input.Bucket).toBe("kitsuden-media");
+  });
+
+  it("an upload's url follows S3_PUBLIC_URL_STYLE (domain: no bucket segment)", async () => {
+    process.env.S3_PUBLIC_URL = "https://media.example.com";
+    process.env.S3_PUBLIC_URL_STYLE = "domain";
+    try {
+      const r = await storage.uploadBuffer(Buffer.from("x"), "uploads/1_a.png", "image/png");
+      expect(r.url).toBe("https://media.example.com/uploads/1_a.png");
+    } finally {
+      process.env.S3_PUBLIC_URL = "http://localhost:9000";
+      delete process.env.S3_PUBLIC_URL_STYLE;
+    }
+    const r = await storage.uploadBuffer(Buffer.from("x"), "uploads/1_a.png", "image/png");
+    expect(r.url).toBe("http://localhost:9000/kitsuden-media/uploads/1_a.png");
+  });
+
   it("throws when storage provider is local", async () => {
     process.env.DEFAULT_STORAGE_PROVIDER = "local";
     // @ts-ignore — fresh instance for the local provider test
     const localStorage = await import("../lib/storage?local");
     const file = new File(["x"], "x.txt", { type: "text/plain" });
     expect(localStorage.uploadFile(file, "x.txt", "text/plain")).rejects.toThrow("local");
+  });
+});
+
+describe("storage with S3_PRIVATE_BUCKET", () => {
+  let split: any;
+
+  beforeAll(async () => {
+    process.env.DEFAULT_STORAGE_PROVIDER = "s3";
+    process.env.S3_PRIVATE_BUCKET = "kitsuden-private";
+    // @ts-ignore — fresh instance that reads S3_PRIVATE_BUCKET at import
+    split = await import("../lib/storage?split");
+  });
+
+  afterAll(() => {
+    delete process.env.S3_PRIVATE_BUCKET;
+  });
+
+  it("chooses the bucket with the normalized private check", () => {
+    expect(split.bucketFor("uploads/a.png")).toBe("kitsuden-media");
+    expect(split.bucketFor("transforms/abc/a.webp")).toBe("kitsuden-media");
+    expect(split.bucketFor("private/koe/note.ogg")).toBe("kitsuden-private");
+    expect(split.bucketFor("Private/x.pdf")).toBe("kitsuden-private");
+    expect(split.bucketFor("uploads/../private/x.pdf")).toBe("kitsuden-private");
+    expect(split.bucketFor("../uploads/private/x")).toBe("kitsuden-private");
+  });
+
+  it("writes, reads, deletes and signs private keys only in the private bucket", async () => {
+    const key = "private/contracts/c.pdf";
+    await split.uploadBuffer(Buffer.from("pdf"), key, "application/pdf");
+    await split.fileExists(key);
+    await split.getFile(key);
+    await split.getFileBuffer(key).catch(() => null); // the mock body has no transformToByteArray
+    await split.deleteFile(key);
+    expect(sentCommands.length).toBe(5);
+    expect(sentCommands.every((c) => c.input.Bucket === "kitsuden-private")).toBe(true);
+
+    await split.generateSignedDownloadUrl(key, 600);
+    const signed = mockGetSignedUrl.mock.calls.at(-1)![1];
+    expect(signed.input.Bucket).toBe("kitsuden-private");
+  });
+
+  it("keeps public keys in the public bucket", async () => {
+    await split.uploadBuffer(Buffer.from("img"), "uploads/1_a.png", "image/png");
+    const file = new File(["x"], "x.txt", { type: "text/plain" });
+    await split.uploadFile(file, "x.txt", "text/plain", "docs");
+    await split.deleteFile("uploads/1_a.png");
+    expect(sentCommands.every((c) => c.input.Bucket === "kitsuden-media")).toBe(true);
+  });
+
+  it("lists a private prefix in the private bucket and a public one in the public bucket", async () => {
+    await split.listKeys("private/koe/");
+    const priv = sentCommands.filter((c) => c instanceof ListObjectsV2Command);
+    expect(priv.every((c) => c.input.Bucket === "kitsuden-private")).toBe(true);
+    sentCommands.length = 0;
+    await split.listKeys("transforms/abc/");
+    const pub = sentCommands.filter((c) => c instanceof ListObjectsV2Command);
+    expect(pub.every((c) => c.input.Bucket === "kitsuden-media")).toBe(true);
   });
 });

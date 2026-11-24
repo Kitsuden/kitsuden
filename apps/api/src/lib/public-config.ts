@@ -43,6 +43,7 @@
  * startup step needs in order to finish cleanly.
  */
 import { driverFromEnv } from "@kitsuden/engine/src/mail/drivers";
+import { isValidAddress } from "@kitsuden/engine/src/mail/types";
 
 import { placeholderSecrets } from "./placeholder-secrets";
 
@@ -212,6 +213,16 @@ export function publicConfigProblems(env: Environment = process.env): ConfigProb
       reason:
         `${sender ? "does not have a real domain" : "is empty"}: providers ` +
         `reject that sender or send it to spam`,
+    });
+  }
+
+  // Optional; when set it must be one valid address. The Mailer drops an invalid one with a warning
+  // (refusing it would stop every email), so here, where a wrong value can stop the start, it is caught.
+  const replyTo = env.MAIL_REPLY_TO?.trim();
+  if (replyTo && !isValidAddress(replyTo)) {
+    problems.push({
+      variable: "MAIL_REPLY_TO",
+      reason: "is not one valid address (`Name <reply@example.com>` or `reply@example.com`)",
     });
   }
 

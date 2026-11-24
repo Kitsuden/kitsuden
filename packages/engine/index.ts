@@ -105,9 +105,6 @@ export {
 
 // ── Storage (S3/MinIO) ──
 export {
-  s3,
-  BUCKET,
-  PUBLIC_URL,
   generateS3Key,
   uploadFile,
   uploadBuffer,
@@ -641,6 +638,7 @@ export type {
 export {
   Mailer,
   mail,
+  defaultReplyTo,
   layout,
   heading,
   paragraph,

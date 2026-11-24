@@ -55,6 +55,33 @@ describe("isValidAddress", () => {
       expect(isValidAddress(a), a).toBe(false);
     }
   });
+
+  it("takes the spacing formatAddress and people write around the name", () => {
+    for (const a of [
+      "Support<support@example.com>",
+      "Support   <support@example.com>",
+      '"Support, EU"<support@example.com>',
+      '"Support, EU"   <support@example.com>',
+      "Support\t<support@example.com>",
+    ]) {
+      expect(isValidAddress(a), a).toBe(true);
+    }
+  });
+
+  it("answers at once on a long run of spaces with no `<` (CodeQL js/polynomial-redos)", () => {
+    // The old pattern matched the spaces with two quantifiers (`[^<…]*\s*<`), and a value with no `<`
+    // backtracked through every split of the run: MAIL_REPLY_TO comes straight from the environment.
+    // The run sits between two characters because `isValidAddress` trims the ends first.
+    for (const a of [
+      "a" + " ".repeat(50_000) + "b",
+      "a" + " ".repeat(50_000) + "b>",
+      '"a"' + " ".repeat(50_000) + "b",
+    ]) {
+      const start = performance.now();
+      expect(isValidAddress(a)).toBe(false);
+      expect(performance.now() - start).toBeLessThan(200);
+    }
+  });
 });
 
 describe("Mailer.send", () => {
