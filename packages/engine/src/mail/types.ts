@@ -36,8 +36,15 @@ export function formatAddress(addr: Address): string {
 
 /** One mailbox: no spaces, line breaks, commas, quotes or angle brackets. */
 const MAILBOX = /^[^\s@<>,;:"()[\]\\]+@[^\s@<>,;:"()[\]\\]+$/;
-/** `Name <mailbox>` with a plain name or a quoted one (what `formatAddress` writes). */
-const NAMED = /^(?:"(?:[^"\\\r\n]|\\.)*"|[^<>@,;"\r\n]*)\s*<([^<>\r\n]+)>$/;
+/**
+ * `Name <mailbox>` with a plain name or a quoted one (what `formatAddress` writes).
+ *
+ * No `\s*` between the name and `<`: the plain name already takes spaces, and a run of spaces matched
+ * by two quantifiers backtracked polynomially on input with no `<` (CodeQL js/polynomial-redos;
+ * `MAIL_REPLY_TO` reaches it from the environment). Only the quoted form needs its own `[ \t]*`, after
+ * the closing quote, where it cannot overlap.
+ */
+const NAMED = /^(?:"(?:[^"\\\r\n]|\\.)*"[ \t]*|[^<>@,;"\r\n]*)<([^<>\r\n]+)>$/;
 
 /**
  * Is this ONE well-formed address? A string may be `a@b.com`, `Name <a@b.com>`
