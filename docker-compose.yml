@@ -320,6 +320,8 @@ services:
       # as defined, so mail would go out with no sender.
       - MAIL_DRIVER=${MAIL_DRIVER:-}
       - MAIL_FROM=${MAIL_FROM:-noreply@localhost}
+      # Where replies go when a message does not set its own reply-to. Empty = none.
+      - MAIL_REPLY_TO=${MAIL_REPLY_TO:-}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}

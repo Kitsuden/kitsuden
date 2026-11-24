@@ -14,6 +14,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   access, chosen by the same normalized `isPrivateKey` check that decides when an address is signed, and
   `S3_BUCKET` holds only public files (a Cloudflare R2 bucket with a custom domain, say). No per-prefix
   policy left to get wrong. `GET /health` checks both buckets. Empty, nothing changes.
+- `MAIL_REPLY_TO`: where replies go when a message does not set its own (`MAIL_FROM` is usually a noreply).
+  The Mailer applies it where every message is rendered, so the core's own mail (verification, password
+  recovery, magic link) and every kon's mail inherit it; a message's own `replyTo` wins. In public mode an
+  invalid value aborts the start; otherwise it is ignored with a warning, since an invalid reply-to would
+  make every send fail.
 - `S3_PUBLIC_URL_STYLE=domain` builds public file addresses as `S3_PUBLIC_URL/<key>`, for a host that is the
   bucket (a Cloudflare R2 custom domain or `r2.dev` address, a CDN). The default `path`
   (`S3_PUBLIC_URL/<bucket>/<key>`) is unchanged. The address an upload returns and `ctx.storage.publicUrl`

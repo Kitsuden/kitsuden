@@ -641,6 +641,7 @@ export type {
 export {
   Mailer,
   mail,
+  defaultReplyTo,
   layout,
   heading,
   paragraph,
