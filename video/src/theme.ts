@@ -1,5 +1,5 @@
-import { loadFont as loadDisplay } from "@remotion/google-fonts/SpaceGrotesk";
 import { loadFont as loadMono } from "@remotion/google-fonts/JetBrainsMono";
+import { loadFont as loadDisplay } from "@remotion/google-fonts/SpaceGrotesk";
 import { Easing, interpolate } from "remotion";
 
 const display = loadDisplay("normal", { weights: ["400", "500", "700"], subsets: ["latin"] });

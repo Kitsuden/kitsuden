@@ -116,11 +116,18 @@
     --ta-radius-sm: 0.375rem;
     --ta-radius: 0.5rem;
     --ta-radius-lg: 0.75rem;
-    --ta-font-sans: var(--kitsuden-font-sans, "Inter", system-ui, -apple-system, sans-serif);
+    --ta-font-sans: var(
+      --kitsuden-font-sans,
+      "Geist Variable",
+      "Geist",
+      system-ui,
+      -apple-system,
+      sans-serif
+    );
     --ta-font-mono: var(
       --kitsuden-font-mono,
-      "JetBrains Mono",
-      "Fira Code",
+      "Geist Mono Variable",
+      "Geist Mono",
       ui-monospace,
       monospace
     );

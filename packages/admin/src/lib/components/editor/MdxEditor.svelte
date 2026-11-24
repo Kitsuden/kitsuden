@@ -188,7 +188,7 @@
           EditorView.theme({
             "&": { height: "100%" },
             ".cm-scroller": {
-              fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+              fontFamily: "var(--kitsuden-font-mono)",
               fontSize: "14px",
               lineHeight: "1.6",
             },
@@ -364,7 +364,7 @@
     outline: none !important;
   }
   :global(.mdx-editor .cm-scroller) {
-    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-family: var(--kitsuden-font-mono);
     font-size: 14px;
     line-height: 1.6;
   }
