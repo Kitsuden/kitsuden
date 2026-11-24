@@ -199,6 +199,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Agents reading a kon table or a dataset failed with `function kitsuden_agente_denegado(text) does not exist`
+  on a database upgraded from 0.8. Migration 0075 drops a Spanish-named agent helper unless Postgres records a
+  dependant, but calls inside a function body are not recorded: it kept `kitsuden_agente_puede_en_kon`,
+  `kitsuden_agente_abre_dataset` and `kitsuden_agente_abre_por_politica` (policies use them) with 0.8 bodies
+  that call helpers it dropped. Migration 0095 rewrites every surviving Spanish name as a wrapper of its English
+  function, and recreates a dropped one that a function or policy still names. Nothing happens on a fresh
+  database. Tests: `tests/unit/agent-helper-wrappers.test.ts`.
 - `GET /api/docs/operations` listed only hand-written `openApi.paths`, which no kon declares, so it
   was empty for every operation declared with `defineOperation` (the Postman export too). It now lists
   the routes each kon serves, with `sdk` and `deprecated` on each row.
