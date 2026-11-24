@@ -162,6 +162,13 @@ describe("hit: one request, one view", () => {
 
   it("a subject whose kon is not installed is still counted, and the request does not break", async () => {
     if (!dbAvailable) return;
+    // Only meaningful where the esports kon is NOT installed: with it installed the
+    // table exists and a made-up tournament is (correctly) not counted.
+    const res = (await db.execute(
+      sql`SELECT to_regclass('esports_tournaments') AS t`
+    )) as unknown as { t: string | null }[] | { rows: { t: string | null }[] };
+    const present = Array.isArray(res) ? res : res.rows;
+    if (present[0]?.t) return;
     expect((await hit({ type: "tournament", id: TOURNAMENT })).status).toBe(204);
     expect(await viewsOf(TOURNAMENT)).toBe(1);
   });
