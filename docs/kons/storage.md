@@ -24,6 +24,9 @@ Store under `private/` anything that belongs to a person: a customer's voice not
     the new bucket first (`rclone copy`, `aws s3 sync`), then set the variable and restart. The API does not
     look in the old bucket for a key it cannot find.
   - `GET /health` writes and deletes a test object in both buckets.
+  - On R2 with a custom domain (`https://media.example.com/<key>`), also set `S3_PUBLIC_URL` to that domain
+    and `S3_PUBLIC_URL_STYLE=domain`: the default `path` style puts the bucket in the address
+    (`S3_PUBLIC_URL/<bucket>/<key>`), which only the S3 endpoint itself serves.
 - **S3, one bucket (when `S3_PRIVATE_BUCKET` is empty):** a presigned `GET`. The bucket's policy must not
   make `private/` public-read: a bucket-wide public-read policy would still expose it. Limit public reads to
   the prefixes that are meant to be public. The bundled SeaweedFS (`docker/seaweedfs-startup.sh`) does this: anonymous reads only the prefixes in

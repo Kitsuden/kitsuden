@@ -14,6 +14,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   access, chosen by the same normalized `isPrivateKey` check that decides when an address is signed, and
   `S3_BUCKET` holds only public files (a Cloudflare R2 bucket with a custom domain, say). No per-prefix
   policy left to get wrong. `GET /health` checks both buckets. Empty, nothing changes.
+- `S3_PUBLIC_URL_STYLE=domain` builds public file addresses as `S3_PUBLIC_URL/<key>`, for a host that is the
+  bucket (a Cloudflare R2 custom domain or `r2.dev` address, a CDN). The default `path`
+  (`S3_PUBLIC_URL/<bucket>/<key>`) is unchanged. The address an upload returns and `ctx.storage.publicUrl`
+  are now built by one function, so they cannot disagree.
 - **Deprecating an operation** ([docs/api-contract.md](docs/api-contract.md#deprecation-policy)):
   `deprecated: { since, sunset, use? }` in `defineOperation` publishes `deprecated` + `x-sunset`
   (what oasdiff reads), sends `Deprecation`/`Sunset` headers (RFC 9745, RFC 8594) on every response,

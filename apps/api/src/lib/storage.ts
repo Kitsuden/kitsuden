@@ -16,7 +16,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import { isPrivateKey } from "./store";
+import { isPrivateKey, s3PublicUrl } from "./store";
 
 // ── Configuration ────────────────────────────────────────────────
 
@@ -111,8 +111,9 @@ export function generateS3Key(filename: string, prefix = "public"): string {
   return `${prefix}/${year}/${month}/${id}-${sanitized}`;
 }
 
+/** Same address `publicUrlOf` gives later (honours `S3_PUBLIC_URL_STYLE`). */
 function buildPublicUrl(s3Key: string): string {
-  return `${PUBLIC_URL}/${BUCKET}/${s3Key}`;
+  return s3PublicUrl(s3Key);
 }
 
 function assertS3Enabled(operation: string): void {

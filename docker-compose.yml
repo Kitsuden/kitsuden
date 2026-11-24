@@ -244,6 +244,8 @@ services:
       # SeaweedFS/S3 (used if DEFAULT_STORAGE_PROVIDER=s3; `minio` is still accepted)
       - S3_ENDPOINT=http://${KITSUDEN_INSTANCE:-kitsuden}_seaweedfs_prod:8333
       - S3_PUBLIC_URL=${S3_PUBLIC_URL:-http://localhost:9000}
+      # path = S3_PUBLIC_URL/<bucket>/<key>; domain = S3_PUBLIC_URL/<key> (a Cloudflare R2 custom domain)
+      - S3_PUBLIC_URL_STYLE=${S3_PUBLIC_URL_STYLE:-path}
       # ⚠️ REQUIRED only when DEFAULT_STORAGE_PROVIDER=minio or s3 (optional for local storage)
       # NOTE: the s3/full/dev profile does require them (see kitsuden_seaweedfs), here they are optional
       # so that `docker compose up -d` works with the default local storage.

@@ -184,6 +184,20 @@ describe("storage", () => {
     expect(sentCommands[0].input.Bucket).toBe("kitsuden-media");
   });
 
+  it("an upload's url follows S3_PUBLIC_URL_STYLE (domain: no bucket segment)", async () => {
+    process.env.S3_PUBLIC_URL = "https://media.example.com";
+    process.env.S3_PUBLIC_URL_STYLE = "domain";
+    try {
+      const r = await storage.uploadBuffer(Buffer.from("x"), "uploads/1_a.png", "image/png");
+      expect(r.url).toBe("https://media.example.com/uploads/1_a.png");
+    } finally {
+      process.env.S3_PUBLIC_URL = "http://localhost:9000";
+      delete process.env.S3_PUBLIC_URL_STYLE;
+    }
+    const r = await storage.uploadBuffer(Buffer.from("x"), "uploads/1_a.png", "image/png");
+    expect(r.url).toBe("http://localhost:9000/kitsuden-media/uploads/1_a.png");
+  });
+
   it("throws when storage provider is local", async () => {
     process.env.DEFAULT_STORAGE_PROVIDER = "local";
     // @ts-ignore — fresh instance for the local provider test

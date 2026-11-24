@@ -48,6 +48,9 @@ const envSchema = z.object({
     ? z.string().min(1)
     : z.string().prefault(""),
   S3_PUBLIC_URL: z.string().prefault("http://localhost:9000"),
+  // `path`: S3_PUBLIC_URL/<bucket>/<key>. `domain`: S3_PUBLIC_URL/<key>, for a host that is the bucket
+  // (an R2 custom domain). store.ts `s3PublicUrl`.
+  S3_PUBLIC_URL_STYLE: z.enum(["path", "domain"]).prefault("path"),
   S3_REGION: z.string().prefault("us-east-1"),
 
   // Auth — No default in any environment; must be explicitly set.

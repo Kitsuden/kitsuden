@@ -243,19 +243,36 @@ export async function listObjects(prefix: string): Promise<string[]> {
 }
 
 /**
- * Public URL of an already stored object.
+ * Public address of a key in the S3 bucket. The ONE place it is built: `publicUrlOf` here and the `url`
+ * that `storage.ts` returns from an upload both call it, so the address stored in a row and the one a kon
+ * asks for later cannot drift apart.
  *
- * It is SYNCHRONOUS, so it cannot wait for the lazy import of the SDK: the two
- * constants are read from the environment, which is where `storage.ts` gets them. The
- * default values are repeated on purpose so they match those there.
+ * `S3_PUBLIC_URL_STYLE` says how the public endpoint addresses the bucket:
+ *
+ *   · `path` (default) — `S3_PUBLIC_URL/<bucket>/<key>`: the S3 API itself (SeaweedFS, MinIO, AWS path
+ *     style), where the bucket is the first path segment.
+ *   · `domain` — `S3_PUBLIC_URL/<key>`: a host that already IS the bucket, such as a custom domain on a
+ *     Cloudflare R2 bucket (`https://media.example.com`), an r2.dev address or a CDN in front of one. With
+ *     `path` there, every address gained a `/<bucket>/` the host does not serve, and every image was a 404.
+ *
+ * Read from the environment on each call (not cached at import): it is SYNCHRONOUS, so it cannot wait for the
+ * lazy import of the SDK, and the defaults match those in `storage.ts`.
  */
+export function s3PublicUrl(key: string): string {
+  const cleans = key.replace(/^\/+/, "");
+  const publicUrl = (process.env.S3_PUBLIC_URL || "http://localhost:9000").replace(/\/+$/, "");
+  if ((process.env.S3_PUBLIC_URL_STYLE || "path").trim().toLowerCase() === "domain") {
+    return `${publicUrl}/${cleans}`;
+  }
+  const bucket = process.env.S3_BUCKET || "kitsuden-media";
+  return `${publicUrl}/${bucket}/${cleans}`;
+}
+
+/** Public URL of an already stored object: under `/media` with local disk, `s3PublicUrl` with S3. */
 export function publicUrlOf(key: string): string {
   const cleans = key.replace(/^\/+/, "");
   if (!usesS3) return `${URL_LOCAL}/${cleans}`;
-
-  const publicUrl = (process.env.S3_PUBLIC_URL || "http://localhost:9000").replace(/\/$/, "");
-  const bucket = process.env.S3_BUCKET || "kitsuden-media";
-  return `${publicUrl}/${bucket}/${cleans}`;
+  return s3PublicUrl(cleans);
 }
 
 export interface StoreStatus {
