@@ -32,6 +32,9 @@ const envSchema = z.object({
   // Storage (S3/MinIO)
   S3_ENDPOINT: z.string().prefault("http://localhost:9000"),
   S3_BUCKET: z.string().prefault("kitsuden-media"),
+  // Optional bucket for `private/…` keys, with no public access (storage.ts `bucketFor`).
+  // Empty: private keys share S3_BUCKET.
+  S3_PRIVATE_BUCKET: z.string().prefault(""),
   // Only needed with DEFAULT_STORAGE_PROVIDER=s3|minio (`storage.ts` requires them there); with
   // local storage, the API must not refuse to start for lacking them.
   S3_ACCESS_KEY: ["s3", "minio"].includes(

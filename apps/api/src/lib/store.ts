@@ -273,14 +273,26 @@ export interface StoreStatus {
  * existing does not say whether we can write to it.
  */
 export async function checkStorage(): Promise<StoreStatus> {
-  const key = "_health/check.txt";
+  // With S3_PRIVATE_BUCKET set, private keys live in another bucket: a health check that only wrote to
+  // the public one would pass while every private upload fails, so it writes to both.
+  const privateBucket = usesS3 ? (process.env.S3_PRIVATE_BUCKET || "").trim() : "";
+  const keys = privateBucket
+    ? ["_health/check.txt", "private/_health/check.txt"]
+    : ["_health/check.txt"];
   try {
-    await saveObject(key, Buffer.from("ok"), "text/plain");
-    await deleteObject(key);
+    for (const key of keys) {
+      await saveObject(key, Buffer.from("ok"), "text/plain");
+      await deleteObject(key);
+    }
+    const bucket = `bucket ${process.env.S3_BUCKET || "kitsuden-media"}`;
     return {
       provider: PROVIDER,
       ok: true,
-      detail: usesS3 ? `bucket ${process.env.S3_BUCKET || "kitsuden-media"}` : LOCAL_DIR,
+      detail: usesS3
+        ? privateBucket
+          ? `${bucket}, private bucket ${privateBucket}`
+          : bucket
+        : LOCAL_DIR,
     };
   } catch (err) {
     return {
@@ -308,8 +320,9 @@ export const MEDIA_CSP =
  *
  *   · local disk: `/media/private/…` answers 404 unless the URL carries `exp` and `sig`, an HMAC of the key
  *     and the expiry with a key derived from KITSUDEN_SECRETS_KEY (or BETTER_AUTH_SECRET);
- *   · S3: a presigned GET. The bucket's own policy must not make `private/` public-read (a bucket-wide
- *     public policy would still expose it: docs/kons/storage.md).
+ *   · S3: a presigned GET. With `S3_PRIVATE_BUCKET` set, private keys live in that bucket, which has no
+ *     public access at all (`bucketFor` in storage.ts). Without it they share `S3_BUCKET`, whose policy must
+ *     not make `private/` public-read (a bucket-wide public policy would still expose it: docs/kons/storage.md).
  *
  * Public keys behave exactly as before.
  */

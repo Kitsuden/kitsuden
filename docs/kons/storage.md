@@ -14,9 +14,19 @@ Store under `private/` anything that belongs to a person: a customer's voice not
 - **Local disk:** `/media/private/…` answers 404 unless the address carries `exp` and `sig`, an HMAC of the
   key and the expiry with a key derived from `KITSUDEN_SECRETS_KEY` (or `BETTER_AUTH_SECRET`). Served with
   `Cache-Control: private, no-store`.
-- **S3:** a presigned `GET`. The bucket's policy must not make `private/` public-read: a bucket-wide
-  public-read policy would still expose it. Limit public reads to the prefixes that are meant to be public.
-  The bundled SeaweedFS (`docker/seaweedfs-startup.sh`) does this: anonymous reads only the prefixes in
+- **S3, two buckets (recommended for an external S3 such as Cloudflare R2):** set `S3_PRIVATE_BUCKET`.
+  Every `private/…` key is written to, read from, listed in and deleted from that bucket; everything else
+  stays in `S3_BUCKET`. Give `S3_BUCKET` public reads (on R2, a custom domain) and give the private bucket
+  no public access at all: it is read only through presigned `GET`s. There is no per-prefix rule to get
+  wrong. The bucket is chosen with the same normalized check as below, so `uploads/../private/x` goes to the
+  private bucket too.
+  - Turning it on for an installation that already has private files: copy `private/` from `S3_BUCKET` to
+    the new bucket first (`rclone copy`, `aws s3 sync`), then set the variable and restart. The API does not
+    look in the old bucket for a key it cannot find.
+  - `GET /health` writes and deletes a test object in both buckets.
+- **S3, one bucket (when `S3_PRIVATE_BUCKET` is empty):** a presigned `GET`. The bucket's policy must not
+  make `private/` public-read: a bucket-wide public-read policy would still expose it. Limit public reads to
+  the prefixes that are meant to be public. The bundled SeaweedFS (`docker/seaweedfs-startup.sh`) does this: anonymous reads only the prefixes in
   `S3_PUBLIC_PREFIXES` (default `uploads transforms cartas juegos media dms`) and refuses to start if
   `private` is listed. A kon that serves public files under another top-level prefix adds it there.
 - **Keys are normalized before the check:** `uploads/../private/x`, `.\private\x` and `Private/x` count as

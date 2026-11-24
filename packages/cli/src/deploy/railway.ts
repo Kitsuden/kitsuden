@@ -134,6 +134,7 @@ export async function deployToRailway(
       "MINIO_ACCESS_KEY",
       "MINIO_SECRET_KEY",
       "S3_BUCKET",
+      "S3_PRIVATE_BUCKET",
       "GITHUB_CLIENT_ID",
       "GITHUB_CLIENT_SECRET",
       "GOOGLE_CLIENT_ID",
