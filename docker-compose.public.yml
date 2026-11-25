@@ -1,0 +1,165 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Kitsuden — PUBLIC overlay: an install reachable from the internet
+#
+# With Caddy terminating TLS (the default, docker-compose.tls.yml):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.public.yml \
+#     -f docker-compose.tls.yml up -d --build
+#
+# Behind a proxy you already run (Traefik, Caddy, nginx, Coolify): this file
+# without docker-compose.tls.yml, and your proxy pointed at the ports below.
+# What it must do is in docs/install/own-proxy.md.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.public.yml up -d --build
+#
+# Or once, in .env, and then a plain `docker compose up -d`:
+#
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.public.yml:docker-compose.tls.yml
+#
+# With explicit `-f` flags (or COMPOSE_FILE), docker-compose.override.yml is NOT
+# merged in (it is development-only).
+#
+# Full guide: docs/install/server.md. Requires in .env:
+#   SITE_DOMAIN=example.com        the public site (the neutral starter)
+#   KITSUDEN_DOMAIN=panel.example.com   the panel and the API the browser sees
+#                                  (default panel.${SITE_DOMAIN})
+#   + a mail transport (RESEND_API_KEY or SMTP_*) and a real MAIL_FROM
+# The passwords and keys are generated on the first start (docker-compose.yml).
+#
+# WHAT CHANGES COMPARED TO THE BASE COMPOSE
+#
+#   · The public URLs stop being localhost: they come from SITE_DOMAIN and
+#     KITSUDEN_DOMAIN, and KITSUDEN_PUBLIC=true makes the API REFUSE to
+#     start if any is left on localhost or if mail would go to the console.
+#   · The public web joins Docker: kitsuden_web, the neutral starter.
+#     (packages/starters/kitsuden-starter-basic, docker/Dockerfile.web).
+#     To serve ANOTHER web, one more overlay that redefines kitsuden_web:
+#     `-f docker-compose.<yours>.yml` at the end.
+#   · Everything a proxy reaches listens on 127.0.0.1 only: the web on
+#     WEB_PORT (4321), the panel and /api on ADMIN_PORT (3001), /media on
+#     API_PORT (3000). Docker bypasses ufw for published ports, so «127.0.0.1»
+#     is what truly protects them, not the firewall. A proxy in another
+#     container reaches them over the compose network instead (own-proxy.md).
+#   · Rotating logs, memory limits and time zone everywhere.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Logs: without this, json-file grows without limit until the disk fills up (the API
+# writes one line per request). 5 × 10 MB per container.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  # ═══════════════════════════════════════════════════════════════════════
+  # The public web: the neutral starter — docker/Dockerfile.web
+  #
+  # SITE_URL is BAKED IN at build time (canonical URLs, Open Graph, sitemap):
+  # changing SITE_DOMAIN requires `docker compose ... build kitsuden_web`. The
+  # API address and the site key are read at STARTUP.
+  # ═══════════════════════════════════════════════════════════════════════
+  kitsuden_web:
+    image: ${KITSUDEN_WEB_IMAGE:-ghcr.io/kitsuden/kitsuden/web:latest}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+      target: web
+      args:
+        SITE_URL: https://${SITE_DOMAIN:?SITE_DOMAIN is required}
+        SITE_NAME: ${SITE_NAME:-Kitsuden}
+        SITE_LOCALE: ${SITE_LOCALE:-en}
+    pull_policy: build
+    container_name: ${KITSUDEN_INSTANCE:-kitsuden}_web_prod
+    # The site key: from .env, or the one generated on the first start (the only
+    # secret the web may read: 0444 in the secrets volume).
+    command:
+      - sh
+      - -c
+      - >-
+        : "$${KITSUDEN_SITE_KEY:=$$(cat /kitsuden-secrets/site_api_key 2>/dev/null)}";
+        export KITSUDEN_SITE_KEY;
+        exec node ./dist/server/entry.mjs
+    volumes:
+      - type: volume
+        source: kitsuden_secrets_prod
+        target: /kitsuden-secrets
+        read_only: true
+    restart: unless-stopped
+    depends_on:
+      kitsuden_api:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - TZ=${TZ:-UTC}
+      # Over the internal network, without going through Caddy
+      - KITSUDEN_API_URL=http://kitsuden_api:3000
+      # The key shared by web and API: the API's limit is counted per
+      # visitor and not for everyone at once
+      # Empty = the generated one, read from the secrets volume at start (below)
+      - KITSUDEN_SITE_KEY=${SITE_API_KEY:-}
+      # Behind Caddy: the visitor's IP comes from X-Forwarded-For
+      - KITSUDEN_TRUST_PROXY=true
+    # Loopback only: the proxy in front reaches it here (Caddy reaches it over
+    # the compose network). Nothing else on the internet does.
+    ports:
+      - "127.0.0.1:${WEB_PORT:-4321}:4321"
+    mem_limit: 512m
+    logging: *logging
+    networks:
+      - kitsuden_net_prod
+
+  kitsuden_api:
+    # Always built here, never pulled: this is the code in this checkout.
+    pull_policy: build
+    # The API serves as the image's `bun` uid. It starts as root only to read
+    # the generated secrets (docker-compose.yml) and drops to `bun` at once. The
+    # media volume has to be bun's: a new one is (Dockerfile.prod prepares
+    # /app/data); one restored or filled with `docker cp` is NOT — see
+    # docs/install/server.md (`chown -R 1000:1000`).
+    environment:
+      - KITSUDEN_PUBLIC=true
+      - BETTER_AUTH_URL=https://${KITSUDEN_DOMAIN:-panel.${SITE_DOMAIN:?SITE_DOMAIN is required}}
+      - ADMIN_URL=https://${KITSUDEN_DOMAIN:-panel.${SITE_DOMAIN}}
+      # The «main web» for the startup check (public-config.ts)
+      - APP_URL=https://${SITE_DOMAIN:?SITE_DOMAIN is required}
+      - SITE_URL=https://${SITE_DOMAIN}
+      # The browser calls the API from the web (session, comments) and from
+      # the panel. www redirects to the root in Caddy, so it is not needed.
+      - ALLOWED_ORIGINS=https://${SITE_DOMAIN},https://${KITSUDEN_DOMAIN:-panel.${SITE_DOMAIN}}
+      # The API's interactive documentation, off in public unless
+      # requested (in the base it is fixed to true)
+      - ENABLE_SWAGGER=${ENABLE_SWAGGER:-false}
+      # Two proxies in front of /api/*: Caddy, then the panel's nginx. The client
+      # IP is the second X-Forwarded-For entry from the right (lib/client-ip.ts).
+      # Change it only if you change that chain (docs/install/variables.md).
+      - TRUSTED_PROXY_HOPS=${TRUSTED_PROXY_HOPS:-2}
+      # No TZ on purpose: the API, the database and the backups work in UTC (as
+      # today locally); the dates the visitor sees are rendered by the web, which does
+      # have TZ.
+    mem_limit: 1536m
+    logging: *logging
+
+  kitsuden_admin:
+    pull_policy: build
+    mem_limit: 128m
+    logging: *logging
+
+  kitsuden_db:
+    # Postgres uses whatever memory it is left for cache: the limit prevents a
+    # large query from leaving the API without memory on an 8 GB VPS.
+    mem_limit: 2g
+    shm_size: 256m
+    logging: *logging
+
+  kitsuden_state:
+    # maxmemory 256mb (base) + AOF and headroom
+    mem_limit: 384m
+    logging: *logging
+
+  kitsuden_backup:
+    # Same image as the API, the one just built: it is never downloaded
+    pull_policy: never
+    # pg_dump + tar of the media
+    mem_limit: 512m
+    logging: *logging

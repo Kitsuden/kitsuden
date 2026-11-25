@@ -70,20 +70,36 @@ const hashOf = (token: string) => createHash("sha256").update(token).digest();
 
 let tokenHash: Buffer | null = null;
 
+/**
+ * The panel address that opens the first-run form with the token already filled in. The token goes
+ * in the fragment (`#setup-token=`): browsers never send a fragment to a server, so it reaches no
+ * access log, proxy or `Referer`, and the panel removes it from the address bar once read.
+ */
+export function setupLink(token: string, env: Env = process.env): string | null {
+  const panel = (env["ADMIN_URL"] ?? "").trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(panel)) return null;
+  return `${panel}/#setup-token=${token}`;
+}
+
 /** Creates the token if there is none, and prints it. Returns it only when it is new. */
 export function ensureSetupToken(): string | null {
   if (tokenHash) return null;
   const token = randomBytes(32).toString("base64url");
   tokenHash = hashOf(token);
   const line = "=".repeat(72);
+  const link = setupLink(token);
   // `console`, not the logger: it must reach the log whatever LOG_LEVEL says.
+  const how = link
+    ? `  No administrator exists yet. To create the first one, open:\n\n    ${link}\n\n` +
+      `  or paste this one-time setup token in the panel (or POST /api/system/setup):\n\n`
+    : `  No administrator exists yet. To create the first one, use this\n` +
+      `  one-time setup token in the panel or in POST /api/system/setup:\n\n`;
   console.warn(
-    `\n${line}\n` +
-      `  No administrator exists yet. To create the first one, use this\n` +
-      `  one-time setup token in the panel or in POST /api/system/setup:\n\n` +
+    `\n${line}\n${how}` +
       `    ${token}\n\n` +
       `  ${setupTokenRequired() ? "It is required." : "It is optional only on a loopback development API."}` +
-      ` A restart generates a new one.\n${line}\n`
+      ` A restart generates a new one.\n` +
+      `  To see it again: docker compose logs kitsuden_api | grep -B4 -A6 "No administrator"\n${line}\n`
   );
   return token;
 }

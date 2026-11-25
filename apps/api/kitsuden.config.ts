@@ -15,10 +15,16 @@
  * (`lib/seed-modules.ts`). After that, the panel is in charge.
  *
  * Seed order for an installed kon:
+ *   0. `KITSUDEN_ENABLE_KONS` in the environment, when it is set: the product profile. The kons it
+ *      lists come on and every other installed kon comes off (`*` = all of them). It is how a
+ *      product compose (a CMS, a bot builder, an inbox) says what it is, with the same image.
  *   1. `enabled` of its entry in kitsuden.kons.json (`kitsuden kon add --enable`)
  *   2. the table below (BASE_FEATURE_KONS)
  *   3. `defaultEnabled` of its manifest
  *   4. off
+ *
+ * All of it is only the SEED: a kon the `modules` table already knows keeps what the panel says, so
+ * changing KITSUDEN_ENABLE_KONS later does not switch anything on or off by itself.
  */
 
 import { listInstalledKons } from "./src/lib/installed-kons";
@@ -113,7 +119,36 @@ export interface KitsudenConfig {
 // WHAT IS INSTALLED → CONFIGURATION
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * `KITSUDEN_ENABLE_KONS=blog,wiki` → the set of canonical ids it names (`kon-blog`, `kon-wiki`), `"*"`
+ * for every installed kon, or `null` when it is not set (the other seed sources decide).
+ */
+export function enabledKonsProfile(
+  env: Record<string, string | undefined> = process.env
+): Set<string> | "*" | null {
+  const raw = env["KITSUDEN_ENABLE_KONS"];
+  if (raw === undefined || raw.trim() === "") return null;
+  const ids = raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (ids.includes("*")) return "*";
+  return new Set(ids.map((id) => (id.startsWith("kon-") ? id : `kon-${id}`)));
+}
+
+/** The seed of one installed kon (see the order at the top of this file). */
+export function seedOf(
+  id: string,
+  sources: { declared?: boolean; base?: boolean; manifestDefault?: boolean },
+  profile: Set<string> | "*" | null = enabledKonsProfile()
+): boolean {
+  if (profile === "*") return true;
+  if (profile) return profile.has(id);
+  return sources.declared ?? sources.base ?? sources.manifestDefault === true;
+}
+
 function buildConfig(): KitsudenConfig {
+  const profile = enabledKonsProfile();
   const base = new Map(BASE_FEATURE_KONS.map((k) => [k.id, k.enabled]));
   const coreIds = new Set(CORE_KONS.map((k) => k.id));
 
@@ -123,10 +158,15 @@ function buildConfig(): KitsudenConfig {
     // Declared but not found on disk: not seeded (the loader
     // warns with the command that fixes it).
     if (!kon.path) continue;
-    const enabled =
-      kon.declaredOne.enabled ??
-      base.get(kon.id) ??
-      (kon.manifest?.defaultEnabled === true ? true : false);
+    const enabled = seedOf(
+      kon.id,
+      {
+        declared: kon.declaredOne.enabled,
+        base: base.get(kon.id),
+        manifestDefault: kon.manifest?.defaultEnabled === true,
+      },
+      profile
+    );
     features.push({ id: kon.id, enabled });
   }
   // The table's order first (it is the order in which the schemas are merged,

@@ -31,14 +31,20 @@ describe("root docker-compose.yml", () => {
   it("Valkey requires a password, and the API uses it", () => {
     // On stdin, not on argv (`ps` shows argv): see secrets-out-of-argv.test.ts
     expect(compose).toContain(`printf 'requirepass %s\\n' "$$REDISCLI_AUTH"`);
-    expect(compose).toContain("REDISCLI_AUTH: ${VALKEY_PASSWORD:?");
-    expect(compose).toContain("REDIS_URL=redis://:${VALKEY_PASSWORD:?");
+    // From .env, or generated on the first start (docker/generate-secrets.sh): never empty
+    expect(compose).toContain("REDISCLI_AUTH: ${VALKEY_PASSWORD:-}");
+    expect(compose).toContain("cat /kitsuden-secrets/valkey_password");
+    expect(compose).toContain("- VALKEY_PASSWORD=${VALKEY_PASSWORD:-}");
+    expect(read("docker/kitsuden-env.sh")).toContain(
+      'REDIS_URL="redis://:${VALKEY_PASSWORD}@${KITSUDEN_STATE_HOST:-kitsuden_state}:6379"'
+    );
   });
 
   it("the images are ours and are never pulled", () => {
     expect(compose).not.toMatch(/:-kitsuden\/(api|admin|mcp):/);
     expect(compose).toContain(`${IMAGES}/api:latest`);
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(3);
+    // api, admin, backup and the one-shot secrets generator (the API image)
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(4);
   });
 
   it("no mention of the owner's setup or of removed services", () => {

@@ -9,6 +9,30 @@
 
 set -e
 
+# ── Secrets generated on the first start (docker/generate-secrets.sh) ───────
+#
+# Each secret comes from the environment (.env) when it is set there, and from
+# the secrets volume otherwise (docker/kitsuden-env.sh). The files are root's:
+# the container starts as root, reads what is missing, and this same script
+# starts again as `bun` (su-exec) with the values in its environment. Then the
+# connection URLs are built and the raw passwords dropped. From there on
+# everything is as before: the admin URL is removed before the API starts, and
+# the running API, as `bun`, cannot open the files.
+. "$(dirname "$0")/kitsuden-env.sh"
+if [ "$(id -u)" = "0" ]; then
+    kitsuden_load_secrets
+    # Never serve as root. su-exec replaces this process: the environment goes
+    # with it, the root shell does not stay behind.
+    if command -v su-exec >/dev/null 2>&1; then
+        kitsuden_bun_home
+        exec su-exec bun:bun sh "$0" "$@"
+    fi
+    echo "ERROR: started as root and su-exec is missing, so it cannot drop to user bun."
+    exit 1
+fi
+kitsuden_build_urls
+SECRETS_DIR="$KITSUDEN_SECRETS_DIR"
+
 # Two connections, and the distinction is about security, not style:
 #
 #   DATABASE_ADMIN_URL  administer: create the database, install pgvector, migrate,
@@ -24,7 +48,9 @@ set -e
 # is the old behavior. It still starts, but step [4/6] warns.
 DB_URL="${DATABASE_URL}"
 if [ -z "$DB_URL" ]; then
-    echo "ERROR: DATABASE_URL is not set. Configure it in your .env file."
+    echo "ERROR: DATABASE_URL is not set. Configure it in your .env file, or start the"
+    echo "       container as root (user: \"0:0\") with the secrets volume mounted at"
+    echo "       $SECRETS_DIR so the generated passwords can be read."
     exit 1
 fi
 DB_ADMIN_URL="${DATABASE_ADMIN_URL:-$DATABASE_URL}"
@@ -560,9 +586,10 @@ echo ""
 # any API failure —or user code escaping the sandbox—
 # would read the superuser from `process.env` or from /proc/1/environ.
 #
-# `docker exec` is NOT affected: it takes the environment from the container's
-# configuration, not from process 1's, so `docker exec <api> bun run
-# scripts/migrate.ts --kon <id>` still has the administration account.
+# A maintenance command that needs the admin account builds it again, the same
+# way, from .env or the secrets volume (`docker exec` is root here):
+#
+#   docker exec <api> sh /app/docker/as-admin.sh bun run scripts/migrate.ts --kon <id>
 #
 # KITSUDEN_API_KEEP_ADMIN_URL=true keeps the previous behavior (for
 # example, to enable kons that alter core tables without restarting).

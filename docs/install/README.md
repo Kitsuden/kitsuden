@@ -26,6 +26,7 @@ A command that changed after that date carries no test mark.
 | [What gets installed](#what-gets-installed)                         | the pieces and the requirements                                                 |
 | [Local install](local.md)                                           | for development, on your computer                                               |
 | [Server install (Docker)](server.md)                                | the recommended way; includes a VPS, domain and TLS                             |
+| [Behind your own proxy](own-proxy.md)                               | Traefik, Caddy or nginx on the host, Coolify: without the bundled Caddy         |
 | [Environment variables](variables.md)                               | one by one: required, optional, and why                                         |
 | [First run](first-run.md)                                           | migrations, first administrator (one-time token), enabling kons                 |
 | [Installing kons](../kons/installing.md)                            | `kitsuden kon add`, `KITSUDEN_KONS`, kons in the Docker image                   |

@@ -9,6 +9,30 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **One compose, nothing to generate by hand.** A one-shot `kitsuden_secrets` service creates every
+  password and key that `.env` does not set (`docker/generate-secrets.sh`) in the `<instance>_secrets_prod`
+  volume: root-only files that Postgres, Valkey and the API's start read before dropping privileges. A value
+  in `.env` wins and is copied there, so an existing install keeps its own. The API starts as root only to
+  read them and serves as `bun`, with no raw password and no admin URL in its environment. The limited DDL
+  role is now always created, so enabling a kon from the panel works on a new install.
+  `docker/as-admin.sh` runs a maintenance command with the admin account. A clean install is checked end to
+  end in CI (`scripts/clean-install-check.sh`).
+- **Behind your own proxy** ([docs/install/own-proxy.md](docs/install/own-proxy.md)): the TLS overlay is split.
+  `docker-compose.public.yml` holds the public URLs, the website (now on `127.0.0.1:4321`) and the limits;
+  `docker-compose.tls.yml` only Caddy. Traefik, Caddy or nginx on the host and Coolify, with what each must
+  do and the `TRUSTED_PROXY_HOPS` to set.
+- **Kon workers** ([docs/kons/workers.md](docs/kons/workers.md)): `defineKon({ workers })` declares a
+  long-running process (a gateway socket, a poller). One instance across every replica (a Postgres advisory
+  lock), restarted after a crash, stopped when the kon is switched off. `KITSUDEN_WORKERS=inline|off|only`
+  chooses where it runs with the same image; the `workers` compose profile runs a worker process.
+  `ctx.workers` tells a kon that the core runs them.
+- **Product profile**: `KITSUDEN_ENABLE_KONS=blog,wiki` says which installed kons come on the first time the
+  panel's table hears of them (a seed: the panel decides afterwards), and their migrations run at start.
+- **The setup link**: on a new install the API log prints `<ADMIN_URL>/#setup-token=…`; the panel fills the
+  token in from the fragment (never sent to a server) and removes it from the address bar.
+- `c.get("clientIp")` on every `/api` request: the client address as `TRUSTED_PROXY_HOPS` resolves it, for
+  kons, which cannot import `lib/client-ip.ts`.
+
 - **A separate bucket for private files** (`S3_PRIVATE_BUCKET`, [docs/kons/storage.md](docs/kons/storage.md)):
   with it set, every `private/…` key is written, read, listed, signed and deleted in a bucket with no public
   access, chosen by the same normalized `isPrivateKey` check that decides when an address is signed, and
@@ -199,6 +223,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `create-kitsuden` did not copy `docker/postgres-entrypoint.sh` and `docker/wal-archive.sh`, which
+  `docker-compose.yml` mounts, so a new project's database could not start. A test now checks every file the
+  compose mounts.
 - Agents reading a kon table or a dataset failed with `function kitsuden_agente_denegado(text) does not exist`
   on a database upgraded from 0.8. Migration 0075 drops a Spanish-named agent helper unless Postgres records a
   dependant, but calls inside a function body are not recorded: it kept `kitsuden_agente_puede_en_kon`,

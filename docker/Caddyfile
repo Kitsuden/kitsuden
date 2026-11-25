@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # Kitsuden — TLS termination (production on a VPS)
 #
-#   docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml up -d --build
 #
 # Caddy obtains and renews the certificates on its own (Let's Encrypt). The
 # DNS A records (and AAAA with IPv6) of the THREE names must point to the
@@ -11,7 +11,7 @@
 #   www.{$SITE_DOMAIN}    redirects to the one above
 #   {$KITSUDEN_DOMAIN}    the admin panel, and the API the browser uses (/api/*)
 #
-# docker-compose.tls.yml sets the variables from .env.
+# docker-compose.tls.yml sets the variables from .env (with docker-compose.public.yml).
 #
 # The website talks to the API over the internal Docker network
 # (KITSUDEN_API_URL), so its domain does not need the API. The panel's nginx

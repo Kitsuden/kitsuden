@@ -49,6 +49,10 @@ export const TEMPLATE_FILES = [
   "docker/init-extensions.sql",
   "docker/seaweedfs-startup.sh",
   "docker/media-backup.sh",
+  // Mounted by docker-compose.yml into the database container: without them a
+  // new project's Postgres would not start (and could not read the generated password).
+  "docker/postgres-entrypoint.sh",
+  "docker/wal-archive.sh",
 ];
 
 /**

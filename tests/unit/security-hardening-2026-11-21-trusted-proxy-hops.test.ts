@@ -124,8 +124,10 @@ describe("TRUSTED_PROXY_HOPS", () => {
 describe("deployment files", () => {
   const read = (p: string) => readFileSync(resolve(__dirname, "../..", p), "utf8");
 
-  it("the TLS overlay (Caddy → panel nginx → API) states two hops; the base passes the value", () => {
-    expect(read("docker-compose.tls.yml")).toContain("TRUSTED_PROXY_HOPS=${TRUSTED_PROXY_HOPS:-2}");
+  it("the public overlay (proxy → panel nginx → API) states two hops; the base passes the value", () => {
+    expect(read("docker-compose.public.yml")).toContain(
+      "TRUSTED_PROXY_HOPS=${TRUSTED_PROXY_HOPS:-2}"
+    );
     expect(read("docker-compose.yml")).toContain("TRUSTED_PROXY_HOPS=${TRUSTED_PROXY_HOPS:-}");
   });
 

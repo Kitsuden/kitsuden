@@ -31,6 +31,7 @@ const read = (f: string) => readFileSync(join(root, f), "utf8");
 /** The compose files of the production stack: the base and its overlays. */
 const COMPOSE_FILES = [
   "docker-compose.yml",
+  "docker-compose.public.yml",
   "docker-compose.tls.yml",
   "docker-compose.replica.yml",
 ];
@@ -46,6 +47,7 @@ const NOT_INTERPOLATED: Record<string, string> = {
   COMPOSE_PROJECT_NAME:
     "read by `docker compose` itself: it names the project and the media volume",
   KITSUDEN_OVERLAYS: "read by scripts/deploy.sh only: the extra compose files it adds",
+  COMPOSE_FILE: "read by `docker compose` itself: the files a plain `docker compose` uses",
 };
 
 /** `NAME=value` and the commented examples (`# NAME=value`) of an env template. */

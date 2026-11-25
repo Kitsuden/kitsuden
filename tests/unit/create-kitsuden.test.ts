@@ -148,7 +148,8 @@ describe("docker mode", () => {
     expect(compose).not.toMatch(/dockerfile:/);
     // Our images come from our registry, pinned to this release: compose pulls them.
     expect(compose).not.toMatch(/pull_policy: never/);
-    expect(compose.match(/pull_policy: missing/g)).toHaveLength(3);
+    // api, admin, backup and the one-shot secrets generator (the API image)
+    expect(compose.match(/pull_policy: missing/g)).toHaveLength(4);
     expect(compose).not.toContain("kitsuden/api:latest");
     expect(compose).toContain(
       "${KITSUDEN_API_IMAGE:-ghcr.io/kitsuden/kitsuden/api:" + VERSION + "}"
@@ -335,5 +336,15 @@ describe("the command", () => {
     expect(pkg.bin["create-kitsuden"]).toBe("./bin/create-kitsuden.mjs");
     expect(pkg.files).toContain("templates");
     expect(pkg.dependencies ?? {}).toEqual({});
+  });
+});
+
+describe("what docker-compose.yml mounts from the project", () => {
+  it("every ./docker/ file it mounts is copied into a new project", () => {
+    const compose = readFileSync(join(ROOT, "docker-compose.yml"), "utf8");
+    const mounted = new Set(
+      [...compose.matchAll(/\.\/(docker\/[A-Za-z0-9._-]+)/g)].map((m) => m[1])
+    );
+    for (const f of mounted) expect(TEMPLATE_FILES, f).toContain(f);
   });
 });

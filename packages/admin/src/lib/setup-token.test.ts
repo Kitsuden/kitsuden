@@ -82,6 +82,22 @@ describe("first-run setup form", () => {
     expect(posts[0]!.body.setupToken).toBe("the-token");
   });
 
+  it("the boot link fills the token in, and the address bar forgets it", async () => {
+    setLocale("en", { reload: false });
+    const posts = stubApi({ initialized: false, setupTokenRequired: true });
+    await checkInit();
+    history.replaceState(null, "", "/#setup-token=abcdefghijklmnop_0123456789");
+    render(SetupView);
+    expect((document.querySelector("#setup-token") as HTMLInputElement).value).toBe(
+      "abcdefghijklmnop_0123456789"
+    );
+    expect(window.location.hash).toBe("");
+    await fill();
+    await fireEvent.submit(document.querySelector("form")!);
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]!.body.setupToken).toBe("abcdefghijklmnop_0123456789");
+  });
+
   it("the label exists in Spanish too", async () => {
     setLocale("es", { reload: false });
     stubApi({ initialized: false, setupTokenRequired: true });

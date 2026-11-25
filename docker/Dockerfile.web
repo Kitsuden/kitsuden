@@ -6,9 +6,10 @@
 # Builds packages/starters/kitsuden-starter-basic, an Astro site rendered
 # on the server that reads pages, the blog and the media library from the
 # Kitsuden API on every request. It is the `kitsuden_web` service of
-# docker-compose.tls.yml (Caddy in front adds TLS):
+# docker-compose.public.yml (Caddy in docker-compose.tls.yml, or your own
+# proxy, adds TLS):
 #
-#   docker compose -f docker-compose.yml -f docker-compose.tls.yml build kitsuden_web
+#   docker compose -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml build kitsuden_web
 #
 # or on its own:
 #
