@@ -104,12 +104,37 @@ describe.skipIf(!sh)("generated secrets: the script", () => {
 
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-  it("generates 64 hex characters, copies a value from .env, ignores a placeholder", () => {
-    run({ POSTGRES_PASSWORD: "kept-from-env", VALKEY_PASSWORD: "<openssl rand -hex 32>" });
+  it("generates 64 hex characters and copies a value from .env", () => {
+    run({ POSTGRES_PASSWORD: "kept-from-env" });
     expect(file("postgres_password")).toBe("kept-from-env");
     expect(file("valkey_password")).toMatch(/^[0-9a-f]{64}$/);
     expect(file("kitsuden_secrets_key")).toMatch(/^[0-9a-f]{64}$/);
     expect(file("app_db_password")).not.toBe(file("ddl_db_password"));
+  });
+
+  it("refuses a placeholder: Postgres and Valkey would take it literally", () => {
+    const other = mkdtempSync(join(tmpdir(), "kitsuden-secrets-"));
+    try {
+      let out = "";
+      try {
+        execFileSync("sh", [join(root, "docker/generate-secrets.sh")], {
+          env: {
+            PATH: process.env.PATH ?? "",
+            KITSUDEN_SECRETS_DIR: other,
+            VALKEY_PASSWORD: "<openssl rand -hex 32>",
+          },
+          encoding: "utf8",
+          stdio: "pipe",
+        });
+      } catch (err) {
+        out = String((err as { stderr?: string }).stderr ?? "");
+      }
+      expect(out).toContain("VALKEY_PASSWORD");
+      expect(out).toContain("Stopped");
+      expect(out).not.toContain("openssl rand -hex 32>");
+    } finally {
+      rmSync(other, { recursive: true, force: true });
+    }
   });
 
   it("never rotates: a second run keeps every file", () => {

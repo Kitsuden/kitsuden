@@ -191,5 +191,5 @@ because of those lines, but restores everything. **(seen)**
 ### The first backup is 1 KB
 
 It was taken while the API was still migrating (they start together). The
-next one has everything; force one with `bun run scripts/backup.ts` inside
-`kitsuden_backup`. **(seen)**
+next one has everything; force one with
+`docker exec <instance>_backup_prod sh /app/docker/backup.sh`. **(seen)**

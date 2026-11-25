@@ -215,7 +215,8 @@ function launch(entry: Registered): void {
 
 /** The life of one worker in this process: wait for its kon and its lock, run it, restart it. */
 async function supervise(entry: Registered): Promise<void> {
-  const done = AbortSignal.any([stopAll.signal, entry.retired.signal]);
+  const shutdown = stopAll.signal;
+  const done = AbortSignal.any([shutdown, entry.retired.signal]);
   let failures = 0;
   while (!done.aborted) {
     if (await konOff(entry.konId)) {
@@ -241,21 +242,28 @@ async function supervise(entry: Registered): Promise<void> {
     const watch = watchActivation(entry.konId, stop, signal);
     const began = Date.now();
     let crashed = false;
+    let run: Promise<void> | null = null;
+    let settled = false;
     entry.running = true;
     logger.info({ worker: entry.workerId, attempt: entry.restarts }, "[worker] started");
     try {
-      const run = Promise.resolve().then(() =>
+      run = Promise.resolve().then(() =>
         entry.worker.run(entry.context, {
           signal,
           workerId: entry.workerId,
           attempt: entry.restarts,
         })
       );
+      void run.then(
+        () => (settled = true),
+        () => (settled = true)
+      );
       // Settles when run() does, or when the grace after a stop runs out.
       await untilSettledOrGrace(run, signal);
       crashed = !signal.aborted;
       if (crashed) entry.lastError = "run() returned while the worker was not stopped";
     } catch (err) {
+      settled = true;
       crashed = !signal.aborted;
       entry.lastError = messageOf(err);
       logger.error(
@@ -263,8 +271,18 @@ async function supervise(entry: Registered): Promise<void> {
         signal.aborted ? "[worker] failed while stopping" : "[worker] crashed"
       );
     } finally {
-      entry.running = false;
       clearInterval(watch);
+      // run() ignored its stop past the grace. The lock stays held until it returns: released now, the
+      // kon announced again (or switched back on) would start a second copy beside this one. Only the
+      // shutdown lets go at once, since the process is ending.
+      if (run && !settled && !shutdown.aborted) {
+        logger.warn(
+          { worker: entry.workerId },
+          "[worker] run() did not stop within the grace period: the lock stays held until it returns"
+        );
+        await Promise.race([run.catch(() => {}), whenAborted(shutdown)]);
+      }
+      entry.running = false;
       await lock.release().catch(() => {});
     }
 
@@ -296,6 +314,13 @@ function watchActivation(
   }, timings.activationCheck);
   timer.unref?.();
   return timer;
+}
+
+function whenAborted(signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal.aborted) resolve();
+    else signal.addEventListener("abort", () => resolve(), { once: true });
+  });
 }
 
 async function untilSettledOrGrace(run: Promise<void>, signal: AbortSignal): Promise<void> {
@@ -358,13 +383,18 @@ async function postgresLock(workerId: string): Promise<WorkerLock | null> {
   client.on("end", () => lost.abort());
   await client.connect();
   const key = lockKeyOf(workerId);
-  const res = await client.query<{ ok: boolean }>("SELECT pg_try_advisory_lock($1::bigint) AS ok", [
-    key,
-  ]);
-  if (!res.rows[0]?.ok) {
-    await client.end().catch(() => {});
-    return null;
+  let held = false;
+  try {
+    const res = await client.query<{ ok: boolean }>(
+      "SELECT pg_try_advisory_lock($1::bigint) AS ok",
+      [key]
+    );
+    held = res.rows[0]?.ok === true;
+  } finally {
+    // Not held, or the query failed: the connection goes too (the supervisor retries every few seconds).
+    if (!held) await client.end().catch(() => {});
   }
+  if (!held) return null;
   // A silent network cut does not end the client: a periodic query notices it.
   const keepalive = setInterval(() => {
     client.query("SELECT 1").catch(() => lost.abort());

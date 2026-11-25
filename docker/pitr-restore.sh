@@ -133,7 +133,7 @@ EOF
 Done. The previous data stays in $KEEP_VOL (remove it when you no longer need it):
   docker volume rm $KEEP_VOL
 Take a fresh base backup now: the old ones restore the OLD history, not this one.
-  docker exec ${INSTANCE}_backup_prod bun run scripts/backup.ts --base --force
+  docker exec ${INSTANCE}_backup_prod sh /app/docker/backup.sh --base --force
 The restored copy volume $APPLY can be removed too:
   docker volume rm $APPLY
 EOF

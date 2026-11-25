@@ -620,8 +620,8 @@ services:
         condition: service_healthy
     working_dir: /app/apps/api
     environment:
-      # The admin URL is built in the command below: the password from .env, or
-      # the generated one
+      # The admin URL is built by docker/backup.sh: the password from .env, or
+      # the generated one. A backup by hand goes through it too.
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
       - KITSUDEN_DB_USER=${POSTGRES_USER:-kitsuden}
       - KITSUDEN_DB_AT=${KITSUDEN_INSTANCE:-kitsuden}_db_prod:5432/${POSTGRES_DB:-kitsuden_prod}
@@ -645,10 +645,6 @@ services:
     # the loop variables when reading the file and the loop gets empty strings.
     command:
       - |
-        : "$${POSTGRES_PASSWORD:=$$(cat /kitsuden-secrets/postgres_password 2>/dev/null)}"
-        DATABASE_URL="postgresql://$${KITSUDEN_DB_USER}:$${POSTGRES_PASSWORD}@$${KITSUDEN_DB_AT}"
-        export DATABASE_URL
-        unset POSTGRES_PASSWORD
         INTERVAL_SECONDS=$$(( $${BACKUP_INTERVAL_HOURS} * 3600 ))
         echo "Backups every $${BACKUP_INTERVAL_HOURS}h in /backups (keeping $${BACKUP_KEEP})"
         # A failure does NOT wait for the next interval: it retries in 5 minutes.
@@ -657,7 +653,7 @@ services:
         # policy, it brings them up at the same time, and the dump may run before
         # Postgres is listening.
         while true; do
-          if bun run scripts/backup.ts; then
+          if sh /app/docker/backup.sh; then
             date -u +%s > /backups/.last-ok
             # The media, after the database and without retrying the dump if
             # they fail: the script decides whether it is due (every BACKUP_MEDIA_DAYS days).
@@ -665,7 +661,7 @@ services:
             # Base backup for point-in-time restore, when due (KITSUDEN_PITR=on).
             # Its failure does not hide behind the dump: the healthcheck reads its marker.
             if [ "$${KITSUDEN_PITR}" = "on" ]; then
-              bun run scripts/backup.ts --base || echo "BASE BACKUP FAILED $$(date -u +%FT%TZ)" >&2
+              sh /app/docker/backup.sh --base || echo "BASE BACKUP FAILED $$(date -u +%FT%TZ)" >&2
             fi
             sleep "$$INTERVAL_SECONDS"
           else

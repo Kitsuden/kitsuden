@@ -10,10 +10,12 @@ Three different places, best not mixed up:
 
 With Docker, connection URLs (`DATABASE_URL`, `REDIS_URL`…) are **not**
 written by hand: the API's start script builds them from the variables below.
-No secret has to be written by hand either: each one left unset is generated
-on the first start and kept in the `<instance>_secrets_prod` volume
+No secret has to be written by hand either: each one left unset (line deleted
+or empty) is generated on the first start and kept in the `<instance>_secrets_prod` volume
 (`docker/generate-secrets.sh`). One set in `.env` wins; if you set one, use
-`openssl rand -hex 32` and do not paste it into loose scripts.
+`openssl rand -hex 32` and do not paste it into loose scripts. A line still
+holding the example's `<openssl rand -hex 32>` stops the start: the
+`kitsuden_secrets` service names it in its log.
 
 Legend: **required** = without it nothing starts (or compose refuses to
 interpolate). **public** = only required by the public mode

@@ -86,16 +86,16 @@ describe("first-run setup form", () => {
     setLocale("en", { reload: false });
     const posts = stubApi({ initialized: false, setupTokenRequired: true });
     await checkInit();
-    history.replaceState(null, "", "/#setup-token=abcdefghijklmnop_0123456789");
+    history.replaceState(null, "", "/#setup-token=fixturefixturefixture");
     render(SetupView);
     expect((document.querySelector("#setup-token") as HTMLInputElement).value).toBe(
-      "abcdefghijklmnop_0123456789"
+      "fixturefixturefixture"
     );
     expect(window.location.hash).toBe("");
     await fill();
     await fireEvent.submit(document.querySelector("form")!);
     await waitFor(() => expect(posts).toHaveLength(1));
-    expect(posts[0]!.body.setupToken).toBe("abcdefghijklmnop_0123456789");
+    expect(posts[0]!.body.setupToken).toBe("fixturefixturefixture");
   });
 
   it("the label exists in Spanish too", async () => {

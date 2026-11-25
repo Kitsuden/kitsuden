@@ -241,6 +241,31 @@ describe("kon workers", () => {
     await until(() => first.state.stops === 1 && second.state.running === 1);
   });
 
+  it("a worker that ignores its stop keeps the lock: no second copy starts beside it", async () => {
+    resetKonWorkersForTests({ acquire: processLockForTests, timings: fast });
+    let running = 0;
+    let most = 0;
+    let letGo!: () => void;
+    const gate = new Promise<void>((resolve) => (letGo = resolve));
+    const stubborn = async () => {
+      running++;
+      most = Math.max(most, running);
+      await gate;
+      running--;
+    };
+    const second = steady();
+    registerKonWorkers({ id: "kon-dc", workers: [{ id: "gateway", run: stubborn }] }, ctx);
+    startKonWorkers({});
+    await until(() => running === 1);
+    registerKonWorkers({ id: "kon-dc", workers: [{ id: "gateway", run: second.run }] }, ctx);
+    // Well past the grace and several lock retries: still the old one alone.
+    await new Promise((r) => setTimeout(r, fast.stopGrace * 4));
+    expect(second.state.starts).toBe(0);
+    letGo();
+    await until(() => second.state.running === 1);
+    expect(most).toBe(1);
+  });
+
   it("shutdown stops every worker", async () => {
     resetKonWorkersForTests({ acquire: processLockForTests, timings: fast });
     const w = steady();

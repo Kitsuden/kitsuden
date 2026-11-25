@@ -2,12 +2,12 @@
  * Re-encrypt the stored secrets with a new KITSUDEN_SECRETS_KEY.
  *
  *   cd apps/api
- *   KITSUDEN_SECRETS_KEY=<new> DATABASE_URL=$DATABASE_ADMIN_URL bun run scripts/rekey-secrets.ts --dry-run
- *   KITSUDEN_SECRETS_KEY=<new> DATABASE_URL=$DATABASE_ADMIN_URL bun run scripts/rekey-secrets.ts
+ *   KITSUDEN_SECRETS_KEY=<new> DATABASE_URL=<admin URL> bun run scripts/rekey-secrets.ts --dry-run
+ *   KITSUDEN_SECRETS_KEY=<new> DATABASE_URL=<admin URL> bun run scripts/rekey-secrets.ts
  *
- * In the container: `docker exec <api-container> sh -c 'cd /app/apps/api &&
- * DATABASE_URL=$DATABASE_ADMIN_URL bun run scripts/rekey-secrets.ts'` after
- * adding the new KITSUDEN_SECRETS_KEY to `.env` and recreating the container.
+ * In the container, after adding the new KITSUDEN_SECRETS_KEY to `.env` and
+ * recreating it (the admin URL is not in its environment; as-admin.sh builds it):
+ *   docker exec <api-container> sh /app/docker/as-admin.sh bun run scripts/rekey-secrets.ts
  *
  * The OLD key is `KITSUDEN_SECRETS_KEY_OLD` if set, otherwise `BETTER_AUTH_SECRET`
  * (what an install without KITSUDEN_SECRETS_KEY used). One transaction: if any

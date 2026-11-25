@@ -889,6 +889,7 @@ jobs:
           sh -n docker/generate-secrets.sh
           sh -n docker/kitsuden-env.sh
           sh -n docker/as-admin.sh
+          sh -n docker/backup.sh
           bash -n scripts/deploy.sh
           bash -n scripts/clean-install-check.sh
           bash -n install.sh

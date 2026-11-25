@@ -51,7 +51,7 @@ copy logs the archive it writes.
   one has everything. To force one:
 
 ```bash
-docker exec -w /app/apps/api kitsuden_backup_prod bun run scripts/backup.ts
+docker exec kitsuden_backup_prod sh /app/docker/backup.sh
 docker exec kitsuden_backup_prod ls -la /backups
 ```
 
@@ -226,7 +226,7 @@ From the one-compose install onwards:
 2. Take a backup **and check that it reads**:
 
    ```bash
-   docker exec -w /app/apps/api kitsuden_backup_prod bun run scripts/backup.ts
+   docker exec kitsuden_backup_prod sh /app/docker/backup.sh
    ```
 
 3. Tag the image that works, so you can go back:

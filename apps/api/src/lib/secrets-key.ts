@@ -87,7 +87,8 @@ export const SECRETS_KEY_REFUSAL =
   "  · New install, or no secrets stored yet: set KITSUDEN_SECRETS_KEY=$(openssl rand -hex 32).\n" +
   "  · Secrets already stored (vault, data source passwords, agent notification secrets):\n" +
   "      a) recommended: set a new KITSUDEN_SECRETS_KEY and run once, with the admin connection,\n" +
-  "         `DATABASE_URL=$DATABASE_ADMIN_URL bun run scripts/rekey-secrets.ts` (apps/api; add --dry-run to check first);\n" +
+  "         `docker exec <api-container> sh /app/docker/as-admin.sh bun run scripts/rekey-secrets.ts`\n" +
+  "         (add --dry-run to check first; outside Docker: DATABASE_URL=<admin URL> bun run scripts/rekey-secrets.ts);\n" +
   "      b) to keep them as they are: set KITSUDEN_SECRETS_KEY to the current value of BETTER_AUTH_SECRET.\n" +
   "  See docs/install/upgrade-and-backups.md.";
 
