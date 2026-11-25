@@ -18,6 +18,8 @@ export type {
   KonDefinition,
   KonRateLimit,
   KonSchedule,
+  KonWorker,
+  KonWorkerRuntime,
   // The job queue tied to a kon (`ctx.queue`)
   KonQueue,
   KonQueueJob,

@@ -194,7 +194,9 @@ WORKDIR /app
 # model. See apps/api/src/lib/worker-sandbox.ts and docs/agents/sandbox.md.
 # `apk upgrade`: the base image's own packages (OpenSSL above all) lag behind
 # Alpine's security fixes; Trivy in CI fails on a fixable HIGH or CRITICAL one.
-RUN apk upgrade --no-cache && apk add --no-cache postgresql-client curl nodejs
+# su-exec: the container may start as root to read the generated secrets
+# (docker/generate-secrets.sh); start-with-check.sh then starts again as `bun`.
+RUN apk upgrade --no-cache && apk add --no-cache postgresql-client curl nodejs su-exec
 
 # Copy built API artifact
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
@@ -247,8 +249,8 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-workspace.yaml ./
 
 # Folders the API WRITES to at runtime, owned by user `bun`
-# (uid/gid 1000, provided by the base image; the same as the `user: "1000:1000"` of
-# docker-compose.tls.yml):
+# (uid/gid 1000, provided by the base image). Compose starts the container as root
+# only to read the generated secrets; start-with-check.sh drops to `bun` at once:
 #
 #   /app/data                    STORAGE_LOCAL_PATH: the media volume
 #   /app/uploads, /app/logs      local uploads and logs

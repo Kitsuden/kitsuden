@@ -5,7 +5,7 @@
  * Sent to the API as `x-kitsuden-client` (only with `KITSUDEN_SITE_KEY`), so
  * the API's rate limit counts each visitor separately.
  *
- * Behind a reverse proxy (Caddy in docker-compose.tls.yml) the socket address
+ * Behind a reverse proxy (Caddy in docker-compose.tls.yml, or the user's own) the socket address
  * is the PROXY's, and every visitor would share one counter. With
  * `KITSUDEN_TRUST_PROXY=true` the address is taken from `X-Forwarded-For`
  * instead: its LAST entry, which is the one the proxy added (the entries

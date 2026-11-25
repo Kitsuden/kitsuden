@@ -50,6 +50,7 @@ import { syncKonEntities } from "./kon-entities";
 import { bindKonEvents } from "./kon-event-access";
 import { registerKonSchedules } from "./kon-schedules";
 import { registerKonSecretColumns } from "./kon-secrets";
+import { registerKonWorkers } from "./kon-workers";
 import { bindKonQueue, installKonQueueGuard, runAsKon } from "./queue-kon-access";
 import { konCapability, konMayBroadcast, registerKonChannels } from "./realtime-kon-channels";
 
@@ -168,6 +169,8 @@ export function bindKonContext(base: KonContext, konId: string): KonContext {
   const binding = {};
   return {
     ...base,
+    // This core runs `defineKon({ workers })` (lib/kon-workers.ts): a kon can drop its own timers.
+    workers: { supported: true },
     ...(base.secrets ? { secrets: bindSecrets(konId, base.secrets) } : {}),
     ...(base.entities ? { entities: bindEntities(konId, base.entities) } : {}),
     ...(base.automation ? { automation: bindAutomation(konId, base.automation) } : {}),
@@ -220,9 +223,9 @@ function scopedEvents(konId: string, events: KonEvents): KonEvents {
  * The kon's rule steps and schedules, run in its kon scope: the core calls them from a rule or a
  * queue job, and what they queue through `@kitsuden/engine` must be checked as this kon.
  */
-function scopedCallbacks<T extends Pick<KonDefinition, "id" | "actionHandlers" | "schedules">>(
-  konDef: T
-): T {
+function scopedCallbacks<
+  T extends Pick<KonDefinition, "id" | "actionHandlers" | "schedules" | "workers">,
+>(konDef: T): T {
   const konId = konDef.id;
   return {
     ...konDef,
@@ -252,6 +255,15 @@ function scopedCallbacks<T extends Pick<KonDefinition, "id" | "actionHandlers" |
           ) as KonDefinition["schedules"],
         }
       : {}),
+    ...(konDef.workers
+      ? {
+          workers: konDef.workers.map((w) =>
+            w && typeof w === "object" && typeof w.run === "function"
+              ? { ...w, run: (ctx, runtime) => runAsKon(konId, () => w.run(ctx, runtime)) }
+              : w
+          ) as KonDefinition["workers"],
+        }
+      : {}),
   };
 }
 
@@ -262,7 +274,14 @@ function scopedCallbacks<T extends Pick<KonDefinition, "id" | "actionHandlers" |
 export async function announceKon(
   konDef: Pick<
     KonDefinition,
-    "id" | "events" | "actionHandlers" | "reports" | "entities" | "secretColumns" | "schedules"
+    | "id"
+    | "events"
+    | "actionHandlers"
+    | "reports"
+    | "entities"
+    | "secretColumns"
+    | "schedules"
+    | "workers"
   >,
   context: KonContext,
   warn: (message: string) => void = (message) => console.warn(`  ⚠️  ${konDef.id}: ${message}`)
@@ -274,6 +293,9 @@ export async function announceKon(
 
   // Its periodic tasks: one run per tick across every replica (lib/kon-schedules.ts).
   for (const problem of registerKonSchedules(scoped, context)) warn(problem);
+
+  // Its long-running processes: one instance across every replica (lib/kon-workers.ts).
+  for (const problem of registerKonWorkers(scoped, context)) warn(problem);
 
   // The entities it owns: one dataset each, created here with no migration (lib/kon-entities.ts).
   if (konDef.entities) {

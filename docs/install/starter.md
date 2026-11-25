@@ -69,7 +69,7 @@ starter's dependencies) and serves it without root on :4321. It is the
 ([server.md](server.md#9-first-public-start)):
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.tls.yml build kitsuden_web
+docker compose -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml build kitsuden_web
 ```
 
 The overlay passes `SITE_URL=https://${SITE_DOMAIN}`, `SITE_NAME` and

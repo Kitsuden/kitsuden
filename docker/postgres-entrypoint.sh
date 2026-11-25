@@ -31,6 +31,15 @@
 # Runs as root (the image drops to `postgres` itself), so it can chown.
 set -eu
 
+# The superuser's password: from .env if it is set, otherwise the one
+# docker/generate-secrets.sh left in the secrets volume (root-only, and this
+# wrapper is still root). Postgres only uses it to create a new cluster.
+SECRET_FILE="${KITSUDEN_SECRETS_DIR:-/kitsuden-secrets}/postgres_password"
+if [ -z "${POSTGRES_PASSWORD:-}" ] && [ -s "$SECRET_FILE" ]; then
+  POSTGRES_PASSWORD=$(cat "$SECRET_FILE")
+  export POSTGRES_PASSWORD
+fi
+
 PITR="${KITSUDEN_PITR:-off}"
 
 if [ "$PITR" = "on" ]; then

@@ -2,12 +2,35 @@
 
 ## What has to be kept
 
-| What             | Where it lives                                         | How it is copied                                                                                                                                                                 |
-| ---------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Database         | volume `kitsuden_postgres_prod`                        | automatic `pg_dump -Fc` (the `kitsuden_backup` service)                                                                                                                          |
-| Uploaded media   | volume `<project>_kitsuden_uploads_prod` (`/app/data`) | automatic tar every `BACKUP_MEDIA_DAYS` days                                                                                                                                     |
-| `.env`           | repository root                                        | **by hand**, off the server and encrypted: without `KITSUDEN_SECRETS_KEY` (or `BETTER_AUTH_SECRET` if you did not set it) the secrets stored in the database cannot be decrypted |
-| TLS certificates | `kitsuden_caddy_data`                                  | not needed: Caddy requests them again                                                                                                                                            |
+| What              | Where it lives                                         | How it is copied                                                                                                                                                                 |
+| ----------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Database          | volume `kitsuden_postgres_prod`                        | automatic `pg_dump -Fc` (the `kitsuden_backup` service)                                                                                                                          |
+| Uploaded media    | volume `<project>_kitsuden_uploads_prod` (`/app/data`) | automatic tar every `BACKUP_MEDIA_DAYS` days                                                                                                                                     |
+| `.env`            | repository root                                        | **by hand**, off the server and encrypted: without `KITSUDEN_SECRETS_KEY` (or `BETTER_AUTH_SECRET` if you did not set it) the secrets stored in the database cannot be decrypted |
+| TLS certificates  | `kitsuden_caddy_data`                                  | not needed: Caddy requests them again                                                                                                                                            |
+| Generated secrets | volume `<instance>_secrets_prod`                       | **by hand**, like `.env`: the passwords and keys the stack generated because `.env` did not set them. See below                                                                  |
+
+### The secrets volume
+
+Every password and key left out of `.env` is generated on the first start and
+kept in the `<instance>_secrets_prod` volume (`docker/generate-secrets.sh`).
+Without a copy, a lost disk loses `KITSUDEN_SECRETS_KEY` (the credentials sealed
+in the database cannot be opened) and the database passwords (a restored dump
+still works: the start script sets the roles' passwords again). Copy it off the
+server, encrypted, after the first start and whenever you change one:
+
+```bash
+docker run --rm -v kitsuden_secrets_prod:/s:ro -v "$PWD":/out alpine \
+  tar czf /out/kitsuden-secrets.tgz -C /s .
+# then encrypt it (age, gpg) and move it off the machine; delete the plain file
+```
+
+Restoring is the reverse, into an empty volume, before the first `up`. To keep
+the secrets in `.env` instead (the older way, what `install.sh` does), write them
+there: a value in `.env` always wins and is copied into the volume.
+
+The automatic backups do **not** include this volume on purpose: a dump and the
+key that opens its sealed credentials should not travel together.
 
 ## Automatic backups
 
@@ -28,7 +51,7 @@ copy logs the archive it writes.
   one has everything. To force one:
 
 ```bash
-docker exec -w /app/apps/api kitsuden_backup_prod bun run scripts/backup.ts
+docker exec kitsuden_backup_prod sh /app/docker/backup.sh
 docker exec kitsuden_backup_prod ls -la /backups
 ```
 
@@ -159,8 +182,8 @@ After 0.9.0-beta (security review 2026-11-03):
      `KITSUDEN_SECRETS_KEY=<openssl rand -hex 32>` to `.env`, recreate the API
      container, and run once, with the admin connection:
      ```bash
-     docker exec <api-container> sh -c 'cd /app/apps/api && DATABASE_URL=$DATABASE_ADMIN_URL bun run scripts/rekey-secrets.ts --dry-run'
-     docker exec <api-container> sh -c 'cd /app/apps/api && DATABASE_URL=$DATABASE_ADMIN_URL bun run scripts/rekey-secrets.ts'
+     docker exec <api-container> sh /app/docker/as-admin.sh bun run scripts/rekey-secrets.ts --dry-run
+     docker exec <api-container> sh /app/docker/as-admin.sh bun run scripts/rekey-secrets.ts
      ```
      The old key is derived from `BETTER_AUTH_SECRET` (or `KITSUDEN_SECRETS_KEY_OLD`
      when rotating from another key). It runs in one transaction: a row that
@@ -174,6 +197,27 @@ After 0.9.0-beta (security review 2026-11-03):
   behaviour). Existing keys keep their expiry.
 - **Valkey gets its password on stdin**, not on the command line; nothing to do.
 
+From the one-compose install onwards:
+
+- **Secrets are generated.** A new `kitsuden_secrets` service fills what `.env`
+  does not set. An existing `.env` keeps working unchanged: its values win and
+  are copied into the new volume. Back that volume up ([above](#the-secrets-volume)).
+- **The API container starts as root** (`user: "0:0"`) only to read those root-only
+  files; its start script drops to `bun` before anything else runs, so the API
+  still serves as uid 1000. The image gains `su-exec`: rebuild it with the
+  compose files of the same version (an older image refuses to start as root).
+- **The TLS overlay is split in two.** `docker-compose.public.yml` holds the
+  public URLs, the website and the limits; `docker-compose.tls.yml` only Caddy.
+  Replace `-f docker-compose.yml -f docker-compose.tls.yml` with
+  `-f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml`
+  in your own scripts (`scripts/deploy.sh` already does), or set
+  `COMPOSE_FILE` in `.env`. With the old command compose stops at once: Caddy
+  depends on the website, which is now in the public file.
+- **The website listens on `127.0.0.1:4321`** (`WEB_PORT`), for a proxy on the
+  host. Nothing reaches it from outside.
+- New, optional: `KITSUDEN_ENABLE_KONS` (which kons come on at the first start),
+  `KITSUDEN_WORKERS` and the `workers` profile ([../kons/workers.md](../kons/workers.md)).
+
 ### Before
 
 1. Read the release notes and the [compatibility matrix](versions.md#compatibility-matrix):
@@ -182,7 +226,7 @@ After 0.9.0-beta (security review 2026-11-03):
 2. Take a backup **and check that it reads**:
 
    ```bash
-   docker exec -w /app/apps/api kitsuden_backup_prod bun run scripts/backup.ts
+   docker exec kitsuden_backup_prod sh /app/docker/backup.sh
    ```
 
 3. Tag the image that works, so you can go back:
@@ -196,7 +240,7 @@ After 0.9.0-beta (security review 2026-11-03):
 
 ```bash
 cd /opt/kitsuden                 # new code: git pull
-C="docker compose -f docker-compose.yml"          # or with -f docker-compose.tls.yml in public mode
+C="docker compose -f docker-compose.yml"          # or with -f docker-compose.public.yml -f docker-compose.tls.yml in public mode
 $C build kitsuden_api kitsuden_admin              # + kitsuden_web with the TLS overlay
 $C up -d
 $C logs -f kitsuden_api                           # until "[6/6] Setup complete"
@@ -235,12 +279,58 @@ pnpm --filter @kitsuden/shared build
 cd apps/api && bun run scripts/migrate.ts
 ```
 
-### Rolling back
+### Upgrade (published images, no build)
+
+A project made with `create-kitsuden` (or any install that sets
+`KITSUDEN_API_IMAGE` and `KITSUDEN_ADMIN_IMAGE`) builds nothing: change the
+version in `.env` and pull.
 
 ```bash
-docker tag ghcr.io/kitsuden/kitsuden/api:before-YYYY-MM-DD ghcr.io/kitsuden/kitsuden/api:latest
-docker compose -f docker-compose.yml up -d --no-deps kitsuden_api kitsuden_backup
+# .env: the new tag on both lines, never `latest`
+KITSUDEN_API_IMAGE=ghcr.io/kitsuden/kitsuden/api:1.2.0
+KITSUDEN_ADMIN_IMAGE=ghcr.io/kitsuden/kitsuden/admin:1.2.0
 ```
+
+```bash
+docker compose pull kitsuden_api kitsuden_admin
+docker compose up -d
+docker compose logs -f kitsuden_api     # until "[6/6] Setup complete"
+```
+
+Take the compose files of the same version too (`create-kitsuden` writes them
+for its version): an image and compose files from different versions can
+disagree on what the start needs. [verify-images.md](verify-images.md) checks
+the signature before you pull.
+
+### Rolling back
+
+Going back is the same three things in reverse: the image, the compose files,
+and the database if the new version migrated it.
+
+1. **The image.** With published images, put the previous tag back in `.env`
+   and `docker compose up -d`. With images built here, restore the tag you made
+   before upgrading:
+
+   ```bash
+   docker tag ghcr.io/kitsuden/kitsuden/api:before-YYYY-MM-DD ghcr.io/kitsuden/kitsuden/api:latest
+   docker compose -f docker-compose.yml up -d --no-deps kitsuden_api kitsuden_backup
+   ```
+
+2. **The compose files**, from the same version as that image
+   (`git checkout <previous tag> -- docker-compose*.yml docker/`).
+3. **The secrets stay.** Never delete the secrets volume to roll back. A version
+   that predates it reads the secrets only from `.env`, so if your `.env` has
+   none of them, append them there first (nothing is printed to the terminal):
+
+   ```bash
+   docker run --rm -v kitsuden_secrets_prod:/s:ro alpine sh -c '
+     for p in postgres_password=POSTGRES_PASSWORD app_db_password=APP_DB_PASSWORD \
+              ddl_db_password=DDL_DB_PASSWORD valkey_password=VALKEY_PASSWORD \
+              better_auth_secret=BETTER_AUTH_SECRET kitsuden_secrets_key=KITSUDEN_SECRETS_KEY \
+              site_api_key=SITE_API_KEY; do
+       printf "%s=%s\n" "${p#*=}" "$(cat "/s/${p%%=*}")"
+     done' >> .env
+   ```
 
 Migrations are **not undone** by themselves: if the new version migrated the
 database and the old one does not understand the schema, restore the backup

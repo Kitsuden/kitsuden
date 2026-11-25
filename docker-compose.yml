@@ -15,6 +15,13 @@
 # (default `kitsuden`), so a second install on one machine shares nothing with the
 # first. Services reach each other by service name, which does not change.
 #
+# SECRETS: nothing to generate by hand. The one-shot `kitsuden_secrets` service
+# creates every password and key on the first start, in the
+# ${KITSUDEN_INSTANCE}_secrets_prod volume (docker/generate-secrets.sh). A value
+# set in .env wins and is copied there, so an existing install keeps its own.
+# Back that volume up: without it the database passwords and the key that seals
+# stored credentials are gone (docs/install/upgrade-and-backups.md).
+#
 # Local access:
 #   • API:              http://localhost:3000
 #   • Admin panel:      http://localhost:3001
@@ -33,7 +40,7 @@
 # from outside.
 #
 # To really publish there are two ways, both deliberate:
-#   · with TLS (the right way): `docker compose -f docker-compose.yml
+#   · with TLS (the right way): `docker compose -f docker-compose.yml -f docker-compose.public.yml
 #     -f docker-compose.tls.yml up -d`, which puts Caddy on 80/443 in front.
 #   · without TLS, on purpose: `BIND_ADDRESS=0.0.0.0` in `.env`.
 #
@@ -41,7 +48,39 @@
 # says, so opening the API without TLS cannot expose them as well. To reach them
 # from another machine, use an SSH tunnel.
 
+x-secrets-volume: &secrets-volume
+  type: volume
+  source: kitsuden_secrets_prod
+  target: /kitsuden-secrets
+  read_only: true
+
 services:
+  # ═══════════════════════════════════════════════════════════════════════
+  # Secrets (ONE-SHOT): generates what is missing, then exits
+  #
+  # Same image as the API, as root: it writes root-only files that Postgres,
+  # Valkey and the API's start script read before dropping privileges. The
+  # variables below only matter for an install that already has them in .env.
+  # ═══════════════════════════════════════════════════════════════════════
+  kitsuden_secrets:
+    image: ${KITSUDEN_API_IMAGE:-ghcr.io/kitsuden/kitsuden/api:latest}
+    pull_policy: never
+    container_name: ${KITSUDEN_INSTANCE:-kitsuden}_secrets_prod
+    user: "0:0"
+    restart: "no"
+    entrypoint: ["sh", "/app/docker/generate-secrets.sh"]
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
+      - APP_DB_PASSWORD=${APP_DB_PASSWORD:-}
+      - DDL_DB_PASSWORD=${DDL_DB_PASSWORD:-}
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD:-}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-}
+      - KITSUDEN_SECRETS_KEY=${KITSUDEN_SECRETS_KEY:-}
+      - SITE_API_KEY=${SITE_API_KEY:-}
+    volumes:
+      - kitsuden_secrets_prod:/kitsuden-secrets
+    network_mode: none
+
   # ═══════════════════════════════════════════════════════════════════════
   # PostgreSQL 16 with pgvector (REQUIRED)
   # ═══════════════════════════════════════════════════════════════════════
@@ -56,9 +95,13 @@ services:
     # CMD, hence `command`.
     entrypoint: ["sh", "/kitsuden/postgres-entrypoint.sh"]
     command: ["postgres"]
+    depends_on:
+      kitsuden_secrets:
+        condition: service_completed_successfully
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-kitsuden}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - set it in .env}
+      # Empty = the generated one (docker/postgres-entrypoint.sh reads it)
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
       POSTGRES_DB: ${POSTGRES_DB:-kitsuden_prod}
       KITSUDEN_PITR: ${KITSUDEN_PITR:-off}
       PG_ARCHIVE_TIMEOUT: ${PG_ARCHIVE_TIMEOUT:-300}
@@ -72,6 +115,7 @@ services:
       - kitsuden_wal_archive_prod:/wal-archive
       - ./docker/postgres-entrypoint.sh:/kitsuden/postgres-entrypoint.sh:ro
       - ./docker/wal-archive.sh:/kitsuden/wal-archive.sh:ro
+      - *secrets-volume
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
     healthcheck:
@@ -103,23 +147,34 @@ services:
     # on the host. `$$REDISCLI_AUTH` is expanded by the container's shell, and
     # `printf` is a shell builtin, so no process gets it in its argv. The image's
     # entrypoint still drops root before starting the server.
+    # Empty REDISCLI_AUTH = the generated password, read (as root, before the
+    # entrypoint drops it) from the secrets volume.
     command:
       - sh
       - -c
       - >-
+        : "$${REDISCLI_AUTH:=$$(cat /kitsuden-secrets/valkey_password 2>/dev/null)}";
         printf 'requirepass %s\n' "$$REDISCLI_AUTH" |
         exec docker-entrypoint.sh valkey-server
         --maxmemory 256mb --maxmemory-policy noeviction --appendonly yes -
+    depends_on:
+      kitsuden_secrets:
+        condition: service_completed_successfully
     environment:
       # Read by valkey-cli in the healthcheck and by the command above, so the
       # password stays out of every argv
-      REDISCLI_AUTH: ${VALKEY_PASSWORD:?VALKEY_PASSWORD is required - set it in .env}
+      REDISCLI_AUTH: ${VALKEY_PASSWORD:-}
     ports:
       - "127.0.0.1:${VALKEY_PORT:-6379}:6379"
     volumes:
       - kitsuden_valkey_prod:/data
+      - *secrets-volume
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          ': "$${REDISCLI_AUTH:=$$(cat /kitsuden-secrets/valkey_password 2>/dev/null)}"; export REDISCLI_AUTH; valkey-cli ping',
+        ]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -231,14 +286,27 @@ services:
       #
       # The role is created automatically at startup, with the necessary GRANTs; see
       # docker/start-with-check.sh.
-      - DATABASE_ADMIN_URL=postgresql://${POSTGRES_USER:-kitsuden}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@${KITSUDEN_INSTANCE:-kitsuden}_db_prod:5432/${POSTGRES_DB:-kitsuden_prod}
-      - DATABASE_URL=postgresql://${APP_DB_USER:-kitsuden_app}:${APP_DB_PASSWORD:?APP_DB_PASSWORD is required - set it in .env}@${KITSUDEN_INSTANCE:-kitsuden}_db_prod:5432/${POSTGRES_DB:-kitsuden_prod}
-      # Limited role to create tables at runtime (enabling a kon from the panel, the
-      # Vault): without it the API has nothing to do that with, because startup takes
-      # the admin URL away from it. Empty if there is no DDL_DB_PASSWORD.
-      - DATABASE_DDL_URL=${DDL_DB_PASSWORD:+postgresql://${DDL_DB_USER:-kitsuden_ddl}:${DDL_DB_PASSWORD}@${KITSUDEN_INSTANCE:-kitsuden}_db_prod:5432/${POSTGRES_DB:-kitsuden_prod}}
+      #
+      # The URLs (DATABASE_ADMIN_URL, DATABASE_URL, DATABASE_DDL_URL, REDIS_URL)
+      # are built by docker/start-with-check.sh from these pieces and each
+      # password: from .env when it is set, otherwise the generated one (the
+      # secrets volume). The raw passwords never reach the running API.
+      #
+      # DDL: a limited role to create tables at runtime (enabling a kon from the
+      # panel, the Vault); startup takes the admin URL away from the API, so
+      # without it nothing could. Generated like the others, so enabling a kon
+      # from the panel works on a new install.
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
+      - APP_DB_PASSWORD=${APP_DB_PASSWORD:-}
+      - DDL_DB_PASSWORD=${DDL_DB_PASSWORD:-}
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD:-}
+      - KITSUDEN_DB_HOST=${KITSUDEN_INSTANCE:-kitsuden}_db_prod
+      - POSTGRES_USER=${POSTGRES_USER:-kitsuden}
+      - POSTGRES_DB=${POSTGRES_DB:-kitsuden_prod}
+      - APP_DB_USER=${APP_DB_USER:-kitsuden_app}
+      - DDL_DB_USER=${DDL_DB_USER:-kitsuden_ddl}
       # Valkey
-      - REDIS_URL=redis://:${VALKEY_PASSWORD:?VALKEY_PASSWORD is required - set it in .env}@${KITSUDEN_INSTANCE:-kitsuden}_state_prod:6379
+      - KITSUDEN_STATE_HOST=${KITSUDEN_INSTANCE:-kitsuden}_state_prod
       # Storage Configuration (configurable via Media Library settings)
       - DEFAULT_STORAGE_PROVIDER=${DEFAULT_STORAGE_PROVIDER:-local}
       # SeaweedFS/S3 (used if DEFAULT_STORAGE_PROVIDER=s3; `minio` is still accepted)
@@ -264,7 +332,8 @@ services:
       # survives a configuration change.
       - STORAGE_LOCAL_URL=/media
       # Auth
-      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required - set it in .env}
+      # Empty = the generated one (secrets volume)
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-}
       # KITSUDEN Secrets Manager (AES-256-GCM master key). Required: the API refuses
       # to start without it (docs/install/upgrade-and-backups.md for an old install)
       - KITSUDEN_SECRETS_KEY=${KITSUDEN_SECRETS_KEY:-}
@@ -278,7 +347,7 @@ services:
       # login stopped working without any error on the server side.
       #
       # Now they come from the environment. The default is still localhost
-      # so that local use does not change; the TLS overlay (docker-compose.tls.yml)
+      # so that local use does not change; the public overlay (docker-compose.public.yml)
       # derives them from KITSUDEN_DOMAIN, and in public mode startup REFUSES to
       # continue if any still points to localhost.
       - KITSUDEN_PUBLIC=${KITSUDEN_PUBLIC:-false}
@@ -400,12 +469,25 @@ services:
       # X-Forwarded-For entry that many hops from the right (lib/client-ip.ts,
       # docs/install/variables.md). Empty = one, and a public socket means none.
       - TRUSTED_PROXY_HOPS=${TRUSTED_PROXY_HOPS:-}
+      # The product profile: which installed kons come on the FIRST time the
+      # panel's table hears of them (`blog,wiki`, `*` = all). Empty = the
+      # defaults (apps/api/kitsuden.config.ts). Later, the panel decides.
+      - KITSUDEN_ENABLE_KONS=${KITSUDEN_ENABLE_KONS:-}
+      # Kons' long-running processes (docs/kons/workers.md): `inline` runs them
+      # here (one instance across replicas), `off` when a separate worker
+      # service runs them.
+      - KITSUDEN_WORKERS=${KITSUDEN_WORKERS:-inline}
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-3000}:3000"
     networks:
       - kitsuden_net_prod
     command: ["sh", "/app/docker/start-with-check.sh"]
+    # Starts as root ONLY to read the generated secrets (root-only files); the
+    # start script then runs again as `bun` (su-exec) and the API never serves
+    # as root nor can it open those files.
+    user: "0:0"
     volumes:
+      - *secrets-volume
       # Files uploaded in local mode. Without this mount they live inside the
       # container and disappear when it is recreated: a `docker compose up -d` after
       # changing the image would delete the entire media library, silently.
@@ -437,6 +519,33 @@ services:
       timeout: 5s
       retries: 5
       start_period: 90s
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Kon workers (OPTIONAL, `--profile workers`) - the same image, another role
+  #
+  # Kons' long-running processes (a bot's gateway, a poller; docs/kons/workers.md)
+  # run inside the API by default (KITSUDEN_WORKERS=inline), one instance across
+  # replicas. To move them out of the process that serves requests:
+  #
+  #   KITSUDEN_WORKERS=off in .env (the API stops running them), then
+  #   docker compose --profile workers up -d
+  #
+  # It runs the same start script after the API is healthy (so it does not race
+  # the API's migrations), serves no public traffic (no ports) and also takes
+  # queue jobs. KITSUDEN_WORKER_FILTER (`dc:gateway,koe:*`) narrows what it runs.
+  # ═══════════════════════════════════════════════════════════════════════
+  kitsuden_worker:
+    extends:
+      service: kitsuden_api
+    profiles: ["workers"]
+    container_name: ${KITSUDEN_INSTANCE:-kitsuden}_worker_prod
+    depends_on:
+      kitsuden_api:
+        condition: service_healthy
+    environment:
+      - KITSUDEN_WORKERS=only
+      - KITSUDEN_WORKER_FILTER=${KITSUDEN_WORKER_FILTER:-}
+    ports: !reset []
 
   # ═══════════════════════════════════════════════════════════════════════
   # Admin Panel - Frontend (SvelteKit) (REQUIRED)
@@ -511,7 +620,11 @@ services:
         condition: service_healthy
     working_dir: /app/apps/api
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-kitsuden}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@${KITSUDEN_INSTANCE:-kitsuden}_db_prod:5432/${POSTGRES_DB:-kitsuden_prod}
+      # The admin URL is built by docker/backup.sh: the password from .env, or
+      # the generated one. A backup by hand goes through it too.
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
+      - KITSUDEN_DB_USER=${POSTGRES_USER:-kitsuden}
+      - KITSUDEN_DB_AT=${KITSUDEN_INSTANCE:-kitsuden}_db_prod:5432/${POSTGRES_DB:-kitsuden_prod}
       - BACKUP_DIR=/backups
       - BACKUP_KEEP=${BACKUP_KEEP:-14}
       - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-24}
@@ -540,7 +653,7 @@ services:
         # policy, it brings them up at the same time, and the dump may run before
         # Postgres is listening.
         while true; do
-          if bun run scripts/backup.ts; then
+          if sh /app/docker/backup.sh; then
             date -u +%s > /backups/.last-ok
             # The media, after the database and without retrying the dump if
             # they fail: the script decides whether it is due (every BACKUP_MEDIA_DAYS days).
@@ -548,7 +661,7 @@ services:
             # Base backup for point-in-time restore, when due (KITSUDEN_PITR=on).
             # Its failure does not hide behind the dump: the healthcheck reads its marker.
             if [ "$${KITSUDEN_PITR}" = "on" ]; then
-              bun run scripts/backup.ts --base || echo "BASE BACKUP FAILED $$(date -u +%FT%TZ)" >&2
+              sh /app/docker/backup.sh --base || echo "BASE BACKUP FAILED $$(date -u +%FT%TZ)" >&2
             fi
             sleep "$$INTERVAL_SECONDS"
           else
@@ -570,6 +683,7 @@ services:
       start_period: 15m
     volumes:
       - kitsuden_backups_prod:/backups
+      - *secrets-volume
       # Read-only: the backup can never touch the media it copies. `nocopy`: it
       # never fills an empty volume with its own /media, which left it owned by root.
       - type: volume
@@ -588,6 +702,12 @@ services:
       - kitsuden_net_prod
 
 volumes:
+  # Generated passwords and keys (docker/generate-secrets.sh). Back it up: the
+  # database passwords and the key that seals stored credentials live only here
+  # unless .env holds them.
+  kitsuden_secrets_prod:
+    name: ${KITSUDEN_INSTANCE:-kitsuden}_secrets_prod
+    driver: local
   # The files uploaded in local mode. WITHOUT this they are stored inside the
   # container and disappear when it is recreated: `docker compose up -d` after an
   # image change would delete the entire media library without warning.

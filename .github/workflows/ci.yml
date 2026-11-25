@@ -823,6 +823,15 @@ jobs:
           --image=kitsuden-api:ci --image=kitsuden-admin:ci
           --image=kitsuden-mcp:ci --image=kitsuden-web:ci
 
+      # The one-compose install, end to end, with the images just built: no .env,
+      # every secret generated, the API as `bun` unable to read them, the DDL role,
+      # the setup link creating the first admin, and a second start that keeps it all.
+      - name: Clean install (one compose, no .env)
+        env:
+          KITSUDEN_API_IMAGE: kitsuden-api:ci
+          KITSUDEN_ADMIN_IMAGE: kitsuden-admin:ci
+        run: bash scripts/clean-install-check.sh
+
   # ── The deployment configuration (compose + Caddy) ─────────────────────────
   #
   # No secrets: a fake .env with values that are good for nothing. What
@@ -847,10 +856,14 @@ jobs:
           ACME_EMAIL=ops@example.invalid
           EOF
           docker compose --env-file /tmp/ci.env -f docker-compose.yml config -q
-          docker compose --env-file /tmp/ci.env -f docker-compose.yml -f docker-compose.tls.yml config -q
+          docker compose --env-file /tmp/ci.env -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml config -q
+          # Behind a proxy of the user's own: the public overlay without Caddy
+          docker compose --env-file /tmp/ci.env -f docker-compose.yml -f docker-compose.public.yml config -q
+          # No .env at all: every secret is generated, nothing is required to parse
+          docker compose -f docker-compose.yml config -q
           REPLICATION_PASSWORD=ci-not-a-secret docker compose --env-file /tmp/ci.env -f docker-compose.yml -f docker-compose.replica.yml config -q
           # Nothing except Caddy may publish outside 127.0.0.1
-          docker compose --env-file /tmp/ci.env -f docker-compose.yml -f docker-compose.tls.yml config --format json \
+          docker compose --env-file /tmp/ci.env -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml config --format json \
             | jq -e '[.services | to_entries[] | select(.key != "kitsuden_proxy") | .value.ports // [] | .[] | select((.host_ip // "") != "127.0.0.1")] | length == 0'
 
       - name: Validate docker/Caddyfile
@@ -873,5 +886,10 @@ jobs:
           sh -n docker/replica-entrypoint.sh
           bash -n docker/pitr-restore.sh
           sh -n docker/start-with-check.sh
+          sh -n docker/generate-secrets.sh
+          sh -n docker/kitsuden-env.sh
+          sh -n docker/as-admin.sh
+          sh -n docker/backup.sh
           bash -n scripts/deploy.sh
+          bash -n scripts/clean-install-check.sh
           bash -n install.sh

@@ -87,6 +87,7 @@ import { initFunctionDispatcher } from "./lib/function-dispatcher";
 import { defaultStores } from "./lib/idempotency-stores";
 import { canSuggest, konRoutes, suggestRoutes } from "./lib/kon-routes";
 import { startKonSchedules } from "./lib/kon-schedules";
+import { startKonWorkers, stopKonWorkers } from "./lib/kon-workers";
 import { listenHost } from "./lib/listen-host";
 import { logger } from "./lib/logger";
 import { configureModelEmbeddings } from "./lib/model-embeddings";
@@ -249,6 +250,7 @@ const app = new Hono<{
     agent?: AgentAuthContext;
     userRoleIds?: string[];
     userDepartmentId?: string | null;
+    clientIp?: string;
   };
 }>();
 
@@ -306,6 +308,14 @@ void sitePublicUrl()
 // Trace context (W3C) + requestId — must go BEFORE everything so that
 // AsyncLocalStorage is available in the rest of the pipeline (logs, metrics).
 app.use("*", requestContextMiddleware());
+// The client's address as clientIp() resolves it (TRUSTED_PROXY_HOPS), for kons:
+// they cannot import lib/client-ip.ts, and reading `x-forwarded-for` or
+// `cf-connecting-ip` themselves takes whatever the client wrote. Kons read
+// `c.get("clientIp")` and store no address when it is missing (an older core).
+app.use("/api/*", async (c, next) => {
+  c.set("clientIp", clientIp(c));
+  await next();
+});
 // ── A1: all /api/* errors as application/problem+json (RFC 9457) ──
 // OUTSIDE the exhausted pool and errorsWithoutDetail: it shapes their
 // responses without changing what is shown. See middleware/problems-http.ts.
@@ -1679,6 +1689,9 @@ initCronScheduler().catch((err) => {
 // Kons' periodic tasks (`defineKon({ schedules })`): the timers of the kons announced so far, and of those
 // announced later (lib/kon-schedules.ts).
 startKonSchedules();
+// Kons' long-running processes (`defineKon({ workers })`): one instance across every replica, where
+// KITSUDEN_WORKERS allows it (lib/kon-workers.ts).
+startKonWorkers();
 
 console.log(`
 ╔══════════════════════════════════════════════════╗
@@ -1703,9 +1716,12 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
   process.once(signal, () => {
     if (shuttingDown) return;
     shuttingDown = true;
-    void Promise.allSettled([shutdownQueues(), stopTraces(), closeValkey()]).finally(() =>
-      process.exit(0)
-    );
+    void Promise.allSettled([
+      stopKonWorkers(),
+      shutdownQueues(),
+      stopTraces(),
+      closeValkey(),
+    ]).finally(() => process.exit(0));
   });
 }
 

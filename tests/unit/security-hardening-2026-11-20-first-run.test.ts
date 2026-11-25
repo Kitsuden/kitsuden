@@ -71,3 +71,15 @@ describe("tokenlessSetupRefusal", () => {
     }
   });
 });
+
+describe("the setup link printed at boot (one-compose install)", () => {
+  it("puts the token in the fragment, never in the path or the query", async () => {
+    const { setupLink } = await import("../../apps/api/src/lib/first-run");
+    expect(setupLink("tok_en", { ADMIN_URL: "https://panel.example.com/" })).toBe(
+      "https://panel.example.com/#setup-token=tok_en"
+    );
+    // No panel address, or not an http(s) one: no link, only the token
+    expect(setupLink("tok_en", {})).toBeNull();
+    expect(setupLink("tok_en", { ADMIN_URL: "panel.example.com" })).toBeNull();
+  });
+});

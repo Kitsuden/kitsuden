@@ -8,8 +8,9 @@ everything:
   `127.0.0.1`; you reach it through an SSH tunnel or from the machine itself.
   It is also how to try an installation before opening it.
 - **Public, with a domain and TLS** (sections 7 to 12): the same plus the
-  `docker-compose.tls.yml` overlay (Caddy on 80/443 and the public website in a
-  container), on a VPS.
+  `docker-compose.public.yml` overlay (public URLs and the website in a
+  container) and `docker-compose.tls.yml` (Caddy on 80/443), on a VPS. Behind a
+  proxy you already run, leave out the Caddy file: [own-proxy.md](own-proxy.md).
 
 Everything marked **(tested 2026-10-15)** was run on a clean copy of the
 folder, with a stack using other names (see
@@ -252,8 +253,8 @@ and `enable_ipv6: true` on the `kitsuden_net_prod` network (not tested).
 
 **Proxies in front of the API:** the API takes the client's address from
 `X-Forwarded-For`, counting `TRUSTED_PROXY_HOPS` entries from the right (one per
-proxy you run; each proxy appends one). `docker-compose.tls.yml` sets `2`, because
-`/api/*` goes Caddy, then the panel's nginx, then the API. If you put the API
+proxy you run; each proxy appends one). `docker-compose.public.yml` sets `2`, because
+`/api/*` goes Caddy (or your proxy), then the panel's nginx, then the API. If you put the API
 behind a single proxy of your own (Caddy or nginx straight to the API port), set
 `TRUSTED_PROXY_HOPS=1` in `.env`; if nothing is in front, `0`. A number higher than
 the real one lets a client choose the address the rate limit sees. Caddy replaces
@@ -286,7 +287,7 @@ MAIL_FROM=My site <noreply@example.com>
 Check without printing secrets:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.tls.yml config -q && echo OK
+docker compose -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml config -q && echo OK
 ./scripts/deploy.sh --check        # the same, plus the <...> placeholders and the .env permissions
 ```
 
@@ -297,12 +298,12 @@ docker compose -f docker-compose.yml -f docker-compose.tls.yml config -q && echo
 ```
 
 The script builds (API, panel and website), starts with
-`docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d --remove-orphans`
+`docker compose -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml up -d --remove-orphans`
 and waits up to 5 minutes for everything to be healthy; it never prints
 `.env` or `docker compose config`. By hand it is the same:
 
 ```bash
-C="docker compose -f docker-compose.yml -f docker-compose.tls.yml"
+C="docker compose -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml"
 $C build
 $C up -d
 $C ps                      # everything "healthy" in 2-3 min; the backup takes longer
@@ -321,7 +322,7 @@ more overlay that redefines `kitsuden_web` (and, if needed, mounts another
 `Caddyfile` in `kitsuden_proxy`), passed **after** the TLS one:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.tls.yml -f docker-compose.mysite.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml -f docker-compose.mysite.yml up -d --build
 ```
 
 `scripts/deploy.sh` adds it when you tell it with `KITSUDEN_OVERLAYS`
@@ -347,7 +348,7 @@ nc -zv <IP> 5432 3000 3001 6379                            # must FAIL: only 80/
 ## 11. Logs, time and memory
 
 - The TLS overlay rotates the logs (`json-file`, 5 × 10 MB per container).
-  `docker compose -f docker-compose.yml -f docker-compose.tls.yml logs --since 1h kitsuden_api`.
+  `docker compose -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml logs --since 1h kitsuden_api`.
 - API, database and backups work in UTC; the website uses `TZ` (default `UTC`).
 - Memory limits in the overlay: database 2 GB, API 1.5 GB, website 512 MB,
   Valkey 384 MB, backups 512 MB, Caddy 256 MB, panel 128 MB. A container that

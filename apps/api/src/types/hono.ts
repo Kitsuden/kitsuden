@@ -22,6 +22,8 @@ export type AppVariables = {
   /** Enriched ACL context — populated by enrichUserContext middleware */
   userRoleIds?: string[];
   userDepartmentId?: string | null;
+  /** The client's address, resolved with TRUSTED_PROXY_HOPS (lib/client-ip.ts), on every /api request */
+  clientIp?: string;
 };
 
 // Extend Hono's ContextVariableMap globally

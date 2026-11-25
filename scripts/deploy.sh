@@ -23,14 +23,14 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-C=(docker compose -f docker-compose.yml -f docker-compose.tls.yml)
+C=(docker compose -f docker-compose.yml -f docker-compose.public.yml -f docker-compose.tls.yml)
 
 step() { printf '\n\033[1;36m▶ %s\033[0m\n' "$1"; }
 fail() { printf '\033[0;31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
 
 # Own overlays (another site instead of the neutral starter, extra services):
 # KITSUDEN_OVERLAYS, in the environment or in .env, comma-separated files.
-# They are added AFTER docker-compose.tls.yml:
+# They are added AFTER docker-compose.public.yml and docker-compose.tls.yml:
 #
 #   KITSUDEN_OVERLAYS=docker-compose.miweb.yml ./scripts/deploy.sh
 #

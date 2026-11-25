@@ -43,7 +43,7 @@ Harmless for the API. **(seen)**
 ### `docker compose up` starts SeaweedFS or asks for S3 keys
 
 Without `-f`, compose merges `docker-compose.override.yml` (development) if it
-exists. Use `-f docker-compose.yml` (and `-f docker-compose.tls.yml` in
+exists. Use `-f docker-compose.yml` (and `-f docker-compose.public.yml -f docker-compose.tls.yml` in
 public mode).
 
 ### `… is already in use by container "kitsuden_db_prod"` (or another `*_prod`)
@@ -191,5 +191,5 @@ because of those lines, but restores everything. **(seen)**
 ### The first backup is 1 KB
 
 It was taken while the API was still migrating (they start together). The
-next one has everything; force one with `bun run scripts/backup.ts` inside
-`kitsuden_backup`. **(seen)**
+next one has everything; force one with
+`docker exec <instance>_backup_prod sh /app/docker/backup.sh`. **(seen)**

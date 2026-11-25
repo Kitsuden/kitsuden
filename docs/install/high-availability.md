@@ -43,8 +43,8 @@ KITSUDEN_PITR=on
 # optional: PG_ARCHIVE_TIMEOUT=300  BACKUP_BASE_DAYS=7  BACKUP_BASE_KEEP=2
 
 docker compose -f docker-compose.yml up -d kitsuden_db kitsuden_backup      # restarts Postgres: a few seconds of downtime
-docker exec -w /app/apps/api <instance>_backup_prod bun run scripts/backup.ts --base --force
-docker exec -w /app/apps/api <instance>_backup_prod bun run scripts/backup.ts --list
+docker exec <instance>_backup_prod sh /app/docker/backup.sh --base --force
+docker exec <instance>_backup_prod sh /app/docker/backup.sh --list
 ```
 
 The entrypoint also adds one line to `pg_hba.conf`, once
@@ -89,7 +89,7 @@ docker rm -f kitsuden_pitr_restore && docker volume rm kitsuden_pitr_restore_<st
 docker/pitr-restore.sh --apply kitsuden_pitr_restore_<stamp> --yes-i-am-sure
 
 # 3. Take a new base backup: the old ones restore the OLD history.
-docker exec -w /app/apps/api kitsuden_backup_prod bun run scripts/backup.ts --base --force
+docker exec kitsuden_backup_prod sh /app/docker/backup.sh --base --force
 ```
 
 Give the time zone in `--target-time`. The log line `recovery stopping before

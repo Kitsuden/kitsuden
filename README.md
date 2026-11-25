@@ -105,7 +105,7 @@ the same steps by hand: [docs/install/server.md](docs/install/server.md).
 
 For a public server with a domain, TLS and a website:
 [docs/install/server.md](docs/install/server.md) (`./scripts/deploy.sh`
-builds and starts `docker-compose.yml` + `docker-compose.tls.yml`).
+builds and starts `docker-compose.yml` + `docker-compose.public.yml` + `docker-compose.tls.yml`).
 
 ## How it fits
 
@@ -403,7 +403,7 @@ All published on `127.0.0.1` only. `BIND_ADDRESS` can open the API and the panel
 | 6379       | Valkey                                                                                                           |
 | 4321       | The neutral starter (`pnpm --filter @kitsuden/starter-basic dev`)                                                |
 | 9000, 9001 | SeaweedFS S3 and its panel, only with `--profile s3` or `docker-compose.dev.yml`                                 |
-| 80, 443    | Caddy, only with `docker-compose.tls.yml` — the only ports meant to be public                                    |
+| 80, 443    | Caddy, only with `docker-compose.tls.yml` — the only ports meant to be public (or your own proxy's)              |
 
 ## Local development
 

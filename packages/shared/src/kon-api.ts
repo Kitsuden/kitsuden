@@ -487,6 +487,14 @@ export interface KonContext<TDb = any> {
    * Optional: a host or test without a queue leaves it undefined.
    */
   queue?: KonQueue;
+
+  /**
+   * Present when this core runs `defineKon({ workers })` (docs/kons/workers.md), whatever
+   * `KITSUDEN_WORKERS` says in this process: with `off` the workers run in another process, not
+   * nowhere. A kon that must also run on an older core keeps its old `setInterval` only when this is
+   * absent, so the work never runs twice.
+   */
+  workers?: { supported: true };
 }
 
 /** A job as `ctx.queue` hands it to a handler. */
@@ -801,6 +809,38 @@ export interface KonDefinition {
    * ONCE across every replica of the API, on the durable job queue.
    */
   schedules?: KonSchedule[];
+
+  /**
+   * Long-running processes the kon needs (docs/kons/workers.md): a socket to another service that
+   * must stay open, a poller. Each one runs ONCE across every replica and process of the API (a
+   * Postgres advisory lock), restarts on a crash and stops when the kon is switched off.
+   */
+  workers?: KonWorker[];
+}
+
+/** A kon's long-running process (`defineKon({ workers })`). */
+export interface KonWorker {
+  /** Unique inside the kon: `gateway` (lower case letters, digits and `-`). Its full name is `<short id>:<id>`. */
+  id: string;
+  /** What it does, for the panel and agents. */
+  description?: string;
+  /**
+   * The work. It runs as the system (no request, no user) until `worker.signal` aborts, and must
+   * return soon after it does. Throwing, or returning while the signal is not aborted, counts as a
+   * crash: it is started again after a growing pause. Do the receiving here and the processing in a
+   * queue handler (`ctx.queue.add` here, `ctx.queue.handle` in the kon's setup).
+   */
+  run(ctx: KonContext, worker: KonWorkerRuntime): Promise<void>;
+}
+
+/** What a running worker gets besides the kon's context. */
+export interface KonWorkerRuntime {
+  /** Aborts on shutdown, when the kon is switched off, or when this process loses the worker's lock. */
+  signal: AbortSignal;
+  /** The full name: `dc:gateway`. */
+  workerId: string;
+  /** Restarts so far in this process (0 on the first run). */
+  attempt: number;
 }
 
 /** A kon's periodic task (`defineKon({ schedules })`). */

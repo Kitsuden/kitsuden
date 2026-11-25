@@ -10,7 +10,20 @@
   let email = $state("");
   let password = $state("");
   let passwordConfirm = $state("");
-  let setupToken = $state("");
+  /**
+   * The link the API prints at boot carries the token in the fragment (`#setup-token=…`, see
+   * apps/api/src/lib/first-run.ts): read once, then removed from the address bar so it is not left in
+   * the history or shared with a screenshot.
+   */
+  function tokenFromLink(): string {
+    if (typeof window === "undefined") return "";
+    const match = /(?:^#|&)setup-token=([A-Za-z0-9_-]{16,})/.exec(window.location.hash);
+    if (!match) return "";
+    history.replaceState(history.state, "", window.location.pathname + window.location.search);
+    return match[1]!;
+  }
+
+  let setupToken = $state(tokenFromLink());
   let showPassword = $state(false);
   let error = $state<string | null>(null);
   let loading = $state(false);

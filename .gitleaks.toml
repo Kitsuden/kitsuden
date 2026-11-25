@@ -35,3 +35,9 @@ description = "Fake vault value in the history of the credential-vault test (f75
 condition = "AND"
 paths = ['''^apps/api/src/tests-unit/credential-vault\.test\.ts$''']
 regexes = ['''sk_test_abcdef123456''']
+
+[[allowlists]]
+description = "Fake setup token in the history of the setup-link test (b5c5768); the file now uses fixturefixturefixture"
+condition = "AND"
+paths = ['''^packages/admin/src/lib/setup-token\.test\.ts$''']
+regexes = ['''abcdefghijklmnop_0123456789''']

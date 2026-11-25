@@ -74,14 +74,24 @@ describe("docker-compose.yml", () => {
   });
 
   it("passes the API the DDL role and the OAuth issuer", () => {
-    expect(compose).toContain("- DATABASE_DDL_URL=${DDL_DB_PASSWORD:+postgresql://");
+    // The password (from .env or generated); docker/start-with-check.sh builds the URL
+    expect(compose).toContain("- DDL_DB_PASSWORD=${DDL_DB_PASSWORD:-}");
+    expect(read("docker/kitsuden-env.sh")).toContain(
+      'DATABASE_DDL_URL="postgresql://${DDL_DB_USER:-kitsuden_ddl}:${DDL_DB_PASSWORD}@${_at}"'
+    );
     expect(compose).toContain("- OAUTH_ISSUER_URL=${OAUTH_ISSUER_URL:-}");
   });
 
-  it("keeps Valkey behind a required password", () => {
+  it("keeps Valkey behind a password, from .env or generated", () => {
     // The password reaches valkey-server on stdin, never on argv (secrets-out-of-argv.test.ts)
-    expect(compose).toContain("REDISCLI_AUTH: ${VALKEY_PASSWORD:?");
+    expect(compose).toContain("REDISCLI_AUTH: ${VALKEY_PASSWORD:-}");
+    expect(compose).toContain(
+      ': "$${REDISCLI_AUTH:=$$(cat /kitsuden-secrets/valkey_password 2>/dev/null)}"'
+    );
     expect(compose).toContain(`printf 'requirepass %s\\n' "$$REDISCLI_AUTH"`);
+    expect(read("docker/generate-secrets.sh")).toContain(
+      "generate valkey_password      VALKEY_PASSWORD      0400"
+    );
   });
 
   it("the database and Valkey never listen beyond this machine", () => {
@@ -105,11 +115,15 @@ describe("what reaches the API by name", () => {
     expect(conf).not.toMatch(/^\s*proxy_pass http:\/\/kitsuden_api/m);
   });
 
-  it("so do Caddy and the TLS overlay", () => {
+  it("so do Caddy and the public and TLS overlays", () => {
     expect(read("docker/Caddyfile")).not.toMatch(/kitsuden_(api|admin|web)_prod/);
-    const tls = read("docker-compose.tls.yml");
-    expect(tls).toContain("KITSUDEN_API_URL=http://kitsuden_api:3000");
-    expect(tls.match(/^\s+container_name: (?!\$\{KITSUDEN_INSTANCE:-kitsuden\}_).*$/gm)).toBeNull();
+    const pub = read("docker-compose.public.yml");
+    expect(pub).toContain("KITSUDEN_API_URL=http://kitsuden_api:3000");
+    for (const overlay of [pub, read("docker-compose.tls.yml")]) {
+      expect(
+        overlay.match(/^\s+container_name: (?!\$\{KITSUDEN_INSTANCE:-kitsuden\}_).*$/gm)
+      ).toBeNull();
+    }
   });
 });
 
