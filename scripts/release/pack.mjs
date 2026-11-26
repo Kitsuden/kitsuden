@@ -19,7 +19,7 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -96,7 +96,7 @@ function localMarkers() {
 
 /** Reads a .tgz into { path, data } entries (ustar, as npm and pnpm write it). */
 export function readTarball(file) {
-  const buf = gunzipSync(readFileSync(file));
+  const buf = gunzipSync(Buffer.isBuffer(file) ? file : readFileSync(file));
   const entries = [];
   let offset = 0;
   let longName = null;
@@ -239,9 +239,11 @@ function main() {
       continue;
     }
     const tarball = join(OUT, `${stem}-${source.version}.tgz`);
-    const { problems, entries } = inspect(tarball, source);
-    const bytes = statSync(tarball).size;
-    const integrity = `sha512-${createHash("sha512").update(readFileSync(tarball)).digest("base64")}`;
+    // Read once: the bytes inspected are the bytes measured and hashed.
+    const bytesRead = readFileSync(tarball);
+    const { problems, entries } = inspect(bytesRead, source);
+    const bytes = bytesRead.length;
+    const integrity = `sha512-${createHash("sha512").update(bytesRead).digest("base64")}`;
     if (problems.length) {
       failed = true;
       console.error(`✗ ${basename(tarball)}: ${problems.length} problem(s)`);
