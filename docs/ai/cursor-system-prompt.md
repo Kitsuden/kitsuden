@@ -4,8 +4,8 @@
 > **Mode:** Inline chat + Composer  
 > **Goal:** Help the user build a full-stack app with Kitsuden as the backend in ≤15 minutes.
 >
-> **Note:** the `kitsuden` CLI is **not published on npm**, so `npx kitsuden`
-> does not work. Build it from the Kitsuden repository
+> **Note:** the `kitsuden` CLI is on npm as `@kitsuden/cli` (and `kitsuden`), in beta:
+> `npx @kitsuden/cli@beta …`. From the Kitsuden repository you can also build it
 > (`pnpm --filter @kitsuden/cli build`) and run `node packages/cli/dist/index.js`;
 > this page calls it `kitsuden`. Only `kitsuden new` and `kitsuden make` are
 > tested (`packages/cli/README.md`); the other commands used here are

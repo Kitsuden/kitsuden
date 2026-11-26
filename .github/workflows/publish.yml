@@ -6,10 +6,15 @@ name: Publish to npm
 # Needs, in the repository settings: the secret NPM_TOKEN, and a `release`
 # environment (add required reviewers there to gate each publication).
 #
-# Published, in this order: @kitsuden/shared, @kitsuden/codegen, @kitsuden/cli,
-# @kitsuden/sdk and @kitsuden/mcp-server. codegen goes before the CLI because the CLI
-# depends on it; its `publishConfig` swaps the TypeScript sources it uses in the
-# workspace for the built dist/, so `npx @kitsuden/cli` runs plain JavaScript.
+# Published, in this order (the same as scripts/release/pack.mjs): @kitsuden/shared,
+# @kitsuden/codegen, @kitsuden/sdk, @kitsuden/cli, @kitsuden/mcp-server, create-kitsuden
+# and kitsuden. A package goes after the ones it depends on: the CLI needs codegen,
+# `kitsuden` needs the SDK and the CLI. codegen's `publishConfig` swaps the TypeScript
+# sources it uses in the workspace for the built dist/, so `npx @kitsuden/cli` runs
+# plain JavaScript. Each package's `prepack` deletes dist/ and rebuilds it, and its
+# `prepublishOnly` runs its tests and scripts/release/dist-check.mjs.
+#
+# By hand from a workstation instead: docs/release.md.
 on:
   push:
     tags:
@@ -28,6 +33,8 @@ on:
           - cli
           - sdk
           - mcp-server
+          - create-kitsuden
+          - kitsuden
 
 permissions:
   contents: read
@@ -87,8 +94,8 @@ jobs:
           SELECTED: ${{ inputs.package || 'all' }}
         run: |
           case "$SELECTED" in
-            all) echo "names=shared codegen cli sdk mcp-server" >> "$GITHUB_OUTPUT" ;;
-            shared|codegen|cli|sdk|mcp-server) echo "names=$SELECTED" >> "$GITHUB_OUTPUT" ;;
+            all) echo "names=shared codegen sdk cli mcp-server create-kitsuden kitsuden" >> "$GITHUB_OUTPUT" ;;
+            shared|codegen|cli|sdk|mcp-server|create-kitsuden|kitsuden) echo "names=$SELECTED" >> "$GITHUB_OUTPUT" ;;
             *) echo "::error::Unknown package: $SELECTED"; exit 1 ;;
           esac
 
@@ -101,20 +108,15 @@ jobs:
           for name in $NAMES; do
             version=$(node -p "require('./packages/$name/package.json').version")
             if [ "v$version" != "$TAG" ]; then
-              echo "::error::Tag $TAG does not match @kitsuden/$name $version"
+              echo "::error::Tag $TAG does not match packages/$name $version"
               exit 1
             fi
           done
 
-      - name: Build
-        env:
-          NAMES: ${{ steps.packages.outputs.names }}
-        run: |
-          for name in $NAMES; do
-            pnpm --filter "@kitsuden/$name" build
-          done
-
+      # No separate build step: `pnpm publish` runs each package's prepublishOnly (tests,
+      # dist check) and prepack (delete dist/, build), so what is published is built here.
       # `pnpm publish`, not `npm publish`: it rewrites `workspace:*` to real versions.
+      # Filtered by folder: create-kitsuden and kitsuden are not under @kitsuden/.
       - name: Publish
         env:
           NAMES: ${{ steps.packages.outputs.names }}
@@ -127,5 +129,5 @@ jobs:
               *-*) tag=beta ;;
               *) tag=latest ;;
             esac
-            pnpm --filter "@kitsuden/$name" publish --access public --no-git-checks --tag "$tag"
+            pnpm --filter "./packages/$name" publish --access public --no-git-checks --tag "$tag"
           done

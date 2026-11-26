@@ -15,10 +15,13 @@ Official JavaScript/TypeScript SDK for Kitsuden — The Modular BaaS/CMS.
 
 ## Installation
 
-`@kitsuden/sdk` is **not published on npm**. Use it from the Kitsuden
-monorepo: inside the workspace, depend on it with `"@kitsuden/sdk": "workspace:*"`
-and build it with `pnpm --filter @kitsuden/sdk build`. Outside the monorepo,
-build it and install the folder (or a `pnpm pack` tarball) by path.
+```bash
+npm install @kitsuden/sdk@beta
+```
+
+(`npm install kitsuden@beta` gives the same module plus the `kitsuden` command.)
+Inside the Kitsuden monorepo, depend on it with `"@kitsuden/sdk": "workspace:*"`
+and build it with `pnpm --filter @kitsuden/sdk build`.
 
 ## Typed client: 5 lines to your first call
 

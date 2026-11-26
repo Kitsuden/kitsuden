@@ -93,7 +93,7 @@ The usual path is to copy the starter and change it: new blocks in
 `src/i18n/`, styles and templates in `src/layouts` and `src/components`. To
 copy it without `node_modules`, `dist` or `.env`, the repository's CLI does it
 for you (`kitsuden new my-site --api-url http://localhost:3000`; see
-`packages/cli/README.md`: the CLI is not on npm, run it from the repository
+`packages/cli/README.md`: `npx @kitsuden/cli@beta new …`, or from the repository
 with `node packages/cli/dist/index.js`).
 
 In your own copy, consider pinning dependency versions with `~` (for example

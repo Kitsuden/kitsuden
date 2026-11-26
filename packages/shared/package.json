@@ -5,7 +5,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kitsuden/kitsuden.git",
+    "url": "git+https://github.com/Kitsuden/kitsuden.git",
     "directory": "packages/shared"
   },
   "homepage": "https://github.com/Kitsuden/kitsuden/tree/main/packages/shared#readme",
@@ -31,7 +31,8 @@
     "prepare": "node scripts/prepare.mjs",
     "dev": "bun run scripts/build.ts --watch",
     "typecheck": "pnpm exec tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "pnpm run typecheck && node ../../scripts/release/dist-check.mjs",
+    "prepack": "node ../../scripts/release/prepack.mjs"
   },
   "keywords": [
     "kitsuden",
@@ -51,5 +52,8 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -14,7 +14,7 @@
   },
   "type": "module",
   "bin": {
-    "create-kitsuden": "./bin/create-kitsuden.mjs"
+    "create-kitsuden": "bin/create-kitsuden.mjs"
   },
   "exports": {
     ".": "./src/index.mjs"
@@ -29,6 +29,10 @@
   },
   "scripts": {
     "sync-templates": "node scripts/sync-templates.mjs",
-    "prepack": "node scripts/sync-templates.mjs"
+    "prepack": "node ../../scripts/release/prepack.mjs --clean=templates --script=sync-templates",
+    "prepublishOnly": "pnpm -w run test:unit tests/unit/create-kitsuden.test.ts && node ../../scripts/release/dist-check.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

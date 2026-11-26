@@ -82,8 +82,8 @@ the kon type-checks, the tests, the guards and **every kon's migrations on a
 real Postgres with Kitsuden's own runner**. Copy that workflow
 (`.github/workflows/ci.yml`) for your own kons repository.
 
-`@kitsuden/shared` and `@kitsuden/engine` are not published to npm yet. When they
-are, the links become version ranges; the kons themselves do not change.
+`@kitsuden/shared` is on npm (beta); `@kitsuden/engine` is not published yet. When it
+is, the links become version ranges; the kons themselves do not change.
 
 ## Releasing
 

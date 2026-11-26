@@ -333,7 +333,8 @@ describe("the command", () => {
     expect(r.status, r.stderr).toBe(0);
     for (const f of TEMPLATE_FILES) expect(existsSync(join(out, f)), f).toBe(true);
     const pkg = JSON.parse(readFileSync(join(PKG, "package.json"), "utf8"));
-    expect(pkg.bin["create-kitsuden"]).toBe("./bin/create-kitsuden.mjs");
+    // `npm pkg fix` writes bin paths without the leading "./"; both mean the same file
+    expect(pkg.bin["create-kitsuden"].replace(/^\.\//, "")).toBe("bin/create-kitsuden.mjs");
     expect(pkg.files).toContain("templates");
     expect(pkg.dependencies ?? {}).toEqual({});
   });

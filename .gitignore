@@ -112,3 +112,6 @@ graphify-out/
 
 # API documentation viewers, downloaded and verified by scripts/docs-viewers.mjs
 apps/api/docs-viewers/
+
+# Tarballs made by scripts/release/pack.mjs (published from there, never committed)
+/release/

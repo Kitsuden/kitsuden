@@ -16,16 +16,18 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "kitsuden-mcp": "./dist/standalone.js"
+    "kitsuden-mcp": "dist/standalone.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target=bun && bun build ./src/standalone.ts --outdir ./dist --target=bun",
+    "build": "bun build ./src/index.ts --outdir ./dist --target=bun && bun build ./src/standalone.ts --outdir ./dist --target=bun && tsc --emitDeclarationOnly --outDir dist",
     "typecheck": "tsc --noEmit",
     "dev": "bun run --watch src/standalone.ts",
-    "start": "bun run dist/standalone.js"
+    "start": "bun run dist/standalone.js",
+    "prepack": "node ../../scripts/release/prepack.mjs",
+    "prepublishOnly": "pnpm -w run test:unit tests/unit/mcp-domain-tools.test.ts tests/unit/mcp-explorer-params.test.ts tests/unit/mcp-sse-web.test.ts && node ../../scripts/release/dist-check.mjs --bun"
   },
   "keywords": [
     "kitsuden",
@@ -46,6 +48,10 @@
     "@types/node": "^22.19.0"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.12.0",
+    "bun": ">=1.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -25,7 +25,9 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "prepack": "node ../../scripts/release/prepack.mjs",
+    "prepublishOnly": "pnpm run typecheck && pnpm -w run test:unit tests/unit/gen-types.test.ts && node ../../scripts/release/dist-check.mjs"
   },
   "dependencies": {},
   "devDependencies": {

@@ -568,95 +568,12 @@ importers:
 
   packages/kitsuden:
     dependencies:
-      '@anthropic-ai/sdk':
-        specifier: ^0.111.0
-        version: 0.111.0(zod@4.6.7)
-      '@aws-sdk/client-s3':
-        specifier: ^3.1173.0
-        version: 3.1173.0
-      '@aws-sdk/s3-request-presigner':
-        specifier: ^3.1173.0
-        version: 3.1173.0
-      '@electric-sql/pglite':
-        specifier: ^0.5.4
-        version: 0.5.17
-      '@kitsuden/blocks':
+      '@kitsuden/cli':
         specifier: workspace:^
-        version: link:../core/blocks
-      '@kitsuden/datasets':
+        version: link:../cli
+      '@kitsuden/sdk':
         specifier: workspace:^
-        version: link:../core/datasets
-      '@kitsuden/media':
-        specifier: workspace:^
-        version: link:../core/media
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.32.1
-        version: 1.32.2(zod@4.6.7)
-      '@node-rs/argon2':
-        specifier: ^2.2.2
-        version: 2.2.2
-      better-auth:
-        specifier: ~1.7.27
-        version: 1.7.27(@sveltejs/kit@3.4.0(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.59.0(@typescript-eslint/types@8.73.0))(vite@8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(svelte@5.59.0(@typescript-eslint/types@8.73.0))(typescript@5.9.3)(vite@8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(@electric-sql/pglite@0.5.17)(@types/pg@8.23.1)(bun-types@1.4.5)(kysely@0.28.20)(mysql2@3.24.6(@types/node@22.20.5))(pg@8.23.1)(postgres@3.4.9))(mysql2@3.24.6(@types/node@22.20.5))(pg@8.23.1)(react@19.3.1)(svelte@5.59.0(@typescript-eslint/types@8.73.0))(vitest@4.1.12)
-      drizzle-orm:
-        specifier: 0.45.4
-        version: 0.45.4(@electric-sql/pglite@0.5.17)(@types/pg@8.23.1)(bun-types@1.4.5)(kysely@0.28.20)(mysql2@3.24.6(@types/node@22.20.5))(pg@8.23.1)(postgres@3.4.9)
-      graphql:
-        specifier: ^16.9.0
-        version: 16.13.0
-      hono:
-        specifier: 4.13.19
-        version: 4.13.19
-      nodemailer:
-        specifier: ^10.2.1
-        version: 10.6.1
-      ollama:
-        specifier: ^0.6.3
-        version: 0.6.4
-      openai:
-        specifier: ^6.46.0
-        version: 6.46.0(@aws-sdk/credential-provider-node@3.972.98)(@smithy/signature-v4@5.7.5)(zod@4.6.7)
-      pdf-lib:
-        specifier: ^1.17.1
-        version: 1.17.1
-      pg:
-        specifier: ^8.20.0
-        version: 8.23.1
-      pino:
-        specifier: ^9.0.0
-        version: 9.14.0
-      redis:
-        specifier: ^5.11.0
-        version: 5.11.0
-      sharp:
-        specifier: ^0.35.5
-        version: 0.35.5(@types/node@22.20.5)
-      zod:
-        specifier: ^4.6.7
-        version: 4.6.7
-    optionalDependencies:
-      mysql2:
-        specifier: ^3.24.6
-        version: 3.24.6(@types/node@22.20.5)
-    devDependencies:
-      '@hono/zod-validator':
-        specifier: ^0.9.1
-        version: 0.9.1(hono@4.13.19)(zod@4.6.7)
-      croner:
-        specifier: ^9.0.0
-        version: 9.1.0
-      graphql-type-json:
-        specifier: ^0.3.2
-        version: 0.3.2(graphql@16.13.0)
-      hono-rate-limiter:
-        specifier: ^0.5.4
-        version: 0.5.4(hono@4.13.19)(unstorage@1.17.6(ioredis@5.9.3))
-      openapi3-ts:
-        specifier: ^4.6.2
-        version: 4.6.2
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
+        version: link:../sdk
 
   packages/kons:
     dependencies:

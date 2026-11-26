@@ -358,7 +358,7 @@ that local checkout (`--from ../kitsuden-kons`):
 
 ```bash
 pnpm install --frozen-lockfile        # needs Bun first, see Requirements
-pnpm --filter @kitsuden/cli build     # the CLI is not on npm yet
+pnpm --filter @kitsuden/cli build     # or use the npm one: npx @kitsuden/cli@beta
 pnpm kitsuden kon list --available --from ../kitsuden-kons   # what is available, with maturity
 pnpm kitsuden kon add blog --from ../kitsuden-kons           # copy, pnpm install, migrations
 pnpm kitsuden kon list
@@ -479,8 +479,8 @@ packages/codegen/    @kitsuden/codegen: frontend code generation for collections
 packages/schemas/    JSON Schemas (kon.json)
 packages/mcp-server/ MCP server for AI agents
 packages/cli/        the kitsuden CLI
-packages/create-kitsuden/  `npm create kitsuden` (not on npm yet)
-packages/kitsuden/   the `kitsuden` package: the framework as one dependency (not on npm yet)
+packages/create-kitsuden/  `npm create kitsuden`
+packages/kitsuden/   the `kitsuden` package: the SDK and the `kitsuden` command in one install
 packages/testing/    @kitsuden/testing: sandboxes and helpers for kon tests
 packages/starters/   kitsuden-starter-basic, the neutral Astro website
 docker/              Dockerfiles, Caddyfile, startup and backup scripts
