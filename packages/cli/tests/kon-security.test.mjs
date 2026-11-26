@@ -44,7 +44,14 @@ function cli(args, env = {}) {
   return spawnSync(process.execPath, [CLI, "kon", ...args, "--root", project], {
     encoding: "utf8",
     input: "",
-    env: { ...process.env, KITSUDEN_API_URL: "", KITSUDEN_KONS_SOURCE: "", ...env },
+    env: {
+      ...process.env,
+      FORCE_COLOR: "0",
+      NO_COLOR: "1",
+      KITSUDEN_API_URL: "",
+      KITSUDEN_KONS_SOURCE: "",
+      ...env,
+    },
   });
 }
 

@@ -28,6 +28,7 @@ function cli(args, cwd) {
     cwd,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
   });
 }
 

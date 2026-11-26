@@ -610,11 +610,15 @@ describe("resolution and lockfile", () => {
 describe("kitsuden kon (registry) end to end", () => {
   let project, registry, sources, keys;
 
+  // The assertions read plain text: a terminal (or pnpm) that forces colour would
+  // put ANSI codes between the words. Same output as CI, wherever the tests run.
   const cli = (args, env = {}) =>
     spawnSync(process.execPath, [CLI, "kon", ...args], {
       encoding: "utf8",
       env: {
         ...process.env,
+        FORCE_COLOR: "0",
+        NO_COLOR: "1",
         KITSUDEN_API_URL: "",
         KITSUDEN_KONS_SOURCE: "",
         KITSUDEN_PUBLIC: "",
