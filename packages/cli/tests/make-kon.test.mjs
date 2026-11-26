@@ -35,7 +35,7 @@ function run(cmd, args, cwd, env = {}) {
     cwd,
     encoding: "utf8",
     shell,
-    env: { ...process.env, ...env },
+    env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1", ...env },
     maxBuffer: 64 * 1024 * 1024,
   });
 }

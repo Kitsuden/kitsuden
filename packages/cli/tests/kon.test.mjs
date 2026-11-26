@@ -47,7 +47,13 @@ function kon(id, extra = {}, pkgExtra = {}) {
 function cli(...args) {
   return spawnSync(process.execPath, [CLI, "kon", ...args, "--root", project], {
     encoding: "utf8",
-    env: { ...process.env, KITSUDEN_API_URL: "", KITSUDEN_KONS_SOURCE: "" },
+    env: {
+      ...process.env,
+      FORCE_COLOR: "0",
+      NO_COLOR: "1",
+      KITSUDEN_API_URL: "",
+      KITSUDEN_KONS_SOURCE: "",
+    },
   });
 }
 
