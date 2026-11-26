@@ -9,8 +9,8 @@ repository or folder with the same layout (`kons/<kon-id>/` with a `kon.json`) â
 
 ## The usual way
 
-The CLI is not on npm yet, so it runs from your clone of Kitsuden. Build it once, then call
-it as `pnpm kitsuden` from the repository root:
+In your clone of Kitsuden, build the CLI once, then call it as `pnpm kitsuden` from the
+repository root (outside a clone, `npx @kitsuden/cli@beta` is the same command):
 
 ```bash
 pnpm install --frozen-lockfile

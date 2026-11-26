@@ -14,7 +14,7 @@
   },
   "type": "module",
   "bin": {
-    "kitsuden": "./dist/index.js"
+    "kitsuden": "dist/index.js"
   },
   "files": [
     "dist",
@@ -25,8 +25,9 @@
     "typecheck": "tsc --noEmit",
     "dev": "tsc --watch",
     "test": "node --test \"tests/kon.test.mjs\" \"tests/kon-security.test.mjs\" \"tests/registry.test.mjs\" \"tests/docker-overlay.test.mjs\"",
-    "prepack": "pnpm build && node scripts/package-starter.mjs",
-    "test:all": "node --test \"tests/*.test.mjs\""
+    "prepack": "node ../../scripts/release/prepack.mjs && node scripts/package-starter.mjs",
+    "test:all": "node --test \"tests/*.test.mjs\"",
+    "prepublishOnly": "pnpm test && node ../../scripts/release/dist-check.mjs"
   },
   "dependencies": {
     "@kitsuden/codegen": "workspace:*",

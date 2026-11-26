@@ -3,8 +3,8 @@
 > **Prerequisite:** Node.js, Bun, pnpm and Docker Desktop installed.  
 > **Goal:** Go from zero to a working backend with auth, database, admin panel, and typed frontend hooks.
 >
-> **Note:** the `kitsuden` CLI is **not published on npm**, so `npx kitsuden`
-> does not work. Build it from the Kitsuden repository
+> **Note:** the `kitsuden` CLI is on npm as `@kitsuden/cli` (and `kitsuden`), in beta:
+> `npx @kitsuden/cli@beta …`. From the Kitsuden repository you can also build it
 > (`pnpm --filter @kitsuden/cli build`) and run `pnpm kitsuden`;
 > this page calls it `kitsuden`. Only `kitsuden new` and `kitsuden make` are
 > tested (`packages/cli/README.md`); the other commands used here are

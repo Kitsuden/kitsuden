@@ -69,7 +69,9 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit && tsc -p tests/tsconfig.json",
     "test": "vitest run --config vitest.config.ts",
-    "test:integration": "vitest run --config tests/integration/vitest.config.ts"
+    "test:integration": "vitest run --config tests/integration/vitest.config.ts",
+    "prepack": "node ../../scripts/release/prepack.mjs",
+    "prepublishOnly": "pnpm test && node ../../scripts/release/dist-check.mjs"
   },
   "devDependencies": {
     "hono": "4.13.19",
@@ -102,5 +104,8 @@
       "optional": true
     }
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -4,9 +4,12 @@ Shared types, schemas, and utilities for Kitsuden: the kon API (`defineKon`, `de
 
 ## Installation
 
-`@kitsuden/shared` is **not published on npm yet**. It is a workspace package of
-the Kitsuden monorepo (`"@kitsuden/shared": "workspace:*"`). `pnpm install`
-at the root builds it (its `prepare` script uses Bun); after changing
+```bash
+npm install @kitsuden/shared@beta
+```
+
+Inside the Kitsuden monorepo it is a workspace package (`"@kitsuden/shared": "workspace:*"`):
+`pnpm install` at the root builds it (its `prepare` script uses Bun); after changing
 `src/`, rebuild it with `pnpm --filter @kitsuden/shared build`.
 
 ## Usage

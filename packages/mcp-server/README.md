@@ -4,8 +4,14 @@
 
 ## 🚀 Quick Start
 
-The package is **not published on npm** and there is no published Docker
-image. Build and run it from the Kitsuden monorepo (it runs on Bun):
+It runs on **Bun** (1.3+): the build targets Bun, and the `kitsuden-mcp` command starts
+with `#!/usr/bin/env bun`. There is no published Docker image yet.
+
+```bash
+bunx @kitsuden/mcp-server@beta            # or: npm install -g @kitsuden/mcp-server@beta
+```
+
+From the Kitsuden monorepo:
 
 ```bash
 pnpm --filter @kitsuden/mcp-server build

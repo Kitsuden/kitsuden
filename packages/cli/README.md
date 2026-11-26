@@ -21,7 +21,9 @@ pnpm --filter @kitsuden/cli build
 pnpm kitsuden --help     # same as: node packages/cli/dist/index.js --help
 ```
 
-The package is not on npm yet. The examples below call it `kitsuden`.
+From npm: `npx @kitsuden/cli@beta --help`, or `npm install -g @kitsuden/cli@beta` and then
+`kitsuden --help` (the `kitsuden` package gives the same command). The examples below
+call it `kitsuden`.
 
 ## `kitsuden new <name>`
 

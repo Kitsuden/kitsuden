@@ -72,7 +72,6 @@ describe("the better-auth version", () => {
     for (const route of [
       ["apps", "api", "package.json"],
       ["packages", "admin", "package.json"],
-      ["packages", "kitsuden", "package.json"],
     ]) {
       const specifier = JSON.parse(read(...route)).dependencies?.["better-auth"];
       expect(specifier, `${route.join("/")} does not declare better-auth`).toBeDefined();
@@ -81,6 +80,15 @@ describe("the better-auth version", () => {
         `${route.join("/")} declares «${specifier}»: it has to use a tilde`
       ).toBe(true);
     }
+  });
+
+  // The npm `kitsuden` package is the SDK and the CLI, with no server inside: if it
+  // ever declares better-auth again, it has to follow the same tilde rule.
+  it("the kitsuden npm package does not carry better-auth with a caret", () => {
+    const specifier = JSON.parse(read("packages", "kitsuden", "package.json")).dependencies?.[
+      "better-auth"
+    ];
+    if (specifier !== undefined) expect(specifier.startsWith("~"), specifier).toBe(true);
   });
 });
 

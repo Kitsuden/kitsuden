@@ -113,13 +113,11 @@ that was in the repository then; the panel is SvelteKit). It ends with the API a
 - Never `docker build -f docker/Dockerfile.prod` without `--target`: it has
   two final stages, and without `--target api` you get the panel's nginx
   tagged as the API. `docker compose build` already sets the right `target`.
-- There are no published images of this project yet. The compose files never
-  pull the API or panel images (`pull_policy: never`, or `build` in the TLS
-  overlay): always build first. `packages/create-kitsuden` (`npm create kitsuden`)
-  is not on npm yet either. Once it and the images are published, a project made
-  with it will be the exception: it has no source to build, so its compose file
-  pulls the `ghcr.io/kitsuden/kitsuden/*` images of its release
-  (`pull_policy: missing`).
+- The compose files of this repository never pull the API or panel images
+  (`pull_policy: never`, or `build` in the TLS overlay): always build first. A
+  project made with `npm create kitsuden@beta` is the exception: it has no source
+  to build, so its compose file pulls the `ghcr.io/kitsuden/kitsuden/*` images of
+  its release (`pull_policy: missing`).
 
 ## 4. Start
 

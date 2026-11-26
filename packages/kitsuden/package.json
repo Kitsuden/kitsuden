@@ -1,8 +1,9 @@
 {
   "name": "kitsuden",
   "version": "0.9.0-beta",
-  "description": "The AI-native backend framework & self-hosted BaaS. Auth, RLS, auto REST+GraphQL, admin, jobs and MCP — batteries included.",
+  "description": "Kitsuden in one install: the typed SDK (@kitsuden/sdk) and the `kitsuden` command (@kitsuden/cli). The server runs from the Docker images or the repository.",
   "license": "MIT",
+  "author": "Victor Antinori Broce (https://github.com/vigogami)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Kitsuden/kitsuden.git",
@@ -13,103 +14,56 @@
     "url": "https://github.com/Kitsuden/kitsuden/issues"
   },
   "keywords": [
+    "kitsuden",
     "backend",
-    "framework",
     "baas",
-    "hono",
-    "bun",
-    "drizzle",
-    "postgres",
-    "rls",
+    "sdk",
+    "cli",
     "mcp",
-    "ai-native"
+    "ai-agents",
+    "postgres",
+    "rls"
   ],
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "main": "./index.cjs",
+  "module": "./index.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": {
+        "types": "./index.d.ts",
+        "default": "./index.js"
+      },
+      "require": {
+        "types": "./index.d.cts",
+        "default": "./index.cjs"
+      }
     },
-    "./engine": {
-      "types": "./dist/engine.d.ts",
-      "import": "./dist/engine.js"
-    },
-    "./shared": {
-      "types": "./dist/shared.d.ts",
-      "import": "./dist/shared.js"
-    },
-    "./package.json": "./package.json",
-    "./framework": {
-      "types": "./dist/framework.d.ts",
-      "import": "./dist/framework.js"
-    }
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "kitsuden": "bin/kitsuden.mjs"
   },
   "files": [
-    "dist",
+    "bin",
+    "index.js",
+    "index.cjs",
+    "index.d.ts",
+    "index.d.cts",
     "README.md"
   ],
   "scripts": {
-    "build": "bun run scripts/build.ts",
-    "prepublishOnly": "bun run build"
+    "test": "node --test \"tests/*.test.mjs\"",
+    "prepublishOnly": "pnpm test && node ../../scripts/release/dist-check.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1173.0",
-    "@aws-sdk/s3-request-presigner": "^3.1173.0",
-    "@kitsuden/blocks": "workspace:^",
-    "@kitsuden/datasets": "workspace:^",
-    "@kitsuden/media": "workspace:^",
-    "@modelcontextprotocol/sdk": "^1.32.2",
-    "@node-rs/argon2": "^2.2.2",
-    "better-auth": "~1.7.27",
-    "drizzle-orm": "^0.45.4",
-    "graphql": "^16.9.0",
-    "hono": "4.13.19",
-    "pg": "^8.23.1",
-    "pino": "^9.0.0",
-    "redis": "^5.11.0",
-    "sharp": "^0.35.5",
-    "zod": "^4.6.7"
+    "@kitsuden/cli": "workspace:^",
+    "@kitsuden/sdk": "workspace:^"
   },
-  "optionalDependencies": {
-    "mysql2": "^3.18.0"
+  "engines": {
+    "node": ">=22.12.0"
   },
-  "devDependencies": {
-    "typescript": "^5.9.3",
-    "croner": "^9.0.0",
-    "graphql-type-json": "^0.3.2",
-    "hono-rate-limiter": "^0.5.4",
-    "openapi3-ts": "^4.6.2",
-    "@hono/zod-validator": "^0.9.1"
-  },
-  "peerDependencies": {
-    "@anthropic-ai/sdk": "^0.111.0",
-    "@electric-sql/pglite": "^0.5.4",
-    "nodemailer": "^10.2.1",
-    "ollama": "^0.6.3",
-    "openai": "^6.46.0",
-    "pdf-lib": "^1.17.1"
-  },
-  "peerDependenciesMeta": {
-    "@anthropic-ai/sdk": {
-      "optional": true
-    },
-    "@electric-sql/pglite": {
-      "optional": true
-    },
-    "nodemailer": {
-      "optional": true
-    },
-    "ollama": {
-      "optional": true
-    },
-    "openai": {
-      "optional": true
-    },
-    "pdf-lib": {
-      "optional": true
-    }
+  "publishConfig": {
+    "access": "public"
   }
 }
