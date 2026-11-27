@@ -575,7 +575,9 @@ describe("first run", () => {
     forgetSetupToken();
     ensureSetupToken();
     warn.mockRestore();
-    const m = /\n\s{4}(\S{40,})\n/.exec(lines.join("\n"));
+    // base64url only: with ADMIN_URL set the setup LINK is printed first, on a line
+    // of its own and just as long, and `\S{40,}` took the link for the token.
+    const m = /\n\s{4}([A-Za-z0-9_-]{40,})\n/.exec(lines.join("\n"));
     expect(m, "the token is printed").toBeTruthy();
     return m![1]!;
   }

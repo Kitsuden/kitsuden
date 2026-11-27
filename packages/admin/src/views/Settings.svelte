@@ -29,6 +29,7 @@
   import MediaPicker from "$lib/components/media/MediaPicker.svelte";
   import SecretsPanel from "$lib/components/settings/SecretsPanel.svelte";
   import TwoFactorPanel from "$lib/components/settings/TwoFactorPanel.svelte";
+  import UsernamePanel from "$lib/components/settings/UsernamePanel.svelte";
   import ThemeSelector from "$lib/components/ThemeSelector.svelte";
   import UnsavedGuard from "$lib/components/feedback/UnsavedGuard.svelte";
   import { queryChoice, setQuery } from "$lib/page";
@@ -115,6 +116,7 @@
   interface SystemUser {
     id: string;
     email: string;
+    username: string | null;
     name: string | null;
     role: string;
     createdAt: string | null;
@@ -1473,7 +1475,10 @@
           {/if}
         </div>
       {:else if activeTab === "security"}
-        <TwoFactorPanel />
+        <div class="space-y-6">
+          <UsernamePanel />
+          <TwoFactorPanel />
+        </div>
       {:else if activeTab === "secrets"}
         <SecretsPanel />
       {:else if activeTab === "agents"}
@@ -1846,6 +1851,7 @@
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("common.email")}</TableHead>
+                      <TableHead>{t("username.label")}</TableHead>
                       <TableHead>{t("common.name")}</TableHead>
                       <TableHead>{t("settings.role")}</TableHead>
                       <TableHead>{t("settings.high")}</TableHead>
@@ -1855,6 +1861,7 @@
                     {#each users as u (u.id)}
                       <TableRow>
                         <TableCell>{u.email}</TableCell>
+                        <TableCell>{u.username || "—"}</TableCell>
                         <TableCell>{u.name || "—"}</TableCell>
                         <TableCell>
                           <Select
