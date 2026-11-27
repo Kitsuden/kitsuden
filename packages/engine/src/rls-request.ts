@@ -74,6 +74,7 @@ import {
   DB_METRICS_SERVICE,
   useRequest,
 } from "./request-scope";
+import { sharedState } from "./shared-state";
 
 /** The minimum of a user that matters to the database. */
 export interface RlsUser {
@@ -166,7 +167,10 @@ function publishedMeasures(): RequestStatus["measures"] {
 }
 
 /** Which queue the code that is running now is in (inside a section, the child). */
-const currentLane = new AsyncLocalStorage<{ status: RequestStatus; lane: Lane }>();
+const currentLane = sharedState(
+  "currentLane",
+  () => new AsyncLocalStorage<{ status: RequestStatus; lane: Lane }>()
+);
 
 function laneOf(status: RequestStatus): Lane {
   const inProgress = currentLane.getStore();
@@ -457,7 +461,10 @@ function errorClosed(): Error {
 }
 
 /** Who is opening their RLS transaction right now (for `pool.connect`). */
-const openingInProgress = new AsyncLocalStorage<RequestStatus>();
+const openingInProgress = sharedState(
+  "openingInProgress",
+  () => new AsyncLocalStorage<RequestStatus>()
+);
 
 /** The minimum of pg-pool that is needed: `connect` with a promise or a callback. */
 /**
@@ -515,9 +522,14 @@ export function withLazyTransactions<P extends ConnectablePool>(pool: P): P {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** The CURRENT user context in each transaction (to restore it). */
-const contextByTx = new WeakMap<object, { userId: string; userRole: string }>();
+// Shared with any other copy of the engine in the process (see shared-state.ts): the kons
+// import `@kitsuden/engine` from sources while the core runs bundled.
+const contextByTx = sharedState(
+  "contextByTx",
+  () => new WeakMap<object, { userId: string; userRole: string }>()
+);
 /** Which request each published `tx` belongs to (root and savepoints). */
-const statusByTx = new WeakMap<object, RequestStatus>();
+const statusByTx = sharedState("statusByTx", () => new WeakMap<object, RequestStatus>());
 
 async function set(tx: TransactionalConnection, userId: string, userRole: string) {
   await tx.execute(
@@ -616,7 +628,10 @@ export interface RlsTransactionOptions {
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-const afterCommitQueue = new AsyncLocalStorage<Array<() => void>>();
+const afterCommitQueue = sharedState(
+  "afterCommitQueue",
+  () => new AsyncLocalStorage<Array<() => void>>()
+);
 
 /**
  * Runs `fn` once the request's transaction has committed, and never if it rolled back. Outside a request it

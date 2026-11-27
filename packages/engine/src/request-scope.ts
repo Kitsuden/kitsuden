@@ -19,6 +19,8 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 
+import { sharedState } from "./shared-state";
+
 // The scope is MUTABLE: it is created empty at the start of the request and later
 // middlewares (e.g. withTransactionalRLS) enrich it (set tx).
 export interface RequestScope {
@@ -33,7 +35,8 @@ export interface RequestScope {
   services?: Record<string, unknown>;
 }
 
-const als = new AsyncLocalStorage<RequestScope>();
+// Shared between the bundled core and the kons' copy of the engine (see shared-state.ts).
+const als = sharedState("requestScope", () => new AsyncLocalStorage<RequestScope>());
 
 /**
  * Key of `services` where the request's transaction leaves its measurements

@@ -1349,6 +1349,13 @@ await announceSetupTokenAtBoot();
 
 // ── The configuration seeds the database, and from then on the database rules ──
 //
+// The kons import `@kitsuden/engine`: in the bundle that must be THIS engine, not a
+// second copy from sources (see lib/kon-engine-alias.ts). Before any kon is imported.
+{
+  const { shareEngineWithKons } = await import("./lib/kon-engine-alias");
+  shareEngineWithKons();
+}
+
 // `kitsuden.config.ts` says which kons come on BY DEFAULT; the `modules`
 // table says what is on NOW. Before, both were read as if they were
 // the same, and the file ended up overwriting what the user changed in the
