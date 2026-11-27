@@ -354,6 +354,8 @@ services:
       - KITSUDEN_SIGNUP=${KITSUDEN_SIGNUP:-}
       # optional | required: must admins use an authenticator app. Empty = optional.
       - KITSUDEN_ADMIN_MFA=${KITSUDEN_ADMIN_MFA:-}
+      # staff | everyone: who may set a username to sign in with. Empty = staff.
+      - KITSUDEN_USERNAMES=${KITSUDEN_USERNAMES:-}
       # Social sign-in. A provider is on only when both its id and its secret are set;
       # empty = off. The callback is BETTER_AUTH_URL/api/auth/callback/<provider>.
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}

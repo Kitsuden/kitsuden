@@ -15,6 +15,8 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  /** better-auth `username` (migration 0096): signs in instead of the email. */
+  username?: string | null;
   image?: string | null;
   role: string;
   /** better-auth `twoFactor`: true once a TOTP code was confirmed. */
@@ -108,17 +110,22 @@ export async function checkSession() {
 }
 
 /**
- * Sign in with email + password
+ * Sign in with email or username + password.
+ *
+ * Anything with an `@` is an email; anything else is a username (migration 0096:
+ * a username never has one). Both open the same session, two-factor included.
  */
-export async function signIn(email: string, password: string) {
+export async function signIn(identifier: string, password: string) {
   loading = true;
   error = null;
+  const login = identifier.trim();
+  const byEmail = login.includes("@");
   try {
-    const res = await fetch(`${API_URL}/api/auth/sign-in/email`, {
+    const res = await fetch(`${API_URL}/api/auth/sign-in/${byEmail ? "email" : "username"}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(byEmail ? { email: login, password } : { username: login, password }),
     });
 
     if (!res.ok) {
@@ -129,8 +136,13 @@ export async function signIn(email: string, password: string) {
        * call for different things —the second, a button to resend the link—
        * and without the code the only option was comparing the English message.
        */
+      // A login with no `@` that is no valid username (too short, a space…) is a
+      // wrong login, not a form to correct: the same words as a wrong password.
+      const malformedUsername = !byEmail && res.status === 422;
       const failure = new Error(
-        body.message || body.error || t("auth.invalidCredentials")
+        malformedUsername
+          ? t("auth.invalidCredentials")
+          : body.message || body.error || t("auth.invalidCredentials")
       ) as Error & {
         code?: string;
       };
@@ -157,6 +169,30 @@ export async function signIn(email: string, password: string) {
   } finally {
     loading = false;
   }
+}
+
+/**
+ * Sets (or with `null` removes) the signed-in user's username.
+ *
+ * better-auth's `/update-user`; who may do it is `KITSUDEN_USERNAMES` on the API
+ * (staff only by default). A taken name fails with USERNAME_IS_ALREADY_TAKEN.
+ */
+export async function setUsername(username: string | null) {
+  const res = await fetch(`${API_URL}/api/auth/update-user`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ username }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const failure = new Error(body.message || t("username.couldNotSave")) as Error & {
+      code?: string;
+    };
+    failure.code = body.code;
+    throw failure;
+  }
+  await checkSession();
 }
 
 /**

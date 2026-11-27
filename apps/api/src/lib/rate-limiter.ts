@@ -118,6 +118,18 @@ const DEFAULT_CONFIG: RateLimitConfig = {
   message: "Rate limit exceeded. Please try again later.",
 };
 
+/**
+ * Password sign-in, by email or by username: 10 per 5 minutes per client, ONE
+ * counter for both paths (the key leaves the route out).
+ */
+const PASSWORD_SIGN_IN: RateLimitConfig = {
+  limit: 10,
+  window: 300,
+  message: "Too many login attempts. Try again in 5 minutes.",
+  failClosed: true,
+  keyGenerator: (c) => `password-sign-in:${siteVisitor(c) || limiterIdentity(c)}`,
+};
+
 /** Route-specific configurations */
 export const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
   // Auth - stricter to prevent brute force.
@@ -125,12 +137,10 @@ export const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
   // With better-auth's REAL paths. Here it used to say `/api/auth/login`,
   // `/register` and `/forgot-password`, which do not exist: sign-in
   // (`/sign-in/email`) ran with the general limit of 300/min.
-  "/api/auth/sign-in/email": {
-    limit: 10,
-    window: 300,
-    message: "Too many login attempts. Try again in 5 minutes.",
-    failClosed: true,
-  },
+  "/api/auth/sign-in/email": PASSWORD_SIGN_IN,
+  // Sign-in by username (migration 0096): the SAME counter as the email one,
+  // so trying passwords on both paths does not double the attempts.
+  "/api/auth/sign-in/username": PASSWORD_SIGN_IN,
   "/api/auth/sign-up/email": {
     limit: 5,
     window: 3600,

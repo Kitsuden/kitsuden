@@ -63,6 +63,7 @@ async function listUsers(c: Context) {
     .select({
       id: authUsers.id,
       email: authUsers.email,
+      username: authUsers.username,
       name: authUsers.name,
       role: authUsers.role,
       emailVerified: authUsers.emailVerified,

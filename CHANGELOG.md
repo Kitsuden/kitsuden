@@ -9,6 +9,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Sign in with a username.** better-auth's `username` plugin: an account can have a username
+  (`auth_users.username`, migration 0096: unique, lower-case, 3–30 of `a–z 0–9 _ .`) and sign in with it
+  and the password at `POST /api/auth/sign-in/username`; the panel's login takes "email or username". The
+  same session as the email sign-in: two-factor, email verification and the login rate limit (one counter
+  for both paths) still apply. Every account keeps its email. Set it in panel → Settings → Security.
+  `KITSUDEN_USERNAMES=staff` (default) lets only admins and editors set one and never at sign-up;
+  `everyone` opens it. `/api/auth/is-username-available` is disabled (404): it listed names to guess at.
+
 - **One compose, nothing to generate by hand.** A one-shot `kitsuden_secrets` service creates every
   password and key that `.env` does not set (`docker/generate-secrets.sh`) in the `<instance>_secrets_prod`
   volume: root-only files that Postgres, Valkey and the API's start read before dropping privileges. A value

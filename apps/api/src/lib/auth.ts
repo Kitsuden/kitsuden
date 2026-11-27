@@ -7,7 +7,8 @@
 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { magicLink, twoFactor } from "better-auth/plugins";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import { magicLink, twoFactor, username } from "better-auth/plugins";
 
 import { db } from "../db";
 import {
@@ -22,6 +23,7 @@ import { inProduction } from "./environment";
 import { setLinkTarget } from "./link-target";
 import { magicLinkRefusal } from "./magic-link-policy";
 import { signUpClosed } from "./signup-mode";
+import { usernamePolicy, usernameRefusal } from "./username-policy";
 
 // Build trusted origins dynamically from environment
 function buildTrustedOrigins(): string[] {
@@ -70,6 +72,9 @@ const PANEL_URL = process.env.ADMIN_URL || "http://localhost:5173";
 
 /** `KITSUDEN_SIGNUP`: can strangers create accounts? (see signup-mode.ts) */
 const SIGN_UP_CLOSED = signUpClosed();
+
+/** `KITSUDEN_USERNAMES`: who may pick a username to sign in with (see username-policy.ts). */
+const USERNAME_POLICY = usernamePolicy();
 
 /** Minutes a magic link stays valid. Single use either way. */
 export const MAGIC_LINK_MINUTES = 10;
@@ -352,6 +357,14 @@ export const auth = betterAuth({
   trustedOrigins: TRUSTED_ORIGINS,
 
   /**
+   * `/is-username-available` answers anyone, with no session, whether a name is
+   * taken: a list of usernames to try passwords against, one request each. The
+   * panel does not need it (setting a taken name fails with
+   * USERNAME_IS_ALREADY_TAKEN), so it answers 404.
+   */
+  disabledPaths: ["/is-username-available"],
+
+  /**
    * Where better-auth gets the IP for its attempt limit (3 every 10 s on
    * `/sign-in`, `/sign-up`…; active in production only).
    *
@@ -421,9 +434,59 @@ export const auth = betterAuth({
       },
     }),
 
+    /**
+     * Sign in with a username: `POST /api/auth/sign-in/username { username, password }`.
+     *
+     * The same session as `/sign-in/email`: `twoFactor` above also answers
+     * `twoFactorRedirect` on this path, an unconfirmed email is refused the same
+     * way (`requireEmailVerification`), better-auth's own `/sign-in*` limit
+     * applies, and rate-limiter.ts gives it the same 10 per 5 minutes as the
+     * email sign-in. An unknown name still hashes the password, so the answer
+     * takes as long as a wrong password.
+     *
+     * Usernames are 3–30 characters of a–z 0–9 _ . and stored lower-case
+     * (migration 0096 checks the same): no `@`, so one never reads like an email.
+     * Who may set one: username-policy.ts, enforced in "kitsuden-hooks" below.
+     */
+    username({
+      minUsernameLength: 3,
+      maxUsernameLength: 30,
+      displayUsername: false,
+      validationOrder: { username: "post-normalization" },
+    }),
+
     {
       id: "kitsuden-hooks",
       hooks: {
+        before: [
+          {
+            /**
+             * Who may set a username (KITSUDEN_USERNAMES, username-policy.ts).
+             * Runs before the username plugin writes anything.
+             */
+            matcher: (context: { path?: string }) =>
+              context.path === "/sign-up/email" || context.path === "/update-user",
+            handler: createAuthMiddleware(async (ctx) => {
+              const session =
+                ctx.path === "/update-user" ? await getSessionFromCtx(ctx).catch(() => null) : null;
+              const role = (session?.user as { role?: string } | undefined)?.role;
+              const refusal = usernameRefusal(ctx.path, ctx.body, role, USERNAME_POLICY);
+              if (refusal === "USERNAME_NOT_AT_SIGN_UP") {
+                throw new APIError("BAD_REQUEST", {
+                  code: refusal,
+                  message: "A username cannot be chosen at sign-up on this installation.",
+                });
+              }
+              if (refusal === "USERNAME_STAFF_ONLY") {
+                throw new APIError("FORBIDDEN", {
+                  code: refusal,
+                  message:
+                    "Only administrators and editors can set a username on this installation.",
+                });
+              }
+            }),
+          },
+        ],
         after: [
           {
             matcher: (context: AuthContext) => context.path === "/sign-up/email",

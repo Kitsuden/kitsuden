@@ -56,6 +56,8 @@ export const authUsers = pgTable("auth_users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
+  // better-auth `username` plugin (migration 0096): optional, unique, lower-case.
+  username: text("username").unique("auth_users_username_unique"),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   role: userRoleEnum("role").default("user").notNull(),

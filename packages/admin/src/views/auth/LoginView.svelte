@@ -281,6 +281,8 @@
     localError = null;
     warning = null;
     pendingVerification = false;
+    // A username typed to sign in is no address for a reset or a magic link.
+    if (next !== "entrar" && !email.includes("@")) email = "";
   }
 </script>
 
@@ -317,13 +319,16 @@
         {#if mode === "entrar"}
           <form onsubmit={handleLogin} class="auth-form">
             <div class="field">
-              <Label for="email">{t("common.email")}</Label>
+              <!-- Email or username (migration 0096): signIn() picks the path by the `@`. -->
+              <Label for="email">{t("loginView.emailOrUsername")}</Label>
               <Input
                 bind:value={email}
-                type="email"
+                type="text"
                 id="email"
-                placeholder={t("loginView.emailPlaceholder")}
-                autocomplete="email"
+                placeholder={t("loginView.emailOrUsernamePlaceholder")}
+                autocomplete="username"
+                autocapitalize="none"
+                spellcheck={false}
                 required
               />
             </div>
@@ -349,7 +354,7 @@
                 variant="ghost"
                 size="sm"
                 class="w-full"
-                disabled={sending || !email}
+                disabled={sending || !email.includes("@")}
                 onclick={handleResend}
               >
                 {t("loginView.resendConfirmationEmail")}
