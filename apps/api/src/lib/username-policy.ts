@@ -30,8 +30,10 @@ export function usernamePolicy(env: Env = process.env): UsernamePolicy {
   const mode = env["KITSUDEN_USERNAMES"]?.trim().toLowerCase();
   if (!mode || mode === "staff") return "staff";
   if (mode === "everyone") return "everyone";
+  // The value is not echoed: CodeQL (js/clear-text-logging) reads a USERNAME
+  // variable as sensitive, and the name of the variable is enough to fix it.
   console.warn(
-    `[auth] KITSUDEN_USERNAMES must be "staff" or "everyone": treating "${mode}" as staff.`
+    '[auth] KITSUDEN_USERNAMES has an unknown value (use "staff" or "everyone"): treating it as staff.'
   );
   return "staff";
 }
